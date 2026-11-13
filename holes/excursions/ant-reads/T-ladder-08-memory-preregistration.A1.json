@@ -1,0 +1,59 @@
+{
+ "stem": "T-ladder-08-memory-preregistration",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1794530636421-18854-12b35644",
+ "at": "2026-11-13T00:45:14+00:00",
+ "row": {
+  "stem": "T-ladder-08-memory-preregistration",
+  "kind": "place",
+  "what": {
+   "value": "Write (not run) a deterministic preregistration EDN for a memory-under-fire CA experiment on a fixed propagator-only engine, pinning thresholds and a wire-test control before observation.",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-08-memory-preregistration.md:12",
+   "quote": "Write, but do not run, a deterministic preregistration EDN for memory-under-fire: guard width, horizon, penetration limit, and the approximately six-step"
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-08-memory-preregistration.md:3",
+   "quote": "**Status:** OPEN — AUTHORIZED STAGE 6"
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-08-memory-preregistration.md:4",
+   "quote": "Parent: M-futonzero-prelim-practice"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-08-memory-preregistration.md:7",
+   "quote": "so this is an experiment on a fixed heterogeneous elementary CA, not on a meta-CA; say so in the result."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-08-memory-preregistration.md:16",
+   "quote": "- [ ] The EDN parses, names the engine (propagator-only, with even8 in mmca-clj order) and seed, pins all thresholds and the control arm before observation, and is presented to Joe for sign-off."
+  },
+  "finish": {
+   "value": "EDN parses, names engine and seed, pins thresholds and control arm, presented to Joe for sign-off; stop before running.",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-08-memory-preregistration.md:16",
+   "quote": "Stop before running the experiment. Expected outcome: **stopped as expected for human sign-off**."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-08-memory-preregistration.md:4",
+   "quote": "Parent: M-futonzero-prelim-practice"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-near",
+  "ok-near",
+  "ok"
+ ],
+ "ok": 7,
+ "unsure": 0,
+ "failed": []
+}

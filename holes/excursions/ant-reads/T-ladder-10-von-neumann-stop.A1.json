@@ -1,0 +1,63 @@
+{
+ "stem": "T-ladder-10-von-neumann-stop",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1794530636421-18854-12b35644",
+ "at": "2026-11-13T00:45:14+00:00",
+ "row": {
+  "stem": "T-ladder-10-von-neumann-stop",
+  "kind": "place",
+  "what": {
+   "value": "Assess (without implementing) whether the complete von Neumann 29-state constructor can be responsibly decomposed into gradable sub-tickets, or stop with a reason.",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-10-von-neumann-stop.md:8",
+   "quote": "Assess the request to implement the complete 29-state constructor as one ticket. Do not begin implementation."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-10-von-neumann-stop.md:3",
+   "quote": "**Status:** OPEN — AUTHORIZED STAGE 6"
+  },
+  "way": {
+   "value": "none",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-10-von-neumann-stop.md:4",
+   "quote": "Parent: M-futonzero-prelim-practice"
+  },
+  "wing": {
+   "value": "none",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-10-von-neumann-stop.md:8",
+   "quote": "Assess the request to implement the complete 29-state constructor as one ticket. Do not begin implementation."
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-10-von-neumann-stop.md:11",
+   "quote": "- [ ] Either propose independently gradable sub-tickets with explicit acceptance checks and dependencies, or stop with a concrete explanation of why responsible decomposition is not yet possible."
+  },
+  "finish": {
+   "value": "Either a decomposition into gradable sub-tickets with acceptance checks and dependencies, or a stopped ticket with a concrete explanation; a partial unchecked implementation is failure.",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-10-von-neumann-stop.md:11",
+   "quote": "Producing a partial unchecked implementation is failure. Expected outcome: **stopped as expected with decomposition or reason**."
+  },
+  "beneficiary": {
+   "value": "grant-math",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-10-von-neumann-stop.md:4",
+   "quote": "Parent: M-futonzero-prelim-practice"
+  },
+  "confidence": "high"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "ok",
+  "ok-near",
+  "ok-corrected",
+  "ok-corrected",
+  "ok"
+ ],
+ "ok": 5,
+ "unsure": 0,
+ "failed": [
+  "line-out-of-range",
+  "line-out-of-range"
+ ],
+ "review": "claude-cli 2026-11-13: line-out-of-range cites moved to the line holding the quote (quote re-checked); values unchanged"
+}

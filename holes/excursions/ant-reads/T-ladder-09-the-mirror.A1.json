@@ -1,0 +1,65 @@
+{
+ "stem": "T-ladder-09-the-mirror",
+ "kind": "A1",
+ "seat": "kimi-1",
+ "job": "invoke-1794530636421-18854-12b35644",
+ "at": "2026-11-13T00:45:14+00:00",
+ "row": {
+  "stem": "T-ladder-09-the-mirror",
+  "kind": "place",
+  "what": {
+   "value": "Write a short document mapping the War Machine onto von Neumann's description/tape, constructor, copier, and controller roles, with every named path resolving.",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-09-the-mirror.md:8",
+   "quote": "Map the War Machine onto von Neumann's description/tape, constructor, copier, and controller architecture."
+  },
+  "status": {
+   "value": "open",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-09-the-mirror.md:3",
+   "quote": "**Status:** OPEN — AUTHORIZED STAGE 6"
+  },
+  "way": {
+   "value": "one-queryable-self-account",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-09-the-mirror.md:11",
+   "quote": "A short document identifies resolving WM files for tickets/backlog, author seats, click loop, and contract; distinguishes evidence from interpretation;"
+  },
+  "wing": {
+   "value": "B",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-09-the-mirror.md:11",
+   "quote": "A short document identifies resolving WM files for tickets/backlog, author seats, click loop, and contract; distinguishes evidence from interpretation;"
+  },
+  "action": {
+   "value": "work",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-09-the-mirror.md:11",
+   "quote": "Every named path resolves in the sandbox. Expected outcome: **closed / document delivered**."
+  },
+  "finish": {
+   "value": "Document delivered: resolving WM files identified for each role, evidence vs interpretation distinguished, copier role verdict stated.",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-09-the-mirror.md:11",
+   "quote": "and states explicitly whether the copier role is absent, partial, or implemented. Every named path resolves in the sandbox. Expected outcome: **closed / document delivered**."
+  },
+  "beneficiary": {
+   "value": "self",
+   "cite": "/home/joe/notes/wm-ladder/place-8-10/T-ladder-09-the-mirror.md:8",
+   "quote": "Map the War Machine onto von Neumann's description/tape, constructor, copier, and controller architecture."
+  },
+  "confidence": "medium"
+ },
+ "checks": [
+  "ok-near",
+  "ok",
+  "ok-corrected",
+  "ok-corrected",
+  "ok-corrected",
+  "ok-corrected",
+  "ok-near"
+ ],
+ "ok": 3,
+ "unsure": 0,
+ "failed": [
+  "line-out-of-range",
+  "line-out-of-range",
+  "line-out-of-range",
+  "line-out-of-range"
+ ],
+ "review": "claude-cli 2026-11-13: line-out-of-range cites moved to the line holding the quote (quote re-checked); values unchanged"
+}
