@@ -111,6 +111,18 @@
    (clusion-type :workplan/serves 1
                  [{:role :item :endpoint/kinds #{:clusion}}
                   {:role :benefit-line :endpoint/kinds #{:clusion}}] [])
+   ;; Substrate items are document entities, never workplan/item mirrors.
+   (clusion-type :workplan/serves 2
+                 [{:role :item :endpoint/kinds #{:entity}}
+                  {:role :benefit-line :endpoint/kinds #{:clusion}}] [])
+   ;; Historical imports have no document digest or trustworthy reading time.
+   ;; Each source act stays independent; these are not current reading facts.
+   (clusion-type :giraffe/legacy-reading 1
+                 [{:role :item :endpoint/kinds #{:entity}}]
+                 [:legacy/source-record-id])
+   (clusion-type :workplan/closure-claim 1
+                 [{:role :item :endpoint/kinds #{:entity}}]
+                 [:legacy/source-record-id])
    (clusion-type :workplan/mention 1
                  [{:role :item :endpoint/kinds #{:clusion}}
                   {:role :evidence :endpoint/kinds #{:external-ref}}]

@@ -13,18 +13,39 @@
 ;; No question text, reading text or turn text appears in this file
 ;; (futon3c is PUBLIC); only field and type names.
 {:meta {:demo "M-repl-circus demo 1a (GCC preview projector)"
-        :as-of "2026-11-12"
+        :as-of "2026-11-13"
         :contract "~/notes/claude-13/demo-01-contract.md"}
+
+ :substrate-item-reference
+ {:types [:mission/doc :excursion/doc :ticket/doc]
+  :identity :entity/id
+  :doc "The existing substrate entity IS the item. No workplan/item records are copied. Model history stays unverified pending E-workplan-validation."}
 
  :record-types
  {"[:workplan/item 1]"
   {:status :built
-   :doc "B3 pending item; one node per item id, shared by the workplan and Giraffe id spaces."
+   :doc "Legacy :7094 preview shape only; never persisted by substrate migration. Replaced by substrate-item-reference."
    :fields {:item-id "item_id"
             :title "title"
             :path "path"
             :repo "repo"
             :doc-sha256 "doc_sha256"}}
+
+  "[:workplan/serves 2]"
+  {:status :built
+   :doc "Item is a substrate entity endpoint; benefit-line is a clusion. Historical model evidence remains unverified."
+   :fields {:item-id "item_id" :benefit-line "benefit_line" :producer "producer" :draft "draft"}}
+
+  "[:giraffe/legacy-reading 1]"
+  {:status :built
+   :doc "Historical source act, not a digest-bound current reading. Unknown freshness/time stay explicit; old pending levels are historical reductions only."
+   :fields {:legacy/source-record-id "source_record_id" :legacy/freshness "freshness"
+            :item-id "item_id" :purpose "purpose"}}
+
+  "[:workplan/closure-claim 1]"
+  {:status :built
+   :doc "Attributable claim on an item entity; preserves the source closure assessment without changing document status."
+   :fields {:legacy/source-record-id "source_record_id" :item-id "item_id"}}
 
   "[:giraffe/state-group 1]"
   {:status :proposed
