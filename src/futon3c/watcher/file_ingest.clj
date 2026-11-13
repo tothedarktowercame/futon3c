@@ -29,7 +29,8 @@
             [futon3c.watcher.projections.python :as python]
             [futon3c.watcher.projections.flexiarg :as flexiarg]
             [futon3c.watcher.projections.essay :as essay]
-            [futon3c.watcher.scope-reingest :as scope-reingest]))
+            [futon3c.watcher.scope-reingest :as scope-reingest]
+            [futon3c.giraffe.reread-service :as reread-service]))
 
 
 ;; Every watcher HTTP call has a deadline. babashka's http-client waits
@@ -1571,6 +1572,7 @@
             dur (- (System/currentTimeMillis) t-start)]
         ;; keep the scope-surface current too (debounced + async — never blocks here)
         (scope-reingest/schedule! path)
+        (reread-service/notify-doc-changed! path)
         (assoc stats :status :mission-doc :duration-ms dur :path path))
 
       ticket-doc?
@@ -1578,6 +1580,7 @@
             stats (ingest-ticket-doc! {:path path :label label})
             dur (- (System/currentTimeMillis) t-start)]
         (when (:entity-ok? stats) (scope-reingest/schedule! path))
+        (reread-service/notify-doc-changed! path)
         (assoc stats :status :ticket-doc :duration-ms dur :path path))
 
       excursion-doc?
@@ -1585,6 +1588,7 @@
             stats (ingest-excursion-doc! {:path path :label label})
             dur (- (System/currentTimeMillis) t-start)]
         (scope-reingest/schedule! path)
+        (reread-service/notify-doc-changed! path)
         (assoc stats :status :excursion-doc :duration-ms dur :path path))
 
       ;; Campaigns: no doc-entity parser yet (Phase 2b), but the scope pipeline

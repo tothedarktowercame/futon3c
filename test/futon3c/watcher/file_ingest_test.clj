@@ -3,7 +3,8 @@
             [futon3c.scripts.mission-scope-ingest :as scope-ingest]
             [futon3c.watcher.file-ingest :as sut]
             [futon3c.watcher.multi :as multi]
-            [futon3c.watcher.scope-reingest :as scope-reingest]))
+            [futon3c.watcher.scope-reingest :as scope-reingest]
+            [futon3c.giraffe.reread-service :as reread-service]))
 
 (deftest mission-doc-path-stays-inside-stack-roots
   (testing "mission-doc ingest is scoped to holes/missions under /home/joe/code"
@@ -250,14 +251,16 @@
 (deftest ticket-dispatch-schedules-scopes-only-after-entity-success
   (let [path "/home/joe/code/futon3c/holes/tickets/T-invented.md"]
     (doseq [success? [true false]]
-      (let [scheduled (atom [])]
+      (let [scheduled (atom []) notified (atom [])]
         (with-redefs [sut/file-exists? (constantly true)
                       sut/ingest-ticket-doc! (fn [opts]
                                                (is (= {:path path :label "futon3c-d"} opts))
                                                {:entity-ok? success? :failed (if success? 0 1)})
-                      scope-reingest/schedule! #(swap! scheduled conj %)]
+                      scope-reingest/schedule! #(swap! scheduled conj %)
+                      reread-service/notify-doc-changed! #(swap! notified conj %)]
           (let [result (sut/dispatch! {:path path :label "futon3c-d" :root "/home/joe/code/futon3c"})]
             (is (= :ticket-doc (:status result)))
+            (is (= [path] @notified))
             (is (= (if success? [path] []) @scheduled))))))))
 
 (deftest nested-holes-copies-are-not-documents
@@ -272,3 +275,15 @@
     (is (not (sut/excursion-doc-path? "/x/holes/labs/r/holes/excursions/E-invented.md")))
     (is (not (sut/ticket-doc-path? "/x/holes/labs/r/holes/tickets/T-invented.md")))
     (is (sut/ticket-doc-path? "/x/holes/tickets/T-invented.md"))))
+
+(deftest mission-and-excursion-dispatch-notify-reread-service
+  (doseq [path ["/home/joe/code/futon3c/holes/missions/M-event-fixture.md"
+                "/home/joe/code/futon3c/holes/excursions/E-event-fixture.md"]]
+    (let [notified (atom [])]
+      (with-redefs [sut/file-exists? (constantly true)
+                    sut/ingest-mission-doc! (constantly {})
+                    sut/ingest-excursion-doc! (constantly {})
+                    scope-reingest/schedule! (constantly :scheduled)
+                    reread-service/notify-doc-changed! #(swap! notified conj %)]
+        (sut/dispatch! {:path path :root "/home/joe/code/futon3c" :label "fixture"})
+        (is (= [path] @notified))))))

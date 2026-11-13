@@ -42,7 +42,8 @@
                   :members-file (str (io/file root "members.json"))
                   :batches (batches root) :repos missions/default-repos
                   :scope :population/missions-excursions-tickets})]
-    {:open-items open-items :coverage (:coverage checked)}))
+    {:all-items (get-in census [:input :items])
+     :open-items open-items :coverage (:coverage checked)}))
 
 (defn health
   "Read-only queue, generation and latest-mint health."
@@ -62,12 +63,13 @@
                   {:run-id (:run-id latest)
                    :at-ms (.lastModified latest-file)})}))
 
-(defn run-once!
-  "One reconciliation, parallel reader, and durably batched mint cycle."
+(defn drain-once!
+  "One reader round and durable mint step; no authority census.
+   :parallel? false keeps reader calls on the invoking service executor."
   [{:keys [reader-seat reader-seats kimi-task-repo store pointer generations-dir
-           giraffe-root edges snapshot-fn contact-fn contact-fns mint-fn now-ms
-           new-item-cap mint-window-ms mint-state-path]
-    :or {pointer default-pointer giraffe-root default-root edges default-edges}}]
+           giraffe-root edges contact-fn contact-fns mint-fn now-ms
+           new-item-cap mint-window-ms mint-state-path parallel?]
+    :or {pointer default-pointer giraffe-root default-root edges default-edges parallel? true}}]
   (let [reader-seats (vec (or (seq reader-seats)
                               (when-not (str/blank? reader-seat) [reader-seat])))]
     (when (empty? reader-seats)
@@ -79,11 +81,7 @@
     (when-not (pos-int? mint-window-ms)
       (throw (ex-info "FUTON3C_GIRAFFE_REREAD_MINT_WINDOW_MS is required"
                       {:kind :giraffe-reread/mint-window-required})))
-    (let [now-ms (or now-ms (System/currentTimeMillis))
-          store (or store (queue/open-store))
-          snapshot ((or snapshot-fn authority-snapshot) {:pointer pointer :edges edges})
-          reconciliation (queue/reconcile! store (:open-items snapshot)
-                                           (:coverage snapshot) now-ms)
+    (let [store (or store (queue/open-store))
           contact-for (fn [seat]
                         (or (get contact-fns seat)
                             contact-fn
@@ -91,26 +89,44 @@
                               (partial worker/kimi-contact
                                        {:reader-seat seat :kimi-task-repo kimi-task-repo})
                               (partial worker/agency-contact {:reader-seat seat}))))
-          jobs (mapv (fn [seat]
-                       (future
-                         (worker/run-once!
-                          {:store store :pointer pointer :generations-dir generations-dir
-                           :contact-fn (contact-for seat) :now-ms now-ms
-                           :new-item-cap new-item-cap :reader-id seat})))
-                     reader-seats)
-          results (mapv deref jobs)
+          run-seat (fn [seat]
+                     (worker/run-once!
+                      {:store store :pointer pointer :generations-dir generations-dir
+                       :contact-fn (contact-for seat) :now-ms (or now-ms (System/currentTimeMillis))
+                       :new-item-cap new-item-cap :reader-id seat}))
+          results (if parallel?
+                    (mapv deref (mapv #(future (run-seat %)) reader-seats))
+                    (mapv run-seat reader-seats))
           landed (count (filter #(= :landed (:status %)) results))
           actionable (filter #(contains? #{:pending :claimed} (:state %))
                              (queue/requests store))
           mint-result (mint-batch/step!
                        {:path (or mint-state-path mint-batch/default-state-path)
-                        :window-ms mint-window-ms :now-ms now-ms
+                        :window-ms mint-window-ms :now-ms (or now-ms (System/currentTimeMillis))
                         :landed-count landed :queue-idle? (empty? actionable)
                         :mint-fn (or mint-fn
                                      #(mint/supported-mint!
                                        {:readings-root pointer
                                         :giraffe-root giraffe-root :edges edges}))})]
-      {:reconciliation reconciliation :workers results :mint mint-result})))
+      {:workers results :mint mint-result})))
+
+(defn run-once!
+  "One full authority reconciliation followed by a reader/mint round."
+  [{:keys [store snapshot-fn now-ms] :as opts}]
+  ;; Validate configuration before touching an authority or opening the queue.
+  (when-not (seq (or (:reader-seats opts)
+                     (when-not (str/blank? (:reader-seat opts)) [(:reader-seat opts)])))
+    (throw (ex-info "At least one named reader seat is required"
+                    {:kind :giraffe-reread/reader-seat-required})))
+  (when-not (and (integer? (:new-item-cap opts)) (not (neg? (:new-item-cap opts))))
+    (throw (ex-info "New-item cap required" {:kind :giraffe-reread/new-item-cap-required})))
+  (when-not (pos-int? (:mint-window-ms opts))
+    (throw (ex-info "Mint window required" {:kind :giraffe-reread/mint-window-required})))
+  (let [store (or store (queue/open-store))
+        snapshot ((or snapshot-fn authority-snapshot) opts)
+        reconciliation (queue/reconcile! store (:open-items snapshot) (:coverage snapshot)
+                                          (or now-ms (System/currentTimeMillis)))]
+    (assoc (drain-once! (assoc opts :store store)) :reconciliation reconciliation)))
 
 (defn -main [& args]
   (let [health? (contains? (set args) "--health")

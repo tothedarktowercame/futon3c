@@ -153,6 +153,37 @@
                         sha now-ms (name target-id)])))
     {:drift drift :requests (requests store)}))
 
+(defn reconcile-item!
+  "Reconcile only TARGET-ID using a freshly parsed item and checked coverage.
+   Nil ITEM means the document is no longer in the open census. Other items'
+   claims, leases and requests are untouched."
+  [store target-id item coverage now-ms]
+  (let [id (name target-id)]
+    (jdbc/with-transaction [tx (:datasource store)]
+      (jdbc/execute! tx
+                     ["UPDATE reread_requests SET state='pending',lease_until_ms=NULL,claimed_by=NULL,updated_at_ms=? WHERE target_id=? AND state='claimed' AND lease_until_ms<=?"
+                      now-ms id now-ms])
+      (if-not item
+        (jdbc/execute! tx
+                       ["UPDATE reread_requests SET state='superseded',superseded_reason='item-not-open',lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND state IN ('pending','claimed')"
+                        now-ms id])
+        (let [drift (excursions/reading-drift [item] coverage)
+              source (:source-pin item)
+              old (some #(when (= id (:id %)) %) (:members coverage))]
+          (when-not (and (= id (name (:id item))) (:sha256 source) (:path source))
+            (throw (ex-info "Item reconciliation requires matching identity and source"
+                            {:kind :giraffe-reread/source-pin-missing :target-id id})))
+          (if (seq (:read drift))
+            (jdbc/execute! tx
+                           ["UPDATE reread_requests SET state='superseded',superseded_by_sha=?,superseded_reason='source-returned-to-read',lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND state IN ('pending','claimed')"
+                            (:sha256 source) now-ms id])
+            (do (supersede-other! tx id (:sha256 source) now-ms)
+                (ensure-pending! tx {:target-id id :source-sha (:sha256 source)
+                                     :source-path (:path source)
+                                     :old-sha (when (= :read (:status old))
+                                                (get-in old [:source :sha256]))} now-ms))))))
+    {:requests (requests store {:target-id id})}))
+
 (defn claim!
   "Claim the oldest pending request through NOW-MS+LEASE-MS.
   NEW-ITEM-CAP is the per-cycle allowance already remaining for rows whose

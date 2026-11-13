@@ -79,8 +79,10 @@
 (defn consume
   "Each record invokes the exact checker. Duplicate members are ambiguous even
   when each individual record passes. Certificate hashes bind checker, member
-  inventory and the exact JSONL line bytes (excluding LF delimiter)."
-  [{:keys [checker members-file batches repos scope]}]
+  inventory and the exact JSONL line bytes (excluding LF delimiter).
+  Optional :target-id checks only that member, retaining duplicate detection;
+  it is a per-item certificate, never a complete population certificate."
+  [{:keys [checker members-file batches repos scope target-id]}]
   (let [checker-text (slurp checker)
         members-text (slurp members-file)
         checker-members (io/file (.getParentFile (io/file checker)) "members.json")
@@ -90,7 +92,9 @@
         ids (set (map (comp keyword :id) members))
         checked (vec (mapcat (fn [batch]
                               (keep-indexed (fn [i line]
-                                              (when-not (str/blank? line)
+                                              (when (and (not (str/blank? line))
+                                                         (or (nil? target-id)
+                                                             (= target-id (:id (json/parse-string line true)))))
                                                 (checked-record checker batch (inc i) line)))
                                             (str/split (slurp batch) #"\n"))) batches))
         _ (when-not (and (= checker-text (slurp checker))
@@ -106,7 +110,8 @@
                         :record-pin (:record-pin r)
                         :record-pins (mapv :record-pin rs)
                         :checker-results (mapv :checker-result rs)
-                        :edge-count (when (:passed? r) (count (get-in r [:record :edges])))})) members)
+                        :edge-count (when (:passed? r) (count (get-in r [:record :edges])))}))
+                   (if target-id (filter #(= target-id (:id %)) members) members))
         readable (set (map :id (filter #(= :read (:status %)) rows)))
         admitted (filter #(contains? readable (get-in % [:record :id])) checked)
         converted (mapcat (fn [{:keys [record]}]
@@ -119,7 +124,8 @@
                      :population-sha (sha256 members-text)
                      :checker-sha (sha256 checker-text)
                      :record-byte-convention :utf8-line-without-lf
-                     :status (if (= (count members) (:read counts)) :complete :incomplete)
+                     :status (if target-id :partial
+                               (if (= (count members) (:read counts)) :complete :incomplete))
                      :member-count (count members) :counts counts :members rows}]
     {:coverage certificate :checked-records checked
      :edges (vec (keep :edge converted)) :links (vec (keep :link converted))

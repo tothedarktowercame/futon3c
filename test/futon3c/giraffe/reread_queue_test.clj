@@ -114,3 +114,17 @@
                      (queue/claim! store 20 200 1 "kimi-1")])]
       (is (= #{"zai-2" "kimi-1"} (set (map :claimed_by claims))))
       (is (= #{120 220} (set (map :lease_until_ms claims)))))))
+
+(deftest item-reconcile-preserves-other-items-even-expired-claims
+  (let [store (queue/open-store (temp-db))
+        other {:id :M-other :source-pin {:path "/invented/other" :sha256 "other"}}]
+    (queue/reconcile! store [other] {:members []} 1)
+    (queue/claim! store 2 10 1 "fixture")
+    (let [before (queue/requests store {:target-id "M-other"})]
+      (queue/reconcile-item! store "M-one" (item "new") (coverage "old") 20)
+      (queue/reconcile-item! store "M-one" (item "new") (coverage "old") 30)
+      (is (= before (queue/requests store {:target-id "M-other"})))
+      (is (= 1 (count (queue/requests store {:target-id "M-one"}))))
+      (is (= "old" (:old_sha (first (queue/requests store {:target-id "M-one"}))))))
+    (queue/reconcile-item! store "M-one" nil nil 40)
+    (is (= :item-not-open (:superseded_reason (first (queue/requests store {:target-id "M-one"})))))))

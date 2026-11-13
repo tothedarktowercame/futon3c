@@ -532,6 +532,20 @@
    (mapv :id (:order pass-output))
    {:decision-as-of (str (java.time.Instant/now))}))
 
+(defn mint!
+  "In-process equivalent of the supported missions/excursions CLI mint.
+   Reads retained focus only; never exits the JVM or acquires focus."
+  [{:keys [edges readings-root root repos]}]
+  (let [invocation {:source "missions-excursions" :edges edges
+                    :repos (or repos gm/default-repos) :readings-root readings-root
+                    :with-retained-focus? true}
+        adapter (build-adapter-result invocation)
+        output (excursions/combined-pass (:input adapter))
+        result (write-run! {:root (or root default-root) :adapter-result adapter
+                           :pass-output output :focus-relation-input (retained-focus-input output)
+                           :invocation invocation :git-sha (git-head-sha) :edges-file edges})]
+    {:status :minted :run-id (:run-id result)}))
+
 (defn -main
   "clojure -M -m futon3c.giraffe.run --edges <file> [--only <ids-file>]
   [--root <dir>] [--run-id <id>] [--source tickets|missions|missions-excursions]
