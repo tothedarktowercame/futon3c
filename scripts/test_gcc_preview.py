@@ -161,6 +161,145 @@ def run_projector(fx, out, shapes=None, env_extra=None):
     return index, items
 
 
+def check_futon1b(root, fx):
+    """Invented records over real HTTP/EDN and a real read-only SQLite resolver."""
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from urllib.parse import unquote
+    import gcc_preview as g
+
+    eid = 'fixture/mission/alpha'
+    entity = {'id': eid, 'external-id': ALPHA, 'type': 'mission/doc'}
+    sidecar = os.path.join(root, 'entities.sqlite')
+    with sqlite3.connect(sidecar) as db:
+        db.execute('CREATE TABLE ent_node(id TEXT, type TEXT, external_id TEXT)')
+        db.executemany('INSERT INTO ent_node VALUES (?,?,?)',
+                       [(eid, ':mission/doc', ALPHA), ('stub', ':mission', ALPHA)])
+    def link(rid, kind, role, target, content=None):
+        return {'id': rid, 'type-revision': [kind, 1],
+                'endpoints': [{'role': role, 'target': target}], 'asserted-content': content or {}}
+    benefit = link('benefit', 'benefit-line', 'unused', {}, {'benefit/line': 'fixture-benefit'})
+    serve = link('serve', 'workplan/serves', 'item', {'entity/id': eid})
+    serve['type-revision'][1] = 2
+    serve['endpoints'].append({'role': 'benefit-line', 'target': {'clusion/id': 'benefit'}})
+    history = link('history', 'giraffe/legacy-reading', 'item', {'entity/id': eid},
+                   {'legacy/freshness': 'unknown', 'legacy/source-record-id': 'old-reading'})
+    intro = link('intro', 'workplan/introduction', 'entity', {'clusion/id': 'lexicon'})
+    def evidence(rid, subject, content, method='fixture-method'):
+        return {'id': rid, 'subject-clusion-id': subject, 'basis': 'model', 'standing': 'unverified',
+                'producer': 'fixture-reader', 'method': {'id': method}, 'content': content}
+    evidence_rows = [evidence('s1', 'serve', {}, 'first-method'),
+                     evidence('s2', 'serve', {}, 'second-method'),
+                     evidence('descriptor', 'benefit', {'benefit/name': 'Invented benefit'}),
+                     evidence('reading', 'history', {'pending/level': 4, 'sheet/one-line': 'Invented history'})]
+    records = {x['id']: x for x in [benefit, serve, history, intro] + evidence_rows}
+    mode = {'value': 'ok'}
+    calls = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_args):
+            pass
+
+        def reply(self, value):
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(value).encode())
+
+        def do_GET(self):
+            assert unquote(self.path) == '/api/alpha/entity/' + eid
+            self.reply({'entity': entity})
+
+        def do_POST(self):
+            assert self.path == '/api/alpha/arxana/query'
+            assert self.headers['Content-Type'] == 'application/edn'
+            assert self.headers['x-arxana-principal'] == 'fixture-principal'
+            q = g.edn_load(self.rfile.read(int(self.headers['Content-Length'])).decode())
+            calls.append(q)
+            kind = q['query/type']
+            assert isinstance(kind, g.Keyword)
+            if mode['value'] == 'stale':
+                self.reply({'status': 'stale-index'})
+                return
+            result = {'status': 'ok', 'watermark': 2 if mode['value'] == 'changed' else 1}
+            if kind == 'role-reverse':
+                assert isinstance(q['edge-type'][0], g.Keyword)
+                ids = [x['id'] for x in records.values() if x.get('type-revision') == q['edge-type']
+                       and any(ep.get('role') == q['endpoint-role'] and
+                               q['endpoint-id'] in ep.get('target', {}).values()
+                               for ep in x.get('endpoints', []))]
+                result.update({'edge-ids': ids, 'truncated?': mode['value'] == 'truncated'})
+            elif kind == 'attestations':
+                ids = [x['id'] for x in evidence_rows if x['subject-clusion-id'] == q['subject-id']]
+                result['attestation-ids'] = ['s1'] * 200 if mode['value'] == 'cap' else ids
+            elif kind == 'record-by-id':
+                result = {'status': 'ok', 'record': records[q['record-id']]}
+            else:
+                raise AssertionError(kind)
+            self.reply(result)
+
+    server = HTTPServer(('127.0.0.1', 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    url = 'http://127.0.0.1:%d' % server.server_port
+    try:
+        source = g.Futon1bSource(url, sidecar, 'fixture-principal')
+        view = source.item_view(ALPHA)
+        assert view['entity']['id'] == eid
+        assert len(view['serves']) == 2, 'two methods must not collapse into one'
+        assert len([r for r in view['records'] if r['id'] == 'serve']) == 1
+        assert source.introductions('lexicon') == [intro]
+        assert not view['names'] and not view['mentions']
+        # Exercise each incomplete read through the actual wire adapter.
+        for bad in ('stale', 'truncated', 'changed', 'cap'):
+            mode['value'] = bad
+            try:
+                source.item_view(ALPHA)
+            except ValueError:
+                pass
+            else:
+                raise AssertionError('accepted incomplete read: ' + bad)
+        mode['value'] = 'ok'
+        with sqlite3.connect(sidecar) as db:
+            db.execute('INSERT INTO ent_node VALUES (?,?,?)', ('other', ':mission/doc', ALPHA))
+        try:
+            source.resolve(ALPHA)
+        except ValueError as exc:
+            assert '2 substrate' in str(exc)
+        else:
+            raise AssertionError('ambiguous real SQLite identity was silently selected')
+        with sqlite3.connect(sidecar) as db:
+            db.execute('DELETE FROM ent_node WHERE id=?', ('other',))
+        # CLI projection with the real adapter: no workplan/item mirror or invented current pending level.
+        out = os.path.join(root, 'futon1b-out')
+        subprocess.run([sys.executable, SCRIPT, '--source', 'futon1b', '--futon1b', url,
+                        '--arxana-principal', 'fixture-principal', '--entity-sidecar', sidecar,
+                        '--items', ALPHA, '--out', out, '--corpus', fx['corpus'],
+                        '--queue', fx['queue'], '--turns', fx['turns'], '--questions', fx['questions']],
+                       check=True, capture_output=True, text=True)
+        with open(os.path.join(out, 'items', ALPHA + '.json')) as f:
+            payload = json.load(f)
+        assert payload['item']['entity_ref']['id'] == eid
+        assert 'not rebuilt yet' in payload['display']['names']['absent']
+        assert 'not rebuilt yet' in payload['display']['mentions']['absent']
+        types = [r['type'] for r in payload['records']]
+        assert '[:workplan/item 1]' not in types
+        assert '[:workplan/pending-level 1]' not in types
+        assert types.count('[:workplan/serves 2]') == 1
+        assert types.count('[:giraffe/legacy-reading 1]') == 1
+        by_id = {r['id']: r for r in payload['records']}
+        for rid in ('s1', 's2', 'reading'):
+            assert by_id[rid]['fields']['record'] == records[rid]
+        assert by_id['history']['fields']['freshness'] == 'unknown'
+        assert payload['display']['reading']['summary'] == 'fixture reading'
+        assert all(q['query/type'] in ('role-reverse', 'record-by-id', 'attestations') for q in calls)
+        print('ok — futon1b HTTP/EDN, v2 identity/evidence, historical semantics, ambiguity and incomplete-read checks')
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
 def main():
     root = tempfile.mkdtemp(prefix="gcc-preview-test-")
     try:
@@ -266,6 +405,8 @@ def main():
             plant_failed_as_expected = True
         assert plant_failed_as_expected, \
             "PLANT did not fail: supersedes link still present under GCC_PREVIEW_PLANT_DROP_SUPERSEDES=1"
+
+        check_futon1b(root, fx)
 
         print("ok — 8 checks pass; plants (dropped supersedes, raw sha in display) "
               "fail their checks as expected")

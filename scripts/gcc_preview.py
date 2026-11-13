@@ -17,7 +17,10 @@ Sources:
     readings a newer reading supersedes.
   - The :7094 workplan stack via /arxana/v1 query operations only
     (workplan/item-view, graph/query): names, serves, mentions, pending
-    level, introductions.
+    level, introductions. Alternatively --source futon1b reads substrate
+    entities and migrated history via :7073; names/mentions stay absent
+    until their writers rebuild them. Historical pending levels do not
+    become current readiness; digest-bound corpus readings stay separate.
   - Xiang turn records (~/.emacs-graph/session-turn-analysis): mentions.
   - futon7 holes/argument-graph/questions.edn: item -> question links.
 
@@ -29,6 +32,7 @@ in the shapes file renames it in the output.
 Usage:
   python3 scripts/gcc_preview.py --items M-repl-circus,M-giraffe,...
       [--shapes PATH] [--out DIR] [--corpus DIR] [--queue DB]
+      [--source workplan|futon1b] [--futon1b URL] [--entity-sidecar DB]
       [--turns DIR] [--questions FILE] [--arxana URL | --arxana-fixture DIR | --no-arxana]
 
 Every absence in the output is typed (contract rule 7).
@@ -41,6 +45,9 @@ import os
 import re
 import sqlite3
 import urllib.request
+from pathlib import Path
+from contextlib import closing
+from urllib.parse import quote
 from datetime import datetime, timezone
 
 # ------------------------------------------------------------------ EDN ---
@@ -381,6 +388,126 @@ class ArxanaSource:
                 out.append(rec)
         return out
 
+class Futon1bSource:
+    """Read-only substrate adapter; incomplete or ambiguous reads fail explicitly."""
+    substrate = True
+
+    def __init__(self, url="http://localhost:7073", sidecar=None, principal=None):
+        self.url = url.rstrip("/")
+        self.sidecar = sidecar or os.path.expanduser("~/code/futon1b/migration-store-21/fts5-evidence.db")
+        self.principal = principal or os.environ.get("FUTON1B_ARXANA_PRINCIPAL", "arxana-service")
+        self.records = {}
+        self.watermark = None
+
+    def query(self, **payload):
+        # JSON keywordizes keys only in futon1b. EDN is required for enum values.
+        def edn(value):
+            if isinstance(value, Keyword):
+                return ":" + value
+            if isinstance(value, list):
+                return "[" + " ".join(map(edn, value)) + "]"
+            return json.dumps(value, ensure_ascii=False)
+        body = "{" + " ".join(":" + k + " " + edn(v) for k, v in payload.items()) + "}"
+        req = urllib.request.Request(self.url + "/api/alpha/arxana/query",
+                                     data=body.encode("utf-8"), method="POST",
+                                     headers={"Content-Type": "application/edn", "Accept": "application/json",
+                                              "x-arxana-principal": self.principal})
+        with urllib.request.urlopen(req, timeout=20) as response:
+            result = json.load(response)
+        if result.get("status") != "ok":
+            raise ValueError("futon1b query refused: %s" % result)
+        if result.get("truncated?"):
+            raise ValueError("futon1b query truncated; complete projection requires pagination")
+        watermark = result.get("watermark")
+        if watermark is not None:
+            if self.watermark is not None and watermark != self.watermark:
+                raise ValueError("futon1b changed during projection; rerun at a stable watermark")
+            self.watermark = watermark
+        return result
+
+    def record(self, rid):
+        if rid not in self.records:
+            self.records[rid] = self.query(**{"query/type": Keyword("record-by-id"),
+                                              "record-id": rid})["record"]
+        return self.records[rid]
+
+    def reverse(self, type_name, revision, role, eid):
+        result = self.query(**{"query/type": Keyword("role-reverse"),
+                               "edge-type": [Keyword(type_name), revision],
+                               "endpoint-role": Keyword(role), "endpoint-id": eid,
+                               "limit": 200, "order": Keyword("asc")})
+        return [self.record(rid) for rid in result["edge-ids"]]
+
+    def attestations(self, rid):
+        result = self.query(**{"query/type": Keyword("attestations"), "subject-id": rid, "limit": 200})
+        ids = result["attestation-ids"]
+        # This endpoint has no total/truncated flag. At its cap completeness is unknown.
+        if len(ids) >= 200:
+            raise ValueError("futon1b attestations reached query cap; completeness unknown")
+        return [self.record(aid) for aid in ids]
+
+    def resolve(self, item_id):
+        kind = {"M": "mission/doc", "E": "excursion/doc", "T": "ticket/doc"}.get(item_id[:1])
+        if not kind:
+            raise ValueError("unsupported item identifier: %s" % item_id)
+        uri = Path(self.sidecar).resolve().as_uri() + "?mode=ro"
+        with closing(sqlite3.connect(uri, uri=True)) as db:
+            matches = db.execute("SELECT id FROM ent_node WHERE external_id=? AND type IN (?,?)",
+                                 (item_id, kind, ":" + kind)).fetchall()
+        if len(matches) != 1:
+            raise ValueError("%s resolves to %d substrate %s entities (expected one)" %
+                             (item_id, len(matches), kind))
+        req = urllib.request.Request(self.url + "/api/alpha/entity/" + quote(matches[0][0], safe=""),
+                                     headers={"Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=20) as response:
+            entity = json.load(response)["entity"]
+        if (entity.get("id") != matches[0][0] or entity.get("external-id") != item_id
+                or str(entity.get("type", "")).lstrip(":") != kind):
+            raise ValueError("sidecar/entity identity mismatch for %s" % item_id)
+        return entity
+
+    @staticmethod
+    def endpoint(record, role):
+        matches = [e["target"] for e in record.get("endpoints", [])
+                   if str(e.get("role", "")).lstrip(":") == role]
+        if len(matches) != 1:
+            raise ValueError("expected one %s endpoint on %s" % (role, record.get("id")))
+        return matches[0]
+
+    def item_view(self, item_id):
+        entity = self.resolve(item_id)
+        served, stored = [], {}
+        def keep(record):
+            stored[record["id"]] = record
+            return record
+        for link in self.reverse("workplan/serves", 2, "item", entity["id"]):
+            keep(link)
+            benefit = keep(self.record(self.endpoint(link, "benefit-line")["clusion/id"]))
+            descriptors = [keep(a) for a in self.attestations(benefit["id"])]
+            evidence = [keep(a) for a in self.attestations(link["id"])]
+            # Preserve every method/evidence record, including a link with no evidence.
+            for att in evidence or [{}]:
+                served.append({"record/id": link["id"], "benefit-line": benefit,
+                               "benefit/attestations": descriptors, "attestation": att,
+                               "producer": att.get("producer"),
+                               "draft?": str(att.get("standing", "")).lstrip(":") != "verified"})
+        for type_name in ("giraffe/legacy-reading", "workplan/closure-claim"):
+            for anchor in self.reverse(type_name, 1, "item", entity["id"]):
+                keep(anchor)
+                for evidence in self.attestations(anchor["id"]):
+                    keep(evidence)
+                if type_name == "workplan/closure-claim":
+                    result = self.query(**{"query/type": Keyword("assessments"),
+                                           "subject-id": anchor["id"], "limit": 200})
+                    for rid in result["assessment-ids"]:
+                        keep(self.record(rid))
+        return {"entity": entity, "serves": served, "names": [], "mentions": [],
+                "records": list(stored.values())}
+
+    def introductions(self, entity_clusion_id):
+        return self.reverse("workplan/introduction", 1, "entity", entity_clusion_id)
+
+
 # ------------------------------------------------------------- questions ---
 
 def question_links(questions_path, item_ids):
@@ -497,6 +624,16 @@ def build_item(item_id, ctx):
     disp_mentions, disp_waiting, disp_related = [], [], []
     disp_benefits, disp_names = [], []
     live_sha = None
+    substrate = isinstance(ctx["arxana"], Futon1bSource)
+    source_ref = "futon1b Arxana" if substrate else ":7094 workplan/item-view"
+    view_error = None
+    try:
+        view = ctx["arxana"].item_view(item_id) if ctx["arxana"] else None
+    except (ValueError, OSError, KeyError, sqlite3.Error) as exc:
+        if not substrate:
+            raise
+        view, view_error = None, str(exc)
+    entity = (view or {}).get("entity")
 
     def emit_record(type_key, ident, fields, provenance, supersedes=None):
         body, status = apply_shape(type_key, fields, shapes)
@@ -532,10 +669,11 @@ def build_item(item_id, ctx):
     else:
         absences.append({"what": "state group",
                          "reason": "item document not found on disk (%s)" % doc_path})
-    emit_record("[:workplan/item 1]", "item/" + item_id,
-                {"item-id": item_id, "title": title, "path": doc_path,
-                 "repo": ctx["repos"].get(item_id), "doc-sha256": doc_sha},
-                {"source": "file", "ref": doc_path, "basis": "parser"})
+    if not substrate:
+        emit_record("[:workplan/item 1]", "item/" + item_id,
+                    {"item-id": item_id, "title": title, "path": doc_path,
+                     "repo": ctx["repos"].get(item_id), "doc-sha256": doc_sha},
+                    {"source": "file", "ref": doc_path, "basis": "parser"})
     if group is not None:
         emit_record("[:giraffe/state-group 1]", "state/" + item_id,
                     {"item-id": item_id, "state-group": group,
@@ -653,13 +791,30 @@ def build_item(item_id, ctx):
                                  "resolved": tinfo is not None,
                                  "kind": kind})
 
-    # ---- :7094 workplan stack ---------------------------------------------
-    view = ctx["arxana"].item_view(item_id) if ctx["arxana"] else None
+    # ---- selected workplan source ----------------------------------------
     if view is None:
         absences.append({"what": "workplan stack records",
-                         "reason": "no workplan/item-view for %s on :7094 "
+                         "reason": view_error or "no workplan/item-view for %s on :7094 "
                                    "(item not in the 323-item load, or stack unreachable)" % item_id})
     else:
+        if substrate:
+            for rec in view["records"]:
+                revision = rec.get("type-revision")
+                type_key = ("[:%s %s]" % (str(revision[0]).lstrip(":"), revision[1]) if revision
+                            else "assessment" if "verdict" in rec else "attestation")
+                fields = dict(rec.get("asserted-content") or rec.get("content") or {})
+                fields["item-id"] = entity["id"]
+                # Keep the full stored evidence, standing and source references inspectable.
+                fields["record"] = rec
+                body, _status = apply_shape(type_key, fields, shapes)
+                records.append({"type": type_key, "status": "built", "id": rec["id"],
+                                "fields": body, "provenance": {"source": "futon1b", "ref": rec["id"],
+                                "basis": rec.get("basis")}, "supersedes": None})
+            absences.extend([
+                {"what": "names links", "reason": "not rebuilt yet: writer-owned names projection"},
+                {"what": "mentions", "reason": "not rebuilt yet: writer-owned mentions projection"},
+                {"what": "pending level", "reason": "no current readiness policy; migrated pending levels are historical, unverified reductions"},
+                {"what": "introductions", "reason": "item-to-lexicon names projection not rebuilt yet; introduction records remain queryable by lexicon entity"}])
         drafts = (view.get("attestations") or {}).get("drafts") or []
         level_att = next((a for a in drafts
                           if "pending" in json.dumps(a.get("method", {})).lower()), None)
@@ -673,7 +828,7 @@ def build_item(item_id, ctx):
                          "note": level_att.get("note")},
                         {"source": "agent", "ref": ":7094 workplan/item-view",
                          "basis": "model"})
-        else:
+        elif not substrate:
             absences.append({"what": "pending level",
                              "reason": "no pending/level draft attestation on the item"})
         named_entity_ids = []
@@ -690,12 +845,13 @@ def build_item(item_id, ctx):
         for s in view.get("serves") or []:
             bl = s.get("benefit-line") or {}
             line = (bl.get("asserted-content") or {}).get("benefit/line", bl.get("id"))
-            emit_record("[:workplan/serves 1]", "serves/%s/%s" % (item_id, line),
-                        {"item-id": item_id, "benefit-line": line,
-                         "producer": s.get("producer"),
-                         "draft": bool(s.get("draft?"))},
-                        {"source": "agent", "ref": ":7094 workplan/item-view",
-                         "basis": "model"})
+            if not substrate:
+                emit_record("[:workplan/serves 1]", "serves/%s/%s" % (item_id, line),
+                            {"item-id": item_id, "benefit-line": line,
+                             "producer": s.get("producer"),
+                             "draft": bool(s.get("draft?"))},
+                            {"source": "agent", "ref": ":7094 workplan/item-view",
+                             "basis": "model"})
             bname = next(((a.get("content") or {}).get("benefit/name")
                           for a in s.get("benefit/attestations") or []
                           if (a.get("content") or {}).get("benefit/name")), None)
@@ -705,12 +861,12 @@ def build_item(item_id, ctx):
                         {"absent": "no benefit/name attestation on the "
                                    "benefit-line 'clusion for %s" % line},
                 "producer": s.get("producer"), "draft": bool(s.get("draft?"))})
-        if not (view.get("names") or []):
+        if not substrate and not (view.get("names") or []):
             absences.append({"what": "names links",
                              "reason": "item names no lexicon entity on :7094"})
         if not (view.get("serves") or []):
             absences.append({"what": "serves links",
-                             "reason": "item serves no benefit line on :7094"})
+                             "reason": "item serves no benefit line in " + source_ref})
         for m in view.get("mentions") or []:
             att = m.get("attestation") or {}
             emit_record("[:workplan/mention 1]",
@@ -752,13 +908,13 @@ def build_item(item_id, ctx):
                             {"source": "joe", "ref": ":7094 workplan/introduction",
                              "basis": "human"})
                 intro_count += 1
-        if intro_count == 0 and not intro_err:
+        if not substrate and intro_count == 0 and not intro_err:
             absences.append({"what": "introductions",
                              "reason": "no entity named by this item has a "
                                        "workplan/introduction on :7094"})
 
     # ---- Xiang turn mentions ----------------------------------------------
-    for tm in ctx["turns"].get(item_id, []):
+    for tm in ([] if substrate else ctx["turns"].get(item_id, [])):
         emit_record("[:workplan/mention 1]",
                     "turn-mention/%s/%s" % (item_id, tm["turn"]),
                     {"item-id": item_id, "role": "context",
@@ -770,7 +926,7 @@ def build_item(item_id, ctx):
                               "role": "context",
                               "who": tm.get("labeller") or "unknown",
                               "turn": tm.get("evidence_id") or tm["turn"]})
-    if not ctx["turns"].get(item_id):
+    if not substrate and not ctx["turns"].get(item_id):
         absences.append({"what": "turn mentions",
                          "reason": "no analyzed operator turn text names %s" % item_id})
 
@@ -800,6 +956,10 @@ def build_item(item_id, ctx):
                  "state_group": group if group is not None
                  else {"absent": "item document not found or status unmapped"}}
 
+    if substrate:
+        item_node["entity_ref"] = ({"id": entity["id"], "type": entity["type"]} if entity
+                                   else {"absent": view_error or "substrate entity unavailable"})
+
     # ---- display block (contract v2): words and dates, never a bare hash --
     repo = ctx["repos"].get(item_id)
     rel_path = None
@@ -826,6 +986,7 @@ def build_item(item_id, ctx):
                      "first": disp_mentions[0] if disp_mentions else None,
                      "latest": disp_mentions[-1] if disp_mentions else None,
                      "list": disp_mentions}
+    disp_benefits.sort(key=lambda b: (b["code"] or "", b["producer"] or "", json.dumps(b["text"], sort_keys=True)))
     display = {"header": {"id": item_id, "title": title,
                           "state_group": group, "declared_status": declared,
                           "path": rel_path},
@@ -835,6 +996,9 @@ def build_item(item_id, ctx):
                "why": {"benefit_lines": disp_benefits, "question": question_disp},
                "names": disp_names,
                "mentions": mentions_disp}
+    if substrate:
+        display["names"] = {"absent": "not rebuilt yet: writer-owned names projection"}
+        display["mentions"] = {"absent": "not rebuilt yet: writer-owned mentions projection"}
     return ({"item": item_node, "display": display, "records": records,
              "links": links, "absences": absences},
             {"id": item_id, "title": title, "kind": kind, "counts": counts})
@@ -872,11 +1036,18 @@ def main(argv=None):
         "~/.local/state/futon3c/giraffe-reread/requests.sqlite"))
     ap.add_argument("--turns", default=os.path.expanduser("~/.emacs-graph/session-turn-analysis"))
     ap.add_argument("--questions", default="/home/joe/code/futon7/holes/argument-graph/questions.edn")
+    ap.add_argument("--source", choices=("workplan", "futon1b"), default="workplan")
+    ap.add_argument("--futon1b", default="http://localhost:7073")
+    ap.add_argument("--entity-sidecar", default=os.path.expanduser("~/code/futon1b/migration-store-21/fts5-evidence.db"))
+    ap.add_argument("--arxana-principal", default=None)
     ap.add_argument("--arxana", default="http://localhost:7094/arxana/v1")
     ap.add_argument("--arxana-fixture", default=None,
                     help="directory of canned item-view JSON (tests)")
     ap.add_argument("--no-arxana", action="store_true")
     args = ap.parse_args(argv)
+
+    if args.source == "futon1b" and (args.no_arxana or args.arxana_fixture):
+        ap.error("--source futon1b cannot be combined with --no-arxana or --arxana-fixture")
 
     with open(args.shapes, encoding="utf-8") as f:
         shapes = edn_load(f.read())
@@ -895,14 +1066,16 @@ def main(argv=None):
         if shas:
             needed[iid] = shas
     historical = find_historical_readings(args.corpus + ".generations", needed)
-    if args.no_arxana:
+    if args.source == "futon1b":
+        arxana = Futon1bSource(args.futon1b, args.entity_sidecar, args.arxana_principal)
+    elif args.no_arxana:
         arxana = None
     elif args.arxana_fixture:
         arxana = ArxanaSource(fixture_dir=args.arxana_fixture)
     else:
         arxana = ArxanaSource(url=args.arxana)
     questions, q_err = question_links(args.questions, item_ids)
-    turns, _t_err = turn_mentions(args.turns, item_ids)
+    turns, _t_err = ({}, None) if args.source == "futon1b" else turn_mentions(args.turns, item_ids)
 
     ctx = {"shapes": shapes, "members": {m["id"]: m for m in members},
            "corpus": corpus_records, "corpus_real": corpus_real,
