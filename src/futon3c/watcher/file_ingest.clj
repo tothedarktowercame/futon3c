@@ -502,7 +502,7 @@
 ;; ---------- collect-file dispatch ----------
 
 (def ^:private base-excluded-dir-re
-  "/\\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv[^/]*|state)/|/node_modules/|/target/|/out/|/__pycache__/")
+  "/\\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv[^/]*|lake|state)/|/node_modules/|/target/|/out/|/__pycache__/")
 
 (defn- extra-excluded-dir-alternation
   "Installation-scoped extra dir exclusions from FUTON3C_WATCH_EXCLUDE_DIRS (comma-separated dir

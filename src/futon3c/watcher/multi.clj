@@ -58,7 +58,7 @@
   ;; evolver scratch incl its own logs). Do NOT bake /home/ or /data/ into the base list — Joe's
   ;; futon checkouts live under /home/joe/code and would be wholly excluded.
   (re-pattern
-   (str "/\\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv[^/]*|state)/|/node_modules/|/target/|/out/|/__pycache__/"
+   (str "/\\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv[^/]*|lake|state)/|/node_modules/|/target/|/out/|/__pycache__/"
         (when-let [dirs (some-> (System/getenv "FUTON3C_WATCH_EXCLUDE_DIRS") str/trim not-empty)]
           (let [names (->> (str/split dirs #",") (map str/trim) (remove str/blank?))]
             (when (seq names)
@@ -1213,6 +1213,23 @@
           retracted (retract-declaration-manifest! dropped)]
       {:ingest result :dropped dropped :retracted retracted})))
 
+(def max-deletions-per-cycle 200)
+
+(def deferred-deletions-file
+  (str (System/getProperty "user.home") "/storage/watcher/deferred-deletions.tsv"))
+
+(defn- record-deferred-deletion!
+  "Append a deletion the watcher could not process (label, path, error) to
+  `deferred-deletions-file`, for a later batch pass."
+  [label path msg]
+  (try
+    (let [f (java.io.File. ^String deferred-deletions-file)]
+      (.mkdirs (.getParentFile f))
+      (spit f (str (java.time.Instant/now) "\t" label "\t" path "\t"
+                   (str/replace (str msg) #"[\t\n]" " ") "\n")
+            :append true))
+    (catch Throwable _ nil)))
+
 (defn handle-deletion!
   [{:keys [path root label run-id event-n hash prior-manifest]}]
   (if (some? prior-manifest)
@@ -1593,14 +1610,36 @@
           ;; and debounced: a burst of 81 files is one build.
           (doseq [p (concat dispatch-paths deleted (mapcat (juxt :from :to) renamed))]
             (pattern-index/on-file-event! p))
-          (doseq [p deleted]
+          ;; A mass deletion (8,400 paths when the futon1/futon1 loop went)
+          ;; at ~5 s per lookup would hold the watcher for hours: past the
+          ;; cap, record every path for a batch pass instead.
+          (when (> (count deleted) max-deletions-per-cycle)
+            (doseq [p deleted]
+              (record-deferred-deletion! label p "mass deletion, over cap"))
+            (binding [*out* *err*]
+              (println (format "[deletion-deferred] %s: %d deletions over cap %d, recorded in %s"
+                               label (count deleted) max-deletions-per-cycle
+                               deferred-deletions-file))))
+          (doseq [p (if (> (count deleted) max-deletions-per-cycle) [] deleted)]
             (mark-subtask! {:phase :deletion :repo label :path p})
             (let [ev-n (swap! event-n inc)]
-              (handle-deletion! {:path p :root root :label label
-                                 :run-id run-id :event-n ev-n
-                                 :hash (get-in cache [p :hash])
-                                 :prior-manifest
-                                 (get-in cache [p :declaration-manifest])})))
+              ;; One failed deletion must not unsettle the whole root: the
+              ;; source-file lookup behind it is an unindexed ~15 s query, so
+              ;; a burst of deletions (a removed .venv-motifs/, the
+              ;; futon1/futon1 symlink loop) timed out every cycle and
+              ;; re-dispatched the root forever (2026-11-13). Record the
+              ;; failure for a batch pass and carry on.
+              (try
+                (handle-deletion! {:path p :root root :label label
+                                   :run-id run-id :event-n ev-n
+                                   :hash (get-in cache [p :hash])
+                                   :prior-manifest
+                                   (get-in cache [p :declaration-manifest])})
+                (catch Throwable t
+                  (record-deferred-deletion! label p (.getMessage t))
+                  (binding [*out* *err*]
+                    (println (format "[deletion-deferred] %s %s: %s"
+                                     label p (.getMessage t))))))))
           (doseq [{:keys [from to hash]} renamed]
             (mark-subtask! {:phase :rename :repo label :from from :to to})
             (let [ev-n (swap! event-n inc)]
