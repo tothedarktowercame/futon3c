@@ -10,7 +10,10 @@
             [futon3c.giraffe.reread-queue :as queue]
             [futon3c.giraffe.reread-service :as service]
             [futon3c.giraffe.reread-worker :as worker]
-            [futon3c.giraffe.run :as run])
+            [futon3c.giraffe.run :as run]
+            [futon3c.xiang.turn-service :as turn-service]
+            [futon3c.xiang.turn-store :as ts]
+            [next.jdbc :as jdbc])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]
            [java.util.concurrent ScheduledThreadPoolExecutor TimeUnit]))
@@ -213,3 +216,90 @@
           (is (= :attention (:status h)))
           (is (= "fixture corpus unavailable" (:health-error h)))
           (is (= [] (:requests h))))))))
+
+(defn- turn-fixture []
+  (let [config (fixture) root (temp-dir) sidecar (io/file root "entities.sqlite")
+        db (jdbc/get-datasource {:dbtype "sqlite" :dbname (str sidecar)})
+        store (ts/store (io/file root "turns"))]
+    (jdbc/execute! db ["CREATE TABLE ent_node(id TEXT, external_id TEXT, type TEXT)"])
+    (doseq [[id external kind] [["fixture/mission/x" "M-x" ":mission/doc"]
+                                ["fixture/ticket/y" "T-y" ":ticket/doc"]
+                                ["fixture/excursion/z" "E-z" "excursion/doc"]
+                                ["legacy-x" "M-x" ":mission"]]]
+      (jdbc/execute! db ["INSERT INTO ent_node VALUES(?,?,?)" id external kind]))
+    (assoc config :entity-sidecar (str sidecar) :turn-store store :fixture-db db)))
+
+(defn- flush-events! []
+  (.get (.submit ^ScheduledThreadPoolExecutor (:executor (service-state))
+                 ^java.util.concurrent.Callable (fn [] true)) 2 TimeUnit/SECONDS))
+
+(deftest settled-turn-marks-two-items-and-mints-once-without-rereading
+  (let [config (turn-fixture) listener (atom nil) boot (promise) minted (promise)
+        workers (atom 0) mints (atom 0) id "turn-fixtureDiscuss"]
+    (ts/write-record-id! (:turn-store config) id
+                         {:source_text "Discuss M-x and M-x; M-unknown is not indexed."
+                          :reply_text "This also concerns T-y."})
+    (ts/publish-analysis! (:turn-store config) id {:acts [{:referent "M-x"}]})
+    (with-redefs [turn-service/add-turn-listener! (fn [key f]
+                                                   (is (= :futon3c.giraffe.reread-service/giraffe key))
+                                                   (reset! listener f))
+                  worker/run-once! (fn [_] (swap! workers inc) (deliver boot true) {:status :idle})
+                  service/item-snapshot (fn [& _] (throw (ex-info "Turn must not reread a document" {})))
+                  queue/reconcile-item! (fn [& _] (throw (ex-info "Turn must not enqueue" {})))]
+      (service/start! (assoc config :mint-fn #(do (swap! mints inc) (deliver minted true)
+                                                 {:status :minted :run-id "fixture-turn-priority"})))
+      (is (= true (deref boot 2000 :timeout)))
+      (@listener {:event :recorded :id id})
+      (@listener {:event :settled :id id})
+      (@listener {:event :settled :id id})
+      (flush-events!)
+      (let [h (service/health)]
+        (is (= #{"M-x" "T-y"} (set (keys (:discussed h)))))
+        (is (= #{"fixture/mission/x" "fixture/ticket/y"}
+               (set (map :entity-id (vals (:discussed h))))))
+        (is (every? #(and (= id (:turn-id %)) (pos-int? (:at-ms %))) (vals (:discussed h))))
+        (is (= 1 (:unknown-turn-item-count h)))
+        (is (= [] (:requests h))))
+      (is (= true (deref minted 2000 :timeout)))
+      (flush-events!)
+      (is (= 1 @mints))
+      (is (= 1 @workers))
+      (is (= 0 (:pending-landings (batch/read-state (:mint-state-path config)))))
+      (is (empty? (:errors (service/health)))))))
+
+(deftest turns-with-no-items-or-only-unknown-items-do-not-mint
+  (let [config (turn-fixture) listener (atom nil) boot (promise) mints (atom 0)]
+    (ts/write-record-id! (:turn-store config) "turn-fixtureNone" {:source_text "No task identifiers here."})
+    (ts/write-record-id! (:turn-store config) "turn-fixtureUnknown" {:reply_text "M-unknown M-unknown"})
+    (with-redefs [turn-service/add-turn-listener! (fn [_ f] (reset! listener f))
+                  worker/run-once! (fn [_] (deliver boot true) {:status :idle})]
+      (service/start! (assoc config :mint-fn #(do (swap! mints inc) {:status :minted})))
+      (is (= true (deref boot 2000 :timeout)))
+      (@listener {:event :settled :id "turn-fixtureNone"})
+      (flush-events!)
+      (is (= {} (:discussed (service/health))))
+      (is (= 0 (:unknown-turn-item-count (service/health))))
+      (@listener {:event :settled :id "turn-fixtureUnknown"})
+      (flush-events!)
+      (is (= 1 (:unknown-turn-item-count (service/health))))
+      (is (nil? (:turn-mint-task (service-state))))
+      (is (= 0 @mints)))))
+
+(deftest turn-resolution-is-read-only-and-rejects-ambiguous-document-identities
+  (let [config (turn-fixture)]
+    (is (= ["E-z"] (mapv :external-id (:items (service/items-touched-by-turn {:象 {:referent "E-z"}} config)))))
+    (jdbc/execute! (:fixture-db config) ["INSERT INTO ent_node VALUES('other/x','M-x',':mission/doc')"])
+    (let [result (service/items-touched-by-turn {:source_text "M-x T-y M-absent"} config)]
+      (is (= ["T-y"] (mapv :external-id (:items result))))
+      (is (= ["M-x"] (:ambiguous-ids result)))
+      (is (= ["M-absent"] (:unknown-ids result))))
+    (let [missing (io/file (temp-dir) "missing.sqlite")]
+      (is (thrown? java.sql.SQLException
+                   (service/items-touched-by-turn {:source_text "M-x"} {:entity-sidecar (str missing)})))
+      (is (not (.exists missing))))))
+
+(deftest stop-removes-the-circus-listener
+  (let [removed (atom [])]
+    (with-redefs [turn-service/remove-turn-listener! #(swap! removed conj %)]
+      (service/stop!)
+      (is (= [:futon3c.giraffe.reread-service/giraffe] @removed)))))

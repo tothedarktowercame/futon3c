@@ -11,11 +11,56 @@
             [futon3c.giraffe.reread-cli :as cli]
             [futon3c.giraffe.reread-mint-batch :as mint-batch]
             [futon3c.giraffe.reread-queue :as queue]
-            [futon3c.giraffe.run :as giraffe-run])
-  (:import [java.util.concurrent ScheduledThreadPoolExecutor ScheduledFuture TimeUnit ThreadFactory]))
+            [futon3c.giraffe.run :as giraffe-run]
+            [futon3c.xiang.turn-service :as turn-service]
+            [futon3c.xiang.turn-store :as ts])
+  (:import [java.sql DriverManager]
+           [java.util.concurrent ScheduledThreadPoolExecutor ScheduledFuture TimeUnit ThreadFactory]))
 
 (defonce ^:private state (atom {:status :stopped}))
 (defonce ^:private lock (Object.))
+
+(def default-entity-sidecar
+  (str (System/getProperty "user.home") "/code/futon1b/migration-store-21/fts5-evidence.db"))
+
+(defn- live-turn-store []
+  (when-let [http (find-ns 'futon3c.transport.http)]
+    (when-let [service (ns-resolve http 'xiang-bell-service)]
+      (get-in (service) [:config :store]))))
+
+(defn items-touched-by-turn
+  "Temporary mention projection, replaceable by the Circus turn projector.
+   Resolve explicit M-/E-/T- tokens in turn text and 象 readings to document
+   entities, never legacy workplan items. Read-only SQLite; ambiguous identities
+   are reported separately, never selected arbitrarily. IDs repeat once per turn."
+  ([record] (items-touched-by-turn record {:entity-sidecar default-entity-sidecar}))
+  ([record {:keys [entity-sidecar]}]
+   (let [fields (select-keys record [:source_text :reply_text :analysis :reading :draft
+                                     :xiang :象 :happened_summary])
+         ids (->> (tree-seq coll? seq fields)
+                  (filter string?)
+                  (mapcat #(re-seq #"(?<![A-Za-z0-9_-])[MET]-[A-Za-z0-9][A-Za-z0-9_-]*" %))
+                  distinct sort)
+         empty-result {:items [] :unknown-ids [] :ambiguous-ids []}]
+     (if (empty? ids)
+       empty-result
+       (with-open [db (DriverManager/getConnection
+                       (str "jdbc:sqlite:" (.toASCIIString (.toURI (io/file entity-sidecar))) "?mode=ro"))
+                   query (.prepareStatement db "SELECT id FROM ent_node WHERE external_id=? AND type IN (?,?)")]
+         (reduce
+          (fn [result id]
+            (let [kind (case (first id) \M "mission/doc" \E "excursion/doc" \T "ticket/doc")]
+              (.setString query 1 id)
+              (.setString query 2 kind)
+              (.setString query 3 (str ":" kind))
+              (with-open [rows (.executeQuery query)]
+                (let [matches (loop [found []]
+                                (if (.next rows) (recur (conj found (.getString rows "id"))) found))]
+                  (case (count matches)
+                    0 (update result :unknown-ids conj id)
+                    1 (update result :items conj {:external-id id :entity-id (first matches) :type kind})
+                    (update result :ambiguous-ids conj id))))))
+          empty-result ids))))))
 
 (defn load-config
   "Read EnvironmentFile assignments without evaluating shell code. Process
@@ -45,7 +90,8 @@
                        :pointer (or (get env "GIRAFFE_READINGS_ROOT") cli/default-pointer)
                        :giraffe-root (or (get env "GIRAFFE_ROOT") cli/default-root)
                        :edges (or (get env "GIRAFFE_EDGES") cli/default-edges)
-                       :mint-state-path mint-batch/default-state-path :debounce-ms 4000}
+                       :mint-state-path mint-batch/default-state-path :debounce-ms 4000
+                       :entity-sidecar default-entity-sidecar :turn-store live-turn-store}
                       (dissoc opts :env-file :environment))]
     (when-not (and (seq (:reader-seats config))
                    (every? #(and (string? %) (not (str/blank? %))) (:reader-seats config))
@@ -195,6 +241,65 @@
             (swap! state assoc-in [:pending id] {:path path :serial serial :task task})
             {:status :scheduled :item-id id}))))))
 
+(defn- schedule-turn-mint! [token]
+  (locking lock
+    (when (active? token)
+      (when-let [^ScheduledFuture task (:turn-mint-task @state)] (.cancel task false))
+      (let [{:keys [config executor]} @state]
+        (swap! state assoc :turn-mint-task
+               (.schedule ^ScheduledThreadPoolExecutor executor
+                          ^Runnable
+                          (fn []
+                            (swap! state dissoc :turn-mint-task)
+                            (when (active? token)
+                              (try
+                                (let [result (mint-batch/step!
+                                              {:path (:mint-state-path config)
+                                               :window-ms (:mint-window-ms config)
+                                               :now-ms (System/currentTimeMillis) :refresh? true
+                                               :landed-count 0 :mint-fn (:mint-fn config)})]
+                                  (swap! state assoc :last-mint result :last-turn-mint result)
+                                  (swap! state update :errors dissoc :turn-mint)
+                                  (schedule-mint! token result))
+                                (catch Exception e (failure! token :turn-mint e)))))
+                          (long (:debounce-ms config)) TimeUnit/MILLISECONDS))))))
+
+(defn- handle-turn! [token {:keys [id]}]
+  (when (and (active? token) (not (contains? (:seen-turns @state) id)))
+    (try
+      (let [config (:config @state)
+            store (:turn-store config)
+            store (if (fn? store) (store) store)
+            record (when store (ts/read-record store id))]
+        (when-not record
+          (throw (ex-info "Settled turn record unavailable" {:turn-id id})))
+        (let [analysis (ts/read-analysis store id)
+              draft (ts/read-draft store id)
+              record (cond-> record analysis (assoc :analysis analysis) draft (assoc :draft draft))
+              {:keys [items unknown-ids ambiguous-ids]} (items-touched-by-turn record config)
+              now (System/currentTimeMillis)]
+          (swap! state
+                 (fn [s]
+                   (-> (reduce (fn [s item]
+                                 (assoc-in s [:discussed (:external-id item)]
+                                           (assoc item :turn-id id :at-ms now))) s items)
+                       (update :seen-turns conj id)
+                       (update :unknown-turn-item-count + (count unknown-ids))
+                       (update :ambiguous-turn-item-count + (count ambiguous-ids)))))
+          (when (seq items) (schedule-turn-mint! token))
+          (swap! state update :errors dissoc [:turn id])))
+      (catch Exception e (failure! token [:turn id] e)))))
+
+(defn- listen-for-turns! [token]
+  (turn-service/add-turn-listener!
+   ::giraffe
+   (fn [{:keys [event id] :as turn}]
+     (when (and (= :settled event) (ts/record-id? id))
+       (locking lock
+         (when (active? token)
+           (.execute ^ScheduledThreadPoolExecutor (:executor @state)
+                     ^Runnable #(handle-turn! token turn))))))))
+
 (defn start!
   "Start once, asynchronously catching up through the full CLI reconciliation.
    Config is read at start, not namespace load. No systemd units are changed."
@@ -216,7 +321,9 @@
                           (.setRemoveOnCancelPolicy true))
                token (Object.)]
            (reset! state {:status :starting :running? true :token token :executor executor
-                          :config config :pending {} :errors {} :identities {}})
+                          :config config :pending {} :errors {} :identities {}
+                          :discussed {} :seen-turns #{}
+                          :unknown-turn-item-count 0 :ambiguous-turn-item-count 0})
            (.execute executor
                      ^Runnable
                      (fn []
@@ -237,6 +344,7 @@
                            (catch Exception e
                              (failure! token :startup e)
                              (swap! state assoc :status :failed :running? false))))))
+           (listen-for-turns! token)
            {:status :starting}))))))
 
 (defn stop!
@@ -244,7 +352,8 @@
    may finish; start! refuses another executor until that one terminates."
   []
   (locking lock
-    (doseq [task (concat (keep :task (vals (:pending @state))) [(:mint-task @state) (:lease-task @state)])
+    (turn-service/remove-turn-listener! ::giraffe)
+    (doseq [task (concat (keep :task (vals (:pending @state))) [(:mint-task @state) (:lease-task @state) (:turn-mint-task @state)])
             :when task]
       (.cancel ^ScheduledFuture task false))
     (swap! state assoc :running? false :status :stopped :pending {})
@@ -269,4 +378,8 @@
                                                 :stopping :stopped)
                           :else status)
             :queue-status (:status queue-health) :pending-items (vec (keys pending))
-            :errors errors :last-round last-round :mint-batch last-mint})))
+            :errors errors :last-round last-round :mint-batch last-mint
+            :discussed (:discussed @state)
+            :unknown-turn-item-count (:unknown-turn-item-count @state)
+            :ambiguous-turn-item-count (:ambiguous-turn-item-count @state)
+            :last-turn-mint (:last-turn-mint @state)})))

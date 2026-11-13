@@ -27,8 +27,9 @@
 
 (defn step!
   "Record LANDED-COUNT and mint only when the window has elapsed or QUEUE-IDLE?
-  demands the final mint. State is durable across timer JVMs."
-  [{:keys [path window-ms now-ms landed-count queue-idle? mint-fn]
+  demands the final mint. :refresh? also requests a mint after a settled turn,
+  without inventing a reading landing. State is durable across processes."
+  [{:keys [path window-ms now-ms landed-count queue-idle? mint-fn refresh?]
     :or {path default-state-path landed-count 0}}]
   (when-not (pos-int? window-ms)
     (throw (ex-info "A positive mint batching window is required"
@@ -36,8 +37,9 @@
   (let [state (update (read-state path) :pending-landings + landed-count)
         pending (:pending-landings state)
         last-at (:last-mint-at-ms state)
-        due? (and (pos? pending)
-                  (or queue-idle? (nil? last-at) (>= (- now-ms last-at) window-ms)))]
+        due? (or refresh?
+                 (and (pos? pending)
+                      (or queue-idle? (nil? last-at) (>= (- now-ms last-at) window-ms))))]
     (if-not due?
       (assoc (write-state! path state) :status :deferred)
       (let [result (mint-fn)
