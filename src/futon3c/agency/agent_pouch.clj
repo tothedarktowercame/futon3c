@@ -1050,7 +1050,6 @@
                   (Thread/sleep (missing-trailer-grace-ms))
                   (locking demux
                     (when (and @open?
-                               candidate-owner
                                (identical? candidate-owner @owner)
                                (= candidate-turn @turn-id)
                                (= event-seq @activity-seq))
@@ -1061,7 +1060,15 @@
                       (emit! {:type "result"
                               :subtype "missing_trailer_inferred"
                               :session_id @sid})
-                      (finish-turn! event true))))))]
+                      (finish-turn! event true)
+                      ;; A solicited caller sees :pouch/trailer-inferred? and
+                      ;; recycles the pouch in run-pouch-turn!. An autonomous
+                      ;; turn has no caller to do that cleanup. Kill it here so
+                      ;; a late real trailer cannot become the next turn, and
+                      ;; fail any waiter parked behind this open autonomous
+                      ;; turn; the invoke layer will retry that waiter cold.
+                      (when-not candidate-owner
+                        (evict! aid)))))))]
       (try
         (loop []
           (if-let [line (.readLine r)]

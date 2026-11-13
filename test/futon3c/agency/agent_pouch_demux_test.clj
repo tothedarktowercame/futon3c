@@ -97,6 +97,24 @@
     (.deleteOnExit f)
     (.getAbsolutePath f)))
 
+(defn- autonomous-missing-result-bin
+  "Announce an autonomous turn and emit its final text without `result`.
+   A real operator waiter is already registered behind it."
+  []
+  (let [f (java.io.File/createTempFile "fake-claude-auto-missing-result-" ".py")]
+    (spit f
+          (str "#!/usr/bin/env python3\n"
+               "import json, sys, time\n"
+               "def emit(o): print(json.dumps(o), flush=True)\n"
+               "emit({'type':'system','subtype':'task_notification'})\n"
+               "emit({'type':'system','subtype':'init','session_id':'auto-missing-result'})\n"
+               "emit({'type':'assistant','message':{'content':"
+               "[{'type':'text','text':'AUTONOMOUS-FINAL-WITHOUT-RESULT'}]}})\n"
+               "time.sleep(60)\n"))
+    (.setExecutable f true)
+    (.deleteOnExit f)
+    (.getAbsolutePath f)))
+
 (defn- duplicate-init-bin
   "A fresh Claude process may emit two init records for one solicited turn."
   []
@@ -376,6 +394,29 @@
         "the original event stream receives an explicit terminal tripwire")
     (is (nil? (get (pouch/snapshot) "demux-missing-result"))
         "the boundary-untrustworthy pouch is recycled, not reused or cold-replayed")))
+
+(deftest autonomous-text-only-quiescence-unblocks-the-operator-waiter
+  ;; Live claude-9/13 failure, 2026-11-13: an autonomous/parked-resume turn
+  ;; wrote its complete final answer but omitted `result`. The existing tripwire
+  ;; required a non-nil owner, so it never closed the autonomous protocol turn;
+  ;; the already-registered operator waiter remained queued forever.
+  (demux-on!)
+  (System/setProperty "FUTON3C_POUCH_MISSING_TRAILER_GRACE_MS" "50")
+  (let [seen (promise)
+        bin (autonomous-missing-result-bin)]
+    (pouch/set-unsolicited-sink!
+     (fn [_ turn] (deliver seen turn)))
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"pouch was evicted while a turn was waiting"
+         (pouch/feed-turn! "demux-autonomous-missing-result" "operator-turn"
+                           {:claude-bin bin :timeout-ms 5000
+                            :turn-id "operator-turn"})))
+    (is (= "AUTONOMOUS-FINAL-WITHOUT-RESULT"
+           (:result (deref seen 5000 nil)))
+        "the completed autonomous answer is delivered before recycling")
+    (is (nil? (get (pouch/snapshot) "demux-autonomous-missing-result"))
+        "the poisoned pouch is gone so the invoke layer can retry cold")))
 
 (deftest off-path-still-serves-turns
   ;; Regression guard on the byte-for-byte OFF path. Deliberately no assertion
