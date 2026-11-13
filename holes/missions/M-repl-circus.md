@@ -822,6 +822,19 @@ above identifies a missing witness.
 7. INSTANTIATE: rewrite CLAUDE.md's minus40 section (it still names the
    retired :7093 store) to treat 驴/狗 lines as entry points; 猴 from 馬
    stays on hold.
+8. DOCUMENT: the mission write-up, including
+   [E-workplan-validation](../excursions/E-workplan-validation.md) (Joe,
+   2026-11-13): the model-made workplan history (serves links, readings,
+   lexicon surveys, referents) is migrated as unverified records, and a later
+   validation stage gives each a verdict.
+
+Progress on items 1–3 (2026-11-13): dedup done (mission/doc 1,276 → 416,
+excursion/doc 767; only M-coordination-rewrite and
+M-u88-contextual-preferences remain twice, as different documents); the
+batched scope writer is live (M-librarian re-ingest 36 s, same edges); the
+:7094 plan is written and Joe decided to keep the model-made history
+(E-workplan-validation); tickets become `ticket/doc` entities first so the
+19 workplan tickets attach like every other item.
 
 ## Acceptance checklist (IDENTIFY)
 
