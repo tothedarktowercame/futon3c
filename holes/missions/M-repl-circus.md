@@ -684,6 +684,46 @@ entity reference.
 - Cost: a pass per settled turn, or debounced like the pattern-index watcher.
 - The CTRL write-up.
 
+## Path to closure (claude-13, 2026-11-13)
+
+Joe, 2026-11-12: "possibly thing are set up so that M-repl-circus will close
+quickly after this is done and/or we could get everything in place so that
+becomes the case". What is in place, and what is left, in order.
+
+**In place**
+- Invariant 2, coverage: `futon3c.logic.turn-coverage` (`307e918f4`), report
+  `scripts/turn_coverage.clj`. Run 2026-11-13 00:13Z for claude-13 since
+  11-12 00:00Z: 52 operator turns, 52 covered, 0 uncovered.
+- Invariant 1, attachment: indexed `*象 stepper:<agent>*` buffers and the
+  Reazon check `emacs/turn-stepper-invariants.el` (`f5526ed01`, `983896667`).
+- Two JVMs: memory store migrated into futon1b, seven Arxana demo JVMs and
+  :7084/:8097 retired (DERIVE §Two JVMs; futon4 M-jvm-arxana).
+- futon1b reads fast enough for pages: permits 8, hydration by `_id = ?`,
+  flat Arxana columns, mission-scope sidecar reads (futon1b `a59a349`,
+  `fcb0e63`, `5ea3be93f`, `b37dbc3`).
+- One entity per mission: writers share `mission_ids.clj` (`36d559dfc`);
+  M-formal-arxana merged; stage 2 (the other 89) running overnight,
+  `~/storage/substrate-dedup-2026-11-12/stage2.log`.
+
+**Left, in order**
+1. Finish dedup: stage 2; repoint the held, clock and cascade edges it sets
+   aside (`deferred-repoint.tsv`) onto the surviving entities; retract the
+   591 duplicate excursion stubs.
+2. Scope ingester writes a mission's edges in one batch, not one HTTP write
+   per edge (stage 2 measured 0.3–1 s per write, 5–20 min per mission).
+3. Workplan :7094: load its records of record (Joe's introductions,
+   verdicts) as GCC records on the entity ids, then stop the JVM.
+4. The turn projector at `:settled` writes mention records on entity ids:
+   the step from a turn to the backlog (IDENTIFY gap). Giraffe then reads
+   events instead of a timer.
+5. VERIFY: coverage and attachment as above, rerun; projection
+   (incremental GCC equals rebuilt GCC) once 4 exists.
+6. Acceptance item 1 below, written from the GCC notes in
+   `holes/labs/M-repl-circus/`.
+7. INSTANTIATE: rewrite CLAUDE.md's minus40 section (it still names the
+   retired :7093 store) to treat 驴/狗 lines as entry points; 猴 from 馬
+   stays on hold.
+
 ## Acceptance checklist (IDENTIFY)
 
 - [ ] For each animal: which GCC node and edge types it writes, and which XTQL queries it reads
