@@ -2702,8 +2702,10 @@ scrolled away, their view and cursor are left undisturbed."
           (agent-chat--turnline-stop-timer)
         (when (or (not (eq agent-chat--turnline-phase 'compacting))
                   (agent-chat--turnline-animation-allowed-p))
-          (cl-incf agent-chat--turnline-frame)
-          (agent-chat--turnline-render))))))
+          (cl-incf agent-chat--turnline-frame))
+        ;; Elapsed time remains live even when spinner animation is too costly
+        ;; for a hidden or large compaction buffer.
+        (agent-chat--turnline-render)))))
 
 (defun agent-chat-turnline-start (&optional phase detail)
   "Start the one live turnline at PHASE with optional DETAIL."

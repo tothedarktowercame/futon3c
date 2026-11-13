@@ -58,15 +58,18 @@
                                   'agent-chat-turnline t))
    (should (equal 1 (how-many "Cooked for" (point-min) (point-max))))))
 
-(ert-deftest agent-chat-turnline-large-buffer-compacting-is-static ()
+(ert-deftest agent-chat-turnline-large-buffer-compacting-updates-elapsed-only ()
   (agent-chat-turnline-test--with-buffer
    (setq-local agent-chat-turnline-large-buffer-animation-threshold 1)
    (agent-chat-turnline-start 'compacting "context")
    (should (string-match-p "Compacting · [0-9]" (buffer-string)))
    (should-not (string-match-p "▰" (buffer-string)))
-   (let ((before (buffer-string)))
-     (agent-chat--turnline-tick (current-buffer))
-     (should (equal before (buffer-string))))))
+   (setq agent-chat--turnline-start-time (- (float-time) 65))
+   (agent-chat--turnline-tick (current-buffer))
+   (should (string-match-p "Compacting · 1m 05s · context"
+                           (buffer-string)))
+   (should-not (string-match-p "▰" (buffer-string)))
+   (should (= 0 agent-chat--turnline-frame))))
 
 (ert-deftest agent-chat-turnline-custom-label-is-used ()
   (agent-chat-turnline-test--with-buffer
