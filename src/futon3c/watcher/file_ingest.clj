@@ -1165,7 +1165,16 @@
       (flexiarg/src-exts ext)))
 
 (defn- collect-repo* [root]
-  (let [files (->> (file-seq (io/file root))
+  (let [root-file (io/file root)
+        ;; Like file-seq, but never through a symlinked directory below the
+        ;; root (a link back to an ancestor recursed without end, 2026-11-13).
+        walk (tree-seq (fn [^java.io.File f]
+                         (and (.isDirectory f)
+                              (or (= f root-file)
+                                  (not (java.nio.file.Files/isSymbolicLink (.toPath f))))))
+                       (fn [^java.io.File d] (or (seq (.listFiles d)) []))
+                       root-file)
+        files (->> walk
                    (filter #(.isFile ^java.io.File %))
                    (filter #(supported-ext? (file-ext (.getPath ^java.io.File %))))
                    (remove #(re-find excluded-dir-re

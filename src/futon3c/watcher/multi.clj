@@ -999,12 +999,19 @@
   does not walk `.git`, virtualenv, `node_modules`, build-output, or cache
   corpora merely to reject their descendants afterwards."
   [root]
-  (tree-seq (fn [^java.io.File f]
-              (and (.isDirectory f)
-                   (not (noise-dir? (.getPath f)))))
-            (fn [^java.io.File dir]
-              (or (seq (.listFiles dir)) []))
-            (java.io.File. ^String root)))
+  (let [root-file (java.io.File. ^String root)]
+    (tree-seq (fn [^java.io.File f]
+                (and (.isDirectory f)
+                     ;; Never descend through a symlinked directory below the
+                     ;; root: futon1/futon1 -> futon1 made the walk recurse
+                     ;; futon1/futon1/futon1/... until paths overflowed and
+                     ;; every cycle timed out (2026-11-13).
+                     (or (= f root-file)
+                         (not (java.nio.file.Files/isSymbolicLink (.toPath f))))
+                     (not (noise-dir? (.getPath f)))))
+              (fn [^java.io.File dir]
+                (or (seq (.listFiles dir)) []))
+              root-file)))
 
 (defn file-fingerprint [^String path]
   (let [f (java.io.File. path)]
