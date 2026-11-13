@@ -87,7 +87,7 @@
 (defn- ok!
   [resp context]
   (when-not (<= 200 (:status resp) 299)
-    (throw (ex-info "futon1a request failed" (assoc context :response resp))))
+    (throw (ex-info "futon1b request failed" (assoc context :response resp))))
   resp)
 
 (defn- http-edn-read
@@ -130,9 +130,56 @@
    because it manufactures the confidence that spends someone else's gate."
   false)
 
+(def ^:private batch-chunk-size
+  "Items per batch request, so one POST stays under the http timeout.
+   futon1b's hyperedge batch hard limit is 500 (hyperedge-batch-max)."
+  (or (some-> (System/getenv "FUTON3C_SUBSTRATE_BATCH_CHUNK") parse-long) 150))
+
+(def ^:dynamic *write-buffer*
+  "When bound to {:entities (atom {}) :hyperedges (atom [])}, post-entity! and
+   post-hyperedge! defer their writes into it instead of POSTing per item, and
+   flush-writes! sends the mission's entities through
+   /api/alpha/entities/batch and then its hyperedges through
+   /api/alpha/hyperedges/batch (entities first: edges reference them).
+
+   This is a TRANSPORT change only. The documents are identical to the
+   per-item path: entity payloads are built by the same ensure-entity!
+   GET-merge (the buffer is read-through — a second ensure of one id merges
+   against the buffered props, exactly as it would merge against the
+   just-committed entity), and hyperedge payloads are appended in call order.
+   A non-2xx batch response, or any failed item inside a 200 batch, throws
+   and fails the mission exactly as a per-item failure does; there is no
+   silent fallback to per-item writes."
+  nil)
+
 (defn- post-entity! [client base-url penholder payload]
-  (if *dry-run?*
+  (cond
+    *dry-run?*
     payload                             ; shape-compatible: callers read :id
+
+    *write-buffer*
+    (let [payload (assoc payload :penholder penholder)
+          merged (swap! (:entities *write-buffer*)
+                        (fn [m]
+                          (update m (:id payload)
+                                  (fn [prev]
+                                    (if prev
+                                      ;; Same result as the per-item path: the
+                                      ;; second ensure GETs the first write and
+                                      ;; merges props, new keys winning.
+                                      (assoc payload
+                                             :props (merge (:props prev)
+                                                           (:props payload)))
+                                      payload))))
+                        )
+          entity (get merged (:id payload))]
+      ;; Read-through: later get-entity calls in this run must see what the
+      ;; per-item path would have committed, so the next ensure merges
+      ;; against these props, not the pre-run store state.
+      (swap! !entity-cache assoc (:id payload) entity)
+      entity)
+
+    :else
     (-> (http-edn client :post (str base-url "/api/alpha/entity")
                   (assoc payload :penholder penholder))
         (ok! {:op :entity :payload payload})
@@ -149,12 +196,49 @@
                     (seq merged-props) (assoc :props merged-props)))))
 
 (defn- post-hyperedge! [client base-url penholder payload]
-  (if *dry-run?*
+  (cond
+    *dry-run?*
     payload                             ; also covers `retract-hyperedge!`
+
+    *write-buffer*
+    (let [payload (assoc payload :penholder penholder)]
+      (swap! (:hyperedges *write-buffer*) conj payload)
+      payload)                          ; callers read :hx/id
+
+    :else
     (-> (http-edn client :post (str base-url "/api/alpha/hyperedge")
                   (assoc payload :penholder penholder))
         (ok! {:op :hyperedge :payload payload})
         (get-in [:body :hyperedge]))))
+
+(defn- flush-writes!
+  "Send the buffered mission writes: all entities (in first-seen id order)
+   through /api/alpha/entities/batch, then all hyperedges (in call order)
+   through /api/alpha/hyperedges/batch, chunked at batch-chunk-size.
+   Any non-2xx response, or any per-item failure inside a 200 batch,
+   throws — the mission fails exactly as the per-item path would fail it."
+  [client base-url]
+  (let [{:keys [entities hyperedges]} *write-buffer*
+        ents (vec (vals @entities))
+        hxs (vec @hyperedges)
+        sent (atom {:entity-requests 0 :hyperedge-requests 0})]
+    (doseq [chunk (partition-all batch-chunk-size ents)]
+      (let [resp (http-edn client :post (str base-url "/api/alpha/entities/batch")
+                           {:entities (vec chunk)})]
+        (swap! sent update :entity-requests inc)
+        (ok! resp {:op :entities-batch :count (count chunk)})))
+    (doseq [chunk (partition-all batch-chunk-size hxs)]
+      (let [resp (http-edn client :post (str base-url "/api/alpha/hyperedges/batch")
+                           {:hyperedges (vec chunk)})]
+        (swap! sent update :hyperedge-requests inc)
+        (ok! resp {:op :hyperedges-batch :count (count chunk)})
+        (when-not (every? :ok (get-in resp [:body :results]))
+          (throw (ex-info "futon1b request failed"
+                          {:op :hyperedges-batch
+                           :count (count chunk)
+                           :failed (mapv #(select-keys % [:hx/id :error])
+                                         (remove :ok (get-in resp [:body :results])))})))))
+    (assoc @sent :entity-count (count ents) :hyperedge-count (count hxs))))
 
 (defn- get-hyperedge [client base-url id]
   (let [resp (http-edn client :get
@@ -1974,7 +2058,9 @@
                                      (map (juxt :hx/id identity))
                                      (hyperedges-by-type client base-url
                                                          "mission-scope/pattern")))]
-    (doseq [scope scopes]
+    (binding [*write-buffer* {:entities (atom (array-map))
+                              :hyperedges (atom [])}]
+      (doseq [scope scopes]
       (let [scope-entity (ensure-entity! client base-url penholder
                                          (scope-entity-spec mission mission-path scope))
             _ (swap! entity-ids conj (:id scope-entity))
@@ -2050,6 +2136,9 @@
             (let [hx (post-hyperedge! client base-url penholder
                                       (nesting-hyperedge mission-entity parent (:scope-id scope)))]
               (swap! hx-ids conj (:hx/id hx)))))))
+      ;; Entities first, then the hyperedges that reference them: one chunked
+      ;; batch request per kind, not one request per record.
+      (flush-writes! client base-url))
     {:mission mission
      :mission-entity (:id mission-entity)
      :entity-count (count @entity-ids)

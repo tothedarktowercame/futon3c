@@ -1,5 +1,6 @@
 (ns futon3c.scripts.mission-scope-ingest-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.scripts.mission-scope-ingest :as ingest]))
 
 (deftest removal-prefers-live-batch-contract
@@ -189,3 +190,137 @@
                                     :path "test/fixtures/scope-trees/M-side-quest.json"})
         (is (= ["futon3c-d/mission/side-quest"]
                (map :id (filter #(= "mission/doc" (:type %)) @ensured))))))))
+
+
+;; --- Batch transport (2026-11-12, M-repl-circus closure item 2) ----------
+;; All data below is INVENTED for these tests (see the fixture file's own
+;; _comment). http-edn is mocked; no server is contacted. ingest-scope-tree!
+;; now batches internally: it binds *write-buffer* around the scope walk and
+;; flushes entities before hyperedges.
+
+(defn- recording-handler
+  "Simpler constructor: a handler fn with http-edn's two arities, logging to
+   the returned atom."
+  []
+  (let [requests (atom [])
+        h (fn h
+            ([c m u] (h c m u nil))
+            ([_client method url body]
+             (swap! requests conj [method url body])
+             (cond
+               (= method :get) {:status 404 :body nil}
+               (and (= method :post) (str/ends-with? url "/api/alpha/entities/batch"))
+               {:status 200 :body {:ok true :entities (:entities body)}}
+               (and (= method :post) (str/ends-with? url "/api/alpha/hyperedges/batch"))
+               {:status 200 :body {:ok true :results (mapv (fn [p] {:ok true :hx/id (:hx/id p)})
+                                                           (:hyperedges body))}}
+               (and (= method :post) (str/ends-with? url "/api/alpha/entity"))
+               {:status 200 :body {:entity body}}
+               (and (= method :post) (str/ends-with? url "/api/alpha/hyperedge"))
+               {:status 200 :body {:hyperedge body}}
+               :else {:status 200 :body {:ok true}})))]
+    [requests h]))
+
+(defn- write-docs
+  "The [entity-payloads hyperedge-payloads] an ingest wrote, from a request log."
+  [requests]
+  (let [posts (filter #(= :post (first %)) @requests)]
+    [(mapcat (fn [r]
+               (or (get-in r [2 :entities])
+                   (when (str/ends-with? (second r) "/api/alpha/entity")
+                     [(get r 2)])
+                   []))
+             posts)
+     (mapcat (fn [r]
+               (or (get-in r [2 :hyperedges])
+                   (when (str/ends-with? (second r) "/api/alpha/hyperedge")
+                     [(get r 2)])
+                   []))
+             posts)]))
+
+(deftest batched-ingest-writes-the-fixture-documents-in-three-requests
+  (let [[requests handler] (recording-handler)]
+    (with-redefs [ingest/http-edn handler]
+      (#'ingest/reset-run-caches!)
+      (ingest/ingest-scope-tree! {:client :mock :base-url "http://substrate"
+                                  :penholder "api"
+                                  :path "test/fixtures/scope-trees/M-batch-fixture.json"})
+      (let [[ents hxs] (write-docs requests)
+            posts (filterv #(= :post (first %)) @requests)
+            urls (mapv second posts)]
+        ;; per-item this fixture cost 8 write requests; batched it is 3:
+        ;; the mission-doc entity (written before the buffer), then one
+        ;; entities batch and one hyperedges batch, entities first.
+        (is (= 3 (count posts)))
+        (is (= ["http://substrate/api/alpha/entity"
+                "http://substrate/api/alpha/entities/batch"
+                "http://substrate/api/alpha/hyperedges/batch"]
+               urls))
+        (is (= 4 (count ents)))
+        (is (= #{"fixture/scope-aa" "fixture/scope-bb" "fixture/scope-cc"}
+               (set (map :external-id
+                         (filter #(= "scope/loose-section" (:type %)) ents)))))
+        (is (= #{"hx|mission-scope|fixture/scope-aa" "hx|mission-scope|fixture/scope-bb"
+                 "hx|mission-scope|fixture/scope-cc"
+                 "hx|mission-scope-parent|fixture/scope-aa|fixture/scope-cc"}
+               (set (map :hx/id hxs))))
+        (is (every? #(= "loose-section" (get-in % [:props :scope/binder-type]))
+                    (filter #(some-> (:hx/type %) (str/ends-with? "loose-section")) hxs)))))))
+
+(deftest batch-and-per-item-primitives-emit-the-same-payload
+  (let [[requests handler] (recording-handler)
+        entity {:id "fixture/ent-9" :name "Nine" :type "fixture"
+                :props {:k "v"}}
+        hx {:hx/id "hx|fixture|9" :hx/type "fixture/x" :hx/endpoints []}]
+    (with-redefs [ingest/http-edn handler]
+      (#'ingest/reset-run-caches!)
+      ;; per-item
+      (#'ingest/post-entity! :mock "http://substrate" "api" entity)
+      (#'ingest/post-hyperedge! :mock "http://substrate" "api" hx)
+      (let [per-item @requests]
+        (reset! requests [])
+        ;; batched
+        (binding [ingest/*write-buffer* {:entities (atom (array-map))
+                                         :hyperedges (atom [])}]
+          (#'ingest/post-entity! :mock "http://substrate" "api" entity)
+          (#'ingest/post-hyperedge! :mock "http://substrate" "api" hx)
+          (#'ingest/flush-writes! :mock "http://substrate"))
+        (is (= [(get-in per-item [0 2]) (get-in per-item [1 2])]
+               [(get-in @requests [0 2 :entities 0])
+                (get-in @requests [1 2 :hyperedges 0])])
+            "batch items are byte-identical to the per-item payloads")))))
+
+(deftest buffered-entity-ensure-merges-props-like-the-get-merge
+  (let [[requests handler] (recording-handler)]
+    (with-redefs [ingest/http-edn handler]
+      (#'ingest/reset-run-caches!)
+      (binding [ingest/*write-buffer* {:entities (atom (array-map))
+                                       :hyperedges (atom [])}]
+        (#'ingest/ensure-entity! :mock "http://substrate" "api"
+                                 {:id "fixture/ent-1" :name "One" :type "fixture"
+                                  :props {:a 1}})
+        ;; The per-item path would GET the first write back here; the buffer
+        ;; must make the second ensure merge against the first's props.
+        (#'ingest/ensure-entity! :mock "http://substrate" "api"
+                                 {:id "fixture/ent-1" :name "One" :type "fixture"
+                                  :props {:b 2}})
+        (#'ingest/flush-writes! :mock "http://substrate"))
+      (let [[ents _] (write-docs requests)]
+        (is (= 1 (count ents)))
+        (is (= {:a 1 :b 2} (:props (first ents))))))))
+
+(deftest batch-non-2xx-fails-the-mission
+  (with-redefs [ingest/http-edn (fn
+                                  ([c m u] {:status 500 :body "boom"})
+                                  ([c m u b] {:status 500 :body "boom"}))]
+    (#'ingest/reset-run-caches!)
+    (binding [ingest/*write-buffer* {:entities (atom (array-map))
+                                     :hyperedges (atom [])}]
+      (#'ingest/post-hyperedge! :mock "http://substrate" "api"
+                                {:hx/id "hx|fixture|1" :hx/type "fixture/x"
+                                 :hx/endpoints []})
+      (let [e (try (#'ingest/flush-writes! :mock "http://substrate")
+                   nil
+                   (catch clojure.lang.ExceptionInfo e e))]
+        (is (= "futon1b request failed" (ex-message e)))
+        (is (= :hyperedges-batch (:op (ex-data e))))))))
