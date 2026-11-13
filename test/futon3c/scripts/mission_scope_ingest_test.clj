@@ -256,6 +256,8 @@
                 "http://substrate/api/alpha/entities/batch"
                 "http://substrate/api/alpha/hyperedges/batch"]
                urls))
+        (is (= ["api" "api"] (mapv #(get-in % [2 :penholder]) (rest posts)))
+            "batch bodies carry the penholder the routes authorise on")
         (is (= 4 (count ents)))
         (is (= #{"fixture/scope-aa" "fixture/scope-bb" "fixture/scope-cc"}
                (set (map :external-id

@@ -224,12 +224,17 @@
         sent (atom {:entity-requests 0 :hyperedge-requests 0})]
     (doseq [chunk (partition-all batch-chunk-size ents)]
       (let [resp (http-edn client :post (str base-url "/api/alpha/entities/batch")
-                           {:entities (vec chunk)})]
+                           ;; Top-level :penholder: the batch routes
+                           ;; authorise on the body's penholder, not the
+                           ;; items' (futon1b gates/resolve-penholder).
+                           {:penholder (:penholder (first chunk))
+                            :entities (vec chunk)})]
         (swap! sent update :entity-requests inc)
         (ok! resp {:op :entities-batch :count (count chunk)})))
     (doseq [chunk (partition-all batch-chunk-size hxs)]
       (let [resp (http-edn client :post (str base-url "/api/alpha/hyperedges/batch")
-                           {:hyperedges (vec chunk)})]
+                           {:penholder (:penholder (first chunk))
+                            :hyperedges (vec chunk)})]
         (swap! sent update :hyperedge-requests inc)
         (ok! resp {:op :hyperedges-batch :count (count chunk)})
         (when-not (every? :ok (get-in resp [:body :results]))
