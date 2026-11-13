@@ -25,13 +25,15 @@
 (def ^:private default-watch-roots
   ;; futon1 and futon1a are no longer watched (Joe, 2026-11-13: "substrate-2
   ;; should restrict itself to *live* code not historical"; both are long
-  ;; outdated). Their past records stay in the store as history.
+  ;; outdated). Their code records are archived to ~/storage and deleted.
   [{:path "/home/joe/code/futon0"  :label "futon0-d"}
    {:path "/home/joe/code/futon2"  :label "futon2-d"}
    ;; futon3 is historical except its pattern library, which is in active
-   ;; use (Joe, 2026-11-13): only paths under :only are watched.
+   ;; use, as are its mission documents and inbox-zero-lib (on futon3c's
+   ;; classpath) (Joe, 2026-11-13): only paths under :only are watched.
    {:path "/home/joe/code/futon3"  :label "futon3-d"
-    :only ["/home/joe/code/futon3/library/"]}
+    :only ["/home/joe/code/futon3/library/" "/home/joe/code/futon3/holes/"
+           "/home/joe/code/futon3/inbox-zero-lib/"]}
    {:path "/home/joe/code/futon3a" :label "futon3a-d"}
    {:path "/home/joe/code/futon3b" :label "futon3b-d"}
    {:path "/home/joe/code/futon3c" :label "futon3c-d"}
