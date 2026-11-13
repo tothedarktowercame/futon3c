@@ -995,7 +995,12 @@
         ;; populations. post-entity! forwards :id; resolve-end-id (routes.clj)
         ;; bridges only UUID-shaped ids, so a name-keyed node resolves
         ;; directly (gate-confirmed with claude-1, the watcher's owner).
-        _entity-ok? (when hx-ok?
+        ;; claude-13, 2026-11-13: this result used to be discarded
+        ;; (`_entity-ok?`), so a failed entity write still counted as ingested,
+        ;; the cache settled, and the doc had no entity until re-ingested by
+        ;; hand (E-question-log, E-r3d-per-entity-attribution,
+        ;; E-ticks-firing-ratio-likelihood). It is now counted in :failed.
+        entity-ok? (when hx-ok?
                       (:ok? (post-entity!
                              {:id vertex-id
                               :name vertex-id
@@ -1030,7 +1035,9 @@
     {:vertices (if hx-ok? 1 0)
      :edges (+ (:emitted edge-stats) (:emitted file-edge-stats))
      :unresolved-edges (+ (:unresolved edge-stats) (count unresolved-code-paths))
-     :failed (+ (if hx-ok? 0 1) (:failed edge-stats) (:failed file-edge-stats))
+     :failed (+ (if hx-ok? 0 1) (if (and hx-ok? (not entity-ok?)) 1 0)
+                (:failed edge-stats) (:failed file-edge-stats))
+     :entity-ok? (boolean entity-ok?)
      :sync sync}))
 
 (defn- label->repo-keyword
@@ -1050,7 +1057,7 @@
                                       (:endpoints vertex-doc)
                                       (:labels vertex-doc)
                                       (:props vertex-doc)))
-        _entity-ok? (when hx-ok?
+        entity-ok? (when hx-ok?
                       (:ok? (post-entity!
                              {:name (first (:endpoints vertex-doc))
                               :type "excursion/doc"
@@ -1073,7 +1080,9 @@
     {:vertices (if hx-ok? 1 0)
      :edges (:emitted edge-stats)
      :unresolved-edges (if skipped-parent-edge? 1 0)
-     :failed (+ (if hx-ok? 0 1) (:failed edge-stats))
+     :failed (+ (if hx-ok? 0 1) (if (and hx-ok? (not entity-ok?)) 1 0)
+                (:failed edge-stats))
+     :entity-ok? (boolean entity-ok?)
      :excursion excursion}))
 
 (defn ingest-sorry-registry!

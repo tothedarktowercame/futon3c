@@ -178,3 +178,23 @@
                 "/home/joe/code/futon2/holes/missions/M-G-over-cascades.md")
                (:id @posted-entity))
             "scope lane derives the identical id from the path")))))
+
+(deftest failed-entity-write-counts-as-a-failure
+  ;; claude-13, 2026-11-13: the entity write's result used to be discarded,
+  ;; so three excursions had a vertex but no entity and nothing reported it.
+  ;; Invented fixture data.
+  (with-redefs [sut/sync-mission!
+                (fn [_ _] {:ok? true :status 200
+                           :body {:mission {:mission/id "invented" :mission/title "Invented"
+                                            :mission/status "in-progress" :mission/repo "futon3c"
+                                            :mission/cross-refs [] :mission/code-paths []
+                                            :mission/phase "identify"}}})
+                sut/post-hyperedge! (fn [& _] {:ok? true})
+                sut/post-entity! (fn [& _] {:ok? false})
+                sut/emit-cross-ref-edges! (fn [& _] {:emitted 0 :unresolved 0 :failed 0})
+                sut/post-hyperedge-doc! (fn [_] {:ok? true})]
+    (let [result (sut/ingest-mission-doc! {:path "/home/joe/code/futon3c/holes/missions/M-invented.md"
+                                           :label "futon3c-d"
+                                           :root "/home/joe/code/futon3c"})]
+      (is (= 1 (:failed result)))
+      (is (false? (:entity-ok? result))))))
