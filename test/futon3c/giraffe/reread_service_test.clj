@@ -55,7 +55,11 @@
       (is (= :already-started (:status (service/start! config))))
       (dotimes [_ 8] (service/notify-doc-changed! path))
       (is (= true (deref event 2000 :timeout)))
+      ;; claude-13 review: let any further (wrongly undebounced) runs land
+      ;; before counting, or the count races the executor (30 ms debounce).
+      (Thread/sleep 300)
       (is (= 1 @reconciles))
+      (is (= 2 @calls) "boot drain + one event drain, not one per notify")
       (is (= [["M-event-fixture" "new" :pending]]
              (mapv (juxt :target_id :source_sha :state) (queue/requests (:store config)))))
       (is (empty? (:errors (service/health)))))))
