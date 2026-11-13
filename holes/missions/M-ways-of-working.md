@@ -166,6 +166,18 @@ walk itself (futon1b cold pages) is still open.
   under stays-alive-and-paid. Not built; context:
   [FEATURE-evidence-flow.md](../FEATURE-evidence-flow.md).
 
+- **~/notes is outside inbox-zero's population (claude-9 with Joe, 2026-11-13).** Joe: one of
+  the ways must be "code and docs are backed up", and ~/notes would be subject to it. The way is
+  inbox-zero ("All files are committed and pushed"), but its `git-clean` probe walks git
+  repositories, and ~/notes (24 GB, 1,361 top-level entries, durable agent notes, packets,
+  ledgers) is not one, and none of the timed backups (`zone-git-backup`, `evidence-backup`,
+  `zone-site-backup`) covers it. So the way passes or fails without seeing it. Proposed: extend
+  the population to every directory the workspace CLAUDE.md names as a home for durable work
+  (today ~/notes and ~/storage), each failing until it is backed up or emptied. The fix for
+  ~/notes itself is futon1b `holes/M-notes-into-memory.md` (HEAD 2026-11-13). Related, same
+  night: minus40 (the "124 with no remote" above) now has a remote,
+  `tothedarktowercame/minus40` (private).
+
 1. ~~The consent-gate sweeper sends without `--from`~~ Resolved
    (`d7ea790eb`): its bells are brief-mode notifications, which need no return
    path, and the probe now exempts them. Live: 0 of 202 work bells without a
