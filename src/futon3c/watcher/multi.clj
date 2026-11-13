@@ -998,10 +998,15 @@
   the same exclusion structural at traversal time, so polling a repository
   does not walk `.git`, virtualenv, `node_modules`, build-output, or cache
   corpora merely to reject their descendants afterwards."
-  [root]
-  (let [root-file (java.io.File. ^String root)]
+  ([root] (pruned-file-seq root nil))
+  ([root exclude]
+  (let [root-file (java.io.File. ^String root)
+        exclude (set (map #(str/replace % #"/$" "") exclude))]
     (tree-seq (fn [^java.io.File f]
                 (and (.isDirectory f)
+                     ;; per-root :exclude (roots.clj): e.g. futon1b's live
+                     ;; XTDB store directory inside the repo
+                     (not (exclude (.getPath f)))
                      ;; Never descend through a symlinked directory below the
                      ;; root: futon1/futon1 -> futon1 made the walk recurse
                      ;; futon1/futon1/futon1/... until paths overflowed and
@@ -1011,7 +1016,7 @@
                      (not (noise-dir? (.getPath f)))))
               (fn [^java.io.File dir]
                 (or (seq (.listFiles dir)) []))
-              root-file)))
+              root-file))))
 
 (defn file-fingerprint [^String path]
   (let [f (java.io.File. path)]
@@ -1024,13 +1029,18 @@
   [root]
   (some #(when (= (str root) (:path %)) (seq (:only %))) roots/watch-roots))
 
+(defn- root-exclude
+  "Directories (absolute) never walked under a root (roots.clj :exclude)."
+  [root]
+  (some #(when (= (str root) (:path %)) (seq (:exclude %))) roots/watch-roots))
+
 (defn walk-root [root]
   (->> (if-let [only (root-only root)]
          ;; walk only the listed subtrees, not the whole checkout
          (mapcat #(let [d (str/replace % #"/$" "")]
                     (when (.isDirectory (java.io.File. ^String d)) (pruned-file-seq d)))
                  only)
-         (pruned-file-seq root))
+         (pruned-file-seq root (root-exclude root)))
        (filter #(.isFile ^java.io.File %))
        (map #(.getPath ^java.io.File %))
        (filter watched?)

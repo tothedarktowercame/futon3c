@@ -27,6 +27,12 @@
   ;; should restrict itself to *live* code not historical"; both are long
   ;; outdated). Their code records are archived to ~/storage and deleted.
   [{:path "/home/joe/code/futon0"  :label "futon0-d"}
+   ;; futon1b is live code (the substrate server) and was never watched
+   ;; (claude-13, 2026-11-13). Its live XTDB store and data/ sit inside the
+   ;; repo and are never walked. Takes effect at the next watcher start.
+   {:path "/home/joe/code/futon1b" :label "futon1b-d"
+    :exclude ["/home/joe/code/futon1b/migration-store-21"
+              "/home/joe/code/futon1b/data"]}
    {:path "/home/joe/code/futon2"  :label "futon2-d"}
    ;; futon3 is historical except its pattern library, which is in active
    ;; use, as are its mission documents and inbox-zero-lib (on futon3c's
@@ -46,7 +52,6 @@
 
 (def ^:private default-sweep-extra
   [{:path "/home/joe/code/apm-lean" :label "apm-lean-d"}
-   {:path "/home/joe/code/futon1b"  :label "futon1b-d"}
    {:path "/home/joe/code/mathlib4" :label "mathlib4-d"}
    {:path "/home/joe/code/p4ng"     :label "p4ng-d"}
    {:path "/home/joe/code/voxterm"  :label "voxterm-d"}])
