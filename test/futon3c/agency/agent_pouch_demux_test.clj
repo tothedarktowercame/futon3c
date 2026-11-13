@@ -92,6 +92,7 @@
                "    emit({'type':'system','subtype':'init','session_id':'missing-result'})\n"
                "    emit({'type':'assistant','message':{'content':"
                "[{'type':'text','text':'FINAL-WITHOUT-RESULT'}]}})\n"
+               "    emit({'type':'rate_limit_event','rate_limit_info':{'status':'allowed'}})\n"
                "    time.sleep(60)\n"))
     (.setExecutable f true)
     (.deleteOnExit f)
@@ -110,6 +111,7 @@
                "emit({'type':'system','subtype':'init','session_id':'auto-missing-result'})\n"
                "emit({'type':'assistant','message':{'content':"
                "[{'type':'text','text':'AUTONOMOUS-FINAL-WITHOUT-RESULT'}]}})\n"
+               "emit({'type':'rate_limit_event','rate_limit_info':{'status':'allowed'}})\n"
                "time.sleep(60)\n"))
     (.setExecutable f true)
     (.deleteOnExit f)

@@ -1081,7 +1081,16 @@
                     :turn-id @turn-id
                     :root-pid (.pid ^Process (:process pouch))
                     :event event})
-                  (let [event-seq (swap! activity-seq inc)]
+                  ;; `rate_limit_event` is status metadata, not evidence that
+                  ;; the assistant continued after a text-only final message.
+                  ;; Both Claude Code 2.1.322 and 2.1.323 normally put it
+                  ;; between final assistant text and the terminal `result`.
+                  ;; Advancing the quiescence clock here cancelled the only
+                  ;; missing-trailer check, so an omitted result wedged the
+                  ;; pouch forever (claude-9/13, 2026-11-13).
+                  (let [event-seq (if (= "rate_limit_event" (:type event))
+                                    @activity-seq
+                                    (swap! activity-seq inc))]
                     (case (:type event)
                     "system"
                     (condp = (str (:subtype event))
