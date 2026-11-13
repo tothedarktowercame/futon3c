@@ -571,12 +571,11 @@ entity reference.
 
 ### What VERIFY checks
 
-- **Coverage** (core.logic): every operator chat turn at :7073 has a record
-  that reached `:settled` within a stated interval, each animal's field present
-  or typed absent, and its GCC records present.
-- **Projection** : incremental GCC equals rebuilt GCC; Giraffe priorities are
-  no older than the newest settled turn.
-- **Attachment** (reazon): one stepper per REPL.
+The [VERIFY section](#verify-constructive-critical-review) below sets the
+acceptance obligations for this DERIVE: complete interfaces, a witnessed
+turn-to-reader chain, bounded completeness, recoverable projection and
+independent acceptance. Coverage and stepper attachment remain necessary
+checks; neither alone proves that the Circus talks through the graph.
 
 ### Open for DERIVE
 
@@ -684,11 +683,111 @@ entity reference.
 - Cost: a pass per settled turn, or debounced like the pattern-index watcher.
 - The CTRL write-up.
 
+## VERIFY: constructive critical review
+
+Recorded by codex-12, 2026-11-13, at Joe's request: "verification through
+constructive critical review. This will push back on any DERIVE that does
+not meet the criteria you outlined."
+
+**Review disposition: closure not established.** This section records a
+critical review of the mission and relevant code, not a successful live
+acceptance run. DERIVE must answer the objections below with a design and
+named witnesses; implementation must then supply those witnesses. A design
+that leaves an obligation unanswered returns to DERIVE. Describing a writer,
+query or intended reader is not evidence that the complete flow works.
+
+**Consolidation is a gate.** Migration, deduplication, durable configuration
+and retirement of redundant stores enable verification. Completing them does
+not close this mission. Closure demonstrates that a turn changes the shared
+graph, that the change reaches Giraffe, and that a reader uses the resulting
+priorities with traceable reasons.
+
+### Acceptance obligations on DERIVE
+
+1. **Declared interfaces.** For each animal, name its trigger, inputs, GCC
+   output types, provenance, consumers and actual queries, together with
+   failure and absence states. Show how these compose without consumers
+   parsing evidence bodies. Preserve the MAP dispatch boundary and specify
+   the CTRL moves and receipts owed by DERIVE. A diagram or list without a
+   named consumer leaves the written-never-read objection open.
+2. **One complete live chain.** Witness an operator turn producing a
+   meaningful GCC change, Giraffe updating against that change, and a named
+   reader (Joe's view or the War Machine) consuming the result and citing
+   its basis. State what question or decision that reader serves. Exercise
+   a correction or rejection as well, showing how it supersedes the earlier
+   interpretation and reaches the reader. Mention records alone do not
+   establish readiness, focus or an accountable next action. The promised
+   scope remains the turn-to-War-Machine composition unless Joe explicitly
+   accepts a narrower outcome; one demonstrated reader does not silently
+   discharge obligations to another promised reader.
+3. **Bounded completeness.** Define the population of REPLs and turns, and
+   numerical deadlines for capture, animal processing, GCC projection and
+   priority freshness. Check these stages separately: each required animal
+   result is present or has a typed absence with a reason; failures and
+   overdue work remain visible. Check current item/document digests, the
+   pass's input digest and the focus version used for priorities. Repeatedly
+   renewing a request must not make stalled work appear healthy. Retain the
+   attachment invariant: a stepper is attached to exactly one REPL, shows
+   that REPL's newest record, and capture works without a stepper attached.
+4. **Recoverable projection.** Declare and preserve the complete versioned
+   source inventory. Demonstrate that duplicate delivery, late output,
+   interruption and replay converge to the same semantic graph as a rebuild
+   from those sources, including supersession and retraction. Record the
+   comparison basis and any excluded operational fields. Rejected and
+   superseded readings must remain queryable so recovery can distinguish
+   unexplored paths from previously rejected ones. Preserve irreplaceable
+   sources before retiring stores or deleting run directories.
+5. **Independent acceptance.** A reader other than the implementer reproduces
+   the result using recorded source IDs/digests, queries, graph records,
+   pass/focus versions and consumer receipts. The closure report names the
+   scope and bounds checked, the outcomes and any remaining failures. The
+   implementing agent's account alone is not the completion witness.
+
+### Concrete objections found in this review
+
+- **Mentions and deferred focus do not close the loop.** The path-to-closure
+  plan proposes mention records and leaves 猴 on hold, while
+  `src/futon3c/giraffe/priority.clj` explicitly says it does not infer focus.
+  DERIVE must provide and demonstrate the focus input and its consumption,
+  or seek an explicit scope revision. Moving pattern occurrence from 馬 to
+  猴 and supplying Giraffe's focus are distinct obligations; deferring the
+  former must not silently defer the latter.
+- **Capture coverage is narrower than lifecycle coverage.**
+  `src/futon3c/logic/turn_coverage.clj`, `coveredo`, checks for a record naming
+  the evidence ID or turn ID. It does not check settlement, animal outputs
+  or GCC projection. The reported 52/52 result supports capture coverage
+  only; it cannot discharge obligation 3 by itself.
+- **Settlement is not the end of all writes.**
+  `src/futon3c/agency/dog_provider.clj`, `start!` and `prepare-use-check!`,
+  enqueue asynchronous work; `dog_use` and `dog_buried` arrive after
+  `:settled`. A projector triggered only once at settlement can miss those
+  outputs. DERIVE must specify revision/reconciliation and demonstrate
+  convergence for late replies and failed animal jobs as well.
+- **Rebuild sources are not just turn records.** The GCC load design names
+  introductions, verdicts, readings and `serves` judgements that cannot be
+  recomputed. Its source inventory must reconcile those records with the
+  earlier claim that the GCC is entirely reconstructible from turn records.
+  A rebuild that reproduces an incomplete graph does not establish closure.
+- **Freshness needs failure semantics.** A recent pending request is not a
+  landed reading. DERIVE must say what happens when a bound expires, retries
+  are exhausted, focus is absent or priorities are stale, and show how the
+  consumer sees that condition instead of treating it as current knowledge.
+
+These are obligations for the composition, not a demand to prove every
+animal's usefulness within this mission. Delivery and observability of 狗
+belong here; evidence of improved outcomes remains with E-dog-helps.
+Instrumentation must not be reported as proof of usefulness.
+
 ## Path to closure (claude-13, 2026-11-13)
 
 Joe, 2026-11-12: "possibly thing are set up so that M-repl-circus will close
 quickly after this is done and/or we could get everything in place so that
 becomes the case". What is in place, and what is left, in order.
+
+This is a work sequence, subject to [VERIFY's acceptance obligations](#verify-constructive-critical-review).
+Items 1–3 discharge prerequisite consolidation work; they do not establish
+mission closure. Items 4–7 must be strengthened wherever the critical review
+above identifies a missing witness.
 
 **In place**
 - Invariant 2, coverage: `futon3c.logic.turn-coverage` (`307e918f4`), report
