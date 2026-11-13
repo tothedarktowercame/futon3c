@@ -37,17 +37,9 @@
   futon2/futon2             {:local/root "../futon2"}
 
   ;; futon3a — pattern retrieval + canonical flexiarg enrichment.
-  ;; Exclusions (2026-07-14, I-0 unification): futon3a pulls graph-memory
-  ;; (via nlp-interface) which uses XTDB **1.24.4** (xtdb-lmdb/-core/-rocksdb).
-  ;; futon3c requires no futon3a namespace in-process (it's used out-of-process
-  ;; via FUTON3A_ROOT), so graph-memory never loads in this JVM — but its
-  ;; XTDB1 jars would otherwise sit on the classpath and clash with the
-  ;; embedded futon1b XTDB **2** node (same com.xtdb/xtdb-core coordinate).
-  ;; Excluding them keeps this JVM's classpath single-major (XTDB 2 only).
-  futon3a/futon3a           {:local/root "../futon3a"
-                             :exclusions [com.xtdb/xtdb-core
-                                          com.xtdb/xtdb-lmdb
-                                          com.xtdb/xtdb-rocksdb]}}
+  ;; The retired NLP/graph-memory dependency was removed from futon3a
+  ;; (2026-11-13); it no longer brings XTDB1 or needs XTDB exclusions here.
+  futon3a/futon3a           {:local/root "../futon3a"}}
 
  :aliases
  {:test {:extra-paths ["test" "dev" "../futon2/test"]
