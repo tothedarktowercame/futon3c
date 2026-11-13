@@ -1017,8 +1017,20 @@
   (let [f (java.io.File. path)]
     {:mtime (.lastModified f) :size (.length f)}))
 
+(defn- root-only
+  "Path prefixes a root is restricted to (roots.clj :only), or nil for all.
+  futon3 watches only its pattern library (Joe, 2026-11-13). Paths outside
+  leave the cache as deletions; a mass drop is deferred (over the cap)."
+  [root]
+  (some #(when (= (str root) (:path %)) (seq (:only %))) roots/watch-roots))
+
 (defn walk-root [root]
-  (->> (pruned-file-seq root)
+  (->> (if-let [only (root-only root)]
+         ;; walk only the listed subtrees, not the whole checkout
+         (mapcat #(let [d (str/replace % #"/$" "")]
+                    (when (.isDirectory (java.io.File. ^String d)) (pruned-file-seq d)))
+                 only)
+         (pruned-file-seq root))
        (filter #(.isFile ^java.io.File %))
        (map #(.getPath ^java.io.File %))
        (filter watched?)
@@ -1362,6 +1374,7 @@
         snapshot (if (seq cache)
                    (incremental-snapshot path cache)
                    (enriched-snapshot path))
+
         changed (filter (fn [[p {:keys [hash]}]]
                           (not= hash (get-in cache [p :hash])))
                         snapshot)
@@ -1547,8 +1560,8 @@
         ;; The running watcher captured its roots at start!; intersecting with
         ;; the current table lets a root be retired by reloading roots.clj,
         ;; without restarting the watcher.
-        live-paths (set (map :path roots/watch-roots))
-        roots (filterv #(live-paths (:path %)) roots)
+        current (into {} (map (juxt :path identity)) roots/watch-roots)
+        roots (into [] (keep #(get current (:path %))) roots)
         plans (vec (map #(build-plan % per-root-cache) roots))
         cross-root-moves (detect-cross-root-moves plans)
         cross-root-froms (set (map :from cross-root-moves))
