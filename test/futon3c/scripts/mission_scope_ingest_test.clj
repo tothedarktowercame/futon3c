@@ -361,3 +361,33 @@
         (is (thrown-with-msg? clojure.lang.ExceptionInfo #"missing or mismatched"
               (#'ingest/ensure-mission-doc-entity!
                nil "http://invented" "test" "E-Mixed-Case" path)))))))
+
+(deftest invented-ticket-scopes-use-watcher-entity-and-never-create-stubs
+  (let [path "/home/joe/code/futon4/holes/tickets/T-Invented-Check.md"
+        id "futon4-elisp-d/ticket/invented-check"
+        entity {:id id :name id :type "ticket/doc" :external-id "T-Invented-Check"
+                :props {:ticket/status "ready" :provenance/path path}}
+        reads (atom [])]
+    (with-redefs [ingest/get-entity (fn [_ _ requested] (swap! reads conj requested) entity)
+                  ingest/ensure-entity! (fn [& _] (throw (ex-info "Unexpected entity write" {})))]
+      (let [resolved (#'ingest/ensure-mission-doc-entity!
+                      nil "http://invented" "test" "T-Invented-Check" path)
+            edge (#'ingest/scope-hyperedge resolved {:id "invented-scope"} []
+                  {:scope-id "invented-scope" :binder-type "loose-section"})]
+        (is (= entity resolved))
+        (is (= [id] @reads))
+        (is (= id (get-in edge [:hx/endpoints 0 :entity-id])))
+        (is (= "T-Invented-Check" (get-in edge [:props :mission])))))
+    (doseq [bad [nil (assoc entity :type "mission/doc")
+                 (assoc entity :id "invented-wrong-id")
+                 (assoc entity :external-id "T-other")
+                 (assoc-in entity [:props :provenance/path] "/other/copy.md")]]
+      (with-redefs [ingest/get-entity (fn [& _] bad)
+                    ingest/ensure-entity! (fn [& _] (throw (ex-info "Unexpected entity write" {})))]
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"missing or mismatched"
+              (#'ingest/ensure-mission-doc-entity!
+               nil "http://invented" "test" "T-Invented-Check" path)))))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"does not identify"
+          (#'ingest/ensure-mission-doc-entity!
+           nil "http://invented" "test" "T-Invented-Check"
+           "/home/joe/code/futon4/holes/T-Invented-Check.md")))))

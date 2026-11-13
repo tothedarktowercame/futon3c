@@ -244,9 +244,12 @@
   (System/currentTimeMillis))
 
 (defn- mission-stem-from-path [path]
-  (some->> (str path)
-           (re-find mission-doc-stem-pattern)
-           second))
+  (or (some->> (str path)
+               (re-find mission-doc-stem-pattern)
+               second)
+      (when (file-ingest/ticket-doc-path? path)
+        (-> (str path) (str/replace "\\" "/")
+            (str/split #"/") last (str/replace #"\.md$" "")))))
 
 (defn- trim-recent-runs [runs]
   (vec (take-last maintenance-recent-limit runs)))
@@ -965,6 +968,7 @@
         ext (file-ext (str path))
         mission-doc? (boolean (re-find mission-doc-pattern norm))
         excursion-doc? (boolean (re-find excursion-doc-pattern norm))
+        ticket-doc? (file-ingest/ticket-doc-path? norm)
         campaign-doc? (boolean (re-find campaign-doc-pattern norm))
         sorry-registry? (file-ingest/sorry-registry-path? norm)]
     (and (or (and ext (WATCHED-EXTS ext)) sorry-registry?)
@@ -973,6 +977,7 @@
              (not= ext "md")
              mission-doc?
              excursion-doc?
+             ticket-doc?
              campaign-doc?))))
 
 (defn- mark-subtask!

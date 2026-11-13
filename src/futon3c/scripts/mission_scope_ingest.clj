@@ -400,11 +400,12 @@
     (mission-ids/mission-doc-id label mission)))
 
 (defn- mission-stem-kind
-  "Stems are prefixed C- (campaign), E- (excursion) or M- (mission)."
+  "Stems are prefixed C- (campaign), E- (excursion), T- (ticket) or M- (mission)."
   [mission]
   (let [s (str mission)]
     (cond
       (str/starts-with? s "E-") :excursion
+      (str/starts-with? s "T-") :ticket
       (str/starts-with? s "C-") :campaign
       :else :mission)))
 
@@ -429,12 +430,33 @@
                       {:mission mission :path path :name entity-name :entity entity})))
     entity))
 
+(defn- resolve-ticket-doc!
+  "Require the watcher's canonical ticket entity before attaching scopes.
+   Never create a mission stub or overwrite watcher-owned ticket properties."
+  [client base-url ticket path]
+  (let [label (mission-ids/watcher-label-for-path watch-roots/watch-roots path)
+        stem (str/replace (.getName (io/file path)) #"\.md$" "")
+        _ (when-not (and label (= ticket stem)
+                         (re-find #"/holes/tickets/T-[^/]+\.md$" (str path)))
+            (throw (ex-info "Ticket path does not identify a watched document"
+                            {:ticket ticket :path path :label label})))
+        id (mission-ids/ticket-doc-id label ticket)
+        entity (get-entity client base-url id)]
+    (when-not (and (= id (:id entity)) (= id (:name entity))
+                   (#{"ticket/doc" :ticket/doc} (:type entity))
+                   (= ticket (:external-id entity))
+                   (= path (get-in entity [:props :provenance/path])))
+      (throw (ex-info "Watcher ticket entity missing or mismatched"
+                      {:ticket ticket :path path :id id :entity entity})))
+    entity))
+
 (defn- ensure-mission-doc-entity!
-  "Ensure M- documents; resolve E- documents to the watcher's existing UUID.
-   Campaign behavior is unchanged. Excursion props remain watcher-owned."
+  "Ensure M- documents; resolve E-/T- documents to existing watcher entities.
+   Campaign behavior is unchanged. Excursion/ticket props remain watcher-owned."
   [client base-url penholder mission mission-path]
-  (if (= :excursion (mission-stem-kind mission))
-    (resolve-excursion-doc! client base-url mission mission-path)
+  (case (mission-stem-kind mission)
+    :excursion (resolve-excursion-doc! client base-url mission mission-path)
+    :ticket (resolve-ticket-doc! client base-url mission mission-path)
     (let [mission-id (mission-doc-id mission mission-path)]
       (if (= :mission (mission-stem-kind mission))
         (ensure-entity! client base-url penholder

@@ -67,3 +67,10 @@
   (let [raw (if (keyword? excursion-id) (name excursion-id) (str excursion-id))
         local (if-let [i (str/index-of raw "/")] (subs raw (inc i)) raw)]
     (str label "/excursion/" local)))
+
+(defn ticket-doc-id
+  "Canonical ticket/doc id AND name: <watcher-label>/ticket/<slug>.
+   Shared by the watcher and scope lane; accepts a T- stem or bare id."
+  [label ticket]
+  (str label "/ticket/"
+       (slug (str/replace-first (str ticket) #"^T-" ""))))

@@ -46,6 +46,9 @@
 (def ^:private mission-doc-pattern
   #"/holes/(?:missions/)?M-[^/]+\.md$")
 
+(def ^:private ticket-doc-pattern
+  #"/holes/tickets/T-[^/]+\.md$")
+
 (def ^:private excursion-doc-pattern
   #"/holes/(?:missions/|excursions/)?E-[^/]+\.md$")
 
@@ -557,6 +560,11 @@
    (re-find mission-doc-pattern
             (str/replace (str path) "\\" "/"))))
 
+(defn ticket-doc-path? [path]
+  (boolean
+   (re-find ticket-doc-pattern
+            (str/replace (str path) "\\" "/"))))
+
 (defn excursion-doc-path?
   [path]
   (boolean
@@ -1046,6 +1054,45 @@
       (str/replace #"-d$" "")
       keyword))
 
+(defn parse-ticket-md
+  "Read ticket identity from its filename and status from its header.
+   Use mission status classification, including :unknown for unclassified text;
+   retain the raw status rather than inferring completion from body checkboxes."
+  [path]
+  (let [header (->> (str/split-lines (slurp path)) (take 80) (str/join "\n"))
+        id (str/replace (.getName (io/file path)) #"^T-|\.md$" "")
+        raw-status (some (fn [pattern] (some-> (re-find pattern header) second str/trim))
+                         [#"(?mi)^\*\*Status:\*\*[ \t]*(.+)$"
+                          #"(?mi)^\*\*Status\*\*:[ \t]*(.+)$"
+                          #"(?mi)^\*\*Status:[ \t]*(.+?)\*\*[ \t]*$"
+                          #"(?mi)^(?:#{1,3}[ \t]+)?Status:[ \t]*(.+)$"])]
+    {:ticket/id id
+     :ticket/title (some-> (re-find #"(?m)^#[ \t]+(?:Ticket:[ \t]*)?(.+)$" header)
+                           second str/trim)
+     :ticket/status (or (mcb/classify-status raw-status) :unknown)
+     :ticket/raw-status raw-status}))
+
+(defn ingest-ticket-doc!
+  [{:keys [path label]}]
+  (let [ticket (parse-ticket-md path)
+        id (mission-ids/ticket-doc-id label (:ticket/id ticket))
+        props {"ticket/id" (:ticket/id ticket)
+               "ticket/title" (:ticket/title ticket)
+               "ticket/status" (name (:ticket/status ticket))
+               "ticket/raw-status" (:ticket/raw-status ticket)
+               "provenance/repo" (name (label->repo-keyword label))
+               "provenance/path" path}
+        hx-ok? (:ok? (post-hyperedge! "code/v05/ticket-doc" [id]
+                                     ["v05" "phase-4.5" label "ticket-doc"]
+                                     (assoc props "repo" label "phase" 4.5 "source-file" path)))
+        entity-ok? (when hx-ok?
+                     (:ok? (post-entity! {:id id :name id :type "ticket/doc"
+                                         :external-id (str "T-" (:ticket/id ticket))
+                                         :source "ticket-doc-watcher" :props props})))]
+    {:vertices (if hx-ok? 1 0) :edges 0 :unresolved-edges 0
+     :failed (+ (if hx-ok? 0 1) (if (and hx-ok? (not entity-ok?)) 1 0))
+     :entity-ok? (boolean entity-ok?) :ticket ticket}))
+
 (defn ingest-excursion-doc!
   [{:keys [path label]}]
   (let [excursion (mcb/parse-excursion-md path (label->repo-keyword label))
@@ -1496,10 +1543,11 @@
   (let [ext (file-ext path)
         mission-doc? (mission-doc-path? path)
         excursion-doc? (excursion-doc-path? path)
+        ticket-doc? (ticket-doc-path? path)
         campaign-doc? (campaign-doc-path? path)
         sorry-registry? (sorry-registry-path? path)
         essay-home? (essay-home-path? path)
-        handled? (or mission-doc? excursion-doc? campaign-doc? sorry-registry? essay-home? (supported-ext? ext))]
+        handled? (or mission-doc? excursion-doc? ticket-doc? campaign-doc? sorry-registry? essay-home? (supported-ext? ext))]
     (cond
       (not handled?) {:status :unhandled :path path :ext ext}
 
@@ -1510,6 +1558,13 @@
         ;; keep the scope-surface current too (debounced + async — never blocks here)
         (scope-reingest/schedule! path)
         (assoc stats :status :mission-doc :duration-ms dur :path path))
+
+      ticket-doc?
+      (let [t-start (System/currentTimeMillis)
+            stats (ingest-ticket-doc! {:path path :label label})
+            dur (- (System/currentTimeMillis) t-start)]
+        (when (:entity-ok? stats) (scope-reingest/schedule! path))
+        (assoc stats :status :ticket-doc :duration-ms dur :path path))
 
       excursion-doc?
       (let [t-start (System/currentTimeMillis)

@@ -2,7 +2,8 @@
   (:require [clojure.test :refer [deftest is testing]]
             [futon3c.scripts.mission-scope-ingest :as scope-ingest]
             [futon3c.watcher.file-ingest :as sut]
-            [futon3c.watcher.multi :as multi]))
+            [futon3c.watcher.multi :as multi]
+            [futon3c.watcher.scope-reingest :as scope-reingest]))
 
 (deftest mission-doc-path-stays-inside-stack-roots
   (testing "mission-doc ingest is scoped to holes/missions under /home/joe/code"
@@ -198,3 +199,63 @@
                                            :root "/home/joe/code/futon3c"})]
       (is (= 1 (:failed result)))
       (is (false? (:entity-ok? result))))))
+
+;; Invented fixtures only: no substrate HTTP calls or background scope work.
+(deftest ticket-path-recognition-is-shared-and-narrow
+  (let [path "/home/joe/code/futon3c/holes/tickets/T-Invented-Check.md"]
+    (is (sut/ticket-doc-path? path))
+    (is (multi/watched? path))
+    (is (= "T-Invented-Check" (#'multi/mission-stem-from-path path)))
+    (doseq [path ["/home/joe/code/futon3c/holes/T-invented-report.md"
+                  "/home/joe/code/futon3c/holes/missions/T-invented-report.md"
+                  "/home/joe/code/futon3c/holes/tickets/M-invented.md"]]
+      (is (not (sut/ticket-doc-path? path)))
+      (is (not (multi/watched? path))))
+    (is (not (multi/watched? "/home/joe/code/futon3c/.state/holes/tickets/T-invented.md")))))
+
+(deftest ticket-ingest-writes-canonical-entity-and-reports-write-failure
+  (let [path "/home/joe/code/futon3c/holes/tickets/T-Invented-Check.md"
+        id "futon3c-d/ticket/invented-check"]
+    (doseq [success? [true false]]
+      (let [entities (atom []) vertices (atom [])]
+        (with-redefs [clojure.core/slurp (fn [_] "# T-Invented-Check — invented fixture\n\n**Status:** DONE\n")
+                      sut/post-hyperedge! (fn [& args] (swap! vertices conj args) {:ok? true})
+                      sut/post-entity! (fn [entity] (swap! entities conj entity) {:ok? success?})]
+          (let [result (sut/ingest-ticket-doc! {:path path :label "futon3c-d"})]
+            (is (= 1 (count @entities)))
+            (is (= {:id id :name id :type "ticket/doc" :external-id "T-Invented-Check"
+                    :source "ticket-doc-watcher"
+                    :props {"ticket/id" "Invented-Check"
+                            "ticket/title" "T-Invented-Check — invented fixture"
+                            "ticket/status" "complete" "ticket/raw-status" "DONE"
+                            "provenance/repo" "futon3c" "provenance/path" path}}
+                   (first @entities)))
+            (is (= ["code/v05/ticket-doc" [id]] (vec (take 2 (first @vertices)))))
+            (is (= path (get (nth (first @vertices) 3) "source-file")))
+            (is (= success? (:entity-ok? result)))
+            (is (= (if success? 0 1) (:failed result)))))))))
+
+(deftest ticket-status-header-variants
+  (doseq [[header expected raw] [["**Status:** OPEN" :in-progress "OPEN"]
+                                 ["**Status**: BLOCKED" :blocked "BLOCKED"]
+                                 ["**Status: NOT STARTED**" :ready "NOT STARTED"]
+                                 ["Status: ABANDONED" :nonstarter "ABANDONED"]
+                                 ["**Status: SCOPED, NOT STARTED.**" :unknown "SCOPED, NOT STARTED."]
+                                 ["No status header" :unknown nil]]]
+    (with-redefs [clojure.core/slurp (fn [_] (str "# Invented ticket\n" header "\n"))]
+      (let [ticket (sut/parse-ticket-md "/invented/holes/tickets/T-test.md")]
+        (is (= expected (:ticket/status ticket)))
+        (is (= raw (:ticket/raw-status ticket)))))))
+
+(deftest ticket-dispatch-schedules-scopes-only-after-entity-success
+  (let [path "/home/joe/code/futon3c/holes/tickets/T-invented.md"]
+    (doseq [success? [true false]]
+      (let [scheduled (atom [])]
+        (with-redefs [sut/file-exists? (constantly true)
+                      sut/ingest-ticket-doc! (fn [opts]
+                                               (is (= {:path path :label "futon3c-d"} opts))
+                                               {:entity-ok? success? :failed (if success? 0 1)})
+                      scope-reingest/schedule! #(swap! scheduled conj %)]
+          (let [result (sut/dispatch! {:path path :label "futon3c-d" :root "/home/joe/code/futon3c"})]
+            (is (= :ticket-doc (:status result)))
+            (is (= (if success? [path] []) @scheduled))))))))
