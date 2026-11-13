@@ -58,7 +58,7 @@
   ;; evolver scratch incl its own logs). Do NOT bake /home/ or /data/ into the base list — Joe's
   ;; futon checkouts live under /home/joe/code and would be wholly excluded.
   (re-pattern
-   (str "/\\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv|state)/|/node_modules/|/target/|/out/|/__pycache__/"
+   (str "/\\.(git|cpcache|shadow-cljs|lsp|clj-kondo|pytest_cache|venv[^/]*|state)/|/node_modules/|/target/|/out/|/__pycache__/"
         (when-let [dirs (some-> (System/getenv "FUTON3C_WATCH_EXCLUDE_DIRS") str/trim not-empty)]
           (let [names (->> (str/split dirs #",") (map str/trim) (remove str/blank?))]
             (when (seq names)
@@ -1530,7 +1530,13 @@
       (let [{:keys [renamed deleted added]} moves
             file-dispatch-ok? (atom true)
             ingest-paths (vec (remove cross-root-tos ingest-paths))
-            deleted (vec (remove cross-root-froms deleted))
+            ;; Noise paths (e.g. a removed in-repo .venv-motifs/) are excluded
+            ;; from ingest, so their deletion is not dispatched. Dispatching
+            ;; it ran a 15 s unindexed source-file query per path, timed out,
+            ;; left the cache unsettled and re-dispatched 86 futon0 files every
+            ;; cycle (CHURN-scope-reingest-2026-11-13.md).
+            deleted (vec (remove #(re-find NOISE-PATTERN (str/replace (str %) "\\" "/"))
+                                 (remove cross-root-froms deleted)))
             cross-root-count (count (filter #(or (= root (:from-root %))
                                                  (= root (:to-root %)))
                                             cross-root-moves))
