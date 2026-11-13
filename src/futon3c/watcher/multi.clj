@@ -1544,6 +1544,11 @@
            file-change-giraffe-probe file-change-settlement]
     :or {commit-ingest? true}}]
   (let [n (swap! cycle-n inc)
+        ;; The running watcher captured its roots at start!; intersecting with
+        ;; the current table lets a root be retired by reloading roots.clj,
+        ;; without restarting the watcher.
+        live-paths (set (map :path roots/watch-roots))
+        roots (filterv #(live-paths (:path %)) roots)
         plans (vec (map #(build-plan % per-root-cache) roots))
         cross-root-moves (detect-cross-root-moves plans)
         cross-root-froms (set (map :from cross-root-moves))

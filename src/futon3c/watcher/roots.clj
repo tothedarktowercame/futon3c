@@ -23,9 +23,10 @@
             [clojure.string :as str]))
 
 (def ^:private default-watch-roots
+  ;; futon1 and futon1a are no longer watched (Joe, 2026-11-13: "substrate-2
+  ;; should restrict itself to *live* code not historical"; both are long
+  ;; outdated). Their past records stay in the store as history.
   [{:path "/home/joe/code/futon0"  :label "futon0-d"}
-   {:path "/home/joe/code/futon1"  :label "futon1-d"}
-   {:path "/home/joe/code/futon1a" :label "futon1a-d"}
    {:path "/home/joe/code/futon2"  :label "futon2-d"}
    {:path "/home/joe/code/futon3"  :label "futon3-d"}
    {:path "/home/joe/code/futon3a" :label "futon3a-d"}
