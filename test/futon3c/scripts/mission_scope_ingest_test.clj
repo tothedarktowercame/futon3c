@@ -166,7 +166,12 @@
 (deftest scope-lane-writes-no-mission-doc-entity-for-excursion-stems
   (let [ensured (atom [])]
     (binding [ingest/*dry-run?* true]
-      (with-redefs [ingest/ensure-entity!
+      (with-redefs [ingest/get-entity
+                    (fn [_ _ _]
+                      {:id "invented-excursion-uuid" :name "futon3c-d/excursion/side-quest"
+                       :type "excursion/doc" :external-id "E-side-quest"
+                       :props {:provenance/path "/home/joe/code/futon3c/holes/missions/E-side-quest.md"}})
+                    ingest/ensure-entity!
                     (fn [_ _ _ spec]
                       (swap! ensured conj spec)
                       spec)]
@@ -313,8 +318,8 @@
 
 (deftest batch-non-2xx-fails-the-mission
   (with-redefs [ingest/http-edn (fn
-                                  ([c m u] {:status 500 :body "boom"})
-                                  ([c m u b] {:status 500 :body "boom"}))]
+                                  ([_c _m _u] {:status 500 :body "boom"})
+                                  ([_c _m _u _b] {:status 500 :body "boom"}))]
     (#'ingest/reset-run-caches!)
     (binding [ingest/*write-buffer* {:entities (atom (array-map))
                                      :hyperedges (atom [])}]
@@ -326,3 +331,33 @@
                    (catch clojure.lang.ExceptionInfo e e))]
         (is (= "futon1b request failed" (ex-message e)))
         (is (= :hyperedges-batch (:op (ex-data e))))))))
+
+(deftest invented-excursion-resolves-watcher-name-and-refuses-mismatches
+  (let [path "/home/joe/code/futon3c/holes/excursions/E-Mixed-Case.md"
+        name "futon3c-d/excursion/Mixed-Case"
+        entity {:id "invented-uuid" :name name :type "excursion/doc"
+                :external-id "E-Mixed-Case" :props {:provenance/path path}}
+        calls (atom [])]
+    (#'ingest/reset-run-caches!)
+    (with-redefs [ingest/http-edn
+                  (fn [_ method url & _]
+                    (swap! calls conj [method url])
+                    {:status 200 :body {:entity entity}})]
+      (is (= entity (#'ingest/ensure-mission-doc-entity!
+                     nil "http://invented" "test" "E-Mixed-Case" path)))
+      (is (= [[:get "http://invented/api/alpha/entity/futon3c-d%2Fexcursion%2FMixed-Case"]]
+             @calls)))
+    (with-redefs [ingest/get-entity (fn [& _] (assoc entity :props {}))]
+      (let [resolved (#'ingest/ensure-mission-doc-entity!
+                      nil "http://invented" "test" "E-Mixed-Case" path)
+            edge (#'ingest/scope-hyperedge resolved {:id "scope"} []
+                  {:scope-id "invented-scope" :binder-type "loose-section"})]
+        (is (= "invented-uuid" (get-in edge [:hx/endpoints 0 :entity-id])))
+        (is (= "E-Mixed-Case" (get-in edge [:props :mission])))))
+    (doseq [bad [nil (assoc entity :type "mission/doc")
+                 (assoc entity :external-id "E-other")
+                 (assoc-in entity [:props :provenance/path] "/other/copy.md")]]
+      (with-redefs [ingest/get-entity (fn [& _] bad)]
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"missing or mismatched"
+              (#'ingest/ensure-mission-doc-entity!
+               nil "http://invented" "test" "E-Mixed-Case" path)))))))

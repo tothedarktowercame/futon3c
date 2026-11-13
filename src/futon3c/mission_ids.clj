@@ -59,3 +59,11 @@
   [label mission]
   (str label "/mission/"
        (slug (str/replace-first (str mission) #"^M-" ""))))
+
+(defn excursion-doc-name
+  "Watcher excursion entity name (not its UUID). ID is the bare parsed
+   excursion id; preserve case and the registry local-name convention."
+  [label excursion-id]
+  (let [raw (if (keyword? excursion-id) (name excursion-id) (str excursion-id))
+        local (if-let [i (str/index-of raw "/")] (subs raw (inc i)) raw)]
+    (str label "/excursion/" local)))

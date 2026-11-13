@@ -408,25 +408,40 @@
       (str/starts-with? s "C-") :campaign
       :else :mission)))
 
+(defn- resolve-excursion-doc!
+  "Resolve the watcher's name to its stored UUID. Never manufacture an endpoint
+   when the document writer has not yet supplied the excursion entity."
+  [client base-url mission path]
+  (let [label (mission-ids/watcher-label-for-path watch-roots/watch-roots path)
+        stem (str/replace (.getName (io/file path)) #"\.md$" "")
+        _ (when-not (and label (= mission stem))
+            (throw (ex-info "Excursion path does not identify a watched document"
+                            {:mission mission :path path :label label})))
+        entity-name (mission-ids/excursion-doc-name label (subs stem 2))
+        entity (get-entity client base-url entity-name)]
+    (when-not (and (:id entity)
+                   (#{"excursion/doc" :excursion/doc} (:type entity))
+                   (= mission (:external-id entity))
+                   (= entity-name (:name entity))
+                   (or (nil? (get-in entity [:props :provenance/path]))
+                       (= path (get-in entity [:props :provenance/path]))))
+      (throw (ex-info "Watcher excursion entity missing or mismatched"
+                      {:mission mission :path path :name entity-name :entity entity})))
+    entity))
+
 (defn- ensure-mission-doc-entity!
-  "Ensure the mission/doc entity for an M- stem. E-/C- stems are
-   excursions/campaigns: the watcher owns those entity docs, so the scope
-   lane must NOT write a mission/doc entity for them (the 755 E- + 9 C-
-   stray stubs found 2026-11-12). Returns a thin id map (no entity write)
-   for non-mission stems so scope hyperedges keep a stable endpoint."
+  "Ensure M- documents; resolve E- documents to the watcher's existing UUID.
+   Campaign behavior is unchanged. Excursion props remain watcher-owned."
   [client base-url penholder mission mission-path]
-  (let [mission-id (mission-doc-id mission mission-path)]
-    (if (= :mission (mission-stem-kind mission))
-      (ensure-entity! client base-url penholder
-                      {:id mission-id
-                       :name mission-id
-                       :type "mission/doc"
-                       :external-id mission
-                       :source "mission-scope-tree"
-                       :props {:mission/id mission
-                               :mission/path mission-path}})
-      {:id mission-id
-       :external-id mission})))
+  (if (= :excursion (mission-stem-kind mission))
+    (resolve-excursion-doc! client base-url mission mission-path)
+    (let [mission-id (mission-doc-id mission mission-path)]
+      (if (= :mission (mission-stem-kind mission))
+        (ensure-entity! client base-url penholder
+                        {:id mission-id :name mission-id :type "mission/doc"
+                         :external-id mission :source "mission-scope-tree"
+                         :props {:mission/id mission :mission/path mission-path}})
+        {:id mission-id :external-id mission}))))
 
 (defn- env-name [scope]
   (or (some #(when (= "environment" (:role %)) (:name %)) (:ends scope))
@@ -576,7 +591,7 @@
                      :endpoint-only? true}))))))))
 
 (defn- flexiarg-endpoint [pattern-ref]
-  (when-let [[repo rest-path] (rest (re-matches #"([^/]+)/(.+\.flexiarg)" (str pattern-ref)))]
+  (when-let [[_ repo rest-path] (re-matches #"([^/]+)/(.+\.flexiarg)" (str pattern-ref))]
     (str repo "-d/file/" rest-path)))
 
 (defn- pattern-library-key [pattern-ref]
@@ -2032,7 +2047,6 @@
                  ("psr" "pur") (stable-record-scopes mission mission-path raw-scopes (vec scopes))
                  (vec scopes))
         selected-ids (set (map :scope-id scopes))
-        mission-id (mission-doc-id mission mission-path)
         mission-entity (ensure-mission-doc-entity! client base-url penholder mission mission-path)
         legacy-report (if binder-filter
                         (retract-legacy-position-scopes! client base-url penholder mission mission-entity binder-filter)

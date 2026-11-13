@@ -629,7 +629,7 @@
 
 (defn normalize-excursion-endpoint
   [label excursion-id]
-  (str label "/excursion/" (local-name-from-registry-id excursion-id)))
+  (mission-ids/excursion-doc-name label excursion-id))
 
 (defn sorry-t
   [status]
