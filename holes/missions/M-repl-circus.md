@@ -822,6 +822,16 @@ above identifies a missing witness.
 7. INSTANTIATE: rewrite CLAUDE.md's minus40 section (it still names the
    retired :7093 store) to treat 驴/狗 lines as entry points; 猴 from 馬
    stays on hold.
+   **Mojira is where the loop is watched and tuned** (Joe, 2026-11-13: "once
+   we have the loop running we can presumably watch the changes load into
+   Mojira in real time and then tune the loop so that what we get is useful.
+   My hope with Mojira dispatch is that "everything will be no more than 5
+   key-presses away", that priorities will always be up to date"). So the
+   loop's last step regenerates the Mojira preview for the items it touched
+   (and the party page) after each mint, and VERIFY measures two things: the
+   priorities shown are newer than the newest settled turn and document
+   change, and any item, its reading, its needs and its place in each
+   character's top ten are reachable within 5 key-presses of the start page.
 8. DOCUMENT: the mission write-up, including
    [E-workplan-validation](../excursions/E-workplan-validation.md) (Joe,
    2026-11-13): the model-made workplan history (serves links, readings,
