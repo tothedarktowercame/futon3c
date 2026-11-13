@@ -13860,7 +13860,8 @@
 
           (and (= :delete method) (re-matches #"/api/alpha/agents/(.+)" uri))
           (let [[_ agent-id] (re-find #"/api/alpha/agents/(.+)" uri)]
-            (handle-agent-delete config agent-id))
+            ;; decode like the reset-session route: 象/猴 ids arrive %-encoded
+            (handle-agent-delete config (enc/decode-uri-component agent-id)))
 
           (and (= :get method) (re-matches #"/api/alpha/agents/(.+)" uri))
           (let [[_ agent-id] (re-find #"/api/alpha/agents/(.+)" uri)]
