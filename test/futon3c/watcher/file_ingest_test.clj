@@ -259,3 +259,16 @@
           (let [result (sut/dispatch! {:path path :label "futon3c-d" :root "/home/joe/code/futon3c"})]
             (is (= :ticket-doc (:status result)))
             (is (= (if success? [path] []) @scheduled))))))))
+
+(deftest nested-holes-copies-are-not-documents
+  ;; claude-13, 2026-11-13: run records under holes/labs/ keep copies of
+  ;; mission docs; they gave M-u88 a second entity. Invented paths.
+  (let [copy "/home/joe/code/futon3c/holes/labs/run-x/authority/holes/missions/M-invented.md"
+        real "/home/joe/code/futon3c/holes/missions/M-invented.md"]
+    (is (sut/nested-holes-copy? copy))
+    (is (not (sut/nested-holes-copy? real)))
+    (is (not (sut/mission-doc-path? copy)))
+    (is (sut/mission-doc-path? real))
+    (is (not (sut/excursion-doc-path? "/x/holes/labs/r/holes/excursions/E-invented.md")))
+    (is (not (sut/ticket-doc-path? "/x/holes/labs/r/holes/tickets/T-invented.md")))
+    (is (sut/ticket-doc-path? "/x/holes/tickets/T-invented.md"))))

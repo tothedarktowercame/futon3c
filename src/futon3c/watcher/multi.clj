@@ -966,10 +966,11 @@
 (defn watched? [path]
   (let [norm (str/replace (str path) "\\" "/")
         ext (file-ext (str path))
-        mission-doc? (boolean (re-find mission-doc-pattern norm))
-        excursion-doc? (boolean (re-find excursion-doc-pattern norm))
+        nested-copy? (file-ingest/nested-holes-copy? norm)
+        mission-doc? (and (not nested-copy?) (boolean (re-find mission-doc-pattern norm)))
+        excursion-doc? (and (not nested-copy?) (boolean (re-find excursion-doc-pattern norm)))
         ticket-doc? (file-ingest/ticket-doc-path? norm)
-        campaign-doc? (boolean (re-find campaign-doc-pattern norm))
+        campaign-doc? (and (not nested-copy?) (boolean (re-find campaign-doc-pattern norm)))
         sorry-registry? (file-ingest/sorry-registry-path? norm)]
     (and (or (and ext (WATCHED-EXTS ext)) sorry-registry?)
          (not (re-find NOISE-PATTERN norm))

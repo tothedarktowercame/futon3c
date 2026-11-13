@@ -555,27 +555,41 @@
 
 ;; ---------- mission doc path detection + sync ----------
 
+(defn nested-holes-copy?
+  "A document under a holes/ that itself sits below another holes/ is a copy
+  kept as a fixture or run record (e.g. futon3c holes/labs/wm-contract/runs/
+  RUN4-*/authority/holes/missions/M-u88-contextual-preferences.md, 14 copies),
+  not a mission, excursion, ticket or campaign. Counting them as documents gave
+  M-u88 a second entity whose path pointed into a run dir (claude-13,
+  2026-11-13)."
+  [path]
+  (boolean (re-find #"/holes/.*/holes/" (str/replace (str path) "\\" "/"))))
+
 (defn mission-doc-path? [path]
-  (boolean
-   (re-find mission-doc-pattern
-            (str/replace (str path) "\\" "/"))))
+  (and (not (nested-holes-copy? path))
+       (boolean
+        (re-find mission-doc-pattern
+                 (str/replace (str path) "\\" "/")))))
 
 (defn ticket-doc-path? [path]
-  (boolean
-   (re-find ticket-doc-pattern
-            (str/replace (str path) "\\" "/"))))
+  (and (not (nested-holes-copy? path))
+       (boolean
+        (re-find ticket-doc-pattern
+                 (str/replace (str path) "\\" "/")))))
 
 (defn excursion-doc-path?
   [path]
-  (boolean
-   (re-find excursion-doc-pattern
-            (str/replace (str path) "\\" "/"))))
+  (and (not (nested-holes-copy? path))
+       (boolean
+        (re-find excursion-doc-pattern
+                 (str/replace (str path) "\\" "/")))))
 
 (defn campaign-doc-path?
   [path]
-  (boolean
-   (re-find campaign-doc-pattern
-            (str/replace (str path) "\\" "/"))))
+  (and (not (nested-holes-copy? path))
+       (boolean
+        (re-find campaign-doc-pattern
+                 (str/replace (str path) "\\" "/")))))
 
 (defn sorry-registry-path? [path]
   (boolean
