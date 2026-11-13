@@ -1529,8 +1529,24 @@
                                          :prompt "check context" :caller "test"
                                          :surface "emacs-repl" :mission-id "E-preclock"})))
         (is (= "E-preclock" (:mission-id @seen)))
+        (is (= :bell (:dispatch-kind @seen)))
         (is (= (clock-store/empty-clock)
                (clock-store/current-clock "zai-preclock" "real-session")))))))
+
+(deftest invoke-job-identifies-whistle-dispatch-to-proxy
+  (let [seen (atom nil)
+        job-id (#'http/create-invoke-job! {:agent-id "remote-question-target"
+                                          :prompt "question" :caller "test"
+                                          :surface "whistle"})]
+    (with-redefs [http/invoke-agent-with-session-recovery!
+                  (fn [_agent _prompt opts _dispatch-id]
+                    (reset! seen opts)
+                    {:ok true :result "answer" :session-id "remote-session"})]
+      (is (:ok (#'http/run-invoke-job! {:job-id job-id
+                                       :agent-id "remote-question-target"
+                                       :prompt "question" :caller "test"
+                                       :surface "whistle"})))
+      (is (= :whistle (:dispatch-kind @seen))))))
 
 (deftest claude-invoke-recovers-from-missing-conversation-session
   (testing "Claude missing-conversation resume failure clears continuity and retries once"

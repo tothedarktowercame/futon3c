@@ -6020,6 +6020,9 @@
                              ;; "failed" and the real late result was lost
                              ;; (whistle-timeout-returns-pollable-supervised-job).
                              :model model :reasoning-effort reasoning-effort
+                             :dispatch-kind (if (= "whistle" (str surface))
+                                              :whistle
+                                              :bell)
                              :mission-id mission-id :evidence-store evidence-store
                              :caller caller
                              :inherited-clock (get-in (ensure-invoke-jobs-ledger!)

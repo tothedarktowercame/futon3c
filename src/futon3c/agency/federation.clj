@@ -370,38 +370,45 @@
    ordinary bell endpoint.  Federation changes transport, not admission: the
    origin Agency durably queues the turn behind any active turn for the agent."
   [origin-url agent-id]
-  (fn [prompt session-id]
-    (try
-      (let [body (json/generate-string
-                  {"agent-id" agent-id
-                   "prompt" prompt
-                   "caller" "federation-proxy"
-                   "surface" "bell"
-                   "timeout-ms" default-proxy-timeout-ms})
+  (letfn [(forward [prompt session-id invoke-options]
+            (try
+              (let [bell? (= :bell (:dispatch-kind invoke-options))
+                    endpoint (if bell? "/api/alpha/bell" "/api/alpha/invoke")
+                    body (json/generate-string
+                          (cond-> {"agent-id" agent-id
+                                   "prompt" prompt
+                                   "caller" "federation-proxy"
+                                   "timeout-ms" default-proxy-timeout-ms}
+                            bell? (assoc "surface" "bell")))
             ;; Use org.httpkit.client for non-blocking HTTP
-            resp @(http/post
-                   (str origin-url "/api/alpha/bell")
-                   {:headers {"Content-Type" "application/json"}
-                    :body body
-                    :timeout default-proxy-timeout-ms})
-            status (:status resp)
-            parsed (try
-                     (json/parse-string (or (:body resp) "{}") true)
-                     (catch Exception _
-                       {}))]
-        (if (and status (< status 400) (= true (:ok parsed)))
-          {:result (or (:result parsed)
-                       (str "[federation bell queued: " (:job-id parsed) "]"))
-           :session-id (or (:session-id parsed) session-id)
-           :remote-job-id (:job-id parsed)
-           :remote-state (:state parsed)}
-          {:error (str "Proxy invoke failed: HTTP " status
-                       (when-let [msg (:message parsed)]
-                         (str " (" msg ")")))
-           :exit-code -1}))
-      (catch Exception e
-        {:error (str "Proxy invoke exception: " (.getMessage e))
-         :exit-code -1}))))
+                    resp @(http/post
+                           (str origin-url endpoint)
+                           {:headers {"Content-Type" "application/json"}
+                            :body body
+                            :timeout default-proxy-timeout-ms})
+                    status (:status resp)
+                    parsed (try
+                             (json/parse-string (or (:body resp) "{}") true)
+                             (catch Exception _
+                               {}))]
+                (if (and status (< status 400) (= true (:ok parsed)))
+                  (cond-> {:result (or (:result parsed)
+                                      (str "[federation bell queued: " (:job-id parsed) "]"))
+                           :session-id (or (:session-id parsed) session-id)}
+                    bell? (assoc :remote-job-id (:job-id parsed)
+                                 :remote-state (:state parsed)))
+                  {:error (str "Proxy invoke failed: HTTP " status
+                               (when-let [msg (:message parsed)]
+                                 (str " (" msg ")")))
+                   :exit-code -1}))
+              (catch Exception e
+                {:error (str "Proxy invoke exception: " (.getMessage e))
+                 :exit-code -1})))]
+    (fn
+      ([prompt session-id]
+       (forward prompt session-id nil))
+      ([prompt session-id invoke-options]
+       (forward prompt session-id invoke-options)))))
 
 ;; =============================================================================
 ;; Peer announcement

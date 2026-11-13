@@ -69,7 +69,7 @@
                                 (doto (promise)
                                   (deliver {:status 202
                                             :body "{\"ok\":true,\"accepted\":true,\"job-id\":\"invoke-remote-1\",\"state\":\"queued\"}"})))]
-        (let [result (f "hello" "sess-1")
+        (let [result (f "hello" "sess-1" {:dispatch-kind :bell})
               call (first @calls)
               payload (json/parse-string (get-in call [:opts :body]) true)]
           (is (= "[federation bell queued: invoke-remote-1]" (:result result)))
@@ -81,6 +81,21 @@
           (is (= "hello" (:prompt payload)))
           (is (= "federation-proxy" (:caller payload)))
           (is (= "bell" (:surface payload))))))))
+
+(deftest proxy-invoke-fn-keeps-non-bell-dispatch-synchronous
+  (testing "surface-blind and whistle callers do not become asynchronous bells"
+    (let [calls (atom [])
+          f (fed/make-proxy-invoke-fn "http://remote:7070" "codex-1")]
+      (with-redefs [http/post (fn [url _opts]
+                                (swap! calls conj url)
+                                (doto (promise)
+                                  (deliver {:status 200
+                                            :body "{\"ok\":true,\"result\":\"pong\",\"session-id\":\"sid-2\"}"})))]
+        (is (= "pong" (:result (f "legacy" "sess-1"))))
+        (is (= "pong" (:result (f "question" "sess-1" {:dispatch-kind :whistle}))))
+        (is (= ["http://remote:7070/api/alpha/invoke"
+                "http://remote:7070/api/alpha/invoke"]
+               @calls))))))
 
 ;; =============================================================================
 ;; Announcement — skips when not configured
