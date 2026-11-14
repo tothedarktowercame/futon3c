@@ -171,3 +171,13 @@ Body.
     (is (every? (fn [xs] (and (sequential? xs) (every? map? xs)))
                 (concat [(:readable-status v)]
                         (vals (:one-document-per-id v)))))))
+
+
+(deftest noise-directory-copies-are-not-documents
+  ;; claude-13 review: copies under a watcher noise directory (.state/) are
+  ;; not documents, so they cannot be duplicates. Invented paths.
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory "mdi-noise" (make-array java.nio.file.attribute.FileAttribute 0)))
+        real (java.io.File. dir "holes/missions/M-invented.md")
+        copy (java.io.File. dir ".state/frames/x/checkout/holes/missions/M-invented.md")]
+    (doseq [f [real copy]] (.mkdirs (.getParentFile f)) (spit f "# M-invented\n\n**Status:** OPEN\n"))
+    (is (= [(.getPath real)] (mapv :path (inv/scan-root {:path (.getPath dir) :label "invented-d"}))))))

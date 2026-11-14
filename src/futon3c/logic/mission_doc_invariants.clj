@@ -34,6 +34,7 @@
             [clojure.string :as str]
             [futon3c.peripheral.mission-control-backend :as mcb]
             [futon3c.watcher.file-ingest :as fi]
+            [futon3c.watcher.multi :as multi]
             [futon3c.watcher.roots :as roots])
   (:import [java.sql DriverManager]))
 
@@ -117,7 +118,13 @@
   [{:keys [label] :as root}]
   (into []
         (comp (map (fn [p]
-                     (when-let [kind (classify-doc-path p)]
+                     ;; claude-13 review: also honour the watcher's noise
+                     ;; directories (.state/, .git/, node_modules/ ...): a
+                     ;; checkout under futon3c/.state/night-shift-frames/
+                     ;; held 36 copies of mission files the watcher never
+                     ;; ingests, which this check counted as duplicates.
+                     (when-let [kind (and (not (re-find multi/NOISE-PATTERN (str p)))
+                                          (classify-doc-path p))]
                        {:path p
                         :kind kind
                         :external-id (.getName (io/file p))
