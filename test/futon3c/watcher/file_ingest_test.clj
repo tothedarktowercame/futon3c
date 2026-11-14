@@ -241,7 +241,7 @@
                                  ["**Status**: BLOCKED" :blocked "BLOCKED"]
                                  ["**Status: NOT STARTED**" :ready "NOT STARTED"]
                                  ["Status: ABANDONED" :nonstarter "ABANDONED"]
-                                 ["**Status: SCOPED, NOT STARTED.**" :unknown "SCOPED, NOT STARTED."]
+                                 ["**Status: SCOPED, NOT STARTED.**" :ready "SCOPED, NOT STARTED."]
                                  ["No status header" :unknown nil]]]
     (with-redefs [clojure.core/slurp (fn [_] (str "# Invented ticket\n" header "\n"))]
       (let [ticket (sut/parse-ticket-md "/invented/holes/tickets/T-test.md")]
@@ -287,3 +287,14 @@
                     reread-service/notify-doc-changed! #(swap! notified conj %)]
         (sut/dispatch! {:path path :root "/home/joe/code/futon3c" :label "fixture"})
         (is (= [path] @notified))))))
+
+
+(deftest ticket-status-in-bold-sentence-forms
+  ;; claude-13, 2026-11-14: 16 tickets wrote "**Status: DONE (...).** ..." or
+  ;; "**Status (triaged ...): SUPERSEDED.**". Invented text.
+  (doseq [[line want] [["**Status: DONE (closed 2026-10-27, invented).** More." :complete]
+                       ["**Status (triaged 2026-09-01): SUPERSEDED.** More." :complete]
+                       ["**Status (triaged 2026-09-01): DONE-IN-FACT.** More." :complete]]]
+    (let [f (java.io.File/createTempFile "T-invented" ".md")]
+      (spit f (str "# T-invented\n\n" line "\n"))
+      (is (= want (:ticket/status (sut/parse-ticket-md (.getPath f)))) line))))

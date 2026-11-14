@@ -1080,7 +1080,13 @@
                          [#"(?mi)^\*\*Status:\*\*[ \t]*(.+)$"
                           #"(?mi)^\*\*Status\*\*:[ \t]*(.+)$"
                           #"(?mi)^\*\*Status:[ \t]*(.+?)\*\*[ \t]*$"
-                          #"(?mi)^(?:#{1,3}[ \t]+)?Status:[ \t]*(.+)$"])]
+                          #"(?mi)^(?:#{1,3}[ \t]+)?Status:[ \t]*(.+)$"
+                          ;; "**Status: DONE (closed ...).** more text" and
+                          ;; "**Status (triaged 2026-09-01): SUPERSEDED.**":
+                          ;; 16 tickets wrote their status these ways
+                          ;; (claude-13, 2026-11-14).
+                          #"(?mi)^\*\*Status:[ \t]*(.+)$"
+                          #"(?mi)^\*\*Status[ \t]*\([^)]*\):[ \t]*(.+)$"])]
     {:ticket/id id
      :ticket/title (some-> (re-find #"(?m)^#[ \t]+(?:Ticket:[ \t]*)?(.+)$" header)
                            second str/trim)
