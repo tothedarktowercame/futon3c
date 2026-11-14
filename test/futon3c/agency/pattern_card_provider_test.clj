@@ -415,3 +415,17 @@
         (is (= 7 (:ms (:m40_ranked entry))))
         (is (= ["emb/top"] (mapv :id (:embedding_ranked entry))))
         (is (= "j-1" (:job_id entry)))))))
+
+(deftest card-reads-are-current-reads-served-by-the-sidecar
+  ;; 2026-11-14: as-of type+end reads scanned every hyperedge in futon1b
+  ;; (~10 s each), starved the sidecar catch-up of permits, and with the
+  ;; instant inlined filled XTDB's plan cache. The card read must not carry
+  ;; valid-as-of or system-as-of.
+  (let [paths (atom [])]
+    (with-redefs [hx-store/request! (fn [_url _method path _body]
+                                      (swap! paths conj path)
+                                      {:hyperedges []})]
+      (pattern/refresh-cards! "claude-x" "sess-x"))
+    (is (= ["/api/alpha/hyperedges?type=pattern-card%2Fselection&end=session%3Asess-x&limit=1000&include-total=false"]
+           @paths))
+    (is (not-any? #(re-find #"as-of" %) @paths))))

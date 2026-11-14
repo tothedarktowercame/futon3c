@@ -206,11 +206,24 @@
 
 (defn- encode [value] (URLEncoder/encode (str value) "UTF-8"))
 
-(defn- default-card-query [type endpoint system-as-of]
+(defn- default-card-query
+  "A CURRENT read of TYPE edges at ENDPOINT. SYSTEM-AS-OF is accepted for the
+   query-fn contract but deliberately not sent.
+
+   Until 2026-11-14 this sent valid-as-of = system-as-of = now. An as-of
+   type+end read cannot use futon1b's hyperedge sidecar index, so each call
+   scanned every hyperedge (~10 s, 60 s timeouts under load). The 1 + N of
+   them per card refresh held futon1b's expensive-read permits, which starved
+   the sidecar's own catch-up (none completed from 11-13 19:19 to 11-14
+   16:30); with the as-of instant inlined they also filled XTDB's plan cache
+   (futon1b holes/E-xtdb-plan-cache-heap.md). A current read is served from
+   the index in ~20 ms and returns what an as-of-now read did, minus a single
+   snapshot across the refresh's reads; the refresh recomputes the card each
+   time, so that is not needed."
+  [type endpoint _system-as-of]
   (let [path (str "/api/alpha/hyperedges?type=" (encode (subs (str type) 1))
                   "&end=" (encode endpoint)
-                  "&limit=1000&include-total=false&valid-as-of=" (encode system-as-of)
-                  "&system-as-of=" (encode system-as-of))]
+                  "&limit=1000&include-total=false")]
     (:hyperedges (hx-store/request! "http://127.0.0.1:7073" "GET" path nil))))
 
 (defn refresh-cards!
