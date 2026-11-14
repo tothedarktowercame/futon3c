@@ -434,3 +434,50 @@
               (is (= :futon3c.watcher.commit-ingest/lookup-failed
                      (sut/last-indexed-commit-sha "nogit" "/tmp/repo")))))))
       (finally (reset! mem saved)))))
+
+(deftest top-level-spans-locate-forms
+  (testing "clojure: names after metadata, spans run to the next top-level form"
+    (is (= [{:name "a" :start 2 :end 3} {:name "b" :start 4 :end 5} {:name "c" :start 6 :end 6}]
+           (sut/top-level-spans "x.clj" (str "(ns x)\n(defn a []\n  1)\n(def ^:private b\n  2)\n"
+                                               "(defn- ^{:doc \"d\"} c [] 3)\n")))))
+  (testing "elisp"
+    (is (= ["f" "v"] (map :name (sut/top-level-spans "x.el" "(defun f ()\n  1)\n(defvar v 2)\n")))))
+  (testing "python: decorators belong to the def; top-level code ends a span"
+    (is (= [{:name "f" :start 2 :end 4} {:name "K" :start 6 :end 7}]
+           (sut/top-level-spans "x.py" (str "import os\n@dec\ndef f():\n    return 1\nX = 2\n"
+                                              "class K:\n    pass\n")))))
+  (testing "an unknown language gives nil, not an empty claim"
+    (is (nil? (sut/top-level-spans "x.md" "# hi\n")))))
+
+(deftest changed-line-ranges-read-zero-context-hunks
+  (is (= [[3 3] [10 12] [7 7]]
+         (sut/changed-line-ranges "@@ -3 +3 @@\n-x\n+y\n@@ -9,0 +10,3 @@\n+a\n@@ -8,2 +7,0 @@\n-z\n"))))
+
+(deftest edits-edges-go-only-to-touched-vars
+  ;; 2026-11-14: a commit got an edits edge to every var in each file it
+  ;; changed; most of futon1b's hyperedge write volume.
+  (let [repo (tmp-dir)
+        f (io/file repo "src/demo.clj")
+        commit! (fn [msg] (run-git! repo "add" ".")
+                  (run-git! repo "-c" "user.name=T" "-c" "user.email=t@example.test"
+                            "commit" "-q" "-m" msg)
+                  (git-fixture/git! repo "rev-parse" "HEAD"))]
+    (try
+      (run-git! repo "init" "-q")
+      (.mkdirs (.getParentFile f))
+      (spit f "(ns demo)\n(defn a [] 1)\n(defn b [] 2)\n(defn c [] 3)\n")
+      (let [first-sha (commit! "add")
+            _ (spit f "(ns demo)\n(defn a [] 1)\n(defn b [] 22)\n(defn c [] 3)\n")
+            second-sha (commit! "edit b")
+            posted (atom [])
+            run (fn [sha]
+                  (reset! posted [])
+                  (with-redefs [sut/post-hyperedges! (fn [items] (swap! posted into items) [])]
+                    (sut/ingest-edits-for-commit!
+                     ["v05"] {} "r" {:sha sha}
+                     (constantly ["demo/a" "demo/b" "demo/c"]) (str repo) nil))
+                  (set (map (comp second second) @posted)))]
+        (is (= #{"r/demo/b"} (run second-sha)) "only the edited var")
+        (is (= #{"r/demo/a" "r/demo/b" "r/demo/c"} (run first-sha))
+            "a commit that adds the file touches all its vars"))
+      (finally (delete-tree! repo)))))

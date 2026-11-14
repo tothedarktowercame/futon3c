@@ -714,23 +714,106 @@
 (defn ingest-precedes! [labels base-props prev-sha next-sha]
   (post-hyperedge! "code/v05/precedes" [prev-sha next-sha] labels base-props))
 
+;; ---------- which vars a commit's diff touched ----------
+;;
+;; Until 2026-11-14 an edits edge went from a commit to EVERY var in every
+;; file it changed. A commit to a large file (transport/http.clj) linked
+;; itself to thousands of vars it did not touch, which was most of
+;; futon1b's hyperedge write volume (~226,700 single POSTs in 21 h with the
+;; re-ingest) and noise for every reader (futon6 mission_activity,
+;; fold_embed/mk_dataset, mission_scope_bindings). Now an edge goes only to
+;; vars whose top-level form overlaps a changed hunk. A file whose forms
+;; cannot be located (unknown language) gets no edits edges, never all.
+
+(def ^:private lisp-exts #{"clj" "cljc" "cljs" "bb" "el"})
+
+(def ^:private lisp-def-name-re
+  ;; (def… name / (ns/def… name, skipping ^:meta, ^Type and one-line ^{…}
+  #"^\((?:[\w.\-]+/)?def[\w\-*!?<>]*\s+(?:\^(?:\{[^}]*\}|\S+)\s+)*([^\s()\[\]{}\"]+)")
+
+(def ^:private py-def-name-re #"^(?:async\s+)?(?:def|class)\s+([A-Za-z_]\w*)")
+
+(defn- file-ext [path] (some-> (re-find #"\.([A-Za-z0-9]+)$" (str path)) second))
+
+(defn top-level-spans
+  "Top-level forms of TEXT as [{:name n :start l :end l}] (1-based, inclusive
+   lines), or nil for a language this does not know. Lisp: a form starts at
+   a line beginning with `(`. Python: at a column-0 def/class (decorator
+   lines above it belong to it); any other column-0 code line ends it."
+  [path text]
+  (let [lines (str/split-lines (str text))
+        n (count lines)
+        ext (file-ext path)]
+    (cond
+      (lisp-exts ext)
+      (let [starts (keep-indexed (fn [i l] (when (str/starts-with? l "(") i)) lines)]
+        (vec (for [[s e] (map vector starts (concat (rest starts) [n]))
+                   :let [nm (second (re-find lisp-def-name-re (nth lines s)))]
+                   :when nm]
+               {:name nm :start (inc s) :end e})))
+
+      (= "py" ext)
+      (let [col0? (fn [l] (and (seq l) (not (Character/isWhitespace (.charAt ^String l 0)))
+                               (not (str/starts-with? l "#"))))
+            idx (vec (keep-indexed (fn [i l] (when (col0? l) i)) lines))]
+        (vec (for [[k i] (map-indexed vector idx)
+                   :let [nm (second (re-find py-def-name-re (nth lines i)))]
+                   :when nm
+                   :let [start (loop [j (dec k)]   ; decorators directly above
+                                 (if (and (>= j 0) (str/starts-with? (nth lines (idx j)) "@"))
+                                   (recur (dec j))
+                                   (inc j)))
+                         nxt (get idx (inc k) n)]]
+               {:name nm :start (inc (idx start)) :end nxt})))
+
+      :else nil)))
+
+(defn changed-line-ranges
+  "New-side changed line ranges [from to] (inclusive) from `git show -U0`
+   output: a pure deletion counts as touching the line after which it fell."
+  [diff-text]
+  (vec (for [[_ c d] (re-seq #"(?m)^@@ -\S+ \+(\d+)(?:,(\d+))? @@" (str diff-text))
+             :let [c (Long/parseLong c)
+                   d (if d (Long/parseLong d) 1)]]
+         (if (zero? d) [(max 1 c) (max 1 c)] [c (+ c d -1)]))))
+
+(defn touched-names
+  "Names of the top-level forms of PATH that SHA's diff touched, or nil when
+   the file's forms cannot be located."
+  [git-root sha path subtree]
+  (let [git-path (if (and subtree (seq subtree)) (str subtree "/" path) path)
+        text (run-git git-root "show" (str sha ":" git-path))
+        spans (top-level-spans path text)]
+    (when spans
+      (let [ranges (changed-line-ranges
+                    (run-git git-root "show" "-U0" "--format=" sha "--" git-path))]
+        (into #{}
+              (keep (fn [{:keys [name start end]}]
+                      (when (some (fn [[a b]] (and (<= a end) (<= start b))) ranges)
+                        name)))
+              spans)))))
+
 (defn ingest-edits-for-commit!
-  "For one commit, posts code/v05/edits edges to all vars in files it
-   changed. `file->vars` is invoked as `(file->vars path)` returning a
-   seq of unprefixed var qnames at HEAD for that path; it can be either
-   a map (backfill) or a function (live mode). Var qnames get per-repo
-   prefixed via `(str repo-label \"/\" qname)` to match phase-1 vertex
-   ID convention."
+  "For one commit, posts code/v05/edits edges to the vars its diff touched in
+   the files it changed (see `touched-names`). `file->vars` is invoked as
+   `(file->vars path)` returning a seq of unprefixed var qnames for that path;
+   it can be either a map (backfill) or a function (live mode). A var is kept
+   when the name after its qname's last `/` is a touched form's name. Var
+   qnames get per-repo prefixed via `(str repo-label \"/\" qname)` to match
+   phase-1 vertex ID convention."
   [labels base-props repo-label commit file->vars git-root subtree]
   (let [pf (fn [q] (str repo-label "/" q))
-        files (files-changed git-root (:sha commit) subtree)]
+        sha (:sha commit)
+        files (files-changed git-root sha subtree)]
     (post-hyperedges!
      (vec
       (for [path files
-            :let [vs (file->vars path)]
-            :when (seq vs)
-            v vs]
-        ["code/v05/edits" [(:sha commit) (pf v)] labels base-props])))))
+            :let [vs (file->vars path)
+                  touched (when (seq vs) (touched-names git-root sha path subtree))]
+            :when (seq touched)
+            v vs
+            :when (contains? touched (last (str/split (str v) #"/")))]
+        ["code/v05/edits" [sha (pf v)] labels base-props])))))
 
 (defn commit-vt-ms
   "Epoch-millis valid-time for a commit (git %at is unix seconds), or nil."
