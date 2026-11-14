@@ -452,6 +452,34 @@
       (str "[no text — called: " (str/join ", " names) "]")
       "[no text or tool calls in this turn]")))
 
+(defn- empty-error-result
+  "An ex-info when result EVENT reports an error for a turn that produced no
+   text and called no tools; else nil.
+
+   `claude --resume <id>` for a conversation that does not exist emits no
+   assistant events and a result with `is_error` true and
+   `errors [\"No conversation found with session ID: …\"]`. Read as an ordinary
+   result, that became the placeholder '[no text or tool calls in this turn]'
+   and a successful turn, so the invoke layer's stale-session recovery never
+   saw the error (claude-1, 2026-11-14: three empty turns, two bells and an
+   operator prompt, on session f547b54c). Throwing instead lets feed-turn!'s
+   caller fall back cold, where the error surfaces as `:error` and the session
+   is reset. A turn that did produce text or tool calls is kept: replaying it
+   cold would repeat its side effects."
+  [agent-id event text tools]
+  (when (and (true? (:is_error event))
+             (str/blank? (str text))
+             (empty? tools))
+    (let [errors (seq (keep #(some-> % str not-empty) (:errors event)))
+          msg (if errors
+                (str/join "; " errors)
+                (str "claude result is_error, subtype " (:subtype event)))]
+      (ex-info (str "pouch turn failed: " msg)
+               {:agent-id agent-id
+                :pouch/error-result? true
+                :subtype (:subtype event)
+                :errors (vec errors)}))))
+
 (defn- alive? [pouch]
   (boolean (and (:process pouch)
                 (.isAlive ^Process (:process pouch)))))
@@ -746,6 +774,8 @@
               "result"
               (do
                 (note-total-cost! (:agent-id pouch) event)
+                (when-let [ex (empty-error-result (:agent-id pouch) event text tools)]
+                  (throw ex))
                 (when-let [event-sid (:session_id event)]
                   (reset! sid event-sid))
                 {:result (let [s (str text)]
@@ -1025,7 +1055,10 @@
                            trailer-inferred?
                            (assoc :pouch/trailer-inferred? true))]
                 (if-let [w @owner]
-                  (deliver (:promise w) {:ok turn})
+                  (deliver (:promise w)
+                           (if-let [ex (empty-error-result aid event body @tools)]
+                             {:error ex}
+                             {:ok turn}))
                   (report-unsolicited! aid turn)))
               (reset! owner nil)
               (reset! open? false)

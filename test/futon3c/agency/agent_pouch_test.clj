@@ -192,3 +192,59 @@
         (is (= ::waiting (deref compact 100 ::waiting)))
         (is (= "reply:SLOW" (:result @slow)))
         (is (= "success" (:compact-result @compact)))))))
+
+(defn- error-result-claude-bin
+  "Answers 'STALE' the way `claude --resume <missing-id>` does (no assistant
+   events, a result with is_error and errors), 'PARTIAL' with text followed by
+   an error result, anything else normally."
+  []
+  (let [f (java.io.File/createTempFile "fake-claude-error-" ".py")]
+    (spit f
+          (str "#!/usr/bin/env python3\n"
+               "import json, sys\n"
+               "sid = 'fake-session-err'\n"
+               "for line in sys.stdin:\n"
+               "    data = json.loads(line)\n"
+               "    content = data.get('message', {}).get('content', '')\n"
+               "    text = content if isinstance(content, str) else content[0].get('text', '')\n"
+               "    print(json.dumps({'type':'system','subtype':'init','session_id':sid}), flush=True)\n"
+               "    if text == 'STALE':\n"
+               "        print(json.dumps({'type':'result','subtype':'error_during_execution','is_error':True,'num_turns':0,'session_id':sid,'errors':['No conversation found with session ID: ' + sid]}), flush=True)\n"
+               "        continue\n"
+               "    print(json.dumps({'type':'assistant','message':{'content':[{'type':'text','text':'reply:' + text}]}}), flush=True)\n"
+               "    print(json.dumps({'type':'result','session_id':sid,'is_error':text == 'PARTIAL'}), flush=True)\n"))
+    (.setExecutable f true)
+    (.deleteOnExit f)
+    (.getAbsolutePath f)))
+
+(defn- check-empty-error-result-throws [agent-id]
+  (let [bin (error-result-claude-bin)
+        ex (try (pouch/feed-turn! agent-id "STALE" {:claude-bin bin :timeout-ms 5000})
+                nil
+                (catch Throwable e e))]
+    ;; Off the demux path the read runs in a future, so the ex-info arrives
+    ;; wrapped in an ExecutionException; dev.clj catches Throwable and logs
+    ;; .getMessage, which carries the CLI's error text either way.
+    ;; The caller (dev.clj) falls back cold on a throw; the cold path's
+    ;; "Exit 1: No conversation found" is what triggers the session reset.
+    (is (some? ex) "an empty error result must not read as a successful turn")
+    (is (re-find #"No conversation found with session ID: fake-session-err"
+                 (str (some-> ex .getMessage))))
+    (is (nil? (get (pouch/snapshot) agent-id)) "failed pouch is evicted")
+    ;; A turn that produced text is kept even if its result reports an error:
+    ;; replaying it cold would repeat whatever it did.
+    (is (= "reply:PARTIAL"
+           (:result (pouch/feed-turn! agent-id "PARTIAL" {:claude-bin bin :timeout-ms 5000}))))
+    (is (= "reply:ok"
+           (:result (pouch/feed-turn! agent-id "ok" {:claude-bin bin :timeout-ms 5000}))))))
+
+(deftest empty-error-result-throws-instead-of-placeholder
+  (System/clearProperty "FUTON3C_POUCH_DEMUX")
+  (check-empty-error-result-throws "claude-stale"))
+
+(deftest empty-error-result-throws-instead-of-placeholder-demux
+  (System/setProperty "FUTON3C_POUCH_DEMUX" "true")
+  (try
+    (check-empty-error-result-throws "claude-stale-demux")
+    (finally
+      (System/clearProperty "FUTON3C_POUCH_DEMUX"))))
