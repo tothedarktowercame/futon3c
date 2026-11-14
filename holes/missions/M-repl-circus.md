@@ -564,6 +564,14 @@ all kinds of things, "mention" being maybe the least interesting one").
   (a question, a decision, an approval) or that it was an absence. The loop
   improves by moving things from the mana side to the ※ side: an item whose
   handling Mojira brings within five keystrokes stops costing attention.
+- **Model first** (Joe, 2026-11-14: "before we build anything concrete we
+  need to build a logic model, maybe in Lean"): futon5
+  `lean-arxana/Circus/Basic.lean`, retro-specifying the code that exists
+  before deriving the primary theorem. Joe: "The Giraffe firing rule will
+  probably become a corollary, and the attention meter *may* turn out to be
+  a "typed hole" (we'll see!)". So the firing rule is derived from the
+  primary theorem, not designed beside it, and mana enters the model as an
+  input of known type whose producer may stay open.
 
 Order: giraffe-reread (event-driven, as above); the `/arxana/v1` mount proved on F1 (with a durable
 artifact provider, since the only one is in memory); workplan; F2–F6 and
