@@ -1013,3 +1013,13 @@
       (#'mcb/fetch-substrate-2-missions*)
       (is (str/includes? (first @seen) "&fields=hx/props"))
       (is (<= 30000 (second @seen))))))
+
+(deftest closed-and-bold-status-lines-are-read
+  ;; claude-13, 2026-11-14: five of the top-ranked items were CLOSED in their
+  ;; documents but :unknown in the substrate. Invented status strings.
+  (is (= :complete (mcb/classify-status "CLOSED 2026-11-10 (ruled with Joe)")))
+  (is (= :complete (mcb/classify-status "**CLOSED** (2026-11-11)")))
+  (is (= :nonstarter (mcb/classify-status "Cancelled: superseded by another")))
+  (is (= :in-progress (mcb/classify-status "OPEN — INVESTIGATION (discovery only)")))
+  (is (= "CLOSED (2026-11-11, invented). The split no longer applies."
+         (#'mcb/extract-header "# E-invented\n\n**Status: CLOSED (2026-11-11, invented). The split no longer applies.\n" "Status"))))

@@ -164,12 +164,16 @@
         ;; Also try: **Key**: value (colon outside bold)
         bold-pat2 (re-pattern (str "(?mi)^\\*\\*" quoted "\\*\\*:\\s*(.+)$"))
         ;; Fallback: plain or heading format: Key: value or ## Key: value
-        plain-pat (re-pattern (str "(?mi)^(?:#{1,3}\\s+)?" quoted ":\\s*(.+)$"))]
+        plain-pat (re-pattern (str "(?mi)^(?:#{1,3}\\s+)?" quoted ":\\s*(.+)$"))
+        ;; **Key: value** (whole line bold, e.g. "**Status: CLOSED (...)**")
+        bold-pat3 (re-pattern (str "(?mi)^\\*\\*" quoted ":\\s*(.+)$"))]
     (or (when-let [m (re-find bold-pat text)]
           (str/trim (second m)))
         (when-let [m (re-find bold-pat2 text)]
           (str/trim (second m)))
         (when-let [m (re-find plain-pat text)]
+          (str/trim (second m)))
+        (when-let [m (re-find bold-pat3 text)]
           (str/trim (second m))))))
 
 (defn classify-status
@@ -194,6 +198,15 @@
       (cond
         (str/starts-with? s "complete")         :complete
         (str/starts-with? s "done")             :complete
+        ;; 2026-11-14 (claude-13, Joe: "If "nothing is finished" that is a
+        ;; deficiency of bookkeeping"): CLOSED was the commonest close word in
+        ;; the top-twenty items and fell through to :unknown.
+        (str/starts-with? s "closed")           :complete
+        (str/starts-with? s "cancelled")        :nonstarter
+        (str/starts-with? s "canceled")         :nonstarter
+        (str/starts-with? s "withdrawn")        :nonstarter
+        (str/starts-with? s "retired")          :complete
+        (str/starts-with? s "investigation")    :in-progress
         (str/starts-with? s "blocked")          :blocked
         (str/starts-with? s "ready")            :ready
         (str/starts-with? s "testing")          :testing
