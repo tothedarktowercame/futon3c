@@ -28,12 +28,14 @@
    §6 for design and reload-safety considerations."
   (:require [clojure.string :as str]
             [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [babashka.http-client :as http]
             [cheshire.core :as json]
             [futon3c.agency.artifact-activation :as artifact-activation]
             [futon3c.agency.registry :as registry]
-            [futon3c.watcher.write-pace :as write-pace]))
+            [futon3c.watcher.write-pace :as write-pace])
+  (:import [java.nio.file CopyOption Files StandardCopyOption]))
 
 
 ;; Every watcher HTTP call has a deadline. babashka's http-client waits
@@ -408,22 +410,97 @@
                      (pr-str e))))
       ::lookup-failed)))
 
-(defn last-indexed-commit-sha
-  "SHA of the most-recently-ingested commit for repo-label.
+;; Cursor sources, cheapest first (2026-11-14). The store query above is a
+;; scan: on a healthy futon1b it answered 500 after 61 s for futon3-d and
+;; futon3c-d. Every JVM start therefore failed the lookup for each repo with
+;; no in-memory cursor, and (before the live-mode guards) re-ingested that
+;; repo's whole history. Live mode no longer calls it. Instead:
+;;   1. the in-memory cursor;
+;;   2. the cursor file, written on every update, so a restart keeps it;
+;;   3. a bounded walk back from HEAD, one by-id lookup per commit (~3 s).
 
-   Reads the in-memory pointer first (authoritative once set during this
-   JVM's lifetime); on cold start falls back to the futon1a query. Once
-   the in-memory value is established it survives reloads (defonce) so
-   this avoids the tie-break re-ingestion bug."
-  [repo-label]
+(def ^:private cursor-file-path
+  (or (System/getenv "FUTON3C_COMMIT_INGEST_CURSORS")
+      (str (System/getProperty "user.home")
+           "/storage/futon3c/commit-ingest-cursors.edn")))
+
+(defn- read-cursor-file []
+  (try
+    (let [f (io/file cursor-file-path)]
+      (when (.exists f)
+        (let [m (edn/read-string (slurp f))]
+          (when (map? m) m))))
+    (catch Exception e
+      (binding [*out* *err*]
+        (println "[commit-ingest] cursor file unreadable:" (.getMessage e)))
+      nil)))
+
+(defn- write-cursor-file! [m]
+  (try
+    (let [f (io/file cursor-file-path)
+          tmp (io/file (str cursor-file-path ".tmp"))]
+      (io/make-parents f)
+      (spit tmp (pr-str m))
+      (Files/move (.toPath tmp) (.toPath f)
+                  (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE
+                                          StandardCopyOption/REPLACE_EXISTING])))
+    (catch Exception e
+      (binding [*out* *err*]
+        (println "[commit-ingest] cursor file write failed:" (.getMessage e))))))
+
+(def cursor-walk-limit
+  "How many commits back from HEAD the cold-start walk looks for an
+   ingested commit before concluding the store has none."
+  100)
+
+(defn last-indexed-commit-sha-by-walk
+  "Newest commit in GIT-ROOT's recent history (at most cursor-walk-limit,
+   newest first, no merges) whose code/v05/commit vertex the store has.
+   nil when the store answered 404 for all of them; ::lookup-failed when any
+   lookup got no answer, or git failed."
+  [git-root]
+  (try
+    (let [shas (->> (str/split-lines
+                     (run-git git-root "log" "--no-merges" "--format=%H"
+                              "-n" (str cursor-walk-limit)))
+                    (map str/trim)
+                    (remove str/blank?))]
+      ;; run-git prints and returns "" on failure: no commits listed is a
+      ;; failed lookup, never "the store has none".
+      (if (empty? shas)
+        ::lookup-failed
+      (loop [[sha & more] shas]
+        (if-not sha
+          nil
+          (let [status (try
+                         (:status (http/get (str FUTON1A "/api/alpha/hyperedge/hx:code/v05/commit:" sha)
+                                            {:throw false :timeout 15000}))
+                         (catch Exception _ nil))]
+            (case (long (or status -1))
+              200 sha
+              404 (recur more)
+              ::lookup-failed))))))
+    (catch Exception _ ::lookup-failed)))
+
+(defn last-indexed-commit-sha
+  "SHA of the most-recently-ingested commit for repo-label: the in-memory
+   cursor, else the cursor file, else (with GIT-ROOT) the bounded walk.
+   nil = the store has none of the recent commits; ::lookup-failed = it
+   could not be determined this time."
+  [repo-label & [git-root]]
   (or (get @!last-ingested repo-label)
-      (last-indexed-commit-sha-from-store repo-label)))
+      (when-let [sha (get (read-cursor-file) repo-label)]
+        (swap! !last-ingested assoc repo-label sha)
+        sha)
+      (if git-root
+        (last-indexed-commit-sha-by-walk git-root)
+        ::lookup-failed)))
 
 (defn- record-last-ingested!
-  "Update the in-memory pointer after a successful batch."
+  "Update the cursor, in memory and in the cursor file."
   [repo-label sha]
   (when (and repo-label sha)
-    (swap! !last-ingested assoc repo-label sha)))
+    (write-cursor-file! (swap! !last-ingested assoc repo-label sha))))
 
 ;; ---------- session-id resolver (mana attribution) ----------
 ;;
@@ -834,7 +911,7 @@
   ;; Before, an unanswered lookup meant "ingest everything" and the cursor was
   ;; recorded only after the whole pass, so a pass cut short started over.
   (let [git-root (or git-root repo-root)
-        since-sha (last-indexed-commit-sha repo-label)
+        since-sha (last-indexed-commit-sha repo-label git-root)
         empty-report {:n-ingested 0 :latest-sha nil :n-failed 0
                       :n-blocks 0 :n-mana-credited 0}]
     (cond

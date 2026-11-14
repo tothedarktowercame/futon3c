@@ -77,7 +77,7 @@
 (deftest ingest-new-commits-records-head-cursor
   (testing "live ingestion anchors the in-memory cursor at HEAD"
     (let [recorded (atom nil)]
-      (with-redefs [sut/last-indexed-commit-sha (fn [_] "old-side-tip")
+      (with-redefs [sut/last-indexed-commit-sha (fn [& _] "old-side-tip")
                     sut/list-commits (fn [_ since & _]
                                        (is (= "old-side-tip" since))
                                        [{:sha "older-mainline"}
@@ -395,3 +395,42 @@
           (is (pos? @posts)))))
     ;; leave no stop in force for posts made outside a batch by later tests
     (finally (reset! stop-before 0)))))
+
+(deftest cursor-survives-restart-and-cold-start-walks-recent-commits
+  ;; 2026-11-14: the store cursor query is a scan that failed (500 at 61 s)
+  ;; on a healthy store, so every JVM start lost every repo's cursor.
+  (let [dir (doto (java.io.File/createTempFile "cursor" "") (.delete) (.mkdirs))
+        path (str dir "/cursors.edn")
+        mem @(ns-resolve 'futon3c.watcher.commit-ingest '!last-ingested)
+        saved @mem]
+    (try
+      (with-redefs-fn {(ns-resolve 'futon3c.watcher.commit-ingest 'cursor-file-path) path}
+        (fn []
+          (testing "a recorded cursor is written to the file and read back after a restart"
+            (reset! mem {})
+            (#'sut/record-last-ingested! "demo" "sha-1")
+            (reset! mem {})                       ; restart: memory empty
+            (with-redefs [http/get (fn [& _] (throw (ex-info "must not query the store" {})))]
+              (is (= "sha-1" (sut/last-indexed-commit-sha "demo" "/tmp/repo")))))
+          (testing "no cursor anywhere: walk newest-first, first commit the store has wins"
+            (reset! mem {})
+            (let [asked (atom [])]
+              (with-redefs [sut/run-git (fn [& _] "c3\nc2\nc1\n")
+                            http/get (fn [url _]
+                                       (swap! asked conj (last (str/split url #":")))
+                                       {:status (if (str/ends-with? url "c2") 200 404)})]
+                (is (= "c2" (sut/last-indexed-commit-sha "other" "/tmp/repo")))
+                (is (= ["c3" "c2"] @asked)))))
+          (testing "store has none of them: nil; a failed answer or git failure: ::lookup-failed"
+            (reset! mem {})
+            (with-redefs [sut/run-git (fn [& _] "c2\nc1\n")
+                          http/get (fn [_ _] {:status 404})]
+              (is (nil? (sut/last-indexed-commit-sha "none" "/tmp/repo"))))
+            (with-redefs [sut/run-git (fn [& _] "c2\nc1\n")
+                          http/get (fn [_ _] {:status 500})]
+              (is (= :futon3c.watcher.commit-ingest/lookup-failed
+                     (sut/last-indexed-commit-sha "busy" "/tmp/repo"))))
+            (with-redefs [sut/run-git (fn [& _] "")]
+              (is (= :futon3c.watcher.commit-ingest/lookup-failed
+                     (sut/last-indexed-commit-sha "nogit" "/tmp/repo")))))))
+      (finally (reset! mem saved)))))
