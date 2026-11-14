@@ -303,3 +303,11 @@ jobs for injection.
   and the plan documents were not read for this.
 - Turn records under `~/.emacs-graph/session-turn-analysis` (counts above);
   one record read in full (`turn-WHNTlI`).
+
+## The memory ladder (claude-1, 2026-11-14)
+
+A design for promoting buried memories (proposed → accepted → attested), with
+six statements for the Circus model (L1–L6) and what it gives this
+excursion's D7: `holes/labs/M-repl-circus/DOG-memory-ladder-2026-11-14.md`.
+Not built: model first (M-repl-circus §DERIVE, 2026-11-14). L6 keeps recall
+from reading status until this excursion's comparison closes.
