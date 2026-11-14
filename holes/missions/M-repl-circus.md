@@ -540,6 +540,30 @@ all kinds of things, "mention" being maybe the least interesting one").
   single executor, debounce, health. What changes: an event adds votes and
   re-ranks the party; only an item newly in the top ten is queued for a
   reading. The giraffe-reread timer is retired when this rule is in.
+- **The pot** (Joe, 2026-11-14: "the pot is funded by tokens/usage and by
+  mana, which we have never yet properly pinned down but which I will
+  understand in this context to be "operator attention""). An item clears
+  when its votes pass the threshold and its price fits the pot (futon5
+  `nonstarter.db`: `vote!`, `decay-votes!`, `check-thresholds!`, `fund!`,
+  `record-mana!`, used as a library in the futon3c JVM, not as a server).
+  Price: the tokens of a reading plus the operator attention firing will
+  claim. Usage refills from agent quotas (M-usage-hacking: unused allowance
+  is perishable); mana from attention.
+- **Mana as the dual of ※** (Joe: "If <f9> is a "do anything" key, Mana is
+  kind of its dual, i.e., the things that take more than five keystrokes to
+  do, and the things that happen in between keystrokes (like thinking about
+  things or eating lunch) all of which need to be understood. We are well on
+  our way to understanding many of those things via Elephant-2000 mechanics
+  and the rest of the Circus."). ※ (`futon4/dev/mojira-dispatch.el`, <f9>)
+  is what costs at most five keystrokes; mana is everything else: work that
+  takes longer (typing a turn, editing a document) and the time between
+  keystrokes (thinking, being away). Sources: clock-ins (declared intention,
+  the bid); an Emacs attention meter (active time per buffer, attached to
+  items, separating ※ dispatches from longer work; counts, never text: the
+  clear); and 象's turn records, which say what the gap before a turn led to
+  (a question, a decision, an approval) or that it was an absence. The loop
+  improves by moving things from the mana side to the ※ side: an item whose
+  handling Mojira brings within five keystrokes stops costing attention.
 
 Order: giraffe-reread (event-driven, as above); the `/arxana/v1` mount proved on F1 (with a durable
 artifact provider, since the only one is in memory); workplan; F2–F6 and
