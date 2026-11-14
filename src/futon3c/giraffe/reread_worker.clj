@@ -201,7 +201,9 @@
                                  (str "Giraffe reading " (:target_id request)) packet-path)
                 text (str (:out result) "\n" (:err result))]
             {:ok (zero? (:exit result))
-             :task-id (second (re-find #"task=(E-kimi-task-\d+)" text))
+             ;; accept any ledger prefix kimi-task.sh derives (E-kimi-task
+             ;; for futon2, E-giraffe-read for the giraffe re-read ledger).
+             :task-id (second (re-find #"task=(E-[A-Za-z0-9-]+)" text))
              :job-id (second (re-find #"job=(invoke-[0-9]+-[0-9]+-[0-9a-f]+)" text))}))
         default-reader (fn [job-id]
                          (try (json/parse-string

@@ -14,7 +14,8 @@
 #   **Requisition:** completed — <ISO-8601 UTC>, job <job-id>, state <done|failed|cancelled>
 #
 # usage: kimi-task.sh --from <caller> --to <kimi-N> --purpose "<one line>" [--cascade <c.clj>] <packet.md> [more.md ...]
-# Mints futon2/holes/excursions/E-kimi-task-N.md (next N) with the purpose,
+# Mints $REPO/holes/excursions/$ID.md (next N; prefix per repo — E-giraffe-read
+# for the giraffe re-read ledger, E-kimi-task for futon2, see the case below)
 # caller, date and packet text, sends the bell with `Requisition:
 # E-kimi-task-N — <purpose>` prepended, writes the in-progress line with the
 # job id, and commits that one path. If the bell returns no job id, the file
@@ -24,7 +25,7 @@
 # --cascade: it must lint, and the receiver is told how to read one) and the
 # packet files ride as the caller's context; the excursion file holds both.
 #
-# usage: kimi-task.sh --complete <E-kimi-task-N> <job-id>
+# usage: kimi-task.sh --complete <$PREFIX-N> <job-id>
 # Reads the job's final state and time from GET /api/alpha/invoke/jobs/<id>
 # and rewrites the line to completed, one commit. Refuses, changing nothing,
 # when the file has no Requisition line, names a different job, or the job is
@@ -32,6 +33,21 @@
 set -euo pipefail
 REPO="${KIMI_TASK_REPO:-/home/joe/code/futon2}"; DIR=$REPO/holes/excursions
 AGENCY_URL="${AGENCY_URL:-http://localhost:7070}"
+
+# One id, one document (Joe, 2026-11-14, M-repl-circus): a task ledger that
+# shares futon2's E-kimi-task names collides with it — the giraffe re-read
+# ledger restarted its count at 1, so 434 names meant different tasks in the
+# two repos. The prefix is therefore per-repo: an explicit KIMI_TASK_PREFIX
+# wins; otherwise a repo named giraffe-reread-requisitions mints
+# E-giraffe-read-N, and anything else keeps futon2's E-kimi-task-N. The
+# Requisition-line protocol itself is unchanged; only the id prefix varies.
+case "${KIMI_TASK_PREFIX:-}" in
+  E-[A-Za-z0-9-]*) PREFIX="$KIMI_TASK_PREFIX" ;;
+  *) case "$(basename "$REPO")" in
+       giraffe-reread-requisitions) PREFIX=E-giraffe-read ;;
+       *) PREFIX=E-kimi-task ;;
+     esac ;;
+esac
 
 # set_requisition FILE LINE — put LINE on the first line after the H1 (after
 # its blank line), replacing an existing **Requisition:** line there.
@@ -101,8 +117,8 @@ if [ -n "$CASCADE" ]; then
   python3 /home/joe/code/futon3c/scripts/xlate.py lint "$CASCADE" | tail -1 | grep -q ' 0 problem(s)$' \
     || { echo "refusal:cascade-does-not-lint — $CASCADE" >&2; python3 /home/joe/code/futon3c/scripts/xlate.py lint "$CASCADE" >&2 || true; exit 2; }
 fi
-N=$(ls "$DIR" 2>/dev/null | sed -n 's/^E-kimi-task-\([0-9]*\)\.md$/\1/p' | sort -n | tail -1); N=$(( ${N:-0} + 1 ))
-ID="E-kimi-task-$N"; FILE="$DIR/$ID.md"; TODAY=$(date -u +%Y-%m-%d)
+N=$(ls "$DIR" 2>/dev/null | sed -n "s/^${PREFIX}-\([0-9]*\)\.md$/\1/p" | sort -n | tail -1); N=$(( ${N:-0} + 1 ))
+ID="$PREFIX-$N"; FILE="$DIR/$ID.md"; TODAY=$(date -u +%Y-%m-%d)
 {
   echo "# $ID — $PURPOSE"; echo
   echo "Clocked in by $FROM for $TO on $TODAY (one Kimi task, one excursion, so the seat's"
@@ -114,7 +130,7 @@ ID="E-kimi-task-$N"; FILE="$DIR/$ID.md"; TODAY=$(date -u +%Y-%m-%d)
   fi
 } > "$FILE"
 AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-JOB=$( { echo "Requisition: $ID — $PURPOSE"; echo; cat "$@"; } | python3 /home/joe/code/futon3c/scripts/agency_send.py --from "$FROM" --to "$TO" --kind bell --mode work --requisition "$ID — $PURPOSE" ${CASCADE:+--cascade "$CASCADE"} 2>&1 | grep -oE 'invoke-[0-9]+-[0-9]+-[0-9a-f]+' | head -1 || true)
+JOB=$( { echo "Requisition: $ID — $PURPOSE"; echo; cat "$@"; } | python3 /home/joe/code/futon3c/scripts/agency_send.py --from "$FROM" --to "$TO" --kind bell --base "$AGENCY_URL" --mode work --requisition "$ID — $PURPOSE" ${CASCADE:+--cascade "$CASCADE"} 2>&1 | grep -oE 'invoke-[0-9]+-[0-9]+-[0-9a-f]+' | head -1 || true)
 if [ -z "$JOB" ]; then
   rm -f "$FILE"
   echo "refusal:no-job — the bell to $TO returned no job id; $ID removed, nothing committed" >&2
