@@ -1,5 +1,7 @@
 # E-prove-memory-useful: making the memory's usefulness something you can see live
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 Date: 2026-10-16; updated 2026-10-17. Owner: claude-16 until the handoff
 below; Joe (2026-10-17 01:25Z) is handing the excursion to an Opus agent with
 claude-16 on tap for advice. Status: the display is live and pushed; nothing

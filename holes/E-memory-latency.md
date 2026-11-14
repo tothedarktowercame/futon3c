@@ -1,5 +1,7 @@
 # E-memory-latency — slow pattern-conditioned memory queries
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Status: BUILD-TEST COMPLETE; MONITOR (2026-07-23). Owner: Joe + Zaif/WM
 implementers.**
 

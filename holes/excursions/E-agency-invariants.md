@@ -1,5 +1,7 @@
 # E-agency-invariants — research: futon3c hardening as guaranteed invariants
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 Date: 2026-06-14
 Status: RESEARCH ONLY (Joe). Started from reading futon1a's invariant docs/code.
 Question: can we specify futon3c Agency features (durable-queue trio, restore,

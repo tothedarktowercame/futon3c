@@ -1,5 +1,7 @@
 # E-apm-A3-ingest-efficiency — the A3 series as handoffs
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — Decomposition of A3 into handoffs with design detail recorded but no stated delivery of the 30-minute ingest target; final commits only elaborate packets. _(WM status classification by zai-5, low confidence; not yet confirmed by the author.)_
 
 **Created 2026-08-13 (claude-2) at Joe's request:** *"let's focus on getting

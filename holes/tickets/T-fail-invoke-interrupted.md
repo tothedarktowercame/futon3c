@@ -1,5 +1,7 @@
 # T-fail-invoke-interrupted -- invoke-interrupted (1x)
 
+**Status:** COMPLETE (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as done but unmarked. Correct it if wrong.)
+
 **Status (triaged 2026-09-01): STILL-OPEN, rare.** 4 occurrences, latest 08-31. Decide whether interruption is a defect or an expected terminal class.
 
 <!-- census:begin -->

@@ -1,5 +1,7 @@
 # E-dog-helps: how we would know that 狗 is helping
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 Excursion of [M-repl-circus](../missions/M-repl-circus.md) (Joe, 2026-11-11:
 "come up with some analytics that we could use to say whether 狗 is helping
 after a while"). Written by claude-6 at claude-13's request (bell

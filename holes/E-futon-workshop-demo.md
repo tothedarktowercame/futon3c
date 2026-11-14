@@ -1,5 +1,7 @@
 # E-futon-workshop-demo — live #futon workshop, week of 2026-07-06
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Date opened:** 2026-07-04
 **Owner:** claude-14 (prep apparatus); **Joe runs the room.**
 **Charter:** Joe's workshop workup (abstract + session plan + logistics checklist),

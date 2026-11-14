@@ -1,5 +1,7 @@
 # E-mo-query-phylogeny — MathOverflow as a query phylogeny + QA benchmark
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — Charter marked 'longer-term, gated' with acceptance criteria framed as 'when run' — the benchmark run is not recorded. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
 
 **Excursion (charter; longer-term, gated). Spun 2026-06-14 from a Joe↔claude-2

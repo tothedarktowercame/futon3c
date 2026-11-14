@@ -1,5 +1,7 @@
 # E-virtual-patterns — the induced holes the cascade names but hasn't formalized
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Status:** INVENTORY (2026-07-01, claude-5). **Member of:** C-cascade-real §7
 DISSOLUTION (the A×B join). **Data:** [`virtual-patterns.edn`](virtual-patterns.edn).
 

@@ -1,5 +1,7 @@
 # E-pattern-promotion-and-gc: how patterns climb, fall and are collected in the cascade
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** ACTIVE — Explicitly deferred until the M-象-2000 cascade exists, but git shows measured pattern-graph work on 2026-09-30 and the doc ends with dated open measurement questions. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
 
 Opened 2026-09-27 by claude-17 at Joe's direction, as a follow-on to M-象-2000's P21

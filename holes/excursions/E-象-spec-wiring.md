@@ -1,5 +1,7 @@
 # E-象-spec-wiring: checking a specification by its open ports
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** ACTIVE — Steps 1-2 done with recent dated work (2026-09-30) and steps 3-5 explicitly not started, plus a fix dispatched to codex-4. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
 
 Opened 2026-09-30 by claude-17 at Joe's direction, under M-象-2000. It connects

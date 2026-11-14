@@ -1,5 +1,7 @@
 # E-possible-world-regulator — a regulator that tunes the War Machine across possible futures
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — Charter at IDENTIFY with a dispatched sweep awaiting bell-back; no sweep result or ratification recorded since 2026-06-09. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
 
 **Excursion** (E-prefix: a bounded scope-out, owned end-to-end by one agent — claude-1).

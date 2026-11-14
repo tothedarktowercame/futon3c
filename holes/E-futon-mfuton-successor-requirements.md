@@ -1,5 +1,7 @@
 # E: shared design requirements for a futon/mfuton successor (outer loop)
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** ACTIVE — Outer-loop synthesis with pass 3 committed 2026-09-20 (within 30 days) and the dialogue protocol still evolving; no closure statement. _(WM status classification by zai-4, low confidence; not yet confirmed by the author.)_
 
 Joe, 2026-09-14, in the Matrix room *Private Federation Proof*

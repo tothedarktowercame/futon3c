@@ -1,5 +1,7 @@
 # E-象-2000-wm-seam: problem statement to War Machine wants
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 Opened 2026-09-27 by claude-17 at Joe's direction. It follows M-象-2000's
 INSTANTIATE and is not part of the first pass. Joe (~16:02Z, via claude-8): the
 front end that turns a problem statement into wants "can be owned by M-象-2000

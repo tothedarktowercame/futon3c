@@ -1,5 +1,7 @@
 # E-象-repl-cycle: the four players as a Read/Evaluate/Print/Loop cycle
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 Agreed with Joe, 2026-10-19 ("Okay, I think we have a working model now").
 Source of the cycle: `t4r/supplement.flexiarg` (workshop phases and roles;
 "keeps the Print phase accountable to what Read reveals"; patterns that did

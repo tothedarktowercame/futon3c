@@ -1,5 +1,7 @@
 # E-early-memories-review — reviewing the 203 problem-centric memories
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 *Excursion, 2026-08-24. Joe's decision: "attached, never reviewed … we could
 still get an agent to review them." Not a quarantine by class; a receipted
 review pass, out of frame, reviewer ≠ depositor.*

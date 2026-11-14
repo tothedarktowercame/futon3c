@@ -1,5 +1,7 @@
 # T-kangaroo-caching-and-compaction — TOMORROW (2026-06-11)
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Status (triaged 2026-09-01): PARTIAL -- research portions obsolete.** The 1h-prompt-cache env rollout and joey-threshold recalibration were never implemented (0 occurrences; threshold still 2 MiB). Compaction went further than the ticket: warm /compact and default-on cold monster compaction both shipped. Close the superseded parts; decide whether threshold recalibration is still wanted.
 
 **Gate:** awaiting Joe -- the ticket itself says "Do NOT start without Joe" (2026-06-10); not for automated work (Joe 2026-11-06). Added by claude-6 2026-11-07 after WM run 2026-11-07-82ab6621 held on it.

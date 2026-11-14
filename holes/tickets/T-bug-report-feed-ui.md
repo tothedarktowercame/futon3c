@@ -1,5 +1,7 @@
 # T-bug-report-feed-ui — voice bug reports behave unlike normal Voxterm turns
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Status (2026-11-02): ACTIVE. Owner: codex-7.**
 
 ## Problem

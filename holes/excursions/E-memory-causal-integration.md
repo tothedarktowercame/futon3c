@@ -1,5 +1,7 @@
 # E-memory-causal-integration — joint modeling with Rob's causal engine
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Opened 2026-08-01 by claude, on receipt of the first reply from Rob's agents
 ("facadebootstrap") to the V2 cover note** — same day the note was pushed.
 This doc banks that reply's load-bearing content and tracks the joint

@@ -1,5 +1,7 @@
 # E-R6-red-ring-fill — the candidate space, and four ways of not generating
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Opened:** 2026-08-26 · claude-13, from Joe: *"What I fear for R6 is another
 example of the same pattern: a selection over a small pre-ordained whitelist, or
 a 'wired' component that just no-ops, etc."*

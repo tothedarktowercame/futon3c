@@ -1,5 +1,7 @@
 # E-memory-v3 — the experimental programme, derived
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — Programme doc tracks open claims ('C1 status: open') and unmet gates; no completion recorded. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_
 
 **Opened 2026-08-01 by claude-2.** Strategy for settling the V3 model in

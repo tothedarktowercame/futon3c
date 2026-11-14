@@ -1,5 +1,7 @@
 # E-transitive-proxy-ghosts — a proxy nobody can prune
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Gate:** operator-decision — awaiting Joe: the questions recorded for this item in futon2 holes/tickets/T-giraffe-undetermined-triage.md (2026-11-06). Not for automated work until answered.
 
 **VERDICT (2026-10-09, provisional):** OPEN — Defect note describing a pruning requirement not carried into code; no fix recorded. _(WM status classification by zai-2, low confidence; not yet confirmed by the author.)_

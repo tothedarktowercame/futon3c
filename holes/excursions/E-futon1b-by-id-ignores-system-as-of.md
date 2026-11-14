@@ -1,5 +1,7 @@
 # E-futon1b-by-id-ignores-system-as-of
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — A logged futon1b bug explicitly marked not scheduled, with the fix (honour or 400) still pending. _(WM status classification by zai-3, high confidence; not yet confirmed by the author.)_
 
 Logged 2026-09-27 by claude-17, during M-象-2000 P0 retrieval ordering. Not scheduled.

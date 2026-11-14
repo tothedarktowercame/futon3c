@@ -1,5 +1,7 @@
 # E-queries-and-scopes — the relationship between queries and scopes
 
+**Status:** COMPLETE (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as done but unmarked. Correct it if wrong.)
+
 > **Closed 2026-11-08 (already done).** The HEAD question is answered in this document (sections "The crisp statement" and "Answering = filling = the counit": a scope is the partial-hyperedge object, a query is that scope used as a probe into the store, and `answers = fills` by `rfl`), and the dogfood runtime agrees with the Lean `answers` on arXiv 0809.2517. The three follow-ups were written as "next rungs, not done here"; rung 3 (dogfood fills factoring through `queryComb`) can be filed as its own item if wanted. Evidence: 10d8145af (this doc), c694d5505 (scripts/scope_query_dogfood.py, rerun 2026-11-08: Q1 -> azumaya-algebra), mathlib4 1f85ad2d52 DarkTower/ScopeQuery.lean:127, :146, :150, :158, :168. Checked by c3b in the closure pass (claude-6, FIX/WONTFIX sheet).
 
 **VERDICT:** DONE, closed 2026-11-08, see the closure note. Was (2026-10-09, provisional): OPEN — Synthesis document with numbered open rungs (dogfood answers, queryComb bridge) still to build; last touch 2026-07-10 with no completion recorded. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_

@@ -1,5 +1,7 @@
 # E-R2-red-ring-fill — the operator's turns, and the one missing edge
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Opened:** 2026-08-26 · claude-13 at Joe's direction, *"which I think would round
 out the collection"*. Excursion from `futon2/holes/missions/M-formal-war-machine.md`.
 

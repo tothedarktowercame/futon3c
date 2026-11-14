@@ -1,5 +1,7 @@
 # Excursion: the Arxana Clock — one surface for the system's time-drivers (E-arxana-clock)
 
+**Status:** COMPLETE (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as done but unmarked. Correct it if wrong.)
+
 > **Closed 2026-11-08 (already done).** The clock surface exists: the scan-primary aggregator `futon3c/scripts/arxana_clock.bb` reads cron, systemd and JVM threads (so a new driver appears without registering), and `futon4/dev/arxana-vsatarcs-clock.el` displays it (on futon4 main). The §8 residual was conditional on the evidence store staying frozen after `stop!`; that store has since been replaced by futon1b. Evidence: futon3c dddb65b27, futon4 c3c8490 (`git branch --contains` lists main), cars 1-4 in §6. The cadence enrichment for watchers and the stale-driver alarm named under car 3 were not built and would be new items. Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
 
 **VERDICT:** done, closed 2026-11-08, see the closure note (was, 2026-10-09 provisional: OPEN — Status is IDENTIFY + MAP only (2026-06-26); incident fixes landed but the tail names a residual diagnosis still owed and no completion is recorded. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_)

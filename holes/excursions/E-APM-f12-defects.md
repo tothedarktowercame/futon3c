@@ -1,5 +1,7 @@
 # E-APM-f12-defects — frame 12 (m03J01), defects D40–D48 + the ContDiff-⊤ corpus sweep
 
+**Status:** COMPLETE (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as done but unmarked. Correct it if wrong.)
+
 > **Closed 2026-11-08 (already done).** Both named fixes are in futon3c master: `default-query-term-limit` is 12 and `:stdin-packet` terms are removed from the issued query (`src/futon3c/dispatch_with_recall.clj:20`, `:528`). The ContDiff-⊤ corpus disposition was carried out in apm-lean on 2026-10-13: t96A08 repaired to ∞, m01J04/m03J01/m95J05 reopened. Evidence: futon3c 395f5e2d5; `test/.../dispatch_with_recall_test.clj:123`; apm-lean a90887f66c, 361a51ed9b. Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
 
 **VERDICT:** done, closed 2026-11-08, see the closure note (was, 2026-10-09 provisional: OPEN — Defect catalogue with confirmed/inapplicable findings and self-corrections but no overall closure statement. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_)

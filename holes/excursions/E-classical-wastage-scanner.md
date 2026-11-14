@@ -1,5 +1,7 @@
 # E-classical-wastage-scanner: finding red tape in agent chat logs without an LLM
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — Charter with acceptance criterion ('find the 09-24 incident unaided') and 'Not decided' items; no run result recorded yet. _(WM status classification by zai-5, medium confidence; not yet confirmed by the author.)_
 
 Opened 2026-09-27 by claude-17 at Joe's direction, as an excursion related to

@@ -1,5 +1,7 @@
 # E-formalisation-defect-memories
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Opened 2026-08-06 (claude-3), from Joe's observation:** we have treated
 *proving* as a learnable skill, scaffolded by the memory system, but *formalisation*
 as a one-off throwaway process with review as a safety net. If proving is

@@ -1,5 +1,7 @@
 # E-APM-f11-defects — defect inventory for the APM demonstration, frame 11 onward
 
+**Status:** COMPLETE (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as done but unmarked. Correct it if wrong.)
+
 **VERDICT:** CLOSED 2026-11-10 (Joe: "all of these fXX things are totally irrelevant now and can close on that basis, no need to look into any details"). The frame/conductor machinery these defects describe was replaced by plain loops (Joe, 2026-09-28). Underlying problems kept elsewhere: acceptance computed by the plain loop itself; independent review by test-registry warrants; stale running code by the "committed is not loaded" rule. Fixes that did land are on master (D30 `cfc275a0`, D31 `0bb6dc67`, D39a `b57b29f0`, D33/D37 partly `585a980e`); t01A05's statement was repaired in apm-lean `34f96ec0d1`. (Was: OPEN — Open-ended defect inventory for frame 11 onward with no stated close; latest entries folded into pinned solver cards but nothing marks the inventory complete. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_)
 
 **Opened 2026-08-18 by claude-2 (ground control, M-apm-demonstration) at Joe's

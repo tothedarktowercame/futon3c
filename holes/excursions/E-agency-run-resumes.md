@@ -1,5 +1,7 @@
 # E-agency-run-resumes — design intake
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 Scope: read-only tracing on futon3c `master` at `31349ee85` (2026-10-29).
 This note distinguishes source facts from design inferences.  It does not
 authorize a change to either server or Emacs.

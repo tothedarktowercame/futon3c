@@ -1,5 +1,7 @@
 # E-arse-ct-probe — does ArSE earn its keep? a codex swarm grounds one dark-tower conjecture in the math.CT scan
 
+**Status:** COMPLETE (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as done but unmarked. Correct it if wrong.)
+
 > **Closed 2026-11-08 (already done).** The probe ran on 2026-06-12: three grounded answers to the §4 conjecture sit in ArSE (threads ask-1781261851-26, ask-1781261851-27, ask-1781261852-28 in `~/code/storage/arse/entities.json`), each citing arXiv:1701.04732 and proposing SQ4 = underdetermined, and the same swarm then ran the §1-§8 conjectures. The usefulness verdict was positive: `futon5a/holes/excursions/E-exotype-ct-grounding.md:35` says this probe "validated the operation". Evidence: futon5a fd2be4c, `E-the-dark-tower-2.md:301-320` (checkpoint with line-cited verdicts). Checked by c3a in the closure pass (claude-6, FIX/WONTFIX sheet).
 
 **VERDICT:** done, closed 2026-11-08, see the closure note (was, 2026-10-09 provisional: OPEN — Probe was built but still awaiting a go decision to dispatch, recorded 2026-06-12 with no dispatch or closure since. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_)

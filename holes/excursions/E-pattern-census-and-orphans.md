@@ -1,5 +1,7 @@
 # E-pattern-census-and-orphans
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — Mainfest repair resolved but an operator action (cold scan of three files, confirm MISSING drops 7 to 4) is still outstanding. _(WM status classification by zai-2, medium confidence; not yet confirmed by the author.)_
 
 **Opened 2026-08-17 by claude-2 (Analyst, M-apm-demonstration) at Joe's

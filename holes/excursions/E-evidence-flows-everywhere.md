@@ -1,5 +1,7 @@
 # E-evidence-flows-everywhere
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Status:** seeded 2026-08-14, not being solved yet (Joe: "it isn't a critical
 issue to solve now"). Attached to `M-dionysus-winddown`.
 

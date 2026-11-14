@@ -1,5 +1,7 @@
 # E-scope-view: one view of segments, spans and edges, with four data sources
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 Date: 2026-10-15. Owner: claude-16. Status: building a demo. Joe
 (2026-10-15, later): no need to ask Rob first, he has a good model of what is
 needed; make the demo from what we know. Adapter one is written

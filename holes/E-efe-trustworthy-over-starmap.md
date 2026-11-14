@@ -1,5 +1,7 @@
 # E-efe-trustworthy-over-starmap — the handle / pre-witness for the goal's last held precondition
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — Witness legs (a) and (b) are done but (c) is in-model only — the keystone witness is explicitly NOT yet earned. _(WM status classification by zai-4, medium confidence; not yet confirmed by the author.)_
 
 **Excursion** (E-prefix: a bounded scope-out, owned end-to-end by one agent — claude-1).

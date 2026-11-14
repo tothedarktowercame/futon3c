@@ -1,5 +1,7 @@
 # E-park-delivery-losses — three ways a parked resume dies between the join and the buffer
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — Intermittency mechanism found (late reconciliation beats deadline race), but the doc's own tail says the fix is a restart and the finalize-time hook still needs diagnosis. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
 
 **Date:** 2026-07-13. **Found by:** claude-6 + Joe, live, during the first

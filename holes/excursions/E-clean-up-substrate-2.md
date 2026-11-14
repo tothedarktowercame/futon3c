@@ -1,5 +1,7 @@
 # Excursion: clean up substrate-2 — honest accounting, the negative space, and the registry (E-clean-up-substrate-2)
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — IDENTIFY+MAP charter for handoff with live census; no evidence the cleanup writes were ever executed by an assignee. _(WM status classification by zai-1, medium confidence; not yet confirmed by the author.)_
 
 **Date:** 2026-06-26 · **Status:** IDENTIFY + MAP grounded in live census (port 7071, 2026-06-26) — charter for handoff (owned end-to-end by one agent; Joe assigns).

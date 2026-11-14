@@ -1,5 +1,7 @@
 # T-zai-chat-transient-timeout — a transient model-call failure must not kill a turn that can continue
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Status (triaged 2026-09-01): STILL-OPEN, cheap prerequisite named.** chat! (zai_api.clj:752) still sends with no transport catch; a timeout throws past the {:error ...} contract and the sole caller has no retry. One fresh occurrence since filing. H1 (~5-line catch returning the error shape) is the first row; H2 retry after.
 
 Surfaced by the P0 acceptance run, 2026-07-22: job

@@ -1,5 +1,7 @@
 # E-distributed-formalisation — formalising paper skeletons hole-by-hole
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **Excursion (synthesis / charter). Spun 2026-06-15, Joe↔claude-3, relaying a
 Joe↔Rob exchange.** Caps the day's chain: `E-queries-and-scopes` →
 `E-question-driven-scope-coverage` → the IATC Argument-to-Clojure pilot

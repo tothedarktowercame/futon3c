@@ -1,5 +1,7 @@
 # E-agency-turn-hardening: turns that collide, leak, or wait on dead jobs
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 Date: 2026-10-16. Owner: claude (terminal session, not on the roster).
 Status: O1-O3 fixed 2026-10-17 (ce669debf), live-loaded; two of them still
 want a live occurrence to confirm (see "Live evidence"). Joe (2026-10-16):

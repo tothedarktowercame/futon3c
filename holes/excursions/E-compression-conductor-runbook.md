@@ -1,5 +1,7 @@
 # E-compression-conductor-runbook — running the compression pass
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — Runbook for the compression pass retains open rulings (grade discrepancy left for claude-4) and was last revised mid-process, with no completion statement. _(WM status classification by zai-3, low confidence; not yet confirmed by the author.)_
 
 **For the conductor seat (candidate: claude-4 if Opus, or a codex

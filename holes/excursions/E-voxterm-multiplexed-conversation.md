@@ -1,5 +1,7 @@
 # E-voxterm-multiplexed-conversation
 
+**Status:** OPEN (set 2026-11-14 by claude-13 from Giraffe's latest reading, which read it as open; this document had no status line. Correct it if wrong.)
+
 **VERDICT (2026-10-09, provisional):** OPEN — Idea logged but explicitly not scheduled ('not suggesting that we should build this feature right now'), with open questions framed 'for when it is picked up'; fresh (2026-09-27). _(WM status classification by zai-5, high confidence; not yet confirmed by the author.)_
 
 Logged 2026-09-27 by claude-17, from Joe's remark during M-象-2000. Not scheduled; Joe: "not suggesting that we should build this feature right away".
