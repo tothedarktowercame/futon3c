@@ -24,7 +24,7 @@
    (But each re-post of a changed or valid-timed doc adds history; see below.)
 
    Live-mode guards (2026-11-14; rules and reasons in futon1b README
-   "Derived indexes and live ingest: rules from the 2026-11-14 collapse"):
+   \"Derived indexes and live ingest: rules from the 2026-11-14 collapse\"):
    a cursor lookup that gets no answer skips the cycle (::lookup-failed,
    never nil); a repo with no known cursor is seeded at HEAD, history is
    backfilled only by ingest-all-commits!; at most max-live-commits-per-cycle
