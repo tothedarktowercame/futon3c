@@ -246,6 +246,7 @@
       (let [posts (atom [])]
         (with-redefs [write-pace/pace! (fn [] nil)
                       http/post (fn [url opts]
+                                  (is (= 120000 (:timeout opts)) "a batch waits for its transaction")
                                   (swap! posts conj [url (json/parse-string (:body opts))])
                                   {:status 200
                                    :body (pr-str {:ok true :results [{:ok true :hx/id "hx:a"}

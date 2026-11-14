@@ -135,6 +135,12 @@
 ;; futon1b restart onto a build with the route is picked up without one here.
 (def ^:private hyperedge-batch-size 200)
 
+(def ^:private batch-http-timeout-ms
+  "A batch is one futon1b transaction; most take 2-8 s, a few over 30 s
+   (2026-11-14: p50 2.4 s, p90 7.6 s, max 30.9 s). At the 30 s single-post
+   timeout those were reported as failed although they had committed."
+  120000)
+
 (def max-live-commits-per-cycle
   "Upper bound on commits one live-mode cycle ingests (ingest-new-commits!).
    The watcher visits repos one after another, so an unbounded cycle stalls
@@ -168,7 +174,7 @@
                                    :body (json/generate-string
                                           {"hyperedges" (mapv #(apply hyperedge-payload %) chunk)})
                                    :throw false
-                                   :timeout watcher-http-timeout-ms})
+                                   :timeout batch-http-timeout-ms})
                        (catch Exception e {:status -1 :body (.getMessage e)}))
                 results (when (= 200 (:status resp))
                           (try (:results (edn/read-string (:body resp)))
