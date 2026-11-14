@@ -116,6 +116,25 @@
             (let [e (thrown #(decision/start! "clock-worker" nil "continue" {:turn-id "busy-forever"}))]
               (is (= :clock/store-busy (:error/code (ex-data e)))))))))))
 
+(deftest slow-admission-says-what-it-waits-on
+  ;; 2026-11-14: a claude-1 bell blocked 7+ minutes in a slow futon1b read
+  ;; before its process started. No busy error, so no on-wait note: follow mode
+  ;; showed "turn started" and "…". The activity must name the wait while the
+  ;; first store read is still in progress.
+  (binding [decision/*test-store* (atom {:entries {} :order []})
+            decision/*repo-roots* {}]
+    (let [activity (atom nil)
+          during-first-write (promise)
+          real-append boundary/append!]
+      (with-redefs [reg/update-invoke-activity! (fn [_ s] (reset! activity s))
+                    boundary/append! (fn [& args]
+                                       (deliver during-first-write @activity)
+                                       (apply real-append args))]
+        (let [context (decision/start! "clock-worker" nil "continue" {:turn-id "slow-store"})]
+          (is (= "before the turn starts: recording its clock in futon1b"
+                 (deref during-first-write 0 ::no-write)))
+          (decision/end! context))))))
+
 (deftest agent-clock-without-session-reads-the-registered-session
   (register! (fn [& _] {:result "unused"}))
   (clock/set-dispatch-mission! "clock-worker" "clock-session" "M-clock-fixture")

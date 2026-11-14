@@ -556,6 +556,12 @@
                                  (when (map? prompt)
                                    (or (:mission-id prompt) (get prompt "mission-id"))))
                  :evidence-store (:evidence-store options)}]
+    ;; The turn's process is not started until this record lands, and a slow
+    ;; futon1b read blocks here with no busy error, so the on-wait note never
+    ;; fires. Say what the turn is waiting on before the first read: on
+    ;; 2026-11-14 a claude-1 bell sat here 7+ minutes (futon1b at 7.9/8 GB)
+    ;; while follow mode showed only "turn started" and "…".
+    (note-waiting! agent-id "before the turn starts: recording its clock in futon1b")
     (record-waiting-out-busy-store! context)
     (swap! !active-turns assoc [agent-id id] context)
     context))
