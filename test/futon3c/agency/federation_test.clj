@@ -90,12 +90,101 @@
                                 (swap! calls conj url)
                                 (doto (promise)
                                   (deliver {:status 200
-                                            :body "{\"ok\":true,\"result\":\"pong\",\"session-id\":\"sid-2\"}"})))]
+                                            :body "{\"ok\":true,\"result\":\"pong\",\"session-id\":\"sid-2\"}"})))
+                    http/get (fn [_url _opts] (doto (promise) (deliver {:status 404})))]
         (is (= "pong" (:result (f "legacy" "sess-1"))))
         (is (= "pong" (:result (f "question" "sess-1" {:dispatch-kind :whistle}))))
         (is (= ["http://remote:7070/api/alpha/invoke"
                 "http://remote:7070/api/alpha/invoke"]
                @calls))))))
+
+;; Synchronous proxy invokes: streaming and long turns (2026-11-14)
+;;
+;; lon-claude-4 showed no tool activity while working (the proxy only read the
+;; final POST body) and a 10-minute turn ended "Proxy invoke failed: HTTP "
+;; (the proxy's own 600 s http timeout, no status). The remote job record has
+;; every event; the proxy now polls it.
+
+(defn- remote-job-stub
+  "An http/get stub serving a remote job whose events/state come from JOB-ATOM."
+  [job-atom gets]
+  (fn [url _opts]
+    (swap! gets conj url)
+    (doto (promise)
+      (deliver {:status 200
+                :body (json/generate-string {:ok true :job @job-atom})}))))
+
+(deftest proxy-invoke-streams-remote-events-to-local-sink
+  (let [seen (atom [])
+        gets (atom [])
+        posted (atom nil)
+        job (atom {:state "running"
+                   :events [{:seq 1 :type "accepted"}
+                            {:seq 2 :type "prompt" :text "hi"}
+                            {:seq 3 :type "tool_use" :tools ["Bash"]
+                             :previews ["Bash git status"]}]})
+        post-p (promise)
+        f (fed/make-proxy-invoke-fn "http://remote:7070" "claude-4" "lon-claude-4")]
+    (with-redefs [fed/proxy-poll-ms 20
+                  reg/get-invoke-event-sink (fn [id] (when (= "lon-claude-4" id)
+                                                       #(swap! seen conj %)))
+                  http/get (remote-job-stub job gets)
+                  http/post (fn [_url opts] (reset! posted opts) post-p)]
+      (let [r (future (f "hello" "sess-1" {}))]
+        (Thread/sleep 150)
+        (swap! job update :events conj {:seq 4 :type "text" :text "partial reply"})
+        (Thread/sleep 150)
+        (deliver post-p {:status 200
+                         :body "{\"ok\":true,\"result\":\"final\",\"session-id\":\"sid-9\"}"})
+        (let [res (deref r 3000 ::hung)
+              payload (json/parse-string (get-in @posted [:opts :body] (:body @posted)) true)]
+          (is (= "final" (:result res)))
+          (is (= "sid-9" (:session-id res)))
+          (is (= (:job-id payload) (:remote-job-id res))
+              "the POST names the job id the proxy polls")
+          (is (every? #(str/ends-with? % (str "/api/alpha/invoke/jobs/" (:job-id payload))) @gets))
+          (is (not (contains? payload :timeout-ms))
+              "no 600 s cap is imposed on the remote turn")
+          (is (= [{:type "tool_use" :tools ["Bash"] :tool_details [{:name "Bash git status"}]}
+                  {:type "text" :text "partial reply"}]
+                 @seen)
+              "each remote tool/text event reaches the local sink exactly once"))))))
+
+(deftest proxy-invoke-survives-a-dropped-post
+  (testing "no HTTP status (timeout/connection drop) while the remote job runs on: the result comes from the job"
+    (let [job (atom {:state "running" :events [{:seq 1 :type "accepted"}]})
+          f (fed/make-proxy-invoke-fn "http://remote:7070" "claude-4" "lon-claude-4")]
+      (with-redefs [fed/proxy-poll-ms 20
+                    reg/get-invoke-event-sink (constantly nil)
+                    http/get (remote-job-stub job (atom []))
+                    http/post (fn [_ _] (doto (promise)
+                                          (deliver {:error (java.util.concurrent.TimeoutException. "read timeout")})))]
+        (let [r (future (f "hello" "sess-1" {}))]
+          (Thread/sleep 150)
+          (is (not (realized? r)) "a dropped POST alone does not end the turn")
+          (reset! job {:state "done" :result "late answer" :session-id "sid-3"
+                       :events [{:seq 1 :type "accepted"} {:seq 2 :type "done"}]})
+          (let [res (deref r 3000 ::hung)]
+            (is (= "late answer" (:result res)))
+            (is (= "sid-3" (:session-id res)))))))))
+
+(deftest proxy-invoke-reports-failed-remote-job-and-missing-status
+  (let [f (fed/make-proxy-invoke-fn "http://remote:7070" "claude-4" "lon-claude-4")]
+    (testing "remote job failed and the POST got no response: error names the job and why"
+      (with-redefs [fed/proxy-poll-ms 20
+                    reg/get-invoke-event-sink (constantly nil)
+                    http/get (remote-job-stub (atom {:state "failed" :terminal-message "timeout"
+                                                     :events []})
+                                              (atom []))
+                    http/post (fn [_ _] (doto (promise) (deliver {:error (Exception. "closed")})))]
+        (let [res (f "hello" "sess-1" {})]
+          (is (re-find #"^Remote job invoke-fed-\S+ failed: timeout$" (str (:error res)))))))
+    (testing "POST fails and the remote job never appears: the error says no HTTP response, not a bare 'HTTP '"
+      (with-redefs [fed/proxy-poll-ms 20
+                    http/get (fn [_ _] (doto (promise) (deliver {:status 404})))
+                    http/post (fn [_ _] (doto (promise) (deliver {:error (Exception. "connection refused")})))]
+        (is (= "Proxy invoke failed: no HTTP response (connection refused)"
+               (:error (f "hello" "sess-1" {}))))))))
 
 ;; =============================================================================
 ;; Announcement — skips when not configured

@@ -361,54 +361,178 @@
 ;; Proxy invoke-fn — forwards dispatch to origin Agency
 ;; =============================================================================
 
-(defn make-proxy-invoke-fn
-  "Create an invoke-fn that forwards a bell to a remote Agency.
-   origin-url: the Agency where the real agent lives.
-   agent-id: the agent's string ID.
+(def ^:private proxy-poll-ms
+  "How often a synchronous proxy invoke reads the remote job for new events."
+  2000)
 
-   Returns (fn [prompt session-id] result-map) that POSTs to the origin's
-   ordinary bell endpoint.  Federation changes transport, not admission: the
-   origin Agency durably queues the turn behind any active turn for the agent."
-  [origin-url agent-id]
-  (letfn [(forward [prompt session-id invoke-options]
-            (try
-              (let [bell? (= :bell (:dispatch-kind invoke-options))
-                    endpoint (if bell? "/api/alpha/bell" "/api/alpha/invoke")
-                    body (json/generate-string
-                          (cond-> {"agent-id" agent-id
-                                   "prompt" prompt
-                                   "caller" "federation-proxy"
-                                   "timeout-ms" default-proxy-timeout-ms}
-                            bell? (assoc "surface" "bell")))
-            ;; Use org.httpkit.client for non-blocking HTTP
-                    resp @(http/post
-                           (str origin-url endpoint)
-                           {:headers {"Content-Type" "application/json"}
-                            :body body
-                            :timeout default-proxy-timeout-ms})
-                    status (:status resp)
-                    parsed (try
-                             (json/parse-string (or (:body resp) "{}") true)
-                             (catch Exception _
-                               {}))]
-                (if (and status (< status 400) (= true (:ok parsed)))
-                  (cond-> {:result (or (:result parsed)
-                                      (str "[federation bell queued: " (:job-id parsed) "]"))
-                           :session-id (or (:session-id parsed) session-id)}
-                    bell? (assoc :remote-job-id (:job-id parsed)
-                                 :remote-state (:state parsed)))
-                  {:error (str "Proxy invoke failed: HTTP " status
-                               (when-let [msg (:message parsed)]
-                                 (str " (" msg ")")))
-                   :exit-code -1}))
-              (catch Exception e
-                {:error (str "Proxy invoke exception: " (.getMessage e))
-                 :exit-code -1})))]
-    (fn
-      ([prompt session-id]
-       (forward prompt session-id nil))
-      ([prompt session-id invoke-options]
-       (forward prompt session-id invoke-options)))))
+(def ^:private max-proxy-wait-ms
+  "Ceiling for a synchronous proxy invoke with no caller timeout. A local seat's
+   operator turn has no fixed cap; the old 600 s proxy cap killed long remote
+   turns mid-work (lon-claude-4, 2026-11-14: a 10-minute wait loop, the remote
+   job failed `timeout` and the REPL showed 'Proxy invoke failed: HTTP ')."
+  (* 6 60 60 1000))
+
+(def ^:private terminal-job-states #{"done" "failed" "cancelled" "timed-out"})
+
+(defn- event-seq-num [e]
+  (let [v (:seq e)]
+    (cond (number? v) (long v)
+          (string? v) (try (Long/parseLong v) (catch Exception _ nil))
+          :else nil)))
+
+(defn- remote-event->sink-event
+  "Translate a remote job-ledger event into the stream-event shape a local
+   invoke-event sink takes (what a local claude seat emits), or nil."
+  [e]
+  (case (str (:type e))
+    "tool_use" {:type "tool_use"
+                :tools (vec (:tools e))
+                ;; Previews are already one display line each; passing them as
+                ;; tool names keeps them intact through the local trimmer.
+                :tool_details (mapv (fn [p] {:name (str p)}) (:previews e))}
+    "text" (when-not (str/blank? (str (:text e)))
+             {:type "text" :text (str (:text e))})
+    nil))
+
+(defn- fetch-remote-job [origin-url job-id]
+  (try
+    (let [resp @(http/get (str origin-url "/api/alpha/invoke/jobs/" job-id)
+                          {:timeout default-sync-timeout-ms})]
+      (when (= 200 (:status resp))
+        (let [parsed (json/parse-string (or (:body resp) "{}") true)]
+          (or (:job parsed) parsed))))
+    (catch Exception _ nil)))
+
+(defn- relay-new-events!
+  "Send events of JOB newer than seq LAST to SINK; return the new last seq."
+  [sink job last]
+  (reduce (fn [hi e]
+            (let [n (event-seq-num e)]
+              (if (and n (> n hi))
+                (do (when sink
+                      (when-let [ev (remote-event->sink-event e)]
+                        (try (sink ev) (catch Throwable _ nil))))
+                    n)
+                hi)))
+          last
+          (:events job)))
+
+(defn make-proxy-invoke-fn
+  "Create an invoke-fn that forwards a turn to a remote Agency.
+   origin-url: the Agency where the real agent lives.
+   agent-id: the agent's id on the remote Agency.
+   local-id: the proxy's id here (e.g. lon-claude-4), whose invoke-event sink
+   receives the remote turn's tool and text events as they happen.
+
+   Bells POST to the origin's bell endpoint and return its queued job identity:
+   federation changes transport, not admission. Other turns POST to the
+   origin's invoke endpoint under a job id chosen here, and poll that job while
+   the POST is open, so the remote turn streams into this server's job ledger
+   like a local seat's turn does. If the POST fails (dropped connection, HTTP
+   timeout) while the remote job is still running, the result is read from the
+   remote job when it ends."
+  ([origin-url agent-id] (make-proxy-invoke-fn origin-url agent-id nil))
+  ([origin-url agent-id local-id]
+   (letfn [(post! [endpoint body-map http-timeout]
+             (http/post (str origin-url endpoint)
+                        {:headers {"Content-Type" "application/json"}
+                         :body (json/generate-string body-map)
+                         :timeout http-timeout}))
+           (parse-body [resp]
+             (try (json/parse-string (or (:body resp) "{}") true)
+                  (catch Exception _ {})))
+           (http-failure [resp parsed]
+             (str "Proxy invoke failed: "
+                  (if-let [status (:status resp)]
+                    (str "HTTP " status
+                         (when-let [msg (:message parsed)] (str " (" msg ")")))
+                    (str "no HTTP response"
+                         (when-let [err (:error resp)]
+                           (str " (" (or (.getMessage ^Throwable err) (str err)) ")"))))))
+           (bell! [prompt session-id]
+             (let [resp @(post! "/api/alpha/bell"
+                                {"agent-id" agent-id "prompt" prompt
+                                 "caller" "federation-proxy"
+                                 "timeout-ms" default-proxy-timeout-ms
+                                 "surface" "bell"}
+                                default-proxy-timeout-ms)
+                   parsed (parse-body resp)]
+               (if (and (:status resp) (< (:status resp) 400) (= true (:ok parsed)))
+                 {:result (or (:result parsed)
+                              (str "[federation bell queued: " (:job-id parsed) "]"))
+                  :session-id (or (:session-id parsed) session-id)
+                  :remote-job-id (:job-id parsed)
+                  :remote-state (:state parsed)}
+                 {:error (http-failure resp parsed) :exit-code -1})))
+           (invoke! [prompt session-id invoke-options]
+             (let [job-id (str "invoke-fed-" (System/currentTimeMillis) "-"
+                               (subs (str (java.util.UUID/randomUUID)) 0 8))
+                   caller-timeout (some-> (:timeout-ms invoke-options) long)
+                   wait-ms (or caller-timeout max-proxy-wait-ms)
+                   deadline (+ (System/currentTimeMillis) wait-ms)
+                   sink (fn [] (when local-id (reg/get-invoke-event-sink (str local-id))))
+                   resp-p (post! "/api/alpha/invoke"
+                                 (cond-> {"agent-id" agent-id "prompt" prompt
+                                          "caller" "federation-proxy"
+                                          "job-id" job-id}
+                                   caller-timeout (assoc "timeout-ms" caller-timeout))
+                                 ;; The HTTP wait covers the whole remote turn.
+                                 (+ wait-ms 60000))]
+               (loop [last 0 terminal-polls 0]
+                 (let [resp (deref resp-p proxy-poll-ms ::pending)
+                       job (fetch-remote-job origin-url job-id)
+                       last (if job (relay-new-events! (sink) job last) last)
+                       terminal? (boolean (and job (terminal-job-states (str (:state job)))))]
+                   (cond
+                     ;; The POST answered: its body is the turn's result.
+                     (and (not= ::pending resp) (:status resp))
+                     (let [parsed (parse-body resp)]
+                       (if (and (< (:status resp) 400) (= true (:ok parsed)))
+                         {:result (:result parsed)
+                          :session-id (or (:session-id parsed) session-id)
+                          :remote-job-id job-id}
+                         {:error (http-failure resp parsed) :exit-code -1
+                          :remote-job-id job-id}))
+
+                     ;; The remote job ended but its POST did not answer
+                     ;; (dropped, or still in flight): read the job.
+                     (and terminal?
+                          (or (not= ::pending resp)
+                              ;; give an in-flight POST two more polls to land
+                              (>= terminal-polls 2)))
+                     (if (= "done" (str (:state job)))
+                       {:result (or (:result job) (:result-summary job))
+                        :session-id (or (:session-id job) session-id)
+                        :remote-job-id job-id}
+                       {:error (str "Remote job " job-id " " (:state job)
+                                    (when-let [m (:terminal-message job)] (str ": " m)))
+                        :exit-code -1 :remote-job-id job-id})
+
+                     ;; POST failed and the remote job never appeared.
+                     (and (not= ::pending resp) (nil? job))
+                     {:error (http-failure resp {}) :exit-code -1
+                      :remote-job-id job-id}
+
+                     (> (System/currentTimeMillis) deadline)
+                     {:error (str "Proxy invoke: remote job " job-id " still "
+                                  (or (:state job) "unknown") " after " wait-ms
+                                  " ms; follow it on " origin-url)
+                      :exit-code -1 :remote-job-id job-id}
+
+                     :else (recur last (if terminal? (inc terminal-polls) 0)))))))
+           (forward [prompt session-id invoke-options]
+             (try
+               (if (= :bell (:dispatch-kind invoke-options))
+                 (bell! prompt session-id)
+                 (invoke! prompt session-id invoke-options))
+               (catch Exception e
+                 {:error (str "Proxy invoke exception: " (.getMessage e))
+                  :exit-code -1})))]
+     (fn
+       ([prompt session-id]
+        (forward prompt session-id nil))
+       ([prompt session-id invoke-options]
+        (forward prompt session-id invoke-options))))))
 
 ;; =============================================================================
 ;; Peer announcement
@@ -643,7 +767,7 @@
               (proxy-local-id origin-url remote-id agent-info))
         existing (when (seq aid) (reg/get-agent aid))
         invoke-fn (or (:invoke-fn agent-info)
-                      (make-proxy-invoke-fn origin-url remote-id))]
+                      (make-proxy-invoke-fn origin-url remote-id aid))]
     (cond
       (str/blank? remote-id)
       {:ok false :action :invalid-agent-id}
