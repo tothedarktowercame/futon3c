@@ -506,6 +506,41 @@ digest has a landed reading or a pending request younger than a stated bound,
 and Giraffe's priorities were computed after the newest reading and the newest
 GCC change. (A scheduled-task packet to codex-7 was cancelled for this.)
 
+**Amendment, 2026-11-14: activation and firing, not re-read on change**
+(Joe: "What if META documents are more like Hawkin's neurons? In this
+scenario there is no "reread" there's just priming until such time as it
+fires"; then: "the threshold is just becoming top-rated in the party view
+... items that enter the top ten get a "reading" in the sense that the War
+Machine would recognise. But the Hawkins style activation could come from
+all kinds of things, "mention" being maybe the least interesting one").
+
+- **Activation.** Each item carries an activation level, a GCC record so
+  Mojira shows it. Events add to it; it decays. Sources (each a vote with a
+  weight, as in futon5a `nonstarter-personal.md`: `vote! … :voter
+  "morning-energy" :weight 3`): the document's own change (proximal, scaled
+  by the size of the change); commits touching the mission's code paths
+  (`code/v05/file→mission` edges); clock-ins (`clock/clocked-on`); a
+  neighbour firing or a `needs` becoming met; 馬's pattern occurrences and
+  tensions; 猴's operator focus; invariant violations and failing checks on
+  the item; a question of Joe's linked to it (M-giraffe L-1); staleness of
+  its last reading; and, least interesting, a settled turn mentioning it.
+- **Threshold.** Entering the top ten of the party view (the Gauntlet
+  characters' orderings combined, `scripts/giraffe_party.py`). Ten slots
+  play the part of nonstarter's pot: an item clears only by displacing
+  another, so firing stays rare and competitive.
+- **Firing.** An item entering the top ten gets a reading the War Machine
+  recognises: a pass entry with its reason (M-giraffe WM-4), from a reader
+  seat. That is the block in nonstarter's sense; the history of firings is
+  the chain. The reading is a prediction (PSR); what happens to the item
+  afterwards is the observation (PUR), and the gap is the learning signal
+  for the vote weights (nonstarter-tech-note.md, "PSR/PUR as
+  Prediction/Observation").
+- **What stays from the built service** (futon3c `28d411c7d`, `c78d89255`):
+  the event intake (document changes, settled turns, landed readings), the
+  single executor, debounce, health. What changes: an event adds votes and
+  re-ranks the party; only an item newly in the top ten is queued for a
+  reading. The giraffe-reread timer is retired when this rule is in.
+
 Order: giraffe-reread (event-driven, as above); the `/arxana/v1` mount proved on F1 (with a durable
 artifact provider, since the only one is in memory); workplan; F2–F6 and
 code↔docs; :7084. The futon4a README's "never a live store" rule changes at
