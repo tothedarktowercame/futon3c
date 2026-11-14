@@ -73,8 +73,31 @@
     props (assoc "hx/props" props)
     *valid-time-ms* (assoc "hx/valid-time" *valid-time-ms*)))
 
+;; A running batch can be stopped (2026-11-14). ingest-commits-batch! never
+;; checked for a stop request, so a 14,677-commit futon2 pass could only end
+;; by finishing or by a JVM restart; stopping the watcher left it posting.
+;; `stop-running-batches!` makes every post of a batch that started earlier
+;; throw, which unwinds the batch through the watcher's per-root catch. A
+;; post outside any batch counts as started at 0, so it is stopped too.
+
+(def ^:dynamic *batch-started-at-ms* 0)
+
+(defonce ^:private !stop-batches-before-ms (atom 0))
+
+(defn stop-running-batches!
+  "Stop every commit-ingest batch that is running now; later batches run."
+  []
+  (reset! !stop-batches-before-ms (System/currentTimeMillis)))
+
+(defn- check-not-stopped! []
+  (when (< *batch-started-at-ms* @!stop-batches-before-ms)
+    (throw (ex-info "commit-ingest batch stopped by stop-running-batches!"
+                    {:batch-started-at-ms *batch-started-at-ms*
+                     :stop-before-ms @!stop-batches-before-ms}))))
+
 (defn post-hyperedge!
   [hx-type endpoints labels & [props]]
+  (check-not-stopped!)
   (let [payload (hyperedge-payload hx-type endpoints labels props)
         _ (write-pace/pace!)
         resp (try
@@ -100,6 +123,12 @@
 ;; futon1b restart onto a build with the route is picked up without one here.
 (def ^:private hyperedge-batch-size 200)
 
+(def max-live-commits-per-cycle
+  "Upper bound on commits one live-mode cycle ingests (ingest-new-commits!).
+   The watcher visits repos one after another, so an unbounded cycle stalls
+   file ingestion for every repo: on 2026-11-14 one futon2 pass ran 13 h."
+  50)
+
 (def ^:private batch-route-recheck-ms (* 10 60 1000))
 
 (defonce ^:private !batch-route-missing-at (atom nil))
@@ -118,6 +147,7 @@
       (vec
        (mapcat
         (fn [chunk]
+          (check-not-stopped!)
           (write-pace/pace!)
           (let [resp (try
                        (http/post (str FUTON1A "/api/alpha/hyperedges/batch")
@@ -140,7 +170,17 @@
               (do (reset! !batch-route-missing-at (System/currentTimeMillis))
                   (mapv single chunk))
 
-              :else (mapv single chunk))))
+              ;; Any other failure (timeout, 5xx, unreadable body) is reported
+              ;; as failed items, NOT re-posted one by one. Until 2026-11-14 it
+              ;; fell back to 200 single posts: after a timeout the batch may
+              ;; already have committed, so each edge got a second version, and
+              ;; an overloaded store got 200 requests where one had failed
+              ;; (226,700 single POSTs in 21 h, futon1b
+              ;; holes/E-xtdb-plan-cache-heap.md). Single posts are only for a
+              ;; store without the batch route.
+              :else (mapv (fn [_] {:ok? false :status (:status resp)
+                                   :body (:body resp)})
+                          chunk))))
         (partition-all hyperedge-batch-size items))))))
 
 ;; ---------- git layer ----------
@@ -338,18 +378,26 @@
    commit history. Prefer `last-indexed-commit-sha`, which checks the
    in-memory pointer first."
   [repo-label]
+  ;; Returns the sha, nil when the store ANSWERED that it has no commit for
+  ;; this repo, or ::lookup-failed when it did not answer. The two must not be
+  ;; confused: until 2026-11-14 a timed-out lookup returned nil, which live
+  ;; mode read as "nothing ingested" and re-posted the repo's whole history
+  ;; (futon0 1,328 commits, futon1b 323, then futon2's 14,677, during a
+  ;; futon1b overload).
   (try
     (let [resp (http/get (str FUTON1A "/api/alpha/hyperedges?type=code/v05/commit"
                               "&repo=" repo-label
                               "&latest=true&limit=1&include-total=false")
                          {:throw false
                           :timeout 5000})
-          body (when (= 200 (:status resp)) (:body resp))
-          parsed (when (string? body)
-                   (edn/read-string {:default (fn [_t v] v)} body))
-          edges (:hyperedges parsed)]
-      (when (seq edges)
-        (let [hx-id (:hx/id (first edges))]
+          parsed (when (and (= 200 (:status resp)) (string? (:body resp)))
+                   (edn/read-string {:default (fn [_t v] v)} (:body resp)))]
+      (if-not (map? parsed)
+        (do (binding [*out* *err*]
+              (println "last-indexed-commit-sha: no answer for" repo-label
+                       "status" (:status resp)))
+            ::lookup-failed)
+        (let [hx-id (:hx/id (first (:hyperedges parsed)))]
           (when (string? hx-id)
             (last (str/split hx-id #":"))))))
     (catch Exception e
@@ -358,7 +406,7 @@
                  (or (.getMessage e)
                      (.getName (class e))
                      (pr-str e))))
-      nil)))
+      ::lookup-failed)))
 
 (defn last-indexed-commit-sha
   "SHA of the most-recently-ingested commit for repo-label.
@@ -670,6 +718,7 @@
    Returns: {:n-ingested <int> :latest-sha <string-or-nil> :n-failed <int>
              :n-blocks <int> :n-mana-credited <int>}"
   [{:keys [commits repo-root git-root subtree repo-label file->structure prev-sha verbose?]}]
+  (binding [*batch-started-at-ms* (System/currentTimeMillis)]
   (let [git-root (or git-root repo-root)
         labels ["v05" "phase-3" repo-label]
         base-props {"repo" repo-label "phase" 3}
@@ -746,7 +795,7 @@
      :latest-sha (some-> commits last :sha)
      :n-failed @n-failed
      :n-blocks @n-blocks
-     :n-mana-credited @n-credited}))
+     :n-mana-credited @n-credited})))
 
 (defn ingest-all-commits!
   "Backfill mode. Walks ALL commits in the repo. Idempotent.
@@ -776,19 +825,51 @@
    Args map: {:repo-root :repo-label :file->structure}.
    Returns: {:n-ingested :latest-sha :n-failed :n-blocks :n-mana-credited}."
   [{:keys [repo-root repo-label file->structure git-root subtree]}]
+  ;; Live mode does BOUNDED work per cycle (2026-11-14 guards):
+  ;; - a cursor lookup the store did not answer skips the cycle;
+  ;; - no known cursor seeds it at HEAD and ingests nothing — a repo's history
+  ;;   is backfilled only by an explicit `ingest-all-commits!`;
+  ;; - at most `max-live-commits-per-cycle` commits per cycle, the cursor
+  ;;   advancing to the last one handled.
+  ;; Before, an unanswered lookup meant "ingest everything" and the cursor was
+  ;; recorded only after the whole pass, so a pass cut short started over.
   (let [git-root (or git-root repo-root)
         since-sha (last-indexed-commit-sha repo-label)
-        commits (list-commits git-root since-sha subtree)
-        head-sha (current-head-sha git-root)
-        result (ingest-commits-batch!
-                {:commits commits
-                 :repo-root repo-root
-                 :git-root git-root
-                 :subtree subtree
-                 :repo-label repo-label
-                 :file->structure file->structure
-                 :prev-sha since-sha
-                 :verbose? false})]
-    (when-let [cursor (or head-sha (:latest-sha result))]
-      (record-last-ingested! repo-label cursor))
-    result))
+        empty-report {:n-ingested 0 :latest-sha nil :n-failed 0
+                      :n-blocks 0 :n-mana-credited 0}]
+    (cond
+      (= ::lookup-failed since-sha)
+      (do (println (str "[commit-ingest] " repo-label
+                        ": store did not answer the cursor lookup; skipping this cycle"))
+          (assoc empty-report :skipped :cursor-lookup-failed))
+
+      (nil? since-sha)
+      (let [head-sha (current-head-sha git-root)]
+        (when head-sha (record-last-ingested! repo-label head-sha))
+        (println (str "[commit-ingest] " repo-label
+                      ": no ingested commit known; cursor seeded at "
+                      (some-> head-sha (subs 0 7))
+                      " without ingesting history (backfill with ingest-all-commits!)"))
+        (assoc empty-report :skipped :cursor-seeded-at-head :latest-sha head-sha))
+
+      :else
+      (let [all (list-commits git-root since-sha subtree)
+            commits (vec (take max-live-commits-per-cycle all))
+            capped? (< (count commits) (count all))
+            head-sha (when-not capped? (current-head-sha git-root))
+            result (ingest-commits-batch!
+                    {:commits commits
+                     :repo-root repo-root
+                     :git-root git-root
+                     :subtree subtree
+                     :repo-label repo-label
+                     :file->structure file->structure
+                     :prev-sha since-sha
+                     :verbose? false})]
+        (when-let [cursor (if capped?
+                            (:sha (peek commits))
+                            (or head-sha (:latest-sha result)))]
+          (record-last-ingested! repo-label cursor))
+        (cond-> result
+          capped? (assoc :capped-at max-live-commits-per-cycle
+                         :remaining (- (count all) (count commits))))))))

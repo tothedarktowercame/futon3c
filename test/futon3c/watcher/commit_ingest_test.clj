@@ -274,17 +274,27 @@
           (sut/post-hyperedges! items)
           (is (= 2 (count (filter #(str/ends-with? % "/batch") @urls)))
               "asked again once the recheck interval has passed"))))
-    (testing "a failed batch falls back to single posts for that chunk"
+    (testing "a failed batch reports failed items and is NOT re-posted one by one"
+      ;; 2026-11-14: the single-post fallback wrote a second version of every
+      ;; edge whose timed-out batch had committed, and multiplied requests to
+      ;; an overloaded store by 200.
       (reset! @missing-at nil)
-      (let [urls (atom [])]
-        (with-redefs [write-pace/pace! (fn [] nil)
-                      http/post (fn [url _]
-                                  (swap! urls conj url)
-                                  (if (str/ends-with? url "/batch")
-                                    {:status 500 :body "{:ok false}"}
-                                    {:status 200 :body "{\"hx/id\":\"hx:x\"}"}))]
-          (is (every? :ok? (sut/post-hyperedges! items)))
-          (is (nil? @@missing-at) "a 500 does not mark the route missing"))))
+      (doseq [failure [{:status 500 :body "{:ok false}"}
+                       {:status -1 :body "timeout"}
+                       {:status 503 :body "busy"}]]
+        (let [urls (atom [])]
+          (with-redefs [write-pace/pace! (fn [] nil)
+                        http/post (fn [url _]
+                                    (swap! urls conj url)
+                                    (if (str/ends-with? url "/batch")
+                                      failure
+                                      {:status 200 :body "{\"hx/id\":\"hx:x\"}"}))]
+            (let [rs (sut/post-hyperedges! items)]
+              (is (= 2 (count rs)))
+              (is (not-any? :ok? rs))
+              (is (= [(:status failure) (:status failure)] (map :status rs))))
+            (is (= 1 (count @urls)) (str "no single posts after " (:status failure)))
+            (is (nil? @@missing-at) "a failure does not mark the route missing")))))
     (reset! @missing-at nil)))
 
 (deftest doc-section-query-is-the-new-paragraph-only
@@ -302,3 +312,86 @@
 (deftest doc-section-hook-without-a-live-backend-refuses
   (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Evidence backend unavailable"
                         (artifact-activation/live-backend))))
+
+(deftest cursor-lookup-distinguishes-no-answer-from-no-commits
+  (testing "a store that answers with no commit gives nil"
+    (with-redefs [http/get (fn [_ _] {:status 200 :body (pr-str {:hyperedges []})})]
+      (is (nil? (sut/last-indexed-commit-sha-from-store "demo")))))
+  (testing "a timeout, error status or unreadable body is a failed lookup, not nil"
+    (doseq [resp [{:status 504 :body "busy"} {:status 200 :body "<html>"} nil]]
+      (with-redefs [http/get (fn [_ _] (if resp resp (throw (ex-info "timed out" {}))))]
+        (is (= :futon3c.watcher.commit-ingest/lookup-failed
+               (binding [*err* (java.io.StringWriter.)]
+                 (sut/last-indexed-commit-sha-from-store "demo"))))))))
+
+(defn- live-ingest [since commits head]
+  (let [recorded (atom nil) listed (atom nil) batch (atom nil)]
+    (with-redefs [sut/last-indexed-commit-sha (constantly since)
+                  sut/list-commits (fn [_ s & _] (reset! listed s) commits)
+                  sut/current-head-sha (constantly head)
+                  sut/ingest-commits-batch! (fn [{:keys [commits]}]
+                                              (reset! batch commits)
+                                              {:n-ingested (count commits)
+                                               :latest-sha (:sha (last commits))
+                                               :n-failed 0 :n-blocks 0
+                                               :n-mana-credited 0})
+                  sut/record-last-ingested! (fn [label sha] (reset! recorded [label sha]))]
+      (let [report (atom nil)
+            log (with-out-str
+                  (reset! report
+                          (sut/ingest-new-commits! {:repo-root "/tmp/repo" :repo-label "demo"
+                                                    :file->structure (constantly nil)})))]
+        {:report @report :log log
+         :recorded @recorded :listed @listed :batch @batch}))))
+
+(deftest live-ingest-never-walks-whole-history
+  (testing "an unanswered cursor lookup skips the cycle: no git log, no posts, no cursor"
+    (let [{:keys [report listed batch recorded log]}
+          (live-ingest :futon3c.watcher.commit-ingest/lookup-failed
+                       [{:sha "a"}] "head")]
+      (is (= :cursor-lookup-failed (:skipped report)))
+      (is (nil? listed)) (is (nil? batch)) (is (nil? recorded))
+      (is (str/includes? log "skipping this cycle"))))
+  (testing "no known cursor seeds it at HEAD without ingesting history"
+    (let [{:keys [report batch recorded log]} (live-ingest nil [{:sha "a"}] "head-sha-1")]
+      (is (= :cursor-seeded-at-head (:skipped report)))
+      (is (nil? batch))
+      (is (= ["demo" "head-sha-1"] recorded))
+      (is (str/includes? log "ingest-all-commits!"))))
+  (testing "a long range is ingested in bounded steps, cursor at the last one handled"
+    (let [commits (mapv (fn [i] {:sha (str "c" i)}) (range 120))
+          {:keys [report batch recorded]} (live-ingest "old" commits "head")]
+      (is (= sut/max-live-commits-per-cycle (count batch)))
+      (is (= (subvec commits 0 sut/max-live-commits-per-cycle) batch))
+      (is (= ["demo" (str "c" (dec sut/max-live-commits-per-cycle))] recorded))
+      (is (= (- 120 sut/max-live-commits-per-cycle) (:remaining report))))))
+
+(deftest a-running-batch-can-be-stopped
+  ;; 2026-11-14: a 14,677-commit futon2 pass could not be stopped short of a
+  ;; JVM restart; the batch loop never checked for a stop request.
+  (let [posts (atom 0)
+        stop-at (atom 3)
+        stop-before @(ns-resolve 'futon3c.watcher.commit-ingest '!stop-batches-before-ms)]
+   (try
+    (with-redefs [write-pace/pace! (fn [] nil)
+                  http/post (fn [_ _]
+                              (when (= (swap! posts inc) @stop-at)
+                                (sut/stop-running-batches!))
+                              {:status 200 :body "{\"hx/id\":\"hx:x\"}"})
+                  sut/files-changed (constantly [])
+                  sut/submit-doc-section-activations! (fn [& _] nil)]
+      (let [commits (mapv (fn [i] {:sha (str "s" i) :email "e" :name "n" :ts 1}) (range 20))
+            batch (fn [] (sut/ingest-commits-batch!
+                          {:commits commits :repo-root "/tmp/r" :repo-label "demo"
+                           :file->structure (constantly nil)}))]
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"stopped by stop-running-batches!"
+                              (batch)))
+        (is (= 3 @posts) "no post after the stop")
+        (testing "a batch started after the stop runs normally"
+          (Thread/sleep 2)
+          (reset! stop-at -1)
+          (reset! posts 0)
+          (is (= 20 (:n-ingested (batch))))
+          (is (pos? @posts)))))
+    ;; leave no stop in force for posts made outside a batch by later tests
+    (finally (reset! stop-before 0)))))
