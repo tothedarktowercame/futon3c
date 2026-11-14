@@ -181,3 +181,14 @@ Body.
         copy (java.io.File. dir ".state/frames/x/checkout/holes/missions/M-invented.md")]
     (doseq [f [real copy]] (.mkdirs (.getParentFile f)) (spit f "# M-invented\n\n**Status:** OPEN\n"))
     (is (= [(.getPath real)] (mapv :path (inv/scan-root {:path (.getPath dir) :label "invented-d"}))))))
+
+
+(deftest campaigns-and-sub-documents-need-no-status
+  ;; Joe, 2026-11-14: campaigns are experimental; dotted notes belong to
+  ;; their mission. Invented docs.
+  (let [docs [{:path "/x/holes/M-a.md" :kind :mission :external-id "M-a.md"}
+              {:path "/x/holes/M-a.note.md" :kind :mission :external-id "M-a.note.md"}
+              {:path "/x/holes/C-c.md" :kind :campaign :external-id "C-c.md"}
+              {:path "/x/holes/M-b.v1.md" :kind :mission :external-id "M-b.v1.md"}]]
+    (is (inv/sub-document? (second docs) (set (map :external-id docs))))
+    (is (not (inv/sub-document? (nth docs 3) (set (map :external-id docs)))) "no parent M-b: still an item")))

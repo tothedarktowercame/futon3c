@@ -238,12 +238,26 @@
     (let [raw (campaign-raw-status path)]
       {:status (mcb/classify-status raw) :raw-status raw})))
 
+(defn sub-document?
+  "A note filed beside a document as `<parent>.<suffix>.md` (e.g.
+  M-substrate-metric.R1-report.md) when <parent> is itself a document in
+  DOCS. Joe, 2026-11-14: these \"look like agent-created notes ... they're
+  part of the mission\"; they carry no status of their own."
+  [doc ids]
+  (let [stem (str/replace (:external-id doc) #"\.md$" "")
+        i (str/index-of stem ".")]
+    (boolean (and i (contains? ids (str (subs stem 0 i) ".md"))))))
+
 (defn unreadable-status-violations
   "Invariant 2: documents whose classified status is :unknown or nil.
   Each violation names the path and the raw status line (nil means no
-  status line was found at all)."
+  status line was found at all). Campaigns are excluded (Joe, 2026-11-14:
+  still experimental, \"not something that requires ingest or necessarily
+  should be counted\"), and so are a document's sub-documents."
   [docs]
   (->> docs
+       (remove (let [ids (set (map :external-id docs))]
+                 (fn [doc] (or (= :campaign (:kind doc)) (sub-document? doc ids)))))
        (keep (fn [doc]
                (let [{:keys [status raw-status]} (doc-status doc)]
                  (when (or (nil? status) (= :unknown status))
