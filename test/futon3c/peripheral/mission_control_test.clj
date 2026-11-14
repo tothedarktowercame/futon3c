@@ -1021,5 +1021,10 @@
   (is (= :complete (mcb/classify-status "**CLOSED** (2026-11-11)")))
   (is (= :nonstarter (mcb/classify-status "Cancelled: superseded by another")))
   (is (= :in-progress (mcb/classify-status "OPEN — INVESTIGATION (discovery only)")))
+  (is (= :ready (mcb/classify-status "SCOPED, NOT STARTED.")))
+  (is (= :complete (:excursion/status
+                    (let [f (java.io.File/createTempFile "E-kimi-task-invented" ".md")]
+                      (spit f "# E-kimi-task-invented — read something\n\n**Requisition:** completed — 2026-11-07T14:02:25Z, job invented, state done\n")
+                      (mcb/parse-excursion-md (.getPath f) :futon2)))))
   (is (= "CLOSED (2026-11-11, invented). The split no longer applies."
          (#'mcb/extract-header "# E-invented\n\n**Status: CLOSED (2026-11-11, invented). The split no longer applies.\n" "Status"))))

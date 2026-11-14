@@ -207,6 +207,11 @@
         (str/starts-with? s "withdrawn")        :nonstarter
         (str/starts-with? s "retired")          :complete
         (str/starts-with? s "investigation")    :in-progress
+        (str/starts-with? s "charter")          :ready
+        (str/starts-with? s "sketch")           :ready
+        (str/starts-with? s "scoped")           :ready
+        (str/starts-with? s "designed")         :ready
+        (str/starts-with? s "watch")            :deferred
         (str/starts-with? s "blocked")          :blocked
         (str/starts-with? s "ready")            :ready
         (str/starts-with? s "testing")          :testing
@@ -738,7 +743,12 @@
           excursion-id (str/replace filename #"^E-|\.md$" "")
           title (when-let [m (re-find #"(?m)^#\s+(?:Excursion:\s*)?(.+)$" header-text)]
                   (str/trim (second m)))
-          raw-status (extract-header header-text "Status")
+          ;; A Kimi-task excursion (futon3c scripts/kimi-task.sh) carries its
+          ;; state as "**Requisition:** in-progress | completed — ..." and no
+          ;; Status line: 744 of the 858 status-less documents (claude-13,
+          ;; 2026-11-14). Read it as the status.
+          raw-status (or (extract-header header-text "Status")
+                         (extract-header header-text "Requisition"))
           date (extract-header header-text "Date")
           owner (or (extract-header header-text "Author + end-to-end owner")
                     (extract-header header-text "End-to-end owner")
