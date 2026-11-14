@@ -295,6 +295,17 @@ python3 -c "import sqlite3;c=sqlite3.connect('file:$HOME/code/storage/test-regis
 
 `/check` resolves an entry id through the same authority.
 
+## Watchers, ingest loops and derived indexes (2026-11-14)
+
+Before writing or changing a watcher, an ingest loop, or a derived index
+(a sidecar kept in step with the store), read futon1b README "Derived
+indexes and live ingest: rules from the 2026-11-14 collapse". On that day a
+cursor lookup that timed out was read as "nothing ingested", the commit
+watcher re-posted three repos' whole histories (226,700 POSTs in 21 h), and
+the hyperedge sidecar's only repair (a full history replay) stopped being
+able to finish. The guards are in `watcher/commit_ingest.clj` and futon1b
+`futon1b_hxindex.clj`; each says why it exists.
+
 ## Agent Prompting: Surface Contracts
 
 When agents operate across multiple surfaces (IRC, Emacs buffer, WS), they

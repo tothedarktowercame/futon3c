@@ -21,6 +21,16 @@
 
    Idempotent: futon1a computes stable hx/ids from {hx-type, endpoints};
    re-posting updates the same record. Re-ingestion never duplicates.
+   (But each re-post of a changed or valid-timed doc adds history; see below.)
+
+   Live-mode guards (2026-11-14; rules and reasons in futon1b README
+   "Derived indexes and live ingest: rules from the 2026-11-14 collapse"):
+   a cursor lookup that gets no answer skips the cycle (::lookup-failed,
+   never nil); a repo with no known cursor is seeded at HEAD, history is
+   backfilled only by ingest-all-commits!; at most max-live-commits-per-cycle
+   per cycle; cursors persist to disk; stop-running-batches! stops a batch at
+   its next post; a failed batch is not re-sent as single posts; edits edges
+   go only to vars the diff touched. Do not remove one without reading why.
 
    Ported from /home/joe/code/futon3/scripts/commit_ingest_lib.clj
    (bb script, original) as part of E-live-means-live's Path B
