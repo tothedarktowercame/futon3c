@@ -121,12 +121,15 @@
 (deftest remote-announce-replaces-existing-local-phantom
   (testing "an origin-url announce heals an existing site-qualified local phantom"
     (fed/configure! {:peers [] :self-url "http://laptop:7070" :peer-sites ["lon"]})
-    (reg/register-agent!
-     {:agent-id {:id/value "lon-claude-1" :id/type :continuity}
-      :type :claude
-      :invoke-fn (fn [_ _] {:result "wrong-local"})
-      :capabilities [:coordination/execute]
-      :metadata {:home-site :lon :auto-registered? true}})
+    ;; Seeds a record from before register-agent! refused area-coded ids
+    ;; (2026-11-15); such records can still sit in a live registry.
+    (binding [reg/*resolve-agent-id-home-site* (constantly nil)]
+      (reg/register-agent!
+       {:agent-id {:id/value "lon-claude-1" :id/type :continuity}
+        :type :claude
+        :invoke-fn (fn [_ _] {:result "wrong-local"})
+        :capabilities [:coordination/execute]
+        :metadata {:home-site :lon :auto-registered? true}}))
     (is (seq (logic/find-phantoms (logic-db-from-registry)))
         "the seeded pre-fix state is a CP-A AG-2 violation")
     (let [response (post-json (handler)
@@ -211,3 +214,43 @@
           _ (post-json h "/api/alpha/agents"
                        {"agent-id" "codex-9" "type" "codex" "ws-bridge" true})]
       (is (nil? (get-in (reg/get-agent "codex-9") [:agent/metadata :home-site]))))))
+
+(defn- register-local!
+  [id & {:as extra}]
+  (reg/register-agent! (merge {:agent-id {:id/value id :id/type :continuity}
+                               :type :claude
+                               :invoke-fn (fn [_ _] {:ok true})
+                               :capabilities [:explore]}
+                              extra)))
+
+(deftest area-coded-id-is-not-a-local-registration
+  ;; Joe, 2026-11-15: a literal ams-claude-1 record beside claude-1 on Zone took
+  ;; the bells dialled to the Zone orchestrator. Uses the real federation
+  ;; recognizer, not a stub.
+  (let [old-site (System/getProperty "FUTON3C_SITE")]
+    (try
+      (System/setProperty "FUTON3C_SITE" "ams")
+      (fed/configure! {:peers [] :self-url "http://ams:7070" :peer-sites ["lon"]})
+      (testing "the bare id registers, and the area code dials it"
+        (is (= "claude-1" (get-in (register-local! "claude-1" :session-id "sid-zone")
+                                  [:agent/id :id/value])))
+        (is (= "sid-zone" (:agent/session-id (reg/get-agent "ams-claude-1")))))
+      (testing "own area code, a peer's, and an unconfigured site in type form are refused"
+        (doseq [id ["ams-claude-1" "ams-scribe-1" "lon-claude-9" "lon-reviewer" "xyz-codex-2"]]
+          (let [r (register-local! id)]
+            (is (false? (:ok r)) id)
+            (is (= :area-code-agent-id (get-in r [:error :error/code])) id)
+            (is (not (contains? @reg/!registry id)) id))))
+      (testing "the refusal leaves the alias pointing at the bare record"
+        (is (= "sid-zone" (:agent/session-id (reg/get-agent "ams-claude-1")))))
+      (testing "bare ids that merely start with three letters still register"
+        (doseq [id ["zai-1" "war-machine" "apm-driver"]]
+          (is (= id (get-in (register-local! id) [:agent/id :id/value])) id)))
+      (testing "a federation proxy keeps its site-qualified id"
+        (is (= "lon-claude-4"
+               (get-in (register-local! "lon-claude-4" :metadata {:proxy? true :home-site "lon"})
+                       [:agent/id :id/value]))))
+      (finally
+        (if old-site
+          (System/setProperty "FUTON3C_SITE" old-site)
+          (System/clearProperty "FUTON3C_SITE"))))))

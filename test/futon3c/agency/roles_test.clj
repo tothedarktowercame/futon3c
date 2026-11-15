@@ -2,7 +2,8 @@
   "M-futon-seams instance 4: routing follows the provider an agent declared,
    not its id. The redirect test (the mission's IDENTIFY exit): change the
    binding and confirm behaviour follows it, with the id held fixed."
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as reg]
             [futon3c.agency.roles :as roles]
             [futon3c.transport.http]
@@ -11,12 +12,16 @@
 (use-fixtures :each (fn [t] (reg/reset-registry!) (estore/reset-store!) (t) (reg/reset-registry!)))
 
 (defn- register! [id type & [metadata]]
-  (reg/register-agent!
-   (cond-> {:agent-id {:id/value id :id/type :continuity}
-            :type type
-            :invoke-fn (fn [_ _] {:result "ok"})
-            :capabilities [:coordination/execute]}
-     metadata (assoc :metadata metadata))))
+  ;; register-agent! refuses an area-coded id unless it is a federation proxy
+  ;; (2026-11-15), so the oxf- ids here are registered as the proxies they are.
+  (let [metadata (cond-> metadata
+                   (str/starts-with? id "oxf-") (assoc :proxy? true))]
+    (reg/register-agent!
+     (cond-> {:agent-id {:id/value id :id/type :continuity}
+              :type type
+              :invoke-fn (fn [_ _] {:result "ok"})
+              :capabilities [:coordination/execute]}
+       metadata (assoc :metadata metadata)))))
 
 (def requires-execution? #'futon3c.transport.http/agent-requires-execution?)
 (def claude-stale-session? #'futon3c.transport.http/claude-missing-conversation-result?)

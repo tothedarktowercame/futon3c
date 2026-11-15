@@ -158,6 +158,16 @@
     (when-let [fed-ns (find-ns 'futon3c.agency.federation)]
       (ns-resolve fed-ns 'site-prefix))))
 
+(def ^:dynamic *resolve-agent-id-home-site*
+  "Best-effort resolver for futon3c.agency.federation/agent-id-home-site.
+   Returns a one-argument fn (agent id -> site code or nil), or nil when
+   federation is not loaded. Dynamic for the same reason as
+   *resolve-site-prefix*: federation requires registry, so registry cannot
+   require it back."
+  (fn []
+    (when-let [fed-ns (find-ns 'futon3c.agency.federation)]
+      (ns-resolve fed-ns 'agent-id-home-site))))
+
 (defonce ^{:doc "Registry of agents.
 
    Structure: {agent-id-value -> agent-record}
@@ -488,6 +498,18 @@
                    (> (count s) (count prefix)))
           (subs s (count prefix)))))))
 
+(defn area-coded-agent-id
+  "Site code carried by ID-VALUE, or nil.
+
+   An area code (ams-, lon-, oxf-, ...) is how a box is dialled from outside;
+   it is resolved by get-agent as an alias and is never part of a local agent's
+   registered id. Recognised by federation/agent-id-home-site: the form
+   <site>-(claude|codex|zai|tickle)-N for any site code, and any name under a
+   configured site (own site, peer sites)."
+  [id-value]
+  (when-let [resolver (*resolve-agent-id-home-site*)]
+    (resolver (str id-value))))
+
 (def ^:private agent-personas-resource "agent-personas.edn")
 
 (defonce ^:private !agent-personas (atom {}))
@@ -666,7 +688,8 @@
                                              (or metadata {}))}
         ;; R2: Atomic check-and-set — reject duplicate, don't overwrite
         result (atom nil)]
-    (if-not (#{:push :inbox} delivery-mode)
+    (cond
+      (not (#{:push :inbox} delivery-mode))
       (reset! result
               {:ok false
                :error (make-social-error
@@ -674,6 +697,24 @@
                        "delivery-mode must be :push or :inbox"
                        :agent-id aid-val
                        :delivery-mode delivery-mode)})
+
+      ;; Joe, 2026-11-15: a literal `ams-claude-1` record sat beside `claude-1`
+      ;; on Zone for two days. A registered id wins over the area-code alias in
+      ;; get-agent, so bells dialled to the Zone orchestrator reached another
+      ;; session. Only a federation proxy (a peer's agent mirrored here) may
+      ;; carry a site code in its registered id.
+      (and (not (:proxy? metadata))
+           (area-coded-agent-id aid-val))
+      (reset! result
+              {:ok false
+               :error (make-social-error
+                       :area-code-agent-id
+                       (str "Agent id carries an area code (" (area-coded-agent-id aid-val)
+                            "-); register the bare id. Area codes are aliases resolved at lookup.")
+                       :agent-id aid-val
+                       :site (area-coded-agent-id aid-val))})
+
+      :else
       (swap! !registry
            (fn [m]
              (if (contains? m aid-val)
