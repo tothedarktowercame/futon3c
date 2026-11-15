@@ -686,6 +686,10 @@ def build_item(item_id, ctx):
     queue_rows = [r for r in ctx["queue"].get(item_id, [])
                   if r["state"] in ("landed", "superseded")]
     current_sha = (corpus_rec.get("source") or {}).get("sha256") if corpus_rec else None
+    # Same live document digest used by the pin-freshness absence above and
+    # display.reading.of_current_version below. Missing documents yield None;
+    # neither None nor False may authorize links from the raw corpus reading.
+    reading_current_version = (live_sha == current_sha) if live_sha else None
     reading_ids = {}
     seen = []
     disp_earlier = []
@@ -737,7 +741,7 @@ def build_item(item_id, ctx):
                 "summary": summary,
                 "status_as_read": corpus_rec.get("status_as_read"),
                 "link_count": len(corpus_rec.get("edges") or []),
-                "of_current_version": (live_sha == sha) if live_sha else None,
+                "of_current_version": reading_current_version,
                 "read_at": _date_of_ms(row.get("updated_at_ms")),
                 "reader": reader,
                 "warnings": warnings,
@@ -754,7 +758,11 @@ def build_item(item_id, ctx):
                                    % (item_id, os.path.basename(ctx["corpus_real"]))})
 
     # ---- needs edges from the current reading ----------------------------
-    for edge in (corpus_rec.get("edges") or []) if corpus_rec else []:
+    if corpus_rec is not None and reading_current_version is not True:
+        absences.append({"what": "reading links withheld", "item": item_id,
+                         "reason": "source-changed" if live_sha else "source-missing",
+                         "source-sha256": current_sha})
+    for edge in (corpus_rec.get("edges") or []) if corpus_rec and reading_current_version is True else []:
         kind = edge.get("kind")
         reverse = kind == "unblocks"
         frm = edge.get("to") if reverse else item_id

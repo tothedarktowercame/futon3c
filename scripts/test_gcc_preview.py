@@ -26,6 +26,7 @@ import hashlib
 import subprocess
 import sys
 import tempfile
+import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPT = os.path.join(HERE, "gcc_preview.py")
@@ -413,6 +414,73 @@ def main():
         return 0
     finally:
         shutil.rmtree(root, ignore_errors=True)
+
+
+class ReadingFreshnessTests(unittest.TestCase):
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix="gcc-preview-freshness-")
+        self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+        self.fx = make_fixture(self.root)
+        batch = os.path.join(self.fx['corpus'], 'batch-1.jsonl')
+        with open(batch, encoding='utf-8') as stream:
+            record = json.loads(stream.read())
+        # Cover all reading-derived link types, including reversed unblocks.
+        base = record['edges'][0]
+        record['edges'] = [dict(base, kind=k) for k in
+                           ('depends-on', 'unblocks', 'part-of', 'relates-to')]
+        write(batch, json.dumps(record) + '\n')
+
+    def project(self):
+        return run_projector(self.fx, os.path.join(self.root, 'out'))[1][ALPHA]
+
+    def reading_links(self, item):
+        return [link for link in item['links'] if link['type'] in
+                ('[:needs 1]', '[:part-of 1]', '[:relates-to 1]')]
+
+    def assert_withheld(self, reason):
+        item = self.project()
+        self.assertEqual([], self.reading_links(item))
+        self.assertEqual([], item['display']['waiting_on'])
+        self.assertEqual([], item['display']['related'])
+        self.assertEqual([{'what': 'reading links withheld', 'item': ALPHA,
+                           'reason': reason, 'source-sha256': self.fx['sha_new']}],
+                         [a for a in item['absences'] if a['what'] == 'reading links withheld'])
+        # History/supersession is not a dependency asserted by this reading.
+        self.assertEqual(1, sum(l['type'] == '[:supersedes 1]' for l in item['links']))
+        return item
+
+    def test_current_links_unchanged(self):
+        item = self.project()
+        links = self.reading_links(item)
+        self.assertEqual(['[:needs 1]', '[:needs 1]', '[:part-of 1]', '[:relates-to 1]'],
+                         [link['type'] for link in links])
+        self.assertEqual([(ALPHA, BETA), (BETA, ALPHA), (ALPHA, BETA), (ALPHA, BETA)],
+                         [(link['from'], link['to']) for link in links])
+        self.assertTrue(item['display']['reading']['of_current_version'])
+        self.assertFalse(any(a['what'] == 'reading links withheld' for a in item['absences']))
+
+    def test_changed_source_withholds_links_and_pins_absence(self):
+        write(os.path.join(self.fx['docs'], ALPHA + '.md'), '# Invented edit\nStatus: OPEN\n')
+        item = self.assert_withheld('source-changed')
+        self.assertFalse(item['display']['reading']['of_current_version'])
+
+    def test_deleted_source_withholds_links_and_pins_absence(self):
+        os.unlink(os.path.join(self.fx['docs'], ALPHA + '.md'))
+        item = self.assert_withheld('source-missing')
+        self.assertIsNone(item['display']['reading']['of_current_version'])
+
+    def test_stale_reading_without_queue_still_withheld(self):
+        with sqlite3.connect(self.fx['queue']) as db:
+            db.execute('DELETE FROM reread_requests')
+        os.unlink(os.path.join(self.fx['docs'], ALPHA + '.md'))
+        item = self.project()
+        self.assertEqual([], self.reading_links(item))
+        self.assertTrue(any(a['what'] == 'reading links withheld' for a in item['absences']))
+
+
+class ExistingPreviewTests(unittest.TestCase):
+    def test_existing_preview_checks_and_plants(self):
+        self.assertEqual(0, main())
 
 
 if __name__ == "__main__":
