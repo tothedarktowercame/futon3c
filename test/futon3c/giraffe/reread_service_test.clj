@@ -321,11 +321,13 @@
 (defn- preview-config
   "Injected process layer: records every argv, and the fake giraffe_party
    writes a party.json with one top item so the top-list join is exercised."
-  [root calls & {:keys [fail-party? gate]}]
+  [root calls & {:keys [fail-party? gate entered]}]
   (let [out (io/file root "gcc-preview")]
     {:repo-dir (str root) :out-dir (str out)
      :exec-fn (fn [args]
-                (when gate (deref gate 2000 nil))
+                ;; Signal entry BEFORE blocking. A timeout here would release the
+                ;; refresh behind the test's back and race its second mint.
+                (when gate (deliver entered true) @gate)
                 (swap! calls conj (vec args))
                 (if (and fail-party? (some #(str/ends-with? % "giraffe_party.py") args))
                   {:exit 1 :out "" :err "party fixture failure"}
@@ -369,8 +371,8 @@
       (is (empty? (:errors (service/health)))))))
 
 (deftest two-mints-during-one-refresh-yield-one-follow-up
-  (let [config (fixture) gate (promise) recorded (atom []) boot (promise)
-        first-mint (promise) mints (atom 0)]
+  (let [config (fixture) gate (promise) entered (promise)
+        recorded (atom []) boot (promise) mints (atom 0)]
     (with-redefs [service/item-snapshot (let [n (atom 0)]
                                       (fn [p c] (let [sha (str "new-" (swap! n inc))]
                                                   (-> (snapshot p c)
@@ -381,19 +383,40 @@
                     (if-let [claim (queue/claim! store now-ms 1000 new-item-cap reader-id)]
                       {:status :landed :request (queue/settle! store claim {:status :landed :digest "fixture"} now-ms 3)}
                       (do (deliver boot true) {:status :idle})))]
-      (service/start! (assoc config :preview (preview-config (temp-dir) recorded :gate gate)
-                             :mint-fn #(do (deliver first-mint true) (swap! mints inc)
-                                           {:status :minted :run-id (str "fixture-run-" @mints)})))
-      (is (= true (deref boot 2000 :timeout)))      (service/notify-doc-changed! path)
-      (is (= true (deref first-mint 2000 :timeout)))
-      ;; the first refresh is now blocked inside its first party call
-      (is (true? (wait-for #(= 1 (count (party-calls recorded))) 2000)))
-      (service/notify-doc-changed! path)
-      (is (= true (wait-for #(= 2 @mints) 2000))
-          "second mint queued while the first refresh was blocked")
-      (deliver gate true)
-      (is (true? (wait-for #(= 2 (count (preview-calls recorded))) 2000)))
-      (Thread/sleep 200)
+      (try
+        (service/start! (assoc config
+                               :preview (preview-config (temp-dir) recorded
+                                                        :gate gate :entered entered)
+                               :mint-fn #(hash-map :status :minted
+                                                   :run-id (str "fixture-run-" (swap! mints inc)))))
+        (is (= true (deref boot 2000 :timeout)))
+        (service/notify-doc-changed! path)
+        (is (= true (deref entered 2000 :timeout))
+            "first refresh entered its process call and cannot finish until released")
+        (service/notify-doc-changed! path)
+        ;; Counting mints alone races schedule-preview-refresh!, which is
+        ;; called only after mint-fn returns. Wait for its queued request too.
+        (is (true? (wait-for #(let [s (service-state)]
+                               (and (= 2 @mints)
+                                    (:refresh-running? s)
+                                    (:refresh-requested? s)
+                                    (= "fixture-run-2" (:refresh-run-id s))))
+                            2000))
+            "second mint queued while the first refresh is still blocked")
+        (is (empty? @recorded) "the gate has not released either process call")
+        (deliver gate true)
+        (is (true? (wait-for #(let [s (service-state)]
+                               (and (:last-refresh s) (not (:refresh-running? s))))
+                            2000))
+            "the refresh and its follow-up finished")
+        (finally
+          ;; Release even on failure, then join BOTH executors before the
+          ;; redefs unwind or counts are checked; no fixed settling sleep.
+          (deliver gate true)
+          (service/stop!)
+          (join!)
+          (when-let [executor (:preview-executor (service-state))]
+            (is (.awaitTermination ^ScheduledThreadPoolExecutor executor 2 TimeUnit/SECONDS)))))
       (is (= 2 (count (party-calls recorded))) "one blocked + one follow-up, not more")
       (is (= 2 (count (preview-calls recorded))))
       (is (empty? (:errors (service/health)))))))
