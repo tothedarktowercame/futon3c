@@ -113,6 +113,14 @@
       (is (= :giraffe-generation/source-changed (:reason result)))
       (is (= before (:path (generation/resolve-generation pointer)))))))
 
+(deftest stale-reading-is-source-changed-before-the-checker-runs
+  ;; a reading of an older source that would ALSO fail the checker must be
+  ;; reported as source-changed (superseded), not checker-failed
+  (let [{:keys [source source-pin] :as f} (fixture)]
+    (spit source "changed after claim\n")
+    (is (= :giraffe-generation/source-changed
+           (:reason (publish! f (record source-pin true)))))))
+
 (deftest never-read-target-adds-a-member-and-validates
   (let [{:keys [pointer generations source source-pin]} (fixture)
         base (:path (generation/resolve-generation pointer))]

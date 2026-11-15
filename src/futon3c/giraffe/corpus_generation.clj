@@ -167,6 +167,14 @@
         staging (io/file stage-parent (str (UUID/randomUUID)))
         lock-path (.toPath (io/file generations-dir ".publish.lock"))]
     (try
+      ;; Cheap check first (claude-13, 2026-11-15): a reading of a source that
+      ;; has since changed is superseded, not a checker failure. Checked only
+      ;; after validation, 25 stale readings were reported :checker-failed
+      ;; after a full-corpus check each (the 74-document status edit,
+      ;; 0292cd2b6). The check after validation stays for the race.
+      (when-not (= (:source-sha claim) (file-sha (:source-path claim)))
+        (throw (ex-info "Claimed source changed during reading"
+                        {:kind :giraffe-generation/source-changed})))
       (copy-tree! base-path staging)
       (apply-replacement! staging (:target-id claim) replacement
                           {:path (:source-path claim) :sha256 (:source-sha claim)}
