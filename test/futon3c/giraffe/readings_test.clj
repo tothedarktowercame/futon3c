@@ -238,11 +238,24 @@ with no reading record: the typed unread count the certificate must carry.
       (is (= 4 (count (:order pass))))
       ;; No reading edge is a counting prerequisite (links + one out-of-scope
       ;; depends-on), so no row has dependents or unblocks from the reading.
-      ;; The pre-hermetic pilot asserted literal nils; readiness arithmetic
-      ;; now reports 0 for a ready row with no dependents (nil only when a
-      ;; row is undetermined), so the claim is kept as "never positive".
-      (is (every? #(not (pos? (or (:cone %) 0))) (:order pass)))
-      (is (every? #(not (pos? (or (:unblocks %) 0))) (:order pass)))
+      ;; The pilot asserted nils because most of its rows were unread, and an
+      ;; unread/unresolved row is :undetermined with nil cone/unblocks. Every
+      ;; open fixture item is read with no counting prerequisite, so each row
+      ;; is KNOWN with exactly 0 (claude-13 review: "never positive" also
+      ;; accepted nil, i.e. a known row wrongly falling back to undetermined).
+      ;; Both branches, exactly: boreal's declared prerequisite is the parked
+      ;; (cancelled) non-member, so boreal is :undetermined with nil terms;
+      ;; the other three are KNOWN with exactly 0.
+      (let [by-id (into {} (map (juxt :id identity)) (:order pass))
+            boreal (by-id :M-fixture-boreal)
+            others (vals (dissoc by-id :M-fixture-boreal))]
+        (is (= [:undetermined :prerequisite-cancelled nil nil]
+               ((juxt :status :reason :cone :unblocks) boreal)))
+        (is (= :unknown (get-in boreal [:graph-terms :status])))
+        (is (= 3 (count others)))
+        (is (every? #(= [:ready :known 0 0]
+                        [(:status %) (get-in % [:graph-terms :status]) (:cone %) (:unblocks %)])
+                    others)))
       (is (every? #(= (:population-sha coverage) (get-in % [:graph-terms :population-sha])) (:order pass))))))
 
 (deftest checker-results-are-temp-path-free-and-deterministic
