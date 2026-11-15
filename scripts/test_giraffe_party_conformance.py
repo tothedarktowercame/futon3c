@@ -46,7 +46,7 @@ def failures(data):
 class ConformanceTests(unittest.TestCase):
     def test_conforming(self):
         results = c.audit(*fixture())
-        self.assertEqual({'PASS'}, {r['status'] for r in results[:-2]})
+        self.assertEqual({'PASS'}, {r['status'] for r in results[:-3]})
         self.assertEqual('ABSENT', results[-1]['status'])
 
     def test_thor_mutation(self):
@@ -129,7 +129,7 @@ class ConformanceTests(unittest.TestCase):
     def test_missing_sources_are_declared(self):
         party, _, _, _ = fixture()
         results = c.audit(party)
-        self.assertEqual(8, sum(r['status'] == 'ABSENT' for r in results))
+        self.assertEqual(9, sum(r['status'] == 'ABSENT' for r in results))
         self.assertEqual(3, sum(r['status'] == 'PASS' for r in results))
 
     def test_missing_metric_is_not_zero(self):
@@ -183,8 +183,8 @@ class RunDigestTests(unittest.TestCase):
         self.assertEqual('PASS', row['status'])
         self.assertEqual({'files': 1}, row['detail'])
         rows = c.audit(*fixture(), run=self.run)
-        self.assertEqual(11, len(rows))
-        self.assertEqual({'PASS'}, {r['status'] for r in rows[:-1]})
+        self.assertEqual(12, len(rows))
+        self.assertEqual({'PASS'}, {r['status'] for r in rows[:-2]})
         self.assertEqual('ABSENT', rows[-1]['status'])
 
     def test_changed_byte(self):
@@ -318,6 +318,104 @@ class CurrentReadingTests(unittest.TestCase):
         self.assertEqual('ABSENT', c.one_current_reading(self.run)['status'])
         self.manifest.unlink()
         self.assertEqual('ABSENT', c.one_current_reading(self.run)['status'])
+
+
+class GenerationDigestTests(unittest.TestCase):
+    # SHA-256 of literal a.txt NUL A nested/z.txt NUL B, independently derived.
+    EXPECTED = '451ba148c7ed949846ef77db712abec8a1d87910f0cd2b5786ad8d7a3458514f'
+    SINGLE = '89d1aee8d2371b90f003b45ade4eea75238f196e5e4b0522b836c2e5254ca830'
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.run = self.root / 'run'
+        self.run.mkdir()
+        self.generation = self.root / 'generation'
+        self.generation.mkdir()
+        (self.generation / 'a.txt').write_bytes(b'A')
+        (self.generation / 'nested').mkdir()
+        self.nested = self.generation / 'nested/z.txt'
+        self.nested.write_bytes(b'B')
+        self.manifest(self.EXPECTED)
+
+    def manifest(self, digest):
+        (self.run / 'manifest.edn').write_text(
+            '{:readings-generation {:path ' + json.dumps(str(self.generation)) +
+            (' :digest "' + digest + '"' if digest is not None else '') + '}}')
+
+    def test_intact(self):
+        row = c.corpus_generation_digest(self.run)
+        self.assertEqual('PASS', row['status'])
+        self.assertEqual({'files': 2}, row['detail'])
+
+    def test_nested_byte_changed(self):
+        self.nested.write_bytes(b'C')
+        row = c.corpus_generation_digest(self.run)
+        self.assertEqual('FAIL', row['status'])
+        self.assertEqual(self.EXPECTED, row['detail']['recorded'])
+
+    def test_nested_file_added(self):
+        # Start with only a.txt: a top-level-only walk would miss the addition
+        # and wrongly keep returning PASS against this same baseline digest.
+        self.nested.unlink()
+        self.manifest(self.SINGLE)
+        self.assertEqual('PASS', c.corpus_generation_digest(self.run)['status'])
+        self.nested.write_bytes(b'B')
+        self.assertEqual('FAIL', c.corpus_generation_digest(self.run)['status'])
+
+    def test_rename(self):
+        self.nested.rename(self.nested.with_name('renamed.txt'))
+        self.assertEqual('FAIL', c.corpus_generation_digest(self.run)['status'])
+
+    def test_missing_and_empty(self):
+        self.nested.unlink()
+        (self.generation / 'a.txt').unlink()
+        self.assertEqual('ABSENT', c.corpus_generation_digest(self.run)['status'])
+        (self.generation / 'nested').rmdir()
+        self.generation.rmdir()
+        self.assertEqual('ABSENT', c.corpus_generation_digest(self.run)['status'])
+
+    def test_missing_digest(self):
+        self.manifest(None)
+        row = c.corpus_generation_digest(self.run)
+        self.assertEqual('ABSENT', row['status'])
+        self.assertEqual('readings-generation.digest', row['detail']['missing'])
+
+    def test_directory_digest(self):
+        renamed = self.root / ('0' * 64)
+        self.generation.rename(renamed)
+        self.generation = renamed
+        self.manifest(self.EXPECTED)
+        row = c.corpus_generation_digest(self.run)
+        self.assertEqual('FAIL', row['status'])
+        self.assertEqual('0' * 64, row['detail']['directory'])
+        self.generation.rename(self.root / self.EXPECTED)
+        self.generation = self.root / self.EXPECTED
+        self.manifest(self.EXPECTED)
+        self.assertEqual('PASS', c.corpus_generation_digest(self.run)['status'])
+
+    def test_java_utf16_sort(self):
+        self.nested.unlink()
+        (self.generation / 'a.txt').unlink()
+        # Java sorts the surrogate pair before U+E000; Python codepoint order
+        # would reverse them. Expected hashes literal UTF-8 names in Java order.
+        (self.generation / '\U00010000').write_bytes(b'S')
+        (self.generation / '\ue000').write_bytes(b'P')
+        self.manifest('99622cbf58ea02b5a2b2bcabc9446ab130d3ce63f159ceca15e00c158819368e')
+        self.assertEqual('PASS', c.corpus_generation_digest(self.run)['status'])
+
+    def test_java_symlinks(self):
+        outside = self.root / 'external'
+        outside.mkdir()
+        target = outside / 'payload'
+        self.nested.rename(target)
+        self.nested.symlink_to(target)
+        (self.generation / 'linked-dir').symlink_to(outside, target_is_directory=True)
+        (self.generation / 'broken').symlink_to(outside / 'missing')
+        # File link contributes the original B bytes; directory link is not
+        # traversed and broken link is not a regular file, exactly as Java.
+        self.assertEqual('PASS', c.corpus_generation_digest(self.run)['status'])
 
 
 if __name__ == '__main__':

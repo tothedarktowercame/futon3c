@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import re
 import sys
@@ -29,6 +30,7 @@ CHECKS = {
     'party_relative_order': 'Circus.drawFresh_survivor; Circus.Retro.drawFresh',
     'run_file_digests': 'Circus.Reproduction.Receipt.passInputDigest',
     'one_current_reading': 'Circus.Supersession.OneCurrent',
+    'corpus_generation_digest': 'Circus.Reproduction.Receipt.corpusGeneration',
 }
 
 
@@ -222,6 +224,7 @@ def audit(party, pass_data=None, pending=None, lexicon=None, run=None):
         results.append({'check': name, 'theorem': theorem, 'status': status, 'detail': detail})
     results.append(run_file_digests(run))
     results.append(one_current_reading(run))
+    results.append(corpus_generation_digest(run))
     return results
 
 
@@ -283,6 +286,31 @@ def run_file_digests(run):
         return result('FAIL', {'kind': 'invalid-manifest-or-file', 'file': 'manifest.edn'})
 
 
+def pinned_generation(run, result):
+    """Resolve manifest readings-generation.path once; never use its pointer."""
+    if run is None:
+        return None, None, result('ABSENT', {'missing': 'manifest.edn'})
+    run = Path(run).resolve()
+    manifest_path = (run / 'manifest.edn').resolve()
+    if not manifest_path.is_relative_to(run):
+        return None, None, result('FAIL', {'kind': 'manifest-outside-run'})
+    if not manifest_path.is_file():
+        return None, None, result('ABSENT', {'missing': 'manifest.edn'})
+    manifest = load(manifest_path, edn=True, strict=True)
+    if not isinstance(manifest, dict):
+        return None, None, result('FAIL', {'kind': 'invalid-manifest'})
+    pinned = manifest.get('readings-generation')
+    if not isinstance(pinned, dict) or not pinned.get('path'):
+        return None, None, result('ABSENT', {'missing': 'readings-generation.path'})
+    path = pinned['path']
+    if not isinstance(path, str) or not Path(path).is_absolute():
+        return None, None, result('FAIL', {'kind': 'invalid-generation-path'})
+    generation = Path(path).resolve()
+    if not generation.is_dir():
+        return None, None, result('ABSENT', {'missing': path})
+    return generation, pinned, None
+
+
 def one_current_reading(run):
     """Check only the generation pinned by manifest readings-generation.path.
 
@@ -298,27 +326,11 @@ def one_current_reading(run):
         return {'check': 'one_current_reading',
                 'theorem': CHECKS['one_current_reading'], 'status': status, 'detail': detail}
 
-    if run is None:
-        return result('ABSENT', {'missing': 'manifest.edn'})
     try:
-        run = Path(run).resolve()
-        manifest_path = (run / 'manifest.edn').resolve()
-        if not manifest_path.is_relative_to(run):
-            return result('FAIL', {'kind': 'manifest-outside-run'})
-        if not manifest_path.is_file():
-            return result('ABSENT', {'missing': 'manifest.edn'})
-        manifest = load(manifest_path, edn=True, strict=True)
-        if not isinstance(manifest, dict):
-            return result('FAIL', {'kind': 'invalid-manifest'})
-        pinned = manifest.get('readings-generation')
-        if not isinstance(pinned, dict) or not pinned.get('path'):
-            return result('ABSENT', {'missing': 'readings-generation.path'})
+        generation, pinned, error = pinned_generation(run, result)
+        if error is not None:
+            return error
         path = pinned['path']
-        if not isinstance(path, str) or not Path(path).is_absolute():
-            return result('FAIL', {'kind': 'invalid-generation-path'})
-        generation = Path(path).resolve()
-        if not generation.is_dir():
-            return result('ABSENT', {'missing': path})
         batches = sorted(generation.rglob('batch-*.jsonl'))
         if not batches:
             return result('ABSENT', {'missing': 'batch-*.jsonl', 'generation': path})
@@ -350,6 +362,59 @@ def one_current_reading(run):
             # Batch files with no records verify nothing about OneCurrent.
             return result('ABSENT', {'missing': 'reading records', 'generation': path})
         return result('PASS', {'records': records, 'items': len(grouped)})
+    except FileNotFoundError:
+        return result('ABSENT', {'missing': 'pinned-generation-or-file'})
+    except (OSError, IndexError, KeyError, TypeError, ValueError, RuntimeError):
+        return result('FAIL', {'kind': 'invalid-manifest-or-generation'})
+
+
+def corpus_generation_digest(run):
+    """Match corpus_generation.clj:25-37 generation-digest on this platform.
+
+    Java String.compareTo orders relative Path.toString names by UTF-16 code
+    units (not Python Unicode code points): use UTF-16BE bytes as the sort key.
+    Hash each relative name's UTF-8 bytes, NUL, then file bytes. Files.walk
+    without FOLLOW_LINKS does not descend symlink directories; isRegularFile
+    without NOFOLLOW_LINKS DOES include symlinks to regular files, hashing
+    target bytes under the symlink's relative name, even for external targets.
+    Broken links are not regular files. os.walk(followlinks=False) + is_file
+    matches these choices; traversal/read errors are failures, never omissions.
+    """
+    def result(status, detail):
+        return {'check': 'corpus_generation_digest',
+                'theorem': CHECKS['corpus_generation_digest'],
+                'status': status, 'detail': detail}
+
+    try:
+        generation, pinned, error = pinned_generation(run, result)
+        if error is not None:
+            return error
+        recorded = pinned.get('digest')
+        if not recorded:
+            return result('ABSENT', {'missing': 'readings-generation.digest'})
+        if not isinstance(recorded, str) or not re.fullmatch('[0-9a-fA-F]{64}', recorded):
+            return result('FAIL', {'kind': 'invalid-generation-digest'})
+        def walk_error(error):
+            raise error
+        files = []
+        for directory, _, names in os.walk(generation, followlinks=False, onerror=walk_error):
+            for name in names:
+                path = Path(directory) / name
+                if path.is_file():
+                    files.append(path)
+        if not files:
+            return result('ABSENT', {'missing': 'regular files'})
+        files.sort(key=lambda p: str(p.relative_to(generation)).encode('utf-16-be'))
+        digest = hashlib.sha256()
+        for path in files:
+            digest.update(str(path.relative_to(generation)).encode('utf-8'))
+            digest.update(b'\0')
+            digest.update(path.read_bytes())
+        actual = digest.hexdigest()
+        dirname = generation.name if re.fullmatch('[0-9a-fA-F]{64}', generation.name) else None
+        if actual != recorded or (dirname is not None and actual != dirname):
+            return result('FAIL', {'recorded': recorded, 'actual': actual, 'directory': dirname})
+        return result('PASS', {'files': len(files)})
     except FileNotFoundError:
         return result('ABSENT', {'missing': 'pinned-generation-or-file'})
     except (OSError, IndexError, KeyError, TypeError, ValueError, RuntimeError):
