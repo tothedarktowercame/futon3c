@@ -8,6 +8,7 @@ sorted-input hypotheses: a failed check does not refute their Lean proofs.
 The two Questor statements overlap necessarily on a unique-item source.
 """
 import argparse
+from contextlib import closing
 import hashlib
 import importlib.util
 import json
@@ -15,6 +16,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import sqlite3
 
 CHARACTERS = ('thor', 'merlin', 'questor', 'thyra')
 READY = 'ready (one small handoff)'
@@ -35,6 +37,7 @@ CHECKS = {
     'thyra_reasons_faithful': 'Circus.Characters.thyra_terms_faithful',
     'questor_reasons_faithful': 'Circus.Characters.questor_terms_faithful',
     'merlin_reasons_faithful': 'Circus.Characters.merlin_terms_faithful',
+    'reading_source_current': 'Circus.Freshness.readingMatches; reason',
 }
 
 
@@ -233,6 +236,7 @@ def audit(party, pass_data=None, pending=None, lexicon=None, run=None):
     results.append(thyra_reasons_faithful(party, pass_data, pending))
     results.append(questor_reasons_faithful(party, pending, lexicon))
     results.append(merlin_reasons_faithful(party, pending, lexicon))
+    results.append(reading_source_current(run))
     return results
 
 
@@ -586,6 +590,96 @@ def pinned_generation(run, result):
     if not generation.is_dir():
         return None, None, result('ABSENT', {'missing': path})
     return generation, pinned, None
+
+
+def reading_source_current(run, queue_path=None):
+    """Compare current document bytes, not a pinned historical document.
+
+    Freshness.lean:81-88 readingMatches/reason marks unmatched readings pending.
+    reread_worker.clj:272-278 requires the exact claim path/hash. Paths are
+    absolute from futon2/aif/mission_registry.clj:1164 (also census :623);
+    do not resolve relative paths against this process or expand shell syntax.
+    The corpus check_edges.py:56-57 hashes Path(p).read_bytes(), checked at
+    :121-123 before landing (corpus_generation.clj:158-218). This agrees with
+    mission_registry.clj:465-474's raw-byte hash; its census text hash at
+    :167-170 is equivalent for UTF-8 documents.
+    reread_queue.clj:12-14 defines the default queue path; :95, :193-211 and
+    :229-256 distinguish pending/claimed from landed/failed/superseded.
+    Open SQLite read-only, never initialize it. Hashes are taken NOW, so results
+    may change without producer action. Superseded history lives in older
+    generations; scan all batch records in the manifest-pinned generation.
+    """
+    def result(status, detail):
+        return dict(check='reading_source_current',
+                    theorem=CHECKS['reading_source_current'], status=status, detail=detail)
+    counts = dict(records=0, current=0, pending=0, source_changed_unqueued=0,
+                  source_missing=0)
+    errors, stale = [], []
+    try:
+        generation, _, error = pinned_generation(run, result)
+        if error is not None:
+            return error
+        for batch in sorted(generation.rglob('batch-*.jsonl')):
+            if not batch.resolve().is_relative_to(generation):
+                return result('FAIL', {'rule': 'batch-outside-generation'})
+            for line in batch.read_text(encoding='utf-8').splitlines():
+                if not line.strip():
+                    continue
+                counts['records'] += 1
+                try:
+                    record = json.loads(line)
+                except ValueError:
+                    errors.append({'item': None, 'rule': 'unparseable-record'})
+                    continue
+                item = record.get('id') if isinstance(record, dict) else None
+                pin = record.get('source') if isinstance(record, dict) else None
+                if not isinstance(item, str) or not item.strip():
+                    errors.append({'item': None, 'rule': 'missing-item-id'})
+                    continue
+                if (not isinstance(pin, dict) or not isinstance(pin.get('path'), str)
+                        or not Path(pin['path']).is_absolute()
+                        or not isinstance(pin.get('sha256'), str)
+                        or not re.fullmatch(r'[0-9a-f]{64}', pin['sha256'])):
+                    errors.append({'item': item, 'rule': 'no-source-pin'})
+                    continue
+                try:
+                    actual = hashlib.sha256(Path(pin['path']).read_bytes()).hexdigest()
+                except FileNotFoundError:
+                    actual = None
+                if actual == pin['sha256']:
+                    counts['current'] += 1
+                else:
+                    counts['source_missing'] += actual is None
+                    stale.append((item, actual))
+        if not counts['records']:
+            return result('ABSENT', {'missing': 'reading records'})
+        queue_missing = False
+        if stale:
+            queue_path = Path(queue_path) if queue_path is not None else (
+                Path.home() / '.local/state/futon3c/giraffe-reread/requests.sqlite')
+            queue_missing = not queue_path.is_file()
+            if not queue_missing:
+                with closing(sqlite3.connect(queue_path.resolve().as_uri() + '?mode=ro', uri=True)) as db:
+                    for item, actual in stale:
+                        query = ("SELECT 1 FROM reread_requests WHERE target_id=? "
+                                 "AND state IN ('pending','claimed')")
+                        args = [item]
+                        if actual is not None:
+                            query += ' AND source_sha=?'
+                            args.append(actual)
+                        if db.execute(query, args).fetchone():
+                            counts['pending'] += 1
+                        else:
+                            counts['source_changed_unqueued'] += actual is not None
+                            errors.append({'item': item, 'rule': 'source-missing' if actual is None
+                                           else 'source-changed'})
+        if errors:
+            return result('FAIL', dict(counts, violations=errors[:20], total=len(errors)))
+        if queue_missing:
+            return result('ABSENT', dict(counts, missing='reread queue', unchecked=len(stale)))
+        return result('PASS', counts)
+    except (OSError, ValueError, TypeError, KeyError, IndexError, RuntimeError, sqlite3.Error):
+        return result('FAIL', dict(counts, rule='invalid-generation-source-or-queue'))
 
 
 def one_current_reading(run):

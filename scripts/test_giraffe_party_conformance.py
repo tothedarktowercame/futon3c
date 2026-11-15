@@ -12,6 +12,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import sqlite3
 
 spec = importlib.util.spec_from_file_location('conformance', Path(__file__).with_name('giraffe_party_conformance.py'))
 c = importlib.util.module_from_spec(spec)
@@ -59,8 +60,8 @@ class ConformanceTests(unittest.TestCase):
     def test_conforming(self):
         results = c.audit(*fixture())
         self.assertEqual({'PASS'}, {r['status'] for r in results if r['check'] not in
-                          ('run_file_digests', 'one_current_reading', 'corpus_generation_digest')})
-        self.assertEqual('ABSENT', results[-5]['status'])
+                          ('run_file_digests', 'one_current_reading', 'corpus_generation_digest', 'reading_source_current')})
+        self.assertEqual('ABSENT', next(r for r in results if r['check'] == 'corpus_generation_digest')['status'])
 
     def test_thor_mutation(self):
         data = fixture()
@@ -145,7 +146,7 @@ class ConformanceTests(unittest.TestCase):
     def test_missing_sources_are_declared(self):
         party, _, _, _ = fixture()
         results = c.audit(party)
-        self.assertEqual(13, sum(r['status'] == 'ABSENT' for r in results))
+        self.assertEqual(14, sum(r['status'] == 'ABSENT' for r in results))
         self.assertEqual(3, sum(r['status'] == 'PASS' for r in results))
 
     def test_missing_metric_is_not_zero(self):
@@ -199,10 +200,10 @@ class RunDigestTests(unittest.TestCase):
         self.assertEqual('PASS', row['status'])
         self.assertEqual({'files': 1}, row['detail'])
         rows = c.audit(*fixture(), run=self.run)
-        self.assertEqual(16, len(rows))
+        self.assertEqual(17, len(rows))
         self.assertEqual({'PASS'}, {r['status'] for r in rows if r['check'] not in
-                          ('one_current_reading', 'corpus_generation_digest')})
-        self.assertEqual('ABSENT', rows[-5]['status'])
+                          ('one_current_reading', 'corpus_generation_digest', 'reading_source_current')})
+        self.assertEqual('ABSENT', next(r for r in rows if r['check'] == 'corpus_generation_digest')['status'])
 
     def test_changed_byte(self):
         self.input.write_bytes(b'{:items [1]}')
@@ -697,6 +698,117 @@ class MerlinReasonTests(unittest.TestCase):
     def test_full_named_count_not_half(self):
         self.rows[0]['reason'] = self.rows[0]['reason'].replace('convergence 1, halved', 'convergence 0.5, halved')
         self.assertEqual('FAIL', self.check()['status'])
+
+
+class ReadingSourceTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.run = self.root / 'run'
+        self.run.mkdir()
+        self.generation = self.root / 'generation'
+        self.generation.mkdir()
+        (self.run / 'manifest.edn').write_text(
+            '{:readings-generation {:path ' + json.dumps(str(self.generation)) + '}}')
+        self.doc = self.root / 'invented.md'
+        self.doc.write_bytes(b'invented source\r\n')
+        self.old = hashlib.sha256(self.doc.read_bytes()).hexdigest()
+        self.record = {'id': 'T-invented', 'source': {'path': str(self.doc), 'sha256': self.old}}
+        self.batch = self.generation / 'batch-toy.jsonl'
+        self.write_record()
+        self.queue = self.root / 'requests.sqlite'
+        # reread_queue.clj:40-46 plus migrations :48-59, no live store access.
+        with sqlite3.connect(self.queue) as db:
+            db.execute("""CREATE TABLE reread_requests (
+                target_id TEXT NOT NULL, source_sha TEXT NOT NULL, old_sha TEXT,
+                source_path TEXT NOT NULL, state TEXT NOT NULL,
+                requested_at_ms INTEGER NOT NULL, updated_at_ms INTEGER NOT NULL,
+                lease_until_ms INTEGER, claimed_by TEXT, superseded_by_sha TEXT,
+                superseded_reason TEXT, attempts INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT, landed_digest TEXT, last_answer TEXT,
+                PRIMARY KEY(target_id, source_sha))""")
+
+    def write_record(self):
+        self.batch.write_text(json.dumps(self.record) + '\n')
+
+    def request(self, sha, state='pending'):
+        with sqlite3.connect(self.queue) as db:
+            db.execute('INSERT INTO reread_requests '
+                       '(target_id,source_sha,source_path,state,requested_at_ms,updated_at_ms) '
+                       'VALUES (?,?,?,?,0,0)', ('T-invented', sha, str(self.doc), state))
+
+    def check(self):
+        return c.reading_source_current(self.run, self.queue)
+
+    def change(self):
+        self.doc.write_bytes(b'changed source\n')
+        return hashlib.sha256(self.doc.read_bytes()).hexdigest()
+
+    def test_current_without_queue(self):
+        self.queue.unlink()
+        row = self.check()
+        self.assertEqual('PASS', row['status'])
+        self.assertEqual(1, row['detail']['current'])
+
+    def test_changed_pending_and_claimed(self):
+        sha = self.change()
+        self.request(sha)
+        before = self.queue.read_bytes()
+        row = self.check()
+        self.assertEqual('PASS', row['status'])
+        self.assertEqual(1, row['detail']['pending'])
+        self.assertEqual(before, self.queue.read_bytes())
+        with sqlite3.connect(self.queue) as db:
+            db.execute("UPDATE reread_requests SET state='claimed'")
+        self.assertEqual('PASS', self.check()['status'])
+
+    def test_changed_unqueued(self):
+        self.change()
+        row = self.check()
+        self.assertEqual('FAIL', row['status'])
+        self.assertEqual([{'item': 'T-invented', 'rule': 'source-changed'}], row['detail']['violations'])
+
+    def test_old_sha_does_not_cover_change(self):
+        self.change()
+        self.request(self.old)
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_settled_does_not_cover_change(self):
+        sha = self.change()
+        self.request(sha, 'landed')
+        for state in ['landed', 'failed', 'superseded']:
+            with sqlite3.connect(self.queue) as db:
+                db.execute('UPDATE reread_requests SET state=?', (state,))
+            self.assertEqual('FAIL', self.check()['status'])
+
+    def test_deleted_requires_pending(self):
+        self.doc.unlink()
+        self.assertEqual('FAIL', self.check()['status'])
+        self.request(self.old)
+        row = self.check()
+        self.assertEqual('PASS', row['status'])
+        self.assertEqual(1, row['detail']['source_missing'])
+        self.assertEqual(1, row['detail']['pending'])
+
+    def test_no_pin(self):
+        del self.record['source']
+        self.write_record()
+        self.assertEqual('no-source-pin', self.check()['detail']['violations'][0]['rule'])
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_missing_generation(self):
+        self.assertEqual('ABSENT', c.reading_source_current(None, self.queue)['status'])
+
+    def test_empty_generation(self):
+        self.batch.write_text('')
+        self.assertEqual('ABSENT', self.check()['status'])
+
+    def test_missing_queue_when_stale(self):
+        self.change()
+        self.queue.unlink()
+        self.assertEqual('ABSENT', self.check()['status'])
+        self.assertFalse(self.queue.exists())
 
 
 if __name__ == '__main__':
