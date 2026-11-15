@@ -909,6 +909,17 @@ above identifies a missing witness.
    improvements, not closure conditions (Joe, 2026-11-15: "I don't think we
    should get hung up on any *one* of the layers if they all work and
    interoperate").
+   **The Gauntlet party, retro-specified (2026-11-15).** futon5
+   `Circus/Party.lean` (094db2a76) states the party as a habit channel
+   (futon5 `TN-gauntlet-party-aif.md` §3) and connects it to step 5's
+   character orderings; `Circus/WMParty.lean` (ee57ef081) models the War
+   Machine's outer choice (`outer_select.clj:577-584`) and two seams for a
+   party term. Seam B (the party reorders only classes whose raw G beats
+   stopping) preserves every stop/abstain outcome; seam A provably lowers the
+   bar for acting. The WM reads Giraffe's pass (rank, cone, unblocks), not the
+   four character orderings. Wiring the party into the WM is deferred (Joe,
+   2026-11-15: "let's save that integration for later b/c I want to see
+   Giraffe working in its own right first").
 8. DOCUMENT: the mission write-up, including
    [E-workplan-validation](../excursions/E-workplan-validation.md) (Joe,
    2026-11-13): the model-made workplan history (serves links, readings,
