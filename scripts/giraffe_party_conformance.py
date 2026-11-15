@@ -28,6 +28,7 @@ CHECKS = {
     'party_turns': 'Circus.Retro.sweep_head_contributes; partyVote',
     'party_relative_order': 'Circus.drawFresh_survivor; Circus.Retro.drawFresh',
     'run_file_digests': 'Circus.Reproduction.Receipt.passInputDigest',
+    'one_current_reading': 'Circus.Supersession.OneCurrent',
 }
 
 
@@ -220,6 +221,7 @@ def audit(party, pass_data=None, pending=None, lexicon=None, run=None):
             status, detail = 'FAIL', {'kind': 'invalid-input', 'reason': str(exc)}
         results.append({'check': name, 'theorem': theorem, 'status': status, 'detail': detail})
     results.append(run_file_digests(run))
+    results.append(one_current_reading(run))
     return results
 
 
@@ -279,6 +281,76 @@ def run_file_digests(run):
     except (OSError, IndexError, KeyError, TypeError, ValueError, RuntimeError):
         # Do not echo malformed payloads or exception strings containing them.
         return result('FAIL', {'kind': 'invalid-manifest-or-file', 'file': 'manifest.edn'})
+
+
+def one_current_reading(run):
+    """Check only the generation pinned by manifest readings-generation.path.
+
+    src/futon3c/giraffe/corpus_generation.clj:75-95 removes every target :id
+    from batch-*.jsonl before appending its replacement. Lines 158-218 group
+    ALL staged batch records by :id and refuse duplicates, without filtering
+    a status field. A generation thus holds current records; superseded
+    versions remain in older generations, not alongside their replacements.
+    The record's id IS the item id (there is no separate reading-record id).
+    No current-pointer fallback; resolve the pinned path once before scanning.
+    """
+    def result(status, detail):
+        return {'check': 'one_current_reading',
+                'theorem': CHECKS['one_current_reading'], 'status': status, 'detail': detail}
+
+    if run is None:
+        return result('ABSENT', {'missing': 'manifest.edn'})
+    try:
+        run = Path(run).resolve()
+        manifest_path = (run / 'manifest.edn').resolve()
+        if not manifest_path.is_relative_to(run):
+            return result('FAIL', {'kind': 'manifest-outside-run'})
+        if not manifest_path.is_file():
+            return result('ABSENT', {'missing': 'manifest.edn'})
+        manifest = load(manifest_path, edn=True, strict=True)
+        if not isinstance(manifest, dict):
+            return result('FAIL', {'kind': 'invalid-manifest'})
+        pinned = manifest.get('readings-generation')
+        if not isinstance(pinned, dict) or not pinned.get('path'):
+            return result('ABSENT', {'missing': 'readings-generation.path'})
+        path = pinned['path']
+        if not isinstance(path, str) or not Path(path).is_absolute():
+            return result('FAIL', {'kind': 'invalid-generation-path'})
+        generation = Path(path).resolve()
+        if not generation.is_dir():
+            return result('ABSENT', {'missing': path})
+        batches = sorted(generation.rglob('batch-*.jsonl'))
+        if not batches:
+            return result('ABSENT', {'missing': 'batch-*.jsonl', 'generation': path})
+        grouped, errors, records = {}, [], 0
+        for batch in batches:
+            if not batch.resolve().is_relative_to(generation):
+                return result('FAIL', {'kind': 'batch-outside-generation'})
+            with batch.open(encoding='utf-8') as stream:
+                for line_number, line in enumerate(stream, 1):
+                    if not line.strip():
+                        continue
+                    records += 1
+                    location = {'file': str(batch.relative_to(generation)), 'line': line_number}
+                    try:
+                        record = json.loads(line)
+                    except ValueError:
+                        errors.append(dict(location, kind='unparseable-record'))
+                        continue
+                    item = record.get('id') if isinstance(record, dict) else None
+                    if not isinstance(item, str) or not item.strip():
+                        errors.append(dict(location, kind='missing-item-id'))
+                        continue
+                    grouped.setdefault(item, []).append(item)
+        duplicates = [{'item': item, 'record_ids': ids}
+                      for item, ids in sorted(grouped.items()) if len(ids) > 1]
+        if errors or duplicates:
+            return result('FAIL', {'duplicates': duplicates, 'errors': errors})
+        return result('PASS', {'records': records, 'items': len(grouped)})
+    except FileNotFoundError:
+        return result('ABSENT', {'missing': 'pinned-generation-or-file'})
+    except (OSError, IndexError, KeyError, TypeError, ValueError, RuntimeError):
+        return result('FAIL', {'kind': 'invalid-manifest-or-generation'})
 
 
 def load(path, edn=False, strict=False):

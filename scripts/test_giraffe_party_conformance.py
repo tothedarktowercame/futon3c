@@ -7,6 +7,7 @@ also violates exact round-robin replay. Hiding these failures would weaken audit
 """
 import copy
 import hashlib
+import json
 import importlib.util
 from pathlib import Path
 import tempfile
@@ -45,7 +46,7 @@ def failures(data):
 class ConformanceTests(unittest.TestCase):
     def test_conforming(self):
         results = c.audit(*fixture())
-        self.assertEqual({'PASS'}, {r['status'] for r in results[:-1]})
+        self.assertEqual({'PASS'}, {r['status'] for r in results[:-2]})
         self.assertEqual('ABSENT', results[-1]['status'])
 
     def test_thor_mutation(self):
@@ -128,7 +129,7 @@ class ConformanceTests(unittest.TestCase):
     def test_missing_sources_are_declared(self):
         party, _, _, _ = fixture()
         results = c.audit(party)
-        self.assertEqual(7, sum(r['status'] == 'ABSENT' for r in results))
+        self.assertEqual(8, sum(r['status'] == 'ABSENT' for r in results))
         self.assertEqual(3, sum(r['status'] == 'PASS' for r in results))
 
     def test_missing_metric_is_not_zero(self):
@@ -182,8 +183,9 @@ class RunDigestTests(unittest.TestCase):
         self.assertEqual('PASS', row['status'])
         self.assertEqual({'files': 1}, row['detail'])
         rows = c.audit(*fixture(), run=self.run)
-        self.assertEqual(10, len(rows))
-        self.assertEqual({'PASS'}, {r['status'] for r in rows})
+        self.assertEqual(11, len(rows))
+        self.assertEqual({'PASS'}, {r['status'] for r in rows[:-1]})
+        self.assertEqual('ABSENT', rows[-1]['status'])
 
     def test_changed_byte(self):
         self.input.write_bytes(b'{:items [1]}')
@@ -238,6 +240,78 @@ class RunDigestTests(unittest.TestCase):
         from unittest.mock import patch
         with patch.object(Path, 'read_text', side_effect=AssertionError('opened manifest')):
             self.assertEqual('FAIL', c.run_file_digests(self.run)['status'])
+
+
+class CurrentReadingTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.run = self.root / 'run'
+        self.run.mkdir()
+        self.generation = self.root / 'generation-one'
+        self.generation.mkdir()
+        self.batch = self.generation / 'batch-invented.jsonl'
+        self.batch.write_text('{"id":"T-ember"}\n{"id":"M-flint"}\n')
+        self.manifest = self.run / 'manifest.edn'
+        self.manifest.write_text('{:readings-generation {:path ' +
+                                 json.dumps(str(self.generation)) + '}}')
+
+    def test_unique(self):
+        row = c.one_current_reading(self.run)
+        self.assertEqual('PASS', row['status'])
+        self.assertEqual({'records': 2, 'items': 2}, row['detail'])
+
+    def test_duplicate(self):
+        (self.generation / 'batch-second.jsonl').write_text('{"id":"T-ember"}\n')
+        row = c.one_current_reading(self.run)
+        self.assertEqual('FAIL', row['status'])
+        self.assertEqual([{'item': 'T-ember', 'record_ids': ['T-ember', 'T-ember']}],
+                         row['detail']['duplicates'])
+
+    def test_history_is_in_other_generation(self):
+        # Old and replacement records coexist across generations, never within
+        # one: apply-replacement! removes the old :id from every staged batch.
+        old = self.root / 'generation-old'
+        old.mkdir()
+        (old / 'batch-old.jsonl').write_text('{"id":"T-ember"}\n')
+        pointer = self.root / 'current'
+        pointer.symlink_to(old, target_is_directory=True)
+        self.manifest.write_text('{:readings-generation {:path ' +
+                                 json.dumps(str(self.generation)) + ' :pointer ' +
+                                 json.dumps(str(pointer)) + '}}')
+        self.assertEqual({'records': 2, 'items': 2},
+                         c.one_current_reading(self.run)['detail'])
+        # An invented status annotation must not conceal an actual duplicate.
+        (self.generation / 'batch-old.jsonl').write_text(
+            '{"id":"T-ember","status":"superseded"}\n')
+        self.assertEqual('FAIL', c.one_current_reading(self.run)['status'])
+
+    def test_missing_generation(self):
+        self.batch.unlink()
+        self.generation.rmdir()
+        row = c.one_current_reading(self.run)
+        self.assertEqual('ABSENT', row['status'])
+        self.assertEqual(str(self.generation), row['detail']['missing'])
+
+    def test_no_pointer_fallback(self):
+        self.manifest.write_text('{:readings-generation {:pointer ' +
+                                 json.dumps(str(self.generation)) + '}}')
+        self.assertEqual('ABSENT', c.one_current_reading(self.run)['status'])
+
+    def test_invalid_records(self):
+        for text in ('not-json', '{}', '{"id":null}', '[]'):
+            with self.subTest(text=text):
+                self.batch.write_text(text + '\n')
+                row = c.one_current_reading(self.run)
+                self.assertEqual('FAIL', row['status'])
+                self.assertEqual(1, row['detail']['errors'][0]['line'])
+
+    def test_missing_manifest_and_batches(self):
+        self.batch.unlink()
+        self.assertEqual('ABSENT', c.one_current_reading(self.run)['status'])
+        self.manifest.unlink()
+        self.assertEqual('ABSENT', c.one_current_reading(self.run)['status'])
 
 
 if __name__ == '__main__':
