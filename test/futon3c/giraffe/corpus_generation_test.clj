@@ -330,6 +330,37 @@
     (is (= ["M-two"] (get-in result [:details :ambiguous-members])))
     (is (= before (:path (generation/resolve-generation pointer))))))
 
+(deftest valid-replacement-refuses-an-unrelated-base-duplicate
+  ;; apply-replacement! only replaces the target's lines, so an unrelated
+  ;; duplicate must already be in the base to survive into staging. Pin the
+  ;; global ambiguity guard independently of target validity and new failures:
+  ;; both copies of M-two are individually valid and neither cites M-one.
+  (let [{:keys [pointer generations base sources]} (multi-fixture 3)
+        target (first sources)
+        other (second sources)
+        log (atom [])]
+    (spit (io/file base "batch-01.jsonl")
+          (str (json/generate-string
+                {:id (:id other) :source (dissoc other :id)
+                 :status_as_read "open" :purpose "duplicate fixture reading"
+                 :edges [] :unresolved []}) "\n"))
+    (let [before (generation/resolve-generation pointer)
+          result (with-redefs [readings/check-record (counted-check-record log)]
+                   (generation/publish-generation!
+                    {:pointer pointer :generations-dir generations
+                     :claim {:target-id (:id target) :source-path (:path target)
+                             :source-sha (:sha256 target)}
+                     :replacement {:id (:id target) :source (dissoc target :id)
+                                   :status_as_read "open" :purpose "valid replacement"
+                                   :edges [] :unresolved []}}))]
+      (is (= ["M-one" "M-one"] @log))
+      (is (= :read (get-in result [:details :member :status])))
+      (is (= 0 (get-in result [:details :failed-record-count])))
+      (is (= [] (get-in result [:details :new-failing-record-ids])))
+      (is (= :giraffe-generation/checker-failed (:reason result)))
+      (is (= ["M-two"] (get-in result [:details :ambiguous-members])))
+      (is (= before (generation/resolve-generation pointer))))))
+
 (deftest migration-dry-run-reports-without-writing
   (let [{:keys [root base]} (fixture)
         legacy (io/file root "legacy-corpus")]
