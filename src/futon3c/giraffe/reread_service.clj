@@ -1,6 +1,6 @@
 (ns futon3c.giraffe.reread-service
-  "Event-driven re-reading in the serving JVM. No periodic census or child JVM.
-   One-shot debounce/mint deadlines share one reload-safe executor. Loading this
+  "Event-driven re-reading with a periodic authority-reconciliation backstop.
+   Reconciliation, reader rounds and deadlines share one reload-safe executor. Loading this
    namespace does nothing; the operator explicitly calls start! after cutover."
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
@@ -92,14 +92,17 @@
                        :giraffe-root (or (get env "GIRAFFE_ROOT") cli/default-root)
                        :edges (or (get env "GIRAFFE_EDGES") cli/default-edges)
                        :mint-state-path mint-batch/default-state-path :debounce-ms 4000
+                       :reconcile-interval-ms (or (number "FUTON3C_GIRAFFE_REREAD_RECONCILE_INTERVAL_MS")
+                                                  600000)
                        :preview (merge preview/default-config (:preview opts))
                        :entity-sidecar default-entity-sidecar :turn-store live-turn-store}
                       (dissoc opts :env-file :environment :preview))]
     (when-not (and (seq (:reader-seats config))
                    (every? #(and (string? %) (not (str/blank? %))) (:reader-seats config))
                    (integer? (:new-item-cap config)) (<= 0 (:new-item-cap config))
-                   (pos-int? (:mint-window-ms config)) (pos-int? (:debounce-ms config)))
-      (throw (ex-info "Readers, nonnegative new-item cap and positive mint/debounce windows required"
+                   (pos-int? (:mint-window-ms config)) (pos-int? (:debounce-ms config))
+                   (pos-int? (:reconcile-interval-ms config)))
+      (throw (ex-info "Readers, nonnegative new-item cap and positive mint/debounce/reconcile windows required"
                       {:kind :giraffe-reread/invalid-config})))
     config))
 
@@ -242,12 +245,67 @@
     ;; claims. Failed attempts are bounded by the existing durable worker cap.
     (.execute ^ScheduledThreadPoolExecutor (:executor @state) ^Runnable #(drain! token))))
 
+(defn- round! [token f]
+  ;; Every round runs on the single worker. Retain its end time so an overdue
+  ;; backstop tick can skip a deadline crossed while this worker was occupied.
+  (when (active? token)
+    (swap! state assoc :round-running? true)
+    (try (f)
+         (finally
+           (when (= token (:token @state))
+             (swap! state assoc :round-running? false :round-ended-ns (System/nanoTime)))))))
+
 (defn- drain! [token]
+  (round! token
+          #(try
+             (record-round! token (cli/drain-once! (:config @state)))
+             (swap! state update :errors dissoc :drain)
+             (catch Exception e (failure! token :drain e)))))
+
+(defn- full-round! [token config]
+  (round! token
+          #(let [snapshot-fn (or (:snapshot-fn config) cli/authority-snapshot)
+                 result (cli/run-once!
+                         (assoc config :snapshot-fn
+                                (fn [opts]
+                                  (let [snapshot (snapshot-fn opts)]
+                                    (when (active? token)
+                                      (swap! state assoc :identities
+                                             (into {} (map (fn [item]
+                                                             [(name (:id item))
+                                                              (get-in item [:source-pin :path])]))
+                                                   (or (:all-items snapshot) (:open-items snapshot)))))
+                                    snapshot))))]
+             (record-round! token result))))
+
+(declare schedule-backstop!)
+
+(defn- backstop-tick! [token due-ns]
   (when (active? token)
     (try
-      (record-round! token (cli/drain-once! (:config @state)))
-      (swap! state update :errors dissoc :drain)
-      (catch Exception e (failure! token :drain e)))))
+      (if (or (:round-running? @state) (:draining-previous? @state)
+              (>= (or (:round-ended-ns @state) 0) due-ns))
+        (swap! state update :backstop-skipped (fnil inc 0))
+        (do
+          (full-round! token (:config @state))
+          (when (active? token)
+            (swap! state assoc :last-backstop-at-ms (System/currentTimeMillis))
+            (swap! state update :errors dissoc :backstop))))
+      (catch Exception e (failure! token :backstop e))
+      (finally (schedule-backstop! token)))))
+
+(defn- schedule-backstop! [token]
+  ;; One outstanding tick, scheduled after the last one completes; no backlog
+  ;; or catch-up burst. A deadline crossed by a reader round is skipped above.
+  (locking lock
+    (when (active? token)
+      (let [{:keys [config executor]} @state
+            delay (:reconcile-interval-ms config)
+            due (+ (System/nanoTime) (* 1000000 delay))]
+        (swap! state assoc :backstop-task
+               (.schedule ^ScheduledThreadPoolExecutor executor
+                          ^Runnable #(backstop-tick! token due)
+                          (long delay) TimeUnit/MILLISECONDS))))))
 
 (defn notify-doc-changed!
   "Coalesce rapid saves per item. Stopped services never start implicitly.
@@ -405,18 +463,10 @@
                                        (assoc % :draining-previous? false) %))
                        (when (active? token)
                          (try
-                           (let [snapshot-fn (or (:snapshot-fn config) cli/authority-snapshot)
-                                 result (cli/run-once!
-                                         (assoc config :snapshot-fn
-                                                (fn [opts]
-                                                  (let [snapshot (snapshot-fn opts)]
-                                                    (swap! state assoc :identities
-                                                           (into {} (map (fn [item]
-                                                                           [(name (:id item)) (get-in item [:source-pin :path])]))
-                                                                 (or (:all-items snapshot) (:open-items snapshot))))
-                                                    snapshot))))]
-                             (when (active? token) (swap! state assoc :status :running))
-                             (record-round! token result))
+                           (full-round! token config)
+                           (when (active? token)
+                             (swap! state assoc :status :running)
+                             (schedule-backstop! token))
                            (catch Exception e
                              (failure! token :startup e)
                              (swap! state assoc :status :failed :running? false))))))
@@ -429,7 +479,7 @@
   []
   (locking lock
     (turn-service/remove-turn-listener! ::giraffe)
-    (doseq [task (concat (keep :task (vals (:pending @state))) [(:mint-task @state) (:lease-task @state) (:turn-mint-task @state)])
+    (doseq [task (concat (keep :task (vals (:pending @state))) [(:mint-task @state) (:lease-task @state) (:turn-mint-task @state) (:backstop-task @state)])
             :when task]
       (.cancel ^ScheduledFuture task false))
     (swap! state assoc :running? false :status :stopped :pending {} :refresh-requested? false)
@@ -474,5 +524,7 @@
             :discussed (:discussed @state)
             :unknown-turn-item-count (:unknown-turn-item-count @state)
             :ambiguous-turn-item-count (:ambiguous-turn-item-count @state)
+            :last-backstop-at-ms (:last-backstop-at-ms @state)
+            :backstop-skipped (:backstop-skipped @state)
             :last-turn-mint (:last-turn-mint @state)
             :last-refresh (:last-refresh @state)})))

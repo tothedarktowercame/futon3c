@@ -6,6 +6,8 @@
             [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.giraffe.preview-refresh]
             [futon3c.giraffe.readings :as readings]
+            [futon3c.giraffe.missions :as missions]
+            [futon2.aif.mission-registry :as registry]
             [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.reread-cli :as cli]
             [futon3c.giraffe.reread-mint-batch :as batch]
@@ -150,9 +152,9 @@
       (spit records (str (json/generate-string a) "\n") :append true)
       (is (= [:ambiguous] (mapv :status (get-in (readings/consume options) [:coverage :members])))))))
 
-(deftest service-has-no-process-launch-or-periodic-scheduling
-  ;; Supplement the runtime tests with a guard against introducing a timer or
-  ;; delegating the service back to a CLI JVM.
+(deftest service-has-no-process-launch-or-fixed-rate-backlog
+  ;; Backstop uses coalesced one-shot scheduling, not a fixed-rate backlog or
+  ;; a separate timer thread. Never delegate this service to a CLI JVM.
   (let [text (slurp "src/futon3c/giraffe/reread_service.clj")]
     (is (not (re-find #"scheduleAtFixedRate|scheduleWithFixedDelay|Timer\.|ProcessBuilder|shell/sh|supported-mint!|/-main" text)))))
 
@@ -517,3 +519,111 @@
         (is (= true (deref second-in 2000 :timeout)))
         (is (false? @overlap) "two rounds never ran at once")
         (is (false? (:draining-previous? (service-state))))))))
+
+;; FRESHNESS P1: real SQLite and file-backed snapshots, no watcher notification.
+(deftest backstop-catches-missed-edits-after-terminal-outcomes
+  (doseq [outcome [{:status :landed :digest "invented-generation"}
+                   {:status :superseded :reason :giraffe-generation/source-changed}
+                   {:status :failed :reason :giraffe-generation/checker-failed}]]
+    (let [config (fixture) store (:store config) doc (io/file (temp-dir) "M-backstop.md")
+          boot (promise) snapshots (atom 0)]
+      (spit doc "invented version one\n")
+      (let [old (readings/sha256 (slurp doc))
+            item (fn [] {:id :M-backstop :source-pin {:path (str doc) :sha256 (readings/sha256 (slurp doc))}})
+            coverage {:members [{:id "M-backstop" :status :read
+                                 :source {:path (str doc) :sha256 (if (= :failed (:status outcome))
+                                                                  "previous-reading" old)}}]}
+            snap (fn [_] (swap! snapshots inc) {:open-items [(item)] :coverage coverage})]
+        (queue/reconcile! store [(item)]
+                          (assoc-in coverage [:members 0 :source :sha256] "previous-reading") 10)
+        (queue/settle! store (queue/claim! store 11 1000 1 "fixture-reader") outcome 12 1)
+        (with-redefs [worker/run-once! (fn [_] (deliver boot true) {:status :idle})]
+          (try
+            (service/start! (assoc config :snapshot-fn snap :reconcile-interval-ms 60))
+            (is (= true (deref boot 2000 :timeout)))
+            (flush-events!)
+            (is (= (:status outcome) (:state (first (queue/requests store))))
+                "startup has not revived the terminal request before the missed edit")
+            ;; For failed, leave the source unchanged: terminal failure must
+            ;; survive repeated full reconciliations with its attempt/error.
+            (when-not (= :failed (:status outcome)) (spit doc "invented version two\n"))
+            (is (true? (wait-for #(some? (:last-backstop-at-ms (service-state))) 2000)))
+            (let [rows (queue/requests store)
+                  current-sha (:sha256 (:source-pin (item)))
+                  current (first (filter #(= current-sha (:source_sha %)) rows))]
+              (is (>= @snapshots 2))
+              (if (= :failed (:status outcome))
+                (do (is (= :failed (:state current)))
+                    (is (= 1 (:attempts current)))
+                    (is (= :giraffe-generation/checker-failed (:last_error current))))
+                (do (is (= :pending (:state current)))
+                    (is (not= old current-sha)))))
+            (finally (service/stop!) (join!))))))))
+
+(deftest backstop-skips-a-deadline-crossed-by-a-round-and-stops
+  (let [config (fixture) boot (promise) entered (promise) release (promise)
+        rounds (atom 0) snapshots (atom 0)]
+    (with-redefs [worker/run-once! (fn [_]
+                                   (if (= 1 (swap! rounds inc))
+                                     (deliver boot true)
+                                     (do (deliver entered true) @release))
+                                   {:status :idle})]
+      (try
+        (service/start! (assoc config :reconcile-interval-ms 60
+                               :snapshot-fn (fn [_] (swap! snapshots inc)
+                                              {:open-items [] :coverage {:members []}})))
+        (is (= true (deref boot 2000 :timeout)))
+        (flush-events!)
+        (let [{:keys [token executor]} (service-state)]
+          (.execute ^ScheduledThreadPoolExecutor executor
+                    ^Runnable #((ns-resolve 'futon3c.giraffe.reread-service 'drain!) token)))
+        (is (= true (deref entered 2000 :timeout)))
+        (Thread/sleep 100)
+        (is (= 1 @snapshots) "the timer cannot run a concurrent full round")
+        (deliver release true)
+        (is (true? (wait-for #(pos? (or (:backstop-skipped (service-state)) 0)) 2000)))
+        (service/stop!) (join!)
+        (let [n @snapshots {:keys [token backstop-task]} (service-state)]
+          (is (.isCancelled ^java.util.concurrent.ScheduledFuture backstop-task))
+          ((ns-resolve 'futon3c.giraffe.reread-service 'backstop-tick!) token 0)
+          (is (= n @snapshots) "even a previously dispatched tick cannot run after stop"))
+        (finally (deliver release true))))))
+
+(deftest backstop-interval-configuration
+  (is (= 600000 (:reconcile-interval-ms (service/load-config (fixture)))))
+  (is (= 120000 (:reconcile-interval-ms
+                  (service/load-config (assoc (fixture) :environment
+                                              {"FUTON3C_GIRAFFE_REREAD_RECONCILE_INTERVAL_MS" "120000"})))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (service/load-config (assoc (fixture) :reconcile-interval-ms 0)))))
+
+(deftest full-authority-fixture-cost-and-reconciliation
+  ;; Measure the actual census + generation hash + consume + SQLite reconcile.
+  ;; Stub ONLY the Python process port: unit tests must not spawn checkers.
+  (let [root (temp-dir) repo (io/file root "fixture-repo")
+        doc (io/file repo "holes/excursions/E-backstop-cost.md")
+        corpus (io/file root "corpus") edges (io/file root "edges.json")
+        store (queue/open-store (io/file root "queue.sqlite")) calls (atom 0)]
+    (.mkdirs (io/file repo ".git"))
+    (.mkdirs (.getParentFile doc))
+    (.mkdirs corpus)
+    (spit doc "# Invented excursion\nStatus: OPEN\n")
+    (spit edges "[]")
+    (spit (io/file corpus "check_edges.py") "# invented checker port")
+    (spit (io/file corpus "members.json")
+          (json/generate-string [{:id "E-backstop-cost" :path (str doc) :sha256 "old"}]))
+    (spit (io/file corpus "batch-cost.jsonl")
+          (str (json/generate-string {:id "E-backstop-cost" :source {:path (str doc) :sha256 "old"}
+                                     :edges [] :unresolved []}) "\n"))
+    (with-redefs [registry/default-code-root (str root)
+                  missions/default-repos [(str repo)]
+                  shell/sh (fn [& _] (swap! calls inc) {:exit 0 :out "" :err ""})]
+      (let [start (System/nanoTime)
+            snapshot (cli/authority-snapshot {:pointer (str corpus) :edges (str edges)})
+            result (queue/reconcile! store (:open-items snapshot) (:coverage snapshot) 100)
+            elapsed (/ (- (System/nanoTime) start) 1000000.0)]
+        (is (= 1 @calls))
+        (is (= [:E-backstop-cost] (mapv :id (:open-items snapshot))))
+        (is (= [:pending] (mapv :state (:requests result))))
+        (println "BACKSTOP fixture snapshot+reconcile ms:" elapsed
+                 "documents: 1; records: 1; checker process port stubbed")))))
