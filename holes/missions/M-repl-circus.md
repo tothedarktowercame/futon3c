@@ -914,6 +914,8 @@ above identifies a missing witness.
    2026-11-13): the model-made workplan history (serves links, readings,
    lexicon surveys, referents) is migrated as unverified records, and a later
    validation stage gives each a verdict.
+   Alongside it, a bonus at the end (Joe, 2026-11-15): talk with zai-13
+   about [[Nipper]] and explore adding it as a feature.
 
 Progress on items 1–3 (2026-11-13): dedup done (mission/doc 1,276 → 416,
 excursion/doc 767; only M-coordination-rewrite and
