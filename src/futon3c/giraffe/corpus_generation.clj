@@ -8,7 +8,6 @@
             [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.string :as str]
-            [futon3c.giraffe.missions :as missions]
             [futon3c.giraffe.readings :as readings])
   (:import [java.nio.channels FileChannel]
            [java.nio.file CopyOption Files LinkOption Path StandardCopyOption StandardOpenOption]
@@ -101,49 +100,114 @@
                       {:kind :giraffe-generation/member-absent :target-id target-id})))
     (spit members-file (json/generate-string members' {:pretty true}))))
 
-(defonce ^:private base-failing-id-cache (atom {}))
-
-(defn- consume-corpus [root]
-  (readings/consume
-   {:checker (.getPath (io/file root "check_edges.py"))
-    :members-file (.getPath (io/file root "members.json"))
-    :batches (mapv #(.getAbsolutePath %) (batch-files root))
-    :repos missions/default-repos
-    :scope :population/missions-excursions-tickets}))
-
-(defn- failing-record-ids [result]
-  (into #{}
-        (comp (filter (complement :passed?))
-              ;; A parse failure has no record id. Keep it as an explicit
-              ;; identity so a newly malformed staged line is a regression.
-              (map #(or (get-in % [:record :id]) :unidentified-record)))
-        (:checked-records result)))
-
 (defn- new-failing-record-ids [base-failing staged-failing]
   (set/difference staged-failing base-failing))
 
-(defn- base-failing-ids [base base-digest]
-  (or (get @base-failing-id-cache base-digest)
-      (let [ids (failing-record-ids (consume-corpus base))]
-        (swap! base-failing-id-cache assoc base-digest ids)
-        ids)))
+(defn- staged-lines
+  "Every JSONL line of ROOT's batches with its batch path, 1-based line
+  number and parsed record (nil for an unparseable line). No checker run."
+  [root]
+  (mapcat (fn [batch]
+            (keep-indexed (fn [i line]
+                            (when-not (str/blank? line)
+                              {:batch (.getAbsolutePath batch)
+                               :line-number (inc i) :line line
+                               :record (try (json/parse-string line true)
+                                            (catch Exception _ nil))}))
+                          (str/split (slurp batch) #"\n")))
+          (batch-files root)))
 
-(defn- validate-staging! [base base-digest staging target-id]
-  (let [result (consume-corpus staging)
-        rows (get-in result [:coverage :members])
-        row (some #(when (= target-id (:id %)) %) rows)
-        staged-failing (failing-record-ids result)
-        new-failing (new-failing-record-ids
-                     (base-failing-ids base base-digest) staged-failing)
-        ambiguous (filterv #(= :ambiguous (:status %)) rows)]
-    (when (or (not= :read (:status row)) (seq new-failing) (seq ambiguous))
+(defn- cites-path?
+  "True when RECORD's edges or unresolved entries carry evidence citing PATH."
+  [record path]
+  (some #(= path (get-in % [:evidence :path]))
+        (concat (:edges record) (:unresolved record))))
+
+(defn- checked-line-failures
+  "Run the Python checker on exactly LINES (staged-lines entries) of ROOT and
+  return [failing-id-set checked-records]. The failing set uses record ids
+  (:unidentified-record for a line that does not parse). The population and
+  mid-validation-change guards of a full readings/consume are retained: the
+  checker's own members.json must equal ROOT's, and neither file may change
+  while the checks run."
+  [root lines]
+  (let [checker (.getAbsolutePath (io/file root "check_edges.py"))
+        members-file (.getAbsolutePath (io/file root "members.json"))
+        members-text (slurp members-file)
+        checker-text (slurp checker)]
+    (when-not (= members-text (slurp (.getPath (io/file (.getParentFile (io/file checker))
+                                                         "members.json"))))
+      (throw (ex-info "Checker uses a different population"
+                      {:kind :reading/population-mismatch})))
+    (let [checked (mapv #(readings/check-record checker (:batch %)
+                                                (:line-number %) (:line %))
+                        lines)]
+      (when-not (and (= checker-text (slurp checker))
+                     (= members-text (slurp members-file)))
+        (throw (ex-info "Checker or population changed during validation"
+                        {:kind :reading/validation-input-changed})))
+      [(into #{}
+             (comp (filter (complement :passed?))
+                   (map #(or (get-in % [:record :id]) :unidentified-record)))
+             checked)
+       checked])))
+
+(defn- validate-staging!
+  "Decide the staged corpus by running the Python checker ONLY on the lines
+  the replacement can affect (Joe, 2026-11-15: one landing took 5-7 minutes
+  because validate-staging! consumed all 654 records; measured here at 583 s).
+
+  Argument for the narrowed check: apply-replacement! changes exactly one
+  staged file line (the target's, replaced) and the target's members.json
+  pin. A checker result is a function of its record line and members.json,
+  so every other record's result equals its base result unless it cites the
+  target's source path in its evidence — those citers are re-checked
+  explicitly. An unparseable staged line is checked (and fails) rather than
+  silently skipped. New failures are judged against the base's result for
+  the SAME ids (run against the base's own lines), not a full base consume,
+  so a publish never pays for the records it did not touch.
+
+  Ambiguity (two records for one id) is detected over ALL staged lines by
+  parsing ids, without the checker. The population and checker-changed
+  guards of readings/consume are retained in checked-line-failures. The
+  price is explicit: a pre-existing failure elsewhere in the corpus is no
+  longer re-witnessed on every publish — it stays decided, and the
+  full-corpus certificate still happens at mint time."
+  [base staging target-id source-path]
+  (let [lines (staged-lines staging)
+        by-id (group-by (comp :id :record) lines)
+        ambiguous (->> by-id
+                       (filter (fn [[id _]] (and id (> (count (val (find by-id id))) 1))))
+                       (map key))
+        target-lines (get by-id target-id)
+        citers (->> lines
+                    (filter #(and (:record %)
+                                  (not= target-id (:id (:record %)))
+                                  (cites-path? (:record %) source-path))))
+        to-check (vec (distinct (concat target-lines citers
+                                        (filter #(nil? (:record %)) lines))))
+        base-lines (let [base-ids (into #{} (comp (map #(get-in % [:record :id]))
+                                                  (remove nil?))
+                                        to-check)]
+                     (filter #(contains? base-ids (:id (:record %)))
+                             (staged-lines base)))
+        [staged-failing staged-checked] (checked-line-failures staging to-check)
+        target-passed? (and (= 1 (count target-lines))
+                            (boolean (some #(and (= target-id (get-in % [:record :id]))
+                                                 (:passed? %))
+                                           staged-checked)))
+        [base-failing _base-checked] (checked-line-failures base base-lines)
+        new-failing (new-failing-record-ids base-failing staged-failing)]
+    (when (or (not target-passed?) (seq new-failing) (seq ambiguous))
       (throw (ex-info "Replacement did not pass corpus validation"
                       {:kind :giraffe-generation/checker-failed
-                       :target-id target-id :member row
+                       :target-id target-id
+                       :member (when (seq target-lines)
+                                 {:id target-id :status (if target-passed? :read :unread)})
                        :failed-record-count (count staged-failing)
                        :new-failing-record-ids (vec (sort-by str new-failing))
-                       :ambiguous-members (mapv :id ambiguous)})))
-    result))
+                       :ambiguous-members (vec ambiguous)})))
+    {:checked-lines (count to-check)}))
 
 (defn- pointer-target [pointer]
   (:path (resolve-generation pointer)))
@@ -181,7 +245,7 @@
                           (nil? (:old-sha claim)))
       ;; Validation is deliberately repeated against this attempt's base. A
       ;; successful retry must never carry forward validation from a stale base.
-      (validate-staging! base-path base-digest staging (:target-id claim))
+      (validate-staging! base-path staging (:target-id claim) (:source-path claim))
       (when before-switch-fn (before-switch-fn))
       (when-not (= (:source-sha claim) (file-sha (:source-path claim)))
         (throw (ex-info "Claimed source changed during reading"

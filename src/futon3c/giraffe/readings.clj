@@ -38,6 +38,13 @@
          :passed? (and (zero? (:exit result)) (map? record))})
       (finally (.delete file)))))
 
+(defn check-record
+  "Public single-line form of the private checked-record used by consume.
+  corpus-generation's targeted staging validation calls it directly so one
+  publish runs the Python checker only on the lines it must decide."
+  [checker batch line-number line]
+  (checked-record checker batch line-number line))
+
 (def ^:private reading-classes #{"closure" "artifact" "alternative"})
 
 (defn- edge-class
