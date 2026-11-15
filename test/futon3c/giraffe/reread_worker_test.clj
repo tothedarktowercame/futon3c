@@ -153,3 +153,12 @@
     (is (:ok result))
     (is (= record (:record result)))
     (is (= ["E-kimi-task-1" "invoke-1-2-abc"] @completed))))
+
+(deftest record-is-taken-out-of-surrounding-prose
+  ;; claude-13, 2026-11-15: a reader that prefixes a sentence to its JSON
+  ;; record must not have the record discarded. Invented text.
+  (let [jr #'futon3c.giraffe.reread-worker/json-record]
+    (is (= "E-invented" (:id (jr "0 problems — pin matches.\n\n{\"id\": \"E-invented\", \"edges\": []}"))))
+    (is (= "E-invented" (:id (jr "```json\n{\"id\": \"E-invented\"}\n```"))))
+    (is (= "E-invented" (:id (jr "{\"id\": \"E-invented\"}"))))
+    (is (nil? (jr "no record here")))))

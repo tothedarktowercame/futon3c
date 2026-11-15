@@ -132,9 +132,21 @@
          "record and do not bell or whistle anyone.")))
 
 (defn- json-record [text]
-  (let [candidate (or (second (re-find #"(?s)```(?:json)?\s*(\{.*?\})\s*```" (str text)))
-                      (str/trim (str text)))]
-    (try (json/parse-string candidate true) (catch Exception _ nil))))
+  ;; A fenced block, else the whole text, else the span from the first "{" to
+  ;; the last "}": zai-2 prefixed a sentence ("0 problems — pin matches the
+  ;; live file.") to 44 of its 59 readings on 2026-11-15, and all 44 valid
+  ;; records were discarded as :reader-record-invalid-json (claude-13).
+  (let [t (str/trim (str text))
+        ;; Only a map counts: cheshire reads the leading "0" of "0 problems"
+        ;; as the number 0 and stops there.
+        parse #(let [v (try (json/parse-string % true) (catch Exception _ nil))]
+                 (when (map? v) v))
+        fenced (second (re-find #"(?s)```(?:json)?\s*(\{.*?\})\s*```" t))
+        i (str/index-of t "{")
+        j (str/last-index-of t "}")]
+    (or (some-> fenced parse)
+        (parse t)
+        (when (and i j (< i j)) (parse (subs t i (inc j)))))))
 
 (defn- job-text [job]
   (some (fn [key]
