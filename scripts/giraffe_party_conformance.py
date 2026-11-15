@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only, stdlib conformance audit. Run with python3 -I.
 
-Checks source values, never parses displayed reasons. Missing inputs produce
+Checks source values; thor_missing_counts also parses displayed reasons. Missing inputs produce
 explicit ABSENT results; malformed inputs FAIL. An absence is not verification.
 Lean references are relative to futon5/lean-arxana. Sortedness theorems have
 sorted-input hypotheses: a failed check does not refute their Lean proofs.
@@ -31,6 +31,7 @@ CHECKS = {
     'run_file_digests': 'Circus.Reproduction.Receipt.passInputDigest',
     'one_current_reading': 'Circus.Supersession.OneCurrent',
     'corpus_generation_digest': 'Circus.Reproduction.Receipt.corpusGeneration',
+    'thor_missing_counts': 'Circus.Characters.missing_count_is_violation',
 }
 
 
@@ -225,7 +226,91 @@ def audit(party, pass_data=None, pending=None, lexicon=None, run=None):
     results.append(run_file_digests(run))
     results.append(one_current_reading(run))
     results.append(corpus_generation_digest(run))
+    results.append(thor_missing_counts(party, pass_data))
     return results
+
+
+def thor_missing_counts(party, pass_data):
+    """Parse displayed clauses, unlike the older source-only ordering checks.
+
+    Match futon5 lean-arxana/Circus/Basic.lean:301-306 Term.render exactly,
+    with semicolon-delimited clauses from giraffe_party.py:122-155. Nat counts
+    include measured zero; only absent/null counts require missing disclosure.
+    Absence multiplicity and scope match Characters.passViolations.
+    """
+    def result(status, detail):
+        return {'check': 'thor_missing_counts',
+                'theorem': CHECKS['thor_missing_counts'], 'status': status, 'detail': detail}
+
+    if pass_data is None:
+        return result('ABSENT', {'missing': 'pass.edn'})
+    try:
+        characters = [ch for ch in party['characters'] if ch['id'] == 'thor']
+        if len(characters) != 1:
+            raise ValueError('invalid Thor character')
+        rows = characters[0]['top']
+        if not rows:
+            return result('ABSENT', {'missing': 'Thor top rows'})
+        entries = pass_data['order']
+        by_id = {entry['id']: entry for entry in entries}
+        if len(by_id) != len(entries):
+            raise ValueError('duplicate pass item')
+        top_ids = {row['item'] for row in rows}
+        absences = {}
+        for absence in party['absences']:
+            what = absence['what']
+            if not isinstance(what, str):
+                raise ValueError('invalid absence')
+            for field in ('unblocks', 'cone'):
+                prefix = field + ' for '
+                if what.startswith(prefix):
+                    key = (what[len(prefix):], field)
+                    absences[key] = absences.get(key, 0) + 1
+        violations, complete, missing = [], 0, 0
+        def bad(item, field, rule):
+            violations.append({'item': item, 'field': field, 'rule': rule})
+        for (item, field) in absences:
+            if item not in top_ids:
+                bad(item, field, 'absence-outside-thor-top')
+        for row in rows:
+            item = row['item']
+            if item not in by_id:
+                bad(item, 'basis', 'item-not-in-pass')
+                continue
+            reason = row.get('reason')
+            if not isinstance(reason, str):
+                reason = ''
+            clauses = [clause.strip() for clause in reason.split(';')]
+            for field in ('unblocks', 'cone'):
+                value = by_id[item].get(field)
+                count = absences.get((item, field), 0)
+                if value is not None and (type(value) is not int or value < 0):
+                    bad(item, field, 'source-count-not-nat')
+                    continue
+                if value is None:
+                    missing += 1
+                    number, suffix = 0, ' (count missing)'
+                    if count != 1:
+                        bad(item, field, 'missing-count-requires-exactly-one-absence')
+                else:
+                    complete += 1
+                    number, suffix = value, ''
+                    if count != 0:
+                        bad(item, field, 'measured-count-has-absence')
+                expected = (f'unblocks {number} item(s)' if field == 'unblocks'
+                            else f'cone of {number} behind it') + suffix
+                # Whole clauses prevent a measured-zero prefix from accepting
+                # the missing-count wording, or contradictory duplicate clauses.
+                field_clauses = [clause for clause in clauses
+                                 if clause.startswith(field + ' ')]
+                if field_clauses != [expected]:
+                    bad(item, field, 'rendered-count-clause-mismatch')
+        if violations:
+            return result('FAIL', violations)
+        return result('PASS', {'rows': len(rows), 'complete_counts': complete,
+                               'missing_counts': missing})
+    except (IndexError, KeyError, TypeError, ValueError):
+        return result('FAIL', {'kind': 'invalid-thor-count-input'})
 
 
 def run_file_digests(run):

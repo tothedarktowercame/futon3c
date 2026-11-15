@@ -31,6 +31,10 @@ def fixture():
                         for i, item in enumerate(sum(lists.values(), []))]}
     lexicon = [{'entity': name, 'status': 'partly', 'relations': 'uses ' + other}
                for name, other in [('alpha', 'beta'), ('beta', 'gamma'), ('gamma', 'alpha')]]
+    party['absences'] = []
+    for row, entry in zip(party['characters'][0]['top'], passage['order']):
+        row['reason'] = (f"unblocks {entry['unblocks']} item(s); "
+                         f"cone of {entry['cone']} behind it")
     return party, passage, pending, lexicon
 
 
@@ -46,8 +50,9 @@ def failures(data):
 class ConformanceTests(unittest.TestCase):
     def test_conforming(self):
         results = c.audit(*fixture())
-        self.assertEqual({'PASS'}, {r['status'] for r in results[:-3]})
-        self.assertEqual('ABSENT', results[-1]['status'])
+        self.assertEqual({'PASS'}, {r['status'] for r in results if r['check'] not in
+                          ('run_file_digests', 'one_current_reading', 'corpus_generation_digest')})
+        self.assertEqual('ABSENT', results[-2]['status'])
 
     def test_thor_mutation(self):
         data = fixture()
@@ -59,7 +64,7 @@ class ConformanceTests(unittest.TestCase):
         data = fixture()
         data[1]['order'][0]['unblocks'] = data[1]['order'][1]['unblocks']
         data[1]['order'][0]['cone'] = 0
-        self.assertEqual({'thor_monotone_unblocks'}, failures(data))
+        self.assertEqual({'thor_monotone_unblocks', 'thor_missing_counts'}, failures(data))
 
     def test_thyra_harm_mutation(self):
         data = fixture()
@@ -129,7 +134,7 @@ class ConformanceTests(unittest.TestCase):
     def test_missing_sources_are_declared(self):
         party, _, _, _ = fixture()
         results = c.audit(party)
-        self.assertEqual(9, sum(r['status'] == 'ABSENT' for r in results))
+        self.assertEqual(10, sum(r['status'] == 'ABSENT' for r in results))
         self.assertEqual(3, sum(r['status'] == 'PASS' for r in results))
 
     def test_missing_metric_is_not_zero(self):
@@ -183,9 +188,10 @@ class RunDigestTests(unittest.TestCase):
         self.assertEqual('PASS', row['status'])
         self.assertEqual({'files': 1}, row['detail'])
         rows = c.audit(*fixture(), run=self.run)
-        self.assertEqual(12, len(rows))
-        self.assertEqual({'PASS'}, {r['status'] for r in rows[:-2]})
-        self.assertEqual('ABSENT', rows[-1]['status'])
+        self.assertEqual(13, len(rows))
+        self.assertEqual({'PASS'}, {r['status'] for r in rows if r['check'] not in
+                          ('one_current_reading', 'corpus_generation_digest')})
+        self.assertEqual('ABSENT', rows[-2]['status'])
 
     def test_changed_byte(self):
         self.input.write_bytes(b'{:items [1]}')
@@ -416,6 +422,75 @@ class GenerationDigestTests(unittest.TestCase):
         # File link contributes the original B bytes; directory link is not
         # traversed and broken link is not a regular file, exactly as Java.
         self.assertEqual('PASS', c.corpus_generation_digest(self.run)['status'])
+
+
+class ThorMissingCountsTests(unittest.TestCase):
+    def setUp(self):
+        self.passage = {'order': [{'id': 'T-ember', 'unblocks': 2, 'cone': 0}]}
+        self.party = {'characters': [{'id': 'thor', 'top': [
+            {'item': 'T-ember', 'reason': 'unblocks 2 item(s); cone of 0 behind it'}]}],
+            'absences': []}
+
+    def check(self):
+        return c.thor_missing_counts(self.party, self.passage)
+
+    def missing_cone(self):
+        self.passage['order'][0]['cone'] = None
+        self.party['characters'][0]['top'][0]['reason'] += ' (count missing)'
+        self.party['absences'] = [{'what': 'cone for T-ember', 'reason': 'invented'}]
+
+    def test_complete(self):
+        self.assertEqual({'rows': 1, 'complete_counts': 2, 'missing_counts': 0},
+                         self.check()['detail'])
+        self.assertEqual('PASS', self.check()['status'])
+
+    def test_missing_correct(self):
+        self.missing_cone()
+        self.assertEqual('PASS', self.check()['status'])
+        self.assertEqual(1, self.check()['detail']['missing_counts'])
+        del self.passage['order'][0]['cone']
+        self.assertEqual('PASS', self.check()['status'])
+
+    def test_bare_zero_missing(self):
+        self.passage['order'][0]['cone'] = None
+        self.assertEqual('FAIL', self.check()['status'])
+        self.assertIn({'item': 'T-ember', 'field': 'cone',
+                       'rule': 'rendered-count-clause-mismatch'}, self.check()['detail'])
+
+    def test_measured_zero_marked_missing(self):
+        self.party['characters'][0]['top'][0]['reason'] += ' (count missing)'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_missing_without_absence(self):
+        self.missing_cone()
+        self.party['absences'] = []
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_duplicate_absence(self):
+        self.missing_cone()
+        self.party['absences'] *= 2
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_spurious_absence(self):
+        self.party['absences'] = [{'what': 'unblocks for M-outside'}]
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_measured_count_absence(self):
+        self.party['absences'] = [{'what': 'cone for T-ember'}]
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_not_in_pass(self):
+        self.passage['order'] = []
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_no_evidence(self):
+        self.assertEqual('ABSENT', c.thor_missing_counts(self.party, None)['status'])
+        self.party['characters'][0]['top'] = []
+        self.assertEqual('ABSENT', self.check()['status'])
+
+    def test_wrong_measured_clause(self):
+        self.party['characters'][0]['top'][0]['reason'] = 'unblocks 12 item(s); cone of 0 behind it'
+        self.assertEqual('FAIL', self.check()['status'])
 
 
 if __name__ == '__main__':
