@@ -560,7 +560,7 @@
                     (is (not= old current-sha)))))
             (finally (service/stop!) (join!))))))))
 
-(deftest backstop-skips-a-deadline-crossed-by-a-round-and-stops
+(deftest backstop-delayed-by-a-round-still-runs-and-stops
   (let [config (fixture) boot (promise) entered (promise) release (promise)
         rounds (atom 0) snapshots (atom 0)]
     (with-redefs [worker/run-once! (fn [_]
@@ -581,7 +581,9 @@
         (Thread/sleep 100)
         (is (= 1 @snapshots) "the timer cannot run a concurrent full round")
         (deliver release true)
-        (is (true? (wait-for #(pos? (or (:backstop-skipped (service-state)) 0)) 2000)))
+        (is (true? (wait-for #(>= @snapshots 2) 2000))
+            "a tick delayed by a reader round still runs one full round afterwards")
+        (is (zero? (or (:backstop-skipped (service-state)) 0)))
         (service/stop!) (join!)
         (let [n @snapshots {:keys [token backstop-task]} (service-state)]
           (is (.isCancelled ^java.util.concurrent.ScheduledFuture backstop-task))

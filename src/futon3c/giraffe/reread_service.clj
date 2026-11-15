@@ -280,11 +280,14 @@
 
 (declare schedule-backstop!)
 
-(defn- backstop-tick! [token due-ns]
+(defn- backstop-tick! [token _due-ns]
   (when (active? token)
     (try
-      (if (or (:round-running? @state) (:draining-previous? @state)
-              (>= (or (:round-ended-ns @state) 0) due-ns))
+      ;; A tick delayed by reader rounds still runs: during a catch-up the
+      ;; worker is busy back to back, and skipping then would starve the
+      ;; backstop exactly when edits are being missed (claude-13 review).
+      ;; One outstanding tick at a time, so no backlog burst either way.
+      (if (or (:round-running? @state) (:draining-previous? @state))
         (swap! state update :backstop-skipped (fnil inc 0))
         (do
           (full-round! token (:config @state))
