@@ -279,6 +279,15 @@ def main(argv=None):
     pass_order = pass_data["order"]
     pass_rank = {e["id"]: e.get("rank") for e in pass_order}
     pending = load_pending(args.pending)
+    # The pending index is a snapshot (2026-11-09); Giraffe's run is current.
+    # Drop the items Giraffe's run excluded, so a character never offers
+    # an item Giraffe has excluded as finished (claude-13, 2026-11-15: the
+    # first live refresh listed M-daily-scan and E-fetch-entity-miss-path,
+    # both closed and in the run's excluded.edn).
+    excluded_path = os.path.join(run_dir, "excluded.edn")
+    excluded = set(re.findall(r':id "([^"]+)"', open(excluded_path, encoding="utf-8").read())) \
+        if os.path.isfile(excluded_path) else set()
+    pending = {k: v for k, v in pending.items() if k not in excluded}
     lexicon = load_lexicon(args.lexicon)
     scores = convergence_scores(lexicon)
     status = {r["entity"]: (r.get("status") or "") for r in lexicon}
