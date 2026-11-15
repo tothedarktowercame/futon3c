@@ -407,3 +407,13 @@
                                    [(req "M-a" "second") {} 100000]])]
     (is (= [2 4] (mapv count sent)))
     (is (empty? (compactions store)))))
+
+(deftest giraffe-ledger-tasks-resolve
+  ;; claude-13, 2026-11-15: the Giraffe re-read ledger's E-giraffe-read-N
+  ;; files resolve as requisition targets; other non-futon dirs still do not.
+  (let [root (.toFile (java.nio.file.Files/createTempDirectory "req-root" (make-array java.nio.file.attribute.FileAttribute 0)))
+        mk (fn [rel] (let [f (java.io.File. root rel)] (.mkdirs (.getParentFile f)) (spit f "# x\n") f))]
+    (mk "giraffe-reread-requisitions/holes/excursions/E-giraffe-read-1.md")
+    (mk "some-other-repo/holes/excursions/E-elsewhere.md")
+    (is (zai/resolve-work-target "E-giraffe-read-1" (.getPath root)))
+    (is (nil? (zai/resolve-work-target "E-elsewhere" (.getPath root))))))

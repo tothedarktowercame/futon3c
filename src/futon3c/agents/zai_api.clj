@@ -1380,7 +1380,12 @@
    that exists only in a worktree is not work the seat can be pointed at."
   [root]
   (->> (.listFiles (io/file root))
-       (filter #(re-matches #"futon\d+[a-z]?" (.getName ^java.io.File %)))
+       ;; giraffe-reread-requisitions is the Giraffe re-read ledger: since
+       ;; its tasks were renamed E-giraffe-read-N (futon3c 4faac85b4) they
+       ;; resolve only there, and every Kimi reading was refused as
+       ;; unresolved (40 of 40, claude-13, 2026-11-15).
+       (filter #(re-matches #"futon\d+[a-z]?|giraffe-reread-requisitions"
+                            (.getName ^java.io.File %)))
        (map #(io/file % "holes"))
        (filter #(.isDirectory ^java.io.File %))))
 
