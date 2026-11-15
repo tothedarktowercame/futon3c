@@ -7,6 +7,7 @@
             [futon2.aif.mission-registry :as registry]
             [futon2.aif.task-requisition :as requisition]
             [futon3c.giraffe.missions :as missions]
+            [futon3c.giraffe.preview-refresh :as preview]
             [futon3c.giraffe.readings :as readings]
             [futon3c.giraffe.reread-cli :as cli]
             [futon3c.giraffe.reread-mint-batch :as mint-batch]
@@ -91,8 +92,9 @@
                        :giraffe-root (or (get env "GIRAFFE_ROOT") cli/default-root)
                        :edges (or (get env "GIRAFFE_EDGES") cli/default-edges)
                        :mint-state-path mint-batch/default-state-path :debounce-ms 4000
+                       :preview (merge preview/default-config (:preview opts))
                        :entity-sidecar default-entity-sidecar :turn-store live-turn-store}
-                      (dissoc opts :env-file :environment))]
+                      (dissoc opts :env-file :environment :preview))]
     (when-not (and (seq (:reader-seats config))
                    (every? #(and (string? %) (not (str/blank? %))) (:reader-seats config))
                    (integer? (:new-item-cap config)) (<= 0 (:new-item-cap config))
@@ -130,11 +132,52 @@
 
 (defn- active? [token] (and (= token (:token @state)) (:running? @state)))
 
+(declare drain! schedule-mint! schedule-lease! schedule-preview-refresh! refresh-preview!)
+
 (defn- failure! [token key exc]
   (when (= token (:token @state))
     (swap! state assoc-in [:errors key] {:message (.getMessage exc) :at-ms (System/currentTimeMillis)})))
 
-(declare drain! schedule-mint! schedule-lease!)
+(defn- after-mint!
+  "A completed mint (new pass/priorities run) refreshes Mojira's GCC pages.
+   Scheduled on the preview executor, never blocking the mint or turn path."
+  [token mint-result]
+  (when (= :minted (:status mint-result))
+    (schedule-preview-refresh! token (get-in mint-result [:last-result :run-id]))))
+
+(defn- schedule-preview-refresh!
+  "At most one refresh in flight; a mint during a refresh queues one more.
+   Stop! clears :running? so a stopped service never refreshes again."
+  [token run-id]
+  (locking lock
+    (when (and (active? token) run-id)
+      (swap! state assoc :refresh-requested? true :refresh-run-id run-id)
+      (when-not (:refresh-running? @state)
+        (swap! state assoc :refresh-running? true)
+        (let [executor (:preview-executor @state)]
+          (.execute ^ScheduledThreadPoolExecutor executor ^Runnable #(refresh-preview! token)))))))
+
+(defn- refresh-preview!
+  "One or more coalesced page refreshes. Each pass takes the newest queued
+   run id and items; a mint landing mid-pass queues exactly one follow-up.
+   A failing script is recorded in :last-refresh and never escapes."
+  [token]
+  (loop []
+    (let [{:keys [config refresh-run-id refresh-items]} @state]
+      (swap! state assoc :refresh-requested? false :refresh-items #{})
+      (let [summary (try
+                      (preview/refresh! (:preview config)
+                                        (when refresh-run-id
+                                          (str (io/file (:giraffe-root config) refresh-run-id)))
+                                        refresh-items)
+                      (catch Exception e
+                        {:ok? false :items [] :error (.getMessage e)}))]
+        (when (active? token)
+          (swap! state assoc :last-refresh (assoc summary :at-ms (System/currentTimeMillis))))))
+    (if (and (active? token) (:refresh-requested? @state))
+      (recur)
+      (locking lock
+        (swap! state dissoc :refresh-running?)))))
 
 (defn- mint-step! [config landed queue-idle?]
   (mint-batch/step! {:path (:mint-state-path config) :window-ms (:mint-window-ms config)
@@ -161,6 +204,7 @@
                                         (try
                                           (let [result (mint-step! config 0 false)]
                                             (swap! state assoc :last-mint result)
+                                            (after-mint! token result)
                                             (swap! state update :errors dissoc :mint)
                                             (schedule-mint! token result))
                                           (catch Exception e (failure! token :mint e)))))
@@ -186,6 +230,7 @@
 
 (defn- record-round! [token result]
   (swap! state assoc :last-round result :last-mint (:mint result))
+  (after-mint! token (:mint result))
   (schedule-mint! token (:mint result))
   (schedule-lease! token)
   (when (and (active? token) (some #(not= :idle (:status %)) (:workers result)))
@@ -234,6 +279,7 @@
                                           (swap! state assoc-in [:identities id] (:path source))
                                           (queue/reconcile-item! (:store config) id item coverage
                                                                  (System/currentTimeMillis))
+                                          (swap! state update :refresh-items (fnil conj #{}) id)
                                           (swap! state update :errors dissoc id)
                                           (drain! token))
                                         (catch Exception e (failure! token id e))))))
@@ -259,6 +305,7 @@
                                                :now-ms (System/currentTimeMillis) :refresh? true
                                                :landed-count 0 :mint-fn (:mint-fn config)})]
                                   (swap! state assoc :last-mint result :last-turn-mint result)
+                                  (after-mint! token result)
                                   (swap! state update :errors dissoc :turn-mint)
                                   (schedule-mint! token result))
                                 (catch Exception e (failure! token :turn-mint e)))))
@@ -286,6 +333,7 @@
                        (update :seen-turns conj id)
                        (update :unknown-turn-item-count + (count unknown-ids))
                        (update :ambiguous-turn-item-count + (count ambiguous-ids)))))
+          (swap! state update :refresh-items (fnil into #{}) (map :external-id items))
           (when (seq items) (schedule-turn-mint! token))
           (swap! state update :errors dissoc [:turn id])))
       (catch Exception e (failure! token [:turn id] e)))))
@@ -319,10 +367,17 @@
                                1 (reify ThreadFactory
                                    (newThread [_ r] (doto (Thread. r "giraffe-reread") (.setDaemon true)))))
                           (.setRemoveOnCancelPolicy true))
+               preview-executor (doto (ScheduledThreadPoolExecutor.
+                                       1 (reify ThreadFactory
+                                           (newThread [_ r] (doto (Thread. r "giraffe-preview") (.setDaemon true)))))
+                                  (.setRemoveOnCancelPolicy true))
                token (Object.)]
            (reset! state {:status :starting :running? true :token token :executor executor
+                          :preview-executor preview-executor
                           :config config :pending {} :errors {} :identities {}
                           :discussed {} :seen-turns #{}
+                          :refresh-items #{} :refresh-run-id nil
+                          :refresh-running? false :refresh-requested? false :last-refresh nil
                           :unknown-turn-item-count 0 :ambiguous-turn-item-count 0})
            (.execute executor
                      ^Runnable
@@ -356,8 +411,9 @@
     (doseq [task (concat (keep :task (vals (:pending @state))) [(:mint-task @state) (:lease-task @state) (:turn-mint-task @state)])
             :when task]
       (.cancel ^ScheduledFuture task false))
-    (swap! state assoc :running? false :status :stopped :pending {})
+    (swap! state assoc :running? false :status :stopped :pending {} :refresh-requested? false)
     (when-let [executor (:executor @state)] (.shutdown ^ScheduledThreadPoolExecutor executor))
+    (when-let [executor (:preview-executor @state)] (.shutdown ^ScheduledThreadPoolExecutor executor))
     {:status :stopped}))
 
 (defn health
@@ -382,4 +438,5 @@
             :discussed (:discussed @state)
             :unknown-turn-item-count (:unknown-turn-item-count @state)
             :ambiguous-turn-item-count (:ambiguous-turn-item-count @state)
-            :last-turn-mint (:last-turn-mint @state)})))
+            :last-turn-mint (:last-turn-mint @state)
+            :last-refresh (:last-refresh @state)})))

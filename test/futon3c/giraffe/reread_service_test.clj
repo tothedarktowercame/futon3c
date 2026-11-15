@@ -2,6 +2,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.giraffe.readings :as readings]
             [futon3c.giraffe.excursions :as excursions]
@@ -303,3 +304,151 @@
     (with-redefs [turn-service/remove-turn-listener! #(swap! removed conj %)]
       (service/stop!)
       (is (= [:futon3c.giraffe.reread-service/giraffe] @removed)))))
+
+;; ------------------------------------------------- preview refresh ------
+
+(defn- wait-for
+  "Poll PRED until true or TIMEOUT-MS passes; returns the last value."
+  [pred timeout-ms]
+  (let [deadline (+ (System/currentTimeMillis) timeout-ms)]
+    (loop []
+      (let [v (pred)]
+        (if (or v (>= (System/currentTimeMillis) deadline))
+          v
+          (do (Thread/sleep 20) (recur)))))))
+
+(defn- preview-config
+  "Injected process layer: records every argv, and the fake giraffe_party
+   writes a party.json with one top item so the top-list join is exercised."
+  [root calls & {:keys [fail-party? gate]}]
+  (let [out (io/file root "gcc-preview")]
+    {:repo-dir (str root) :out-dir (str out)
+     :exec-fn (fn [args]
+                (when gate (deref gate 2000 nil))
+                (swap! calls conj (vec args))
+                (if (and fail-party? (some #(str/ends-with? % "giraffe_party.py") args))
+                  {:exit 1 :out "" :err "party fixture failure"}
+                  (do (when (some #(str/ends-with? % "giraffe_party.py") args)
+                        (.mkdirs out)
+                        (spit (io/file out "party.json")
+                              (json/generate-string
+                               {:party {:top [{:rank 1 :item "M-party-top"}]}})))
+                      {:exit 0 :out "" :err ""})))}))
+
+(defn- party-calls [calls]
+  (filter #(some (fn [a] (str/ends-with? a "giraffe_party.py")) %) @calls))
+
+(defn- preview-calls [calls]
+  (filter #(some (fn [a] (str/ends-with? a "gcc_preview.py")) %) @calls))
+
+(deftest landed-mint-triggers-exactly-one-preview-refresh-with-changed-items
+  (let [config (fixture) recorded (atom []) boot (promise)]
+    (with-redefs [service/item-snapshot (fn [p c] (snapshot p c))
+                  worker/run-once!
+                  (fn [{:keys [store now-ms new-item-cap reader-id]}]
+                    (if-let [claim (queue/claim! store now-ms 1000 new-item-cap reader-id)]
+                      {:status :landed :request (queue/settle! store claim {:status :landed :digest "fixture"} now-ms 3)}
+                      (do (deliver boot true) {:status :idle})))]
+      (service/start! (assoc config :preview (preview-config (temp-dir) recorded)))
+      (is (= true (deref boot 2000 :timeout)))
+      (service/notify-doc-changed! path)
+      (is (true? (wait-for #(some? (:last-refresh (service/health))) 2000)))
+      (Thread/sleep 200)
+      (is (= 1 (count (party-calls recorded))) "exactly one refresh, no spares")
+      (is (= 1 (count (preview-calls recorded))))
+      (let [run-dir (str (io/file (get-in (service-state) [:config :giraffe-root]) "fixture-run"))]
+        (is (contains? (set (first (party-calls recorded))) run-dir)))
+      (is (= "M-event-fixture,M-party-top"
+             (get-in (vec (preview-calls recorded)) [0 5]))
+          "preview covers the reconciled item plus the party top list")
+      (let [refresh (:last-refresh (service/health))]
+        (is (true? (:ok? refresh)))
+        (is (= ["M-event-fixture" "M-party-top"] (:items refresh)))
+        (is (pos-int? (:at-ms refresh))))
+      (is (empty? (:errors (service/health)))))))
+
+(deftest two-mints-during-one-refresh-yield-one-follow-up
+  (let [config (fixture) gate (promise) recorded (atom []) boot (promise)
+        first-mint (promise) mints (atom 0)]
+    (with-redefs [service/item-snapshot (let [n (atom 0)]
+                                      (fn [p c] (let [sha (str "new-" (swap! n inc))]
+                                                  (-> (snapshot p c)
+                                                      (assoc-in [:source :sha256] sha)
+                                                      (assoc-in [:item :source-pin :sha256] sha)))))
+                  worker/run-once!
+                  (fn [{:keys [store now-ms new-item-cap reader-id]}]
+                    (if-let [claim (queue/claim! store now-ms 1000 new-item-cap reader-id)]
+                      {:status :landed :request (queue/settle! store claim {:status :landed :digest "fixture"} now-ms 3)}
+                      (do (deliver boot true) {:status :idle})))]
+      (service/start! (assoc config :preview (preview-config (temp-dir) recorded :gate gate)
+                             :mint-fn #(do (deliver first-mint true) (swap! mints inc)
+                                           {:status :minted :run-id (str "fixture-run-" @mints)})))
+      (is (= true (deref boot 2000 :timeout)))      (service/notify-doc-changed! path)
+      (is (= true (deref first-mint 2000 :timeout)))
+      ;; the first refresh is now blocked inside its first party call
+      (is (true? (wait-for #(= 1 (count (party-calls recorded))) 2000)))
+      (service/notify-doc-changed! path)
+      (is (= true (wait-for #(= 2 @mints) 2000))
+          "second mint queued while the first refresh was blocked")
+      (deliver gate true)
+      (is (true? (wait-for #(= 2 (count (preview-calls recorded))) 2000)))
+      (Thread/sleep 200)
+      (is (= 2 (count (party-calls recorded))) "one blocked + one follow-up, not more")
+      (is (= 2 (count (preview-calls recorded))))
+      (is (empty? (:errors (service/health)))))))
+
+(deftest failing-script-is-recorded-and-the-service-keeps-running
+  (let [config (fixture) root (temp-dir) recorded (atom []) boot (promise) mint-count (atom 0)]
+    (with-redefs [service/item-snapshot (let [n (atom 0)]
+                                      (fn [p c] (let [sha (str "new-" (swap! n inc))]
+                                                  (-> (snapshot p c)
+                                                      (assoc-in [:source :sha256] sha)
+                                                      (assoc-in [:item :source-pin :sha256] sha)))))
+                  worker/run-once!
+                  (fn [{:keys [store now-ms new-item-cap reader-id]}]
+                    (if-let [claim (queue/claim! store now-ms 1000 new-item-cap reader-id)]
+                      {:status :landed :request (queue/settle! store claim {:status :landed :digest "fixture"} now-ms 3)}
+                      (do (deliver boot true) {:status :idle})))]
+      ;; fail the first party call only; later calls succeed
+      (let [first? (atom true)
+            preview (preview-config root recorded)]
+        (service/start! (assoc config
+                               :preview (assoc preview
+                                               :exec-fn (fn [args]
+                                                          (if (and @first?
+                                                                   (some #(str/ends-with? % "giraffe_party.py") args))
+                                                            (do (reset! first? false)
+                                                                (swap! recorded conj (vec args))
+                                                                {:exit 1 :out "" :err "party fixture failure"})
+                                                            ((:exec-fn preview) args))))
+                               :mint-fn #(do (swap! mint-count inc)
+                                             {:status :minted :run-id (str "fixture-run-" @mint-count)})))
+        (is (= true (deref boot 2000 :timeout)))
+        (service/notify-doc-changed! path)
+        (is (true? (wait-for #(= 1 @mint-count) 2000)))
+        (is (true? (wait-for #(false? (:ok? (:last-refresh (service/health)))) 2000)))
+        (let [refresh (:last-refresh (service/health))]
+          (is (= [] (:items refresh)))
+          (is (re-find #"party fixture failure" (:error refresh))))
+        (is (not= :failed (:status (service/health))))
+        (is (empty? (:errors (service/health))))
+        ;; a second mint refreshes successfully: the service survived
+        (service/notify-doc-changed! path)
+        (is (true? (wait-for #(= 2 @mint-count) 2000)))
+        (is (true? (wait-for #(true? (:ok? (:last-refresh (service/health)))) 2000)))))))
+
+(deftest no-preview-refresh-without-a-mint
+  (let [config (fixture) recorded (atom []) boot (promise) event (promise) calls (atom 0)]
+    (with-redefs [service/item-snapshot (fn [p c] (snapshot p c))
+                  worker/run-once! (fn [_]
+                                     (if (= 1 (swap! calls inc)) (deliver boot true) (deliver event true))
+                                     {:status :idle})]
+      (service/start! (assoc config :preview (preview-config (temp-dir) recorded)))
+      (is (= true (deref boot 2000 :timeout)))
+      (service/notify-doc-changed! path)
+      ;; reading lands but the mint batch window defers the mint
+      (service/start! {}) ;; already started; no-op
+      (is (= true (deref event 2000 :timeout)))
+      (Thread/sleep 300)
+      (is (= [] @recorded) "no helper process without a minted run")
+      (is (nil? (:last-refresh (service/health)))))))
