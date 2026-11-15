@@ -899,6 +899,16 @@ above identifies a missing witness.
    priorities shown are newer than the newest settled turn and document
    change, and any item, its reading, its needs and its place in each
    character's top ten are reachable within 5 key-presses of the start page.
+   **Item 4 progress (2026-11-15):** the event-driven Giraffe re-read service
+   runs in the futon3c JVM (futon3c `28d411c7d`, `c78d89255`, test fix
+   `5b42def26`): document changes and settled turns (the `::giraffe` turn
+   listener) feed it; the 5-minute `giraffe-reread.timer` is disabled (Joe),
+   so Zone runs two JVMs. `items-touched-by-turn` stands in for the turn
+   projector. The activation-and-firing rule (§DERIVE amendment 2026-11-14)
+   and named beneficiaries with pilots (M-giraffe L-7) are later Giraffe
+   improvements, not closure conditions (Joe, 2026-11-15: "I don't think we
+   should get hung up on any *one* of the layers if they all work and
+   interoperate").
 8. DOCUMENT: the mission write-up, including
    [E-workplan-validation](../excursions/E-workplan-validation.md) (Joe,
    2026-11-13): the model-made workplan history (serves links, readings,
