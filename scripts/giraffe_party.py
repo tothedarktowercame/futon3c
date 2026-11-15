@@ -128,13 +128,28 @@ def thor_order(pass_order, top=10):
         # be true of its basis; futon5 Circus.Characters thor_terms_faithful).
         out.append({"item": entry["id"],
                     "score": entry.get("unblocks"),
-                    "reason": "unblocks %d item(s); cone of %d behind it; %s"
-                              % (entry.get("unblocks") or 0,
-                                 entry.get("cone") or 0,
-                                 "Giraffe pass rank %d" % rank
-                                 if rank is not None else
-                                 "no Giraffe pass rank")})
+                    "reason": "; ".join([
+                        "unblocks %d item(s)" % entry["unblocks"]
+                        if entry.get("unblocks") is not None else
+                        "unblocks 0 item(s) (count missing)",
+                        "cone of %d behind it" % entry["cone"]
+                        if entry.get("cone") is not None else
+                        "cone of 0 behind it (count missing)",
+                        "Giraffe pass rank %d" % rank if rank is not None else
+                        "no Giraffe pass rank"])})
     return out
+
+
+def thor_absences(pass_order, top=10):
+    """Missing counts in Thor's displayed slice are reading-contract violations.
+
+    Match Circus.Characters.passViolations; measured zero is not missing.
+    """
+    return [{"what": "%s for %s" % (field, entry["id"]),
+             "reason": "Giraffe pass entry has no %s count "
+                       "(reading contract violation); shown as 0" % field}
+            for entry in pass_order[:top]
+            for field in ("unblocks", "cone") if entry.get(field) is None]
 
 
 def merlin_order(pending, scores, slugs, top=10):
@@ -322,7 +337,7 @@ def main(argv=None):
                  "questor": list(questor), "thyra": list(thyra)}
     party = party_vote({k: [dict(r) for r in v] for k, v in orderings.items()},
                        args.party)
-    absences = m_abs + q_abs
+    absences = thor_absences(pass_order, args.top) + m_abs + q_abs
     out = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "sources": {"giraffe_run": run_id,

@@ -9,6 +9,9 @@ Exit 0 when all checks pass, 1 otherwise.
 """
 
 import os
+import json
+import tempfile
+from unittest.mock import patch
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -119,6 +122,58 @@ broken = gp.party_vote({k: list(v) for k, v in orderings.items()}, 12,
 check("plant: with the skip broken, 'A' is chosen twice",
       [p["item"] for p in broken].count("A") == 2
       and [p["item"] for p in broken] != ["A", "C", "D", "E", "B"])
+
+# ---- FIXTURE: absent counts are not measured zeros ------------------------
+COUNT_PASS = [
+    {"id": "M-missing", "rank": 1},
+    {"id": "T-null", "rank": 2, "unblocks": None, "cone": None},
+    {"id": "E-zero", "rank": 3, "unblocks": 0, "cone": 0},
+    {"id": "M-outside", "rank": 4},
+]
+count_rows = gp.thor_order(COUNT_PASS, 3)
+check("thor: absent and null counts are explicitly missing, score stays null",
+      all(r["reason"] == "unblocks 0 item(s) (count missing); "
+          "cone of 0 behind it (count missing); Giraffe pass rank %d" % (j + 1)
+          and r["score"] is None for j, r in enumerate(count_rows[:2])))
+check("thor: measured zeros have no missing qualifier",
+      count_rows[2]["reason"] ==
+      "unblocks 0 item(s); cone of 0 behind it; Giraffe pass rank 3"
+      and count_rows[2]["score"] == 0)
+
+
+def fixture_party(entries, top):
+    """Exercise main's actual party.json writer using only invented inputs."""
+    with tempfile.TemporaryDirectory() as root:
+        with patch.object(gp, "load_pass", return_value={"order": entries}), \
+             patch.object(gp, "load_pending", return_value={}), \
+             patch.object(gp, "load_lexicon", return_value=[]), \
+             patch.object(gp.gcc_preview, "load_corpus", return_value=([], [], [])):
+            gp.main(["--run", os.path.join(root, "fixture-run"),
+                     "--pending", os.path.join(root, "pending.json"),
+                     "--lexicon", os.path.join(root, "lexicon.json"),
+                     "--corpus", os.path.join(root, "corpus"),
+                     "--out", root, "--top", str(top)])
+        with open(os.path.join(root, "party.json"), encoding="utf-8") as stream:
+            return json.load(stream)
+
+
+count_party = fixture_party(COUNT_PASS, 3)
+expected_absences = [
+    {"what": "%s for %s" % (field, iid),
+     "reason": "Giraffe pass entry has no %s count (reading contract violation); shown as 0" % field}
+    for iid in ("M-missing", "T-null") for field in ("unblocks", "cone")]
+check("party.json: one typed violation per missing count, only Thor top entries",
+      count_party["absences"] == expected_absences)
+check("party.json: Thor displays the qualified missing counts",
+      count_party["characters"][0]["top"][0]["reason"] ==
+      "unblocks 0 item(s) (count missing); cone of 0 behind it (count missing); Giraffe pass rank 1")
+check("party.json: one missing cone yields exactly one violation",
+      fixture_party([{"id": "T-cone", "rank": 1, "unblocks": 2}], 1)["absences"] == [
+          {"what": "cone for T-cone", "reason":
+           "Giraffe pass entry has no cone count (reading contract violation); shown as 0"}])
+check("party.json: complete pass and empty top have no count violations",
+      fixture_party(PASS_ORDER, 3)["absences"] == []
+      and fixture_party(COUNT_PASS, 0)["absences"] == [])
 
 failed = [l for l, ok in RESULTS if not ok]
 print("%d/%d PASS" % (len(RESULTS) - len(failed), len(RESULTS)))
