@@ -503,11 +503,18 @@ The invented ledger gap is described and an invented remedy is proposed.
       (is (= class (get-in rows [id :completion :completion-class]))))
     (is (= :task-completion-author (get-in rows [:E-fixture-plain :completion :producer])))
     ;; No fixture edge is a counting prerequisite, so no row has dependents
-    ;; or unblocks. The pre-hermetic test asserted literal nils; readiness
-    ;; arithmetic now reports 0 for a ready row with no dependents (nil only
-    ;; when a row is undetermined), so the claim is kept as never-positive.
-    (is (every? #(not (pos? (or (:cone %) 0))) (vals rows)))
-    (is (every? #(not (pos? (or (:unblocks %) 0))) (vals rows)))
+    ;; or unblocks. Undetermined rows (unknown graph terms) carry no cone or
+    ;; unblocks at all; known ready rows carry exactly 0. Both branches are
+    ;; pinned so an undetermined row reporting 0 is caught.
+    (let [undetermined #{:M-fixture-boreal :E-fixture-murky}]
+      (is (= 2 (count (select-keys rows undetermined))))
+      (is (every? #(= [:undetermined :unknown nil nil]
+                      [(:status %) (get-in % [:graph-terms :status]) (:cone %) (:unblocks %)])
+                  (vals (select-keys rows undetermined))))
+      (is (= 5 (count (apply dissoc rows undetermined))))
+      (is (every? #(= [:ready :known 0 0]
+                      [(:status %) (get-in % [:graph-terms :status]) (:cone %) (:unblocks %)])
+                  (vals (apply dissoc rows undetermined)))))
     (is (= :undetermined (get-in rows [:E-fixture-murky :status])))
     (is (= :undetermined (get-in rows [:M-fixture-boreal :status])))
     (is (:ok? (writer/verify-run (:dir output))))
