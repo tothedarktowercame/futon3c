@@ -21,7 +21,11 @@
 (defn default-exec
   "One helper process. Reads sources read-only; the only writes are the page
    files under the configured out-dir."
-  [& args]
+  [args]
+  ;; Takes the command as ONE vector, as `run` calls it. The first live
+  ;; refresh (2026-11-15) failed with "No value supplied for key: [...]"
+  ;; because this took varargs and passed the vector to sh as a single
+  ;; argument; the tests had replaced exec-fn, so only the live run hit it.
   (apply shell/sh args))
 
 (defn- run [{:keys [exec-fn] :as _cfg} args]

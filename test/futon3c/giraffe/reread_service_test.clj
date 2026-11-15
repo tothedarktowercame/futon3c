@@ -452,3 +452,11 @@
       (Thread/sleep 300)
       (is (= [] @recorded) "no helper process without a minted run")
       (is (nil? (:last-refresh (service/health)))))))
+
+
+(deftest default-exec-runs-a-real-command
+  ;; claude-13: the stand-in exec-fn hid that the real launcher could not run
+  ;; a command at all. This calls the real one, the way `run` does.
+  (let [r (futon3c.giraffe.preview-refresh/default-exec ["echo" "ok"])]
+    (is (zero? (:exit r)))
+    (is (= "ok" (clojure.string/trim (:out r))))))
