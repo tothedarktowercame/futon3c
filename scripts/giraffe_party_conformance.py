@@ -269,6 +269,10 @@ def run_file_digests(run):
                 mismatches.append({'file': name, 'recorded': recorded, 'actual': actual})
         if mismatches:
             return result('FAIL', {'mismatches': mismatches, 'missing': missing})
+        # passInputDigest is about input.edn: an empty list, or a manifest that
+        # does not list the pass input, verifies nothing about it.
+        if 'input.edn' not in {name for name, _, _ in paths}:
+            return result('ABSENT', {'files': ['input.edn'], 'reason': 'not listed in manifest'})
         if missing:
             return result('ABSENT', {'files': missing})
         return result('PASS', {'files': len(entries)})

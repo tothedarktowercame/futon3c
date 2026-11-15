@@ -199,6 +199,17 @@ class RunDigestTests(unittest.TestCase):
         self.assertEqual('ABSENT', row['status'])
         self.assertEqual(['input.edn'], row['detail']['files'])
 
+    def test_input_not_listed_is_absent(self):
+        for text in ('{:files []}',
+                     '{:files [{:file "other.edn" :sha256 "' + self.recorded + '"}]}'):
+            with self.subTest(text=text):
+                if 'other' in text:
+                    (self.run / 'other.edn').write_bytes(self.input.read_bytes())
+                self.manifest.write_text(text)
+                row = c.run_file_digests(self.run)
+                self.assertEqual('ABSENT', row['status'])
+                self.assertEqual(['input.edn'], row['detail']['files'])
+
     def test_missing_manifest(self):
         self.manifest.unlink()
         self.assertEqual('ABSENT', c.run_file_digests(self.run)['status'])
