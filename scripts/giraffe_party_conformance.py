@@ -8,6 +8,7 @@ sorted-input hypotheses: a failed check does not refute their Lean proofs.
 The two Questor statements overlap necessarily on a unique-item source.
 """
 import argparse
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -26,6 +27,7 @@ CHECKS = {
     'party_nodup': 'Circus.Retro.partyVote_fresh_and_nodup',
     'party_turns': 'Circus.Retro.sweep_head_contributes; partyVote',
     'party_relative_order': 'Circus.drawFresh_survivor; Circus.Retro.drawFresh',
+    'run_file_digests': 'Circus.Reproduction.Receipt.passInputDigest',
 }
 
 
@@ -66,7 +68,7 @@ def convergence(rows):
                     if value in ('partly', 'hypothesised')}
 
 
-def audit(party, pass_data=None, pending=None, lexicon=None):
+def audit(party, pass_data=None, pending=None, lexicon=None, run=None):
     """Return one independently evaluated result per named check.
 
     None means an unavailable source; empty lists mean known empty sources.
@@ -217,10 +219,65 @@ def audit(party, pass_data=None, pending=None, lexicon=None):
         except (IndexError, KeyError, TypeError, ValueError) as exc:
             status, detail = 'FAIL', {'kind': 'invalid-input', 'reason': str(exc)}
         results.append({'check': name, 'theorem': theorem, 'status': status, 'detail': detail})
+    results.append(run_file_digests(run))
     return results
 
 
-def load(path, edn=False):
+def run_file_digests(run):
+    """Hash only manifest-listed files contained in the resolved run directory."""
+    def result(status, detail):
+        return {'check': 'run_file_digests',
+                'theorem': CHECKS['run_file_digests'], 'status': status, 'detail': detail}
+
+    if run is None:
+        return result('ABSENT', {'files': ['manifest.edn']})
+    try:
+        root = Path(run).resolve()
+
+        def contained(name):
+            if not isinstance(name, str) or not name or Path(name).is_absolute():
+                raise ValueError('invalid run-relative file name')
+            path = (root / name).resolve()
+            if not path.is_relative_to(root):
+                raise ValueError('file escapes run directory')
+            return path
+
+        manifest_path = contained('manifest.edn')
+        if not manifest_path.exists():
+            return result('ABSENT', {'files': ['manifest.edn']})
+        manifest = load(manifest_path, edn=True, strict=True)
+        if not isinstance(manifest, dict) or not isinstance(manifest.get('files'), list):
+            raise ValueError('manifest files must be a list')
+        entries = manifest['files']
+        # Validate every path before opening any listed file, including symlinks.
+        paths = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                raise ValueError('invalid manifest file entry')
+            name, recorded = entry.get('file'), entry.get('sha256')
+            path = contained(name)
+            if not isinstance(recorded, str) or not re.fullmatch(r'[0-9a-f]{64}', recorded):
+                raise ValueError('invalid recorded SHA-256')
+            paths.append((name, path, recorded))
+        missing, mismatches = [], []
+        for name, path, recorded in paths:
+            if not path.is_file():
+                missing.append(name)
+                continue
+            actual = hashlib.sha256(path.read_bytes()).hexdigest()
+            if actual != recorded:
+                mismatches.append({'file': name, 'recorded': recorded, 'actual': actual})
+        if mismatches:
+            return result('FAIL', {'mismatches': mismatches, 'missing': missing})
+        if missing:
+            return result('ABSENT', {'files': missing})
+        return result('PASS', {'files': len(entries)})
+    except (OSError, IndexError, KeyError, TypeError, ValueError, RuntimeError):
+        # Do not echo malformed payloads or exception strings containing them.
+        return result('FAIL', {'kind': 'invalid-manifest-or-file', 'file': 'manifest.edn'})
+
+
+def load(path, edn=False, strict=False):
     if not path or not Path(path).is_file():
         return None
     text = Path(path).read_text(encoding='utf-8')
@@ -230,12 +287,19 @@ def load(path, edn=False):
     spec = importlib.util.spec_from_file_location('gcc_edn', Path(__file__).with_name('gcc_preview.py'))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    if strict:
+        reader = module._EdnReader(text)
+        value = reader.read()
+        if reader.pos != len(reader.tokens):
+            raise ValueError('trailing EDN input')
+        return value
     return module.edn_load(text)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('party', type=Path)
+    parser.add_argument('party', type=Path, nargs='?',
+                        default=Path.home() / 'storage/gcc-preview/party.json')
     parser.add_argument('--run', type=Path)
     parser.add_argument('--pending', type=Path)
     parser.add_argument('--lexicon', type=Path)
@@ -253,7 +317,7 @@ def main(argv=None):
                 raise ValueError('run-identity-mismatch: ' + str(run))
             pending = args.pending or sources.get('pending_index')
             lexicon = args.lexicon or sources.get('lexicon', '').split(' (convergence')[0]
-            results = audit(party, load(run / 'pass.edn', edn=True), load(pending), load(lexicon))
+            results = audit(party, load(run / 'pass.edn', edn=True), load(pending), load(lexicon), run=run)
             print('generated_at:', party.get('generated_at'), 'run:', run.name)
             print('sources:', json.dumps({'pending': str(pending), 'lexicon': str(lexicon)}))
             print('Scope: current source values; party.json does not retain source digests.')

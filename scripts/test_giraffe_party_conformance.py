@@ -6,6 +6,7 @@ Questor eligibility implies its exclusion theorem; duplicating a party entry
 also violates exact round-robin replay. Hiding these failures would weaken audit.
 """
 import copy
+import hashlib
 import importlib.util
 from pathlib import Path
 import tempfile
@@ -43,7 +44,9 @@ def failures(data):
 
 class ConformanceTests(unittest.TestCase):
     def test_conforming(self):
-        self.assertEqual({'PASS'}, {r['status'] for r in c.audit(*fixture())})
+        results = c.audit(*fixture())
+        self.assertEqual({'PASS'}, {r['status'] for r in results[:-1]})
+        self.assertEqual('ABSENT', results[-1]['status'])
 
     def test_thor_mutation(self):
         data = fixture()
@@ -125,7 +128,7 @@ class ConformanceTests(unittest.TestCase):
     def test_missing_sources_are_declared(self):
         party, _, _, _ = fixture()
         results = c.audit(party)
-        self.assertEqual(6, sum(r['status'] == 'ABSENT' for r in results))
+        self.assertEqual(7, sum(r['status'] == 'ABSENT' for r in results))
         self.assertEqual(3, sum(r['status'] == 'PASS' for r in results))
 
     def test_missing_metric_is_not_zero(self):
@@ -156,6 +159,74 @@ class ConformanceTests(unittest.TestCase):
         results = {r['check']: r for r in c.audit(*data)}
         for name in ('party_turns', 'party_nodup', 'party_relative_order'):
             self.assertEqual('PASS', results[name]['status'])
+
+
+class RunDigestTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.run = Path(self.temp.name) / 'invented-run'
+        self.run.mkdir()
+        self.input = self.run / 'input.edn'
+        self.input.write_bytes(b'{:items []}')
+        self.manifest = self.run / 'manifest.edn'
+        self.recorded = hashlib.sha256(self.input.read_bytes()).hexdigest()
+        self.write_manifest('input.edn')
+
+    def write_manifest(self, name):
+        self.manifest.write_text('{:files [{:file "' + name +
+                                 '" :sha256 "' + self.recorded + '"}]}')
+
+    def test_intact(self):
+        row = c.run_file_digests(self.run)
+        self.assertEqual('PASS', row['status'])
+        self.assertEqual({'files': 1}, row['detail'])
+        rows = c.audit(*fixture(), run=self.run)
+        self.assertEqual(10, len(rows))
+        self.assertEqual({'PASS'}, {r['status'] for r in rows})
+
+    def test_changed_byte(self):
+        self.input.write_bytes(b'{:items [1]}')
+        row = c.run_file_digests(self.run)
+        self.assertEqual('FAIL', row['status'])
+        self.assertEqual([{'file': 'input.edn', 'recorded': self.recorded,
+                          'actual': hashlib.sha256(self.input.read_bytes()).hexdigest()}],
+                         row['detail']['mismatches'])
+
+    def test_missing_file(self):
+        self.input.unlink()
+        row = c.run_file_digests(self.run)
+        self.assertEqual('ABSENT', row['status'])
+        self.assertEqual(['input.edn'], row['detail']['files'])
+
+    def test_missing_manifest(self):
+        self.manifest.unlink()
+        self.assertEqual('ABSENT', c.run_file_digests(self.run)['status'])
+
+    def test_malformed_manifest(self):
+        for text in ('{:files [', '{:files []} trailing', '{}', 'nil'):
+            with self.subTest(text=text):
+                self.manifest.write_text(text)
+                self.assertEqual('FAIL', c.run_file_digests(self.run)['status'])
+
+    def test_escape_is_not_opened(self):
+        from unittest.mock import patch
+        outside = Path(self.temp.name) / 'outside.edn'
+        outside.write_bytes(self.input.read_bytes())
+        (self.run / 'escape.edn').symlink_to(outside)
+        for name in ('../outside.edn', str(outside), 'escape.edn'):
+            with self.subTest(name=name):
+                self.write_manifest(name)
+                with patch.object(Path, 'read_bytes', side_effect=AssertionError('opened file')):
+                    self.assertEqual('FAIL', c.run_file_digests(self.run)['status'])
+
+    def test_manifest_symlink_escape(self):
+        outside = Path(self.temp.name) / 'outside-manifest.edn'
+        self.manifest.rename(outside)
+        self.manifest.symlink_to(outside)
+        from unittest.mock import patch
+        with patch.object(Path, 'read_text', side_effect=AssertionError('opened manifest')):
+            self.assertEqual('FAIL', c.run_file_digests(self.run)['status'])
 
 
 if __name__ == '__main__':
