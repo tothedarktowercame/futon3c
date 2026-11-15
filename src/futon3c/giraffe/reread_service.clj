@@ -174,10 +174,14 @@
                         {:ok? false :items [] :error (.getMessage e)}))]
         (when (active? token)
           (swap! state assoc :last-refresh (assoc summary :at-ms (System/currentTimeMillis))))))
-    (if (and (active? token) (:refresh-requested? @state))
-      (recur)
-      (locking lock
-        (swap! state dissoc :refresh-running?)))))
+    ;; Check and release under the same lock schedule-preview-refresh! takes
+    ;; (claude-13 review): checking outside it let a mint landing between the
+    ;; check and the release be dropped.
+    (when (locking lock
+            (if (and (active? token) (:refresh-requested? @state))
+              true
+              (do (swap! state dissoc :refresh-running?) false)))
+      (recur))))
 
 (defn- mint-step! [config landed queue-idle?]
   (mint-batch/step! {:path (:mint-state-path config) :window-ms (:mint-window-ms config)
