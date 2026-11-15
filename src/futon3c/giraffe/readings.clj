@@ -26,12 +26,18 @@
                        v)]))
         (select-keys result [:exit :out :err])))
 
-(defn- checked-record [checker batch line-number line]
+(defn- checked-record [checker batch line-number line env]
   (let [file (java.io.File/createTempFile "giraffe-reading-" ".jsonl")
         pin {:sha256 (sha256 line) :batch (str batch) :line line-number}]
     (try
       (spit file (str line "\n"))
-      (let [result (shell/sh "python3" "-I" (str checker) (.getPath file))
+      (let [;; :checker-env is merged OVER the process environment (never
+            ;; replaces it), so a fixture can point the checker's code-root
+            ;; override at its invented root while PATH etc. survive.
+            result (if env
+                     (shell/sh "python3" "-I" (str checker) (.getPath file)
+                               :env (merge (into {} (System/getenv)) env))
+                     (shell/sh "python3" "-I" (str checker) (.getPath file)))
             record (try (json/parse-string line true) (catch Exception _ nil))]
         {:record record :record-pin pin
          :checker-result (scrubbed-result result (.getPath file))
@@ -43,7 +49,7 @@
   corpus-generation's targeted staging validation calls it directly so one
   publish runs the Python checker only on the lines it must decide."
   [checker batch line-number line]
-  (checked-record checker batch line-number line))
+  (checked-record checker batch line-number line nil))
 
 (def ^:private reading-classes #{"closure" "artifact" "alternative"})
 
@@ -88,8 +94,11 @@
   when each individual record passes. Certificate hashes bind checker, member
   inventory and the exact JSONL line bytes (excluding LF delimiter).
   Optional :target-id checks only that member, retaining duplicate detection;
-  it is a per-item certificate, never a complete population certificate."
-  [{:keys [checker members-file batches repos scope target-id]}]
+  it is a per-item certificate, never a complete population certificate.
+  Optional :checker-env is merged over the process environment for every
+  checker invocation (e.g. {\"GIRAFFE_CHECK_CODE_ROOT\" ...} for a fixture
+  code root); omitted, the checker sees the process environment unchanged."
+  [{:keys [checker members-file batches repos scope target-id checker-env]}]
   (let [checker-text (slurp checker)
         members-text (slurp members-file)
         checker-members (io/file (.getParentFile (io/file checker)) "members.json")
@@ -102,7 +111,7 @@
                                               (when (and (not (str/blank? line))
                                                          (or (nil? target-id)
                                                              (= target-id (:id (json/parse-string line true)))))
-                                                (checked-record checker batch (inc i) line)))
+                                                (checked-record checker batch (inc i) line checker-env)))
                                             (str/split (slurp batch) #"\n"))) batches))
         _ (when-not (and (= checker-text (slurp checker))
                          (= members-text (slurp members-file)))

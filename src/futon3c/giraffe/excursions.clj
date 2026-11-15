@@ -106,13 +106,14 @@
      :members-not-open (vec (sort (remove open-names (map :id (:members coverage)))))}))
 
 (defn missions-and-excursions->input
-  [{:keys [reading-batches reading-checker members-file repos reading-scope] :as opts}]
+  [{:keys [reading-batches reading-checker members-file repos reading-scope
+           reading-checker-env] :as opts}]
   (let [adapter (census-input opts)]
     (if-not reading-batches
       adapter
       (let [reading (readings/consume {:checker reading-checker :members-file members-file
                                        :batches reading-batches :repos (or repos missions/default-repos)
-                                       :scope reading-scope})
+                                       :scope reading-scope :checker-env reading-checker-env})
             coverage (:coverage reading)
             by-id (into {} (map (juxt :id identity)) (:members coverage))
             open-items (remove #(#{:completed :cancelled} (:state-group %))

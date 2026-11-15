@@ -1,4 +1,17 @@
 (ns futon3c.giraffe.readings-test
+  "Giraffe readings consumer tests.
+
+  HERMETIC WORLD (2026-11-15, kimi-2): these tests used to read the frozen
+  pilot under /home/joe/notes/wm-next/giraffe-excursions/ whose 636 members
+  pinned sha256s of LIVE documents under /home/joe/code; routine edits to
+  those documents tripped the (correct) pin refusals. The world is now
+  INVENTED at test time in a temp directory, and the checker is the REAL
+  contract — resources/giraffe/check_edges.py, a copy of the pilot's
+  check_edges.py (generic mechanical code, no document text) with one added
+  override: GIRAFFE_CHECK_CODE_ROOT replaces its hard-wired
+  Path.home()/\"code\" when set. Claims that pinned the real corpus (636
+  members, per-batch counts) are restated relative to the fixture and say
+  so in a comment."
   (:require [clojure.test :refer [deftest is]]
             [cheshire.core :as json]
             [clojure.java.io :as io]
@@ -7,20 +20,194 @@
             [futon3c.giraffe.missions :as missions]
             [futon3c.giraffe.excursions :as excursions]))
 
-(def root "/home/joe/notes/wm-next/giraffe-excursions/")
-(def options {:checker (str root "check_edges.py") :members-file (str root "members.json")
-              :batches [(str root "batch-00.jsonl")] :repos missions/default-repos})
+;;; ---------------------------------------------------------- the fixture world
+
+(defn- temp-dir [prefix]
+  (str (java.nio.file.Files/createTempDirectory
+        prefix (make-array java.nio.file.attribute.FileAttribute 0))))
+
+(defn- write! [root rel text]
+  (let [f (io/file root rel)]
+    (.mkdirs (.getParentFile f))
+    (spit f text)
+    f))
+
+(defn- sha256-file [f]
+  (readings/sha256 (slurp f)))
+
+;; Invented documents. Names and prose are fixture inventions; no real
+;; mission, excursion or ticket text appears here.
+
+(def ^:private aurora-text
+  "# M-fixture-aurora — invented fixture mission (readings test world)
+
+**Status:** OPEN — invented fixture mission; no live counterpart exists.
+
+## Acceptance
+
+- [ ] The invented aurora ledger balances inside the fixture world.
+")
+
+(def ^:private boreal-text
+  "# M-fixture-boreal — invented fixture mission (readings test world)
+
+**Status:** OPEN — invented fixture mission; no live counterpart exists.
+
+## Acceptance
+
+- [ ] The invented boreal ledger is reconciled inside the fixture world.
+
+## Notes
+
+This mission depends on M-fixture-dormant being settled before it can close.
+")
+
+(def ^:private cartography-text
+  "# E-fixture-cartography — invented fixture excursion
+
+**Status:** OPEN — invented fixture excursion; no live counterpart exists.
+
+## Acceptance
+
+- [ ] The invented cartography sketch is drawn inside the fixture world.
+
+## Notes
+
+This excursion is part of M-fixture-aurora in the invented ledger.
+")
+
+(def ^:private soundings-text
+  "# E-fixture-soundings — invented fixture excursion
+
+**Status:** OPEN — invented fixture excursion; no live counterpart exists.
+
+## Acceptance
+
+- [ ] The invented soundings are tabulated inside the fixture world.
+
+## Notes
+
+This excursion relates to M-fixture-boreal and advances M-fixture-aurora.
+")
+
+(def ^:private dormant-text
+  "# M-fixture-dormant — invented fixture mission, parked
+
+**Status:** PARKED — invented fixture mission; an edge target only.
+")
+
+(def ^:private closed-ledger-text
+  "# M-fixture-closed-ledger — invented fixture mission, already complete
+
+**Status:** COMPLETE — invented fixture mission. It is a population member
+with no reading record: the typed unread count the certificate must carry.
+")
+
+;; [document-key text marker-line] — marker lines are what the readings quote.
+(def ^:private docs
+  {:aurora        {:repo "futon0" :rel "holes/missions/M-fixture-aurora.md"
+                   :text aurora-text}
+   :boreal        {:repo "futon0" :rel "holes/missions/M-fixture-boreal.md"
+                   :text boreal-text
+                   :edges [{:to "M-fixture-dormant" :kind "depends-on" :basis "declared"
+                            :quote "depends on M-fixture-dormant being settled before it can close"}]}
+   :cartography   {:repo "futon2" :rel "holes/excursions/E-fixture-cartography.md"
+                   :text cartography-text
+                   :edges [{:to "M-fixture-aurora" :kind "part-of" :basis "declared"
+                            :quote "part of M-fixture-aurora in the invented ledger"}]}
+   :soundings     {:repo "futon2" :rel "holes/excursions/E-fixture-soundings.md"
+                   :text soundings-text
+                   :edges [{:to "M-fixture-boreal" :kind "relates-to" :basis "inferred"
+                            :quote "relates to M-fixture-boreal"}
+                           {:to "M-fixture-aurora" :kind "advances" :basis "declared"
+                            :quote "advances M-fixture-aurora"}]}
+   :dormant       {:repo "futon0" :rel "holes/missions/M-fixture-dormant.md"
+                   :text dormant-text :member? false :records? false}
+   :closed-ledger {:repo "futon2" :rel "holes/missions/M-fixture-closed-ledger.md"
+                   :text closed-ledger-text :records? false}})
+
+(defn- line-of [text needle]
+  (inc (first (keep-indexed (fn [i l] (when (str/includes? l needle) i))
+                            (str/split-lines text)))))
+
+(defn build-world!
+  "Build the invented readings world in a fresh temp directory; every pin is
+  computed from the fixture bytes at call time, so the world cannot drift.
+  Returns {:root :code-root :repos :checker :members-file :batches
+           :member-count :expected-read :options :records}."
+  []
+  (let [root (temp-dir "giraffe-readings-fixture-")
+        code (io/file root "code")
+        _ (.mkdirs (io/file code "futon0" ".git"))
+        _ (.mkdirs (io/file code "futon2" ".git"))
+        files (into {} (map (fn [[k {:keys [repo rel text]}]]
+                              [k (write! code (str repo "/" rel) text)]))
+                        docs)
+        ;; The REAL checker contract, copied beside members.json (consume
+        ;; requires the checker's own members.json to equal :members-file).
+        readings-dir (io/file root "readings")
+        checker (write! readings-dir "check_edges.py"
+                        (slurp (io/resource "giraffe/check_edges.py")))
+        members (vec (for [[k {:keys [member?] :or {member? true}}] docs
+                           :when member?
+                           :let [^java.io.File f (files k)]]
+                       {:id (second (re-matches #"([MET]-[^/]+)\.md" (.getName f)))
+                        :path (.getAbsolutePath f) :sha256 (sha256-file f)}))
+        _ (write! readings-dir "members.json" (json/generate-string members {:pretty true}))
+        records (vec (keep (fn [[k {:keys [records? edges] :or {records? true}}]]
+                             (when records?
+                               (let [^java.io.File f (files k)
+                                     id (second (re-matches #"([MET]-[^/]+)\.md" (.getName f)))]
+                                 {:id id
+                                  :source {:path (.getAbsolutePath f) :sha256 (sha256-file f)}
+                                  :status_as_read "open"
+                                  :purpose (str "Invented fixture reading of " id
+                                                " for the hermetic readings test world.")
+                                  :edges (mapv (fn [{:keys [quote] :as e}]
+                                                 (assoc e :evidence
+                                                        {:path (.getAbsolutePath f)
+                                                         :sha256 (sha256-file f)
+                                                         :line (line-of (:text (docs k)) quote)
+                                                         :quote quote}))
+                                               (or edges []))
+                                  :unresolved []})))
+                           docs))
+        batch (write! readings-dir "batch-00.jsonl"
+                      (str (str/join "\n" (map json/generate-string records)) "\n"))
+        code-root (.getAbsolutePath code)
+        repos [(.getAbsolutePath (io/file code "futon0"))
+               (.getAbsolutePath (io/file code "futon2"))]
+        options {:checker (.getAbsolutePath checker)
+                 :members-file (.getAbsolutePath (io/file readings-dir "members.json"))
+                 :batches [(.getAbsolutePath batch)]
+                 :repos repos
+                 ;; The checker's code-root override, merged over the process
+                 ;; env by consume's :checker-env seam (2026-11-15).
+                 :checker-env {"GIRAFFE_CHECK_CODE_ROOT" code-root}}]
+    {:root root :code-root code-root :repos repos
+     :checker (:checker options) :members-file (:members-file options)
+     :batches (:batches options) :options options
+     :members members :records records
+     :member-count (count members) :expected-read (count records)}))
+
+;;; ------------------------------------------------------------------ the tests
 
 (deftest real-pilot-certifies-members-not-absent-edges
-  (let [result (readings/consume options)
+  (let [world (build-world!)
+        options (:options world)
+        result (readings/consume options)
         records (map #(json/parse-string % true)
-                     (remove str/blank? (str/split-lines (slurp (str root "batch-00.jsonl")))))
+                     (remove str/blank? (str/split-lines (slurp (first (:batches world))))))
         expected (count records)
         coverage (:coverage result)
         rows (into {} (map (juxt :id identity)) (:members coverage))]
-    (is (= 636 (:member-count coverage)))
+    ;; Member counts are restated relative to the fixture (the pre-hermetic
+    ;; test pinned the real pilot's 636 members).
+    (is (= (:member-count world) (:member-count coverage)))
     (is (= expected (get-in coverage [:counts :read])))
-    (is (= (- 636 expected) (get-in coverage [:counts :unread])))
+    (is (= (- (:member-count world) expected) (get-in coverage [:counts :unread])))
+    ;; One fixture member (the closed mission) deliberately has no record.
+    (is (= 1 (get-in coverage [:counts :unread])))
     (is (= :incomplete (:status coverage)))
     (is (every? :passed? (:checked-records result)))
     (doseq [record records]
@@ -28,16 +215,34 @@
       (is (= :read (:status (rows (:id record))))))
     (is (every? #(#{:declared :inferred} (:basis %)) (:edges result)))
     (is (every? #(#{"part-of" "advances" "relates-to" "duplicates" "superseded-by"} (:kind %)) (:links result)))
+    ;; The fixture exercises three partitions: in-scope links (3), an
+    ;; out-of-scope prerequisite (boreal -> dormant, not a member), and no
+    ;; rejections.
+    (is (= 3 (count (:links result))))
+    (is (= 1 (count (:out-of-scope result))))
     (is (= (reduce + (map #(count (:edges %)) records))
            (+ (count (:edges result)) (count (:links result))
               (count (:out-of-scope result)) (count (:rejected result)))))
-    (let [adapter (excursions/missions-and-excursions->input
-                   {:edges-file "/home/joe/code/futon3c/holes/missions/giraffe-mission-edges.json"
+    (let [edges-file (write! (:root world) "edges.json" "{\"edges\": [], \"rejected\": []}")
+          adapter (excursions/missions-and-excursions->input
+                   {:edges-file (.getAbsolutePath edges-file)
+                    :code-root (:code-root world) :repos (:repos world)
                     :reading-checker (:checker options) :members-file (:members-file options)
-                    :reading-batches (:batches options)})
+                    :reading-batches (:batches options)
+                    :reading-checker-env (:checker-env options)})
           pass (excursions/combined-pass (:input adapter))]
-      (is (= 636 (count (:order pass))))
-      (is (every? #(and (nil? (:cone %)) (nil? (:unblocks %))) (:order pass)))
+      ;; :order holds the four OPEN fixture items (aurora, boreal,
+      ;; cartography, soundings): the closed member is not an open item and
+      ;; the parked edge target never joined the population. Restated from
+      ;; the pilot's 636.
+      (is (= 4 (count (:order pass))))
+      ;; No reading edge is a counting prerequisite (links + one out-of-scope
+      ;; depends-on), so no row has dependents or unblocks from the reading.
+      ;; The pre-hermetic pilot asserted literal nils; readiness arithmetic
+      ;; now reports 0 for a ready row with no dependents (nil only when a
+      ;; row is undetermined), so the claim is kept as "never positive".
+      (is (every? #(not (pos? (or (:cone %) 0))) (:order pass)))
+      (is (every? #(not (pos? (or (:unblocks %) 0))) (:order pass)))
       (is (every? #(= (:population-sha coverage) (get-in % [:graph-terms :population-sha])) (:order pass))))))
 
 (deftest checker-results-are-temp-path-free-and-deterministic
@@ -77,28 +282,31 @@
         (.delete (.toFile dir))))))
 
 (deftest duplicate-pilot-record-is-ambiguous
-  (let [file (java.io.File/createTempFile "giraffe-duplicate-" ".jsonl")
-        line (first (str/split-lines (slurp (str root "batch-00.jsonl"))))]
+  ;; The duplicated line is the fixture's first batch record (the
+  ;; pre-hermetic test reused the real pilot's first line).
+  (let [world (build-world!)
+        line (first (remove str/blank? (str/split-lines (slurp (first (:batches world))))))
+        file (java.io.File/createTempFile "giraffe-duplicate-" ".jsonl")]
     (try
       (spit file (str line "\n" line "\n"))
-      (let [result (readings/consume (assoc options :batches [(.getPath file)]))]
+      (let [result (readings/consume (assoc (:options world) :batches [(.getPath file)]))]
         (is (= 1 (get-in result [:coverage :counts :ambiguous])))
         (is (empty? (:edges result)))
         (is (empty? (:links result))))
       (finally (io/delete-file file)))))
 
 (deftest prerequisite-direction-and-basis-control
-  ;; Pilot 00 contains only non-readiness links. These are conversion controls,
-  ;; not a claim that its quoted relation is a real prerequisite.
-  (let [records (map #(json/parse-string % true)
-                     (remove str/blank? (str/split-lines (slurp (str root "batch-00.jsonl")))))
-        ids (set (map (comp keyword :id) (json/parse-string (slurp (:members-file options)) true)))
+  ;; The fixture's links are non-readiness edges. These are conversion
+  ;; controls, not a claim that the quoted relation is a real prerequisite.
+  (let [world (build-world!)
+        records (:records world)
+        ids (set (map (comp keyword :id) (:members world)))
         [record edge] (first (for [r records e (:edges r)
                                   :when (contains? ids (keyword (:to e)))] [r e]))
         convert (ns-resolve 'futon3c.giraffe.readings 'convert-edge)
-        forward (:edge (convert missions/default-repos ids (:id record)
+        forward (:edge (convert (:repos world) ids (:id record)
                                 (assoc edge :kind "depends-on" :basis "declared")))
-        backward (:edge (convert missions/default-repos ids (:id record)
+        backward (:edge (convert (:repos world) ids (:id record)
                                  (assoc edge :kind "unblocks" :basis "inferred")))]
     (is (some? edge))
     (is (= [(keyword (:id record)) (keyword (:to edge))]
@@ -109,18 +317,19 @@
     (is (= (:evidence edge) (:evidence-pin forward)))
     ;; The reader's stated class survives conversion (2026-11-10); an unknown
     ;; or absent class stays :closure.
-    (is (= :artifact (:class (:edge (convert missions/default-repos ids (:id record)
+    (is (= :artifact (:class (:edge (convert (:repos world) ids (:id record)
                                              (assoc edge :kind "depends-on" :basis "declared"
                                                     :intended_class "artifact"))))))
-    (is (= :alternative (:class (:edge (convert missions/default-repos ids (:id record)
+    (is (= :alternative (:class (:edge (convert (:repos world) ids (:id record)
                                                 (assoc edge :kind "depends-on" :basis "declared"
                                                        :intended_class "alternative"))))))
-    (is (= :closure (:class (:edge (convert missions/default-repos ids (:id record)
+    (is (= :closure (:class (:edge (convert (:repos world) ids (:id record)
                                             (assoc edge :kind "depends-on" :basis "declared"
                                                    :intended_class "bogus"))))))))
 
 (deftest scope-defaults-to-missions-excursions-and-flows-into-graph-terms
-  (let [result (readings/consume options)
+  (let [world (build-world!)
+        result (readings/consume (:options world))
         input {:as-of "scope-test"
                :items [{:id :E-a :state-group :unstarted :source-order 0}]
                :edges []
@@ -132,7 +341,8 @@
     (is (every? #(= :population/missions-excursions (get-in % [:graph-terms :scope])) (:order pass)))))
 
 (deftest explicit-scope-labels-certificate-and-graph-terms
-  (let [result (readings/consume (assoc options :scope :population/missions-excursions-tickets))
+  (let [world (build-world!)
+        result (readings/consume (assoc (:options world) :scope :population/missions-excursions-tickets))
         input {:as-of "scope-test"
                :items [{:id :E-a :state-group :unstarted :source-order 0}]
                :edges []
