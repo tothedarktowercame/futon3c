@@ -262,6 +262,12 @@ class CurrentReadingTests(unittest.TestCase):
         self.assertEqual('PASS', row['status'])
         self.assertEqual({'records': 2, 'items': 2}, row['detail'])
 
+    def test_empty_generation_is_absent(self):
+        self.batch.write_text('')
+        row = c.one_current_reading(self.run)
+        self.assertEqual('ABSENT', row['status'])
+        self.assertEqual('reading records', row['detail']['missing'])
+
     def test_duplicate(self):
         (self.generation / 'batch-second.jsonl').write_text('{"id":"T-ember"}\n')
         row = c.one_current_reading(self.run)

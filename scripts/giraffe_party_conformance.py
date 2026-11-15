@@ -346,6 +346,9 @@ def one_current_reading(run):
                       for item, ids in sorted(grouped.items()) if len(ids) > 1]
         if errors or duplicates:
             return result('FAIL', {'duplicates': duplicates, 'errors': errors})
+        if records == 0:
+            # Batch files with no records verify nothing about OneCurrent.
+            return result('ABSENT', {'missing': 'reading records', 'generation': path})
         return result('PASS', {'records': records, 'items': len(grouped)})
     except FileNotFoundError:
         return result('ABSENT', {'missing': 'pinned-generation-or-file'})
