@@ -91,6 +91,16 @@ must supply for it, stated here without quoting it:
 - **L-5, runs on the team's own machine,** with no data leaving it, and an
   open record format so one team's audit can be read by another.
 - **L-6, measured** by the application's own traction measures (futon7).
+- **L-7, benefits name their beneficiaries** (Joe, 2026-11-15, relayed by
+  claude-1 from turn-PGKFek): "we can't just name anonymous benefits we have
+  to talk about real beneficiaries even if they're hypothetical ... and then
+  we could have a conversation with him about it". A benefit record points at
+  a named person or group, marked hypothetical until that person has been
+  asked; the asking is its next action. Such a list "is not the same as
+  traction now ... it's realizing that there's a kind of latent ability to
+  generate traction". Bears on Thyra's ordering and the cui-bono chain. Names
+  stay private: the beneficiary records and contact lists live in futon7
+  (business conversations), never in this public repo.
 
 ### What both need from the GCC
 
