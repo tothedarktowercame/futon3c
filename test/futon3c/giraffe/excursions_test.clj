@@ -225,7 +225,7 @@ The invented ledger gap is described and an invented remedy is proposed.
                        {:id (doc-id k) :path (.getAbsolutePath f)
                         :sha256 (sha256-file f)}))
         _ (write! readings-dir "members.json" (json/generate-string members {:pretty true}))
-        records (vec (keep (fn [[k {:keys [record? edges] :or {record? true member? true}}]]
+        records (vec (keep (fn [[k {:keys [record? edges] :or {record? true}}]]
                              (when (and (get (docs k) :member? true) record?)
                                (let [^java.io.File f (files k)
                                      id (doc-id k)]
