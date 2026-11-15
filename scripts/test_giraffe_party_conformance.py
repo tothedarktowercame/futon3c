@@ -113,18 +113,19 @@ class ConformanceTests(unittest.TestCase):
         rows[0], rows[4] = rows[4], rows[0]
         self.assertEqual({'party_relative_order', 'party_turns'}, failures(data))
 
-    def test_nat_representation_mutation(self):
+    def test_half_integral_merlin_score_conforms(self):
+        # The Lean model keeps the doubled score (futon5 afdb6eb), so a
+        # half-integral displayed score is not a failure.
         data = fixture()
         data[3].append({'entity': 'delta', 'status': 'partly', 'relations': 'uses alpha'})
-        # All four unfinished nodes are within two hops: own=3, half=1.5.
         for row in data[0]['characters'][1]['top']:
             row['score'] = 4.5
-        self.assertEqual({'merlin_nat_model'}, failures(data))
+        self.assertEqual(set(), failures(data))
 
     def test_missing_sources_are_declared(self):
         party, _, _, _ = fixture()
         results = c.audit(party)
-        self.assertEqual(7, sum(r['status'] == 'ABSENT' for r in results))
+        self.assertEqual(6, sum(r['status'] == 'ABSENT' for r in results))
         self.assertEqual(3, sum(r['status'] == 'PASS' for r in results))
 
     def test_missing_metric_is_not_zero(self):

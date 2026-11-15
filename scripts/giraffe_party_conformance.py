@@ -26,7 +26,6 @@ CHECKS = {
     'party_nodup': 'Circus.Retro.partyVote_fresh_and_nodup',
     'party_turns': 'Circus.Retro.sweep_head_contributes; partyVote',
     'party_relative_order': 'Circus.drawFresh_survivor; Circus.Retro.drawFresh',
-    'merlin_nat_model': 'Circus.Characters.MerlinRow.score (Nat representation)',
 }
 
 
@@ -204,8 +203,10 @@ def audit(party, pass_data=None, pending=None, lexicon=None):
                                     'remaining_source_order': source_items[offset:]})
         return bad
 
+    # Merlin's half-integral scores are exact in the Lean model since futon5
+    # afdb6eb (MerlinRow.score is the doubled score), so no representation check.
     functions = [thor, harm, thyra, merlin, questor, questor, nodup, turns,
-                 relative, lambda: [v for v in merlin_values() if v['named'] % 2]]
+                 relative]
     results = []
     for (name, theorem), check in zip(CHECKS.items(), functions):
         try:
