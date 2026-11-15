@@ -595,7 +595,13 @@ def pinned_generation(run, result):
 def reading_source_current(run, queue_path=None):
     """Compare current document bytes, not a pinned historical document.
 
-    Freshness.lean:81-88 readingMatches/reason marks unmatched readings pending.
+    Freshness.lean:81-88 readingMatches/reason scopes freshness to loop inputs.
+    Scope is recorded by the pinned run, NOT recomputed now: input.edn's
+    graph-coverage.drift.members-not-open, built by excursions.clj:82-106,
+    :130-141 and installed at :157; run.clj:252 writes that input. Its digest
+    is checked separately by run_file_digests. Inactive readings are reported,
+    never passed; gcc_preview.py withholds stale reading links. Document
+    hashes below are taken NOW, independently of the recorded scope.
     reread_worker.clj:272-278 requires the exact claim path/hash. Paths are
     absolute from futon2/aif/mission_registry.clj:1164 (also census :623);
     do not resolve relative paths against this process or expand shell syntax.
@@ -612,13 +618,24 @@ def reading_source_current(run, queue_path=None):
     def result(status, detail):
         return dict(check='reading_source_current',
                     theorem=CHECKS['reading_source_current'], status=status, detail=detail)
-    counts = dict(records=0, current=0, pending=0, source_changed_unqueued=0,
-                  source_missing=0)
+    counts = dict(records=0, in_view=0, current=0, pending=0, source_changed_unqueued=0,
+                  source_missing=0, inactive_current=0, inactive_changed=0, inactive_missing=0)
+    inactive_ids = {kind: [] for kind in ('current', 'changed', 'missing')}
+    counts['inactive_ids'] = inactive_ids
+    inactive_unknown = []
     errors, stale = [], []
     try:
         generation, _, error = pinned_generation(run, result)
         if error is not None:
             return error
+        try:
+            scope = load(Path(run) / 'input.edn', edn=True, strict=True)
+            inactive = scope['graph-coverage']['drift']['members-not-open']
+            if not isinstance(inactive, list) or not all(isinstance(x, str) for x in inactive):
+                raise ValueError('invalid scope')
+            inactive = set(inactive)
+        except (OSError, ValueError, TypeError, KeyError, IndexError, RuntimeError):
+            return result('ABSENT', dict(counts, missing='input.edn graph-coverage.drift.members-not-open'))
         for batch in sorted(generation.rglob('batch-*.jsonl')):
             if not batch.resolve().is_relative_to(generation):
                 return result('FAIL', {'rule': 'batch-outside-generation'})
@@ -636,16 +653,33 @@ def reading_source_current(run, queue_path=None):
                 if not isinstance(item, str) or not item.strip():
                     errors.append({'item': None, 'rule': 'missing-item-id'})
                     continue
+                in_view = item not in inactive
+                counts['in_view'] += in_view
                 if (not isinstance(pin, dict) or not isinstance(pin.get('path'), str)
                         or not Path(pin['path']).is_absolute()
                         or not isinstance(pin.get('sha256'), str)
                         or not re.fullmatch(r'[0-9a-f]{64}', pin['sha256'])):
-                    errors.append({'item': item, 'rule': 'no-source-pin'})
+                    if in_view:
+                        errors.append({'item': item, 'rule': 'no-source-pin'})
+                    else:
+                        inactive_unknown.append(item)
                     continue
                 try:
                     actual = hashlib.sha256(Path(pin['path']).read_bytes()).hexdigest()
                 except FileNotFoundError:
                     actual = None
+                except OSError:
+                    if in_view:
+                        raise
+                    inactive_unknown.append(item)
+                    continue
+                if not in_view:
+                    kind = ('current' if actual == pin['sha256'] else
+                            'missing' if actual is None else 'changed')
+                    counts['inactive_' + kind] += 1
+                    if len(inactive_ids[kind]) < 20:
+                        inactive_ids[kind].append(item)
+                    continue
                 if actual == pin['sha256']:
                     counts['current'] += 1
                 else:
@@ -677,6 +711,11 @@ def reading_source_current(run, queue_path=None):
             return result('FAIL', dict(counts, violations=errors[:20], total=len(errors)))
         if queue_missing:
             return result('ABSENT', dict(counts, missing='reread queue', unchecked=len(stale)))
+        if inactive_unknown:
+            return result('ABSENT', dict(counts, missing='inactive source pins or readable documents',
+                                        items=inactive_unknown[:20], total=len(inactive_unknown)))
+        if not counts['in_view']:
+            return result('ABSENT', dict(counts, missing='in-view reading records'))
         return result('PASS', counts)
     except (OSError, ValueError, TypeError, KeyError, IndexError, RuntimeError, sqlite3.Error):
         return result('FAIL', dict(counts, rule='invalid-generation-source-or-queue'))

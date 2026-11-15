@@ -711,6 +711,7 @@ class ReadingSourceTests(unittest.TestCase):
         self.generation.mkdir()
         (self.run / 'manifest.edn').write_text(
             '{:readings-generation {:path ' + json.dumps(str(self.generation)) + '}}')
+        self.scope()
         self.doc = self.root / 'invented.md'
         self.doc.write_bytes(b'invented source\r\n')
         self.old = hashlib.sha256(self.doc.read_bytes()).hexdigest()
@@ -728,6 +729,64 @@ class ReadingSourceTests(unittest.TestCase):
                 superseded_reason TEXT, attempts INTEGER NOT NULL DEFAULT 0,
                 last_error TEXT, landed_digest TEXT, last_answer TEXT,
                 PRIMARY KEY(target_id, source_sha))""")
+
+    def scope(self, inactive=()):
+        (self.run / 'input.edn').write_text(
+            '{:graph-coverage {:drift {:members-not-open ' + json.dumps(list(inactive)) + '}}}')
+
+    def test_inactive_changed_not_verified(self):
+        self.change()
+        self.assertEqual('FAIL', self.check()['status'])
+        self.scope(['T-invented'])
+        row = self.check()
+        self.assertEqual('ABSENT', row['status'])
+        self.assertEqual(1, row['detail']['inactive_changed'])
+        self.assertEqual(0, row['detail']['in_view'])
+        self.assertEqual(['T-invented'], row['detail']['inactive_ids']['changed'])
+
+    def test_inactive_missing_not_verified(self):
+        self.doc.unlink()
+        self.assertEqual('FAIL', self.check()['status'])
+        self.scope(['T-invented'])
+        row = self.check()
+        self.assertEqual('ABSENT', row['status'])
+        self.assertEqual(1, row['detail']['inactive_missing'])
+        self.assertEqual(0, row['detail']['source_missing'])
+
+    def test_inactive_current_not_verified(self):
+        self.scope(['T-invented'])
+        row = self.check()
+        self.assertEqual('ABSENT', row['status'])
+        self.assertEqual(1, row['detail']['inactive_current'])
+        self.assertEqual(0, row['detail']['current'])
+
+    def test_inactive_invalid_pin_is_absent_not_failure(self):
+        self.scope(['T-invented'])
+        del self.record['source']
+        self.write_record()
+        self.assertEqual('ABSENT', self.check()['status'])
+
+    def test_scope_required(self):
+        path = self.run / 'input.edn'
+        path.unlink()
+        self.assertEqual('ABSENT', self.check()['status'])
+        for text in ['{', '{}', '{:graph-coverage {:drift {}}}',
+                     '{:graph-coverage {:drift {:members-not-open nil}}}']:
+            path.write_text(text)
+            self.assertEqual('ABSENT', self.check()['status'])
+
+    def test_current_plus_inactive_changed(self):
+        extra = copy.deepcopy(self.record)
+        extra['id'] = 'T-inactive'
+        extra['source']['sha256'] = '0' * 64
+        self.batch.write_text(json.dumps(self.record) + '\n' + json.dumps(extra) + '\n')
+        self.scope(['T-inactive'])
+        self.queue.unlink()
+        row = self.check()
+        self.assertEqual('PASS', row['status'])
+        self.assertEqual(1, row['detail']['current'])
+        self.assertEqual(1, row['detail']['in_view'])
+        self.assertEqual(1, row['detail']['inactive_changed'])
 
     def write_record(self):
         self.batch.write_text(json.dumps(self.record) + '\n')
