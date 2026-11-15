@@ -435,8 +435,12 @@
                         (try
                           (let [now-ms (System/currentTimeMillis)
                                 window-ms (* 60 60 1000)]
-                            (queue/seat-health (queue/recent-outcomes (:store config) now-ms window-ms)
-                                               now-ms window-ms))
+                            ;; only configured reader seats: a maintenance pass
+                            ;; (e.g. zai-5-recovery) is not a seat to stop
+                            (select-keys
+                             (queue/seat-health (queue/recent-outcomes (:store config) now-ms window-ms)
+                                                now-ms window-ms)
+                             (:reader-seats config)))
                           (catch Exception _ nil)))]
     (merge queue-health
              {:reader-health reader-health
