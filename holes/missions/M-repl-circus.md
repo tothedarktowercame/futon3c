@@ -1005,6 +1005,11 @@ are what would have caught it.
 
 ## Open
 
+- Whether the shown top ten is a cascade in more than name: excursion
+  [E-stands-alone](../excursions/E-stands-alone.md), for the end of this
+  mission (Joe, 2026-11-15). The proved `top_ten_is_a_cascade` counts any
+  nonempty reason as "standing alone".
+
 - Making XTQL itself fast (Joe, 2026-11-12: run the zone maps through the
   pattern cascade): the follow-on mission futon1b `holes/M-xtdb-fast.md`.
 
