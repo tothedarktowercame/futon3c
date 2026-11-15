@@ -169,12 +169,36 @@
   [job]
   (job-text job))
 
+(def default-usage-backoff-ms (* 10 60 1000))
+
+(defn usage-failure
+  "Read Agency's terminal-message (JSON string or map), not the reader answer.
+   Provider reset timestamps without an offset are interpreted as UTC. Missing,
+   malformed or elapsed reset times use the bounded fallback backoff."
+  [job {:keys [clock usage-backoff-ms]
+        :or {clock #(System/currentTimeMillis)
+             usage-backoff-ms default-usage-backoff-ms}}]
+  (let [message (:terminal-message job)
+        text (if (string? message) message (pr-str message))]
+    (when (re-find #"(?i)(HTTP\s+429|limit exhausted|rate.?limit|too many requests)" text)
+      (let [now (clock)
+            timestamp (second (re-find #"(?i)reset at (\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})" text))
+            reset-ms (when timestamp
+                       (try (.toEpochMilli (.toInstant
+                                            (java.time.LocalDateTime/parse
+                                             (str/replace timestamp " " "T"))
+                                            java.time.ZoneOffset/UTC))
+                            (catch Exception _ nil)))]
+        {:ok false :reason :reader-usage-exhausted
+         :retry-at-ms (if (and reset-ms (> reset-ms now)) reset-ms
+                         (+ now usage-backoff-ms))}))))
+
 (defn agency-contact
   "Dispatch through the existing Agency bell CLI with an explicit --from,
   poll the returned job, and decode its single JSON record. Intended for the
   later timer; tests inject a contact function and never call Agency."
   [{:keys [reader-seat caller timeout-ms poll-ms]
-    :or {caller "giraffe-reread-worker" timeout-ms (* 40 60 1000) poll-ms 2000}}
+    :or {caller "giraffe-reread-worker" timeout-ms (* 40 60 1000) poll-ms 2000} :as opts}
    _request prompt]
   (let [sent (shell/sh "python3" "/home/joe/code/futon3c/scripts/agency_send.py"
                        "--from" caller "--to" reader-seat "--kind" "bell"
@@ -194,14 +218,16 @@
                 job (or (:job response) response)
                 state (some-> (:state job) name)]
             (if (contains? terminal-states state)
-              (if (not= "done" state)
-                {:ok false :reason :agency-job-failed :job-id job-id :state state
+              (if-let [usage (usage-failure job opts)]
+                (assoc usage :job-id job-id)
+                (if (not= "done" state)
+                  {:ok false :reason :agency-job-failed :job-id job-id :state state
                    :answer-text (job-text job)}
-                (let [text (job-text job)]
-                  (if-let [record (some-> text json-record)]
-                    {:ok true :record record :job-id job-id}
-                    {:ok false :reason :reader-record-invalid-json :job-id job-id
-                     :answer-text text})))
+                  (let [text (job-text job)]
+                    (if-let [record (some-> text json-record)]
+                      {:ok true :record record :job-id job-id}
+                      {:ok false :reason :reader-record-invalid-json :job-id job-id
+                       :answer-text text}))))
               (do (Thread/sleep poll-ms)
                   (recur (- remaining poll-ms))))))))))
 
@@ -213,7 +239,7 @@
   COMPLETER and never touch a repository or Agency."
   [{:keys [reader-seat caller kimi-task-repo timeout-ms poll-ms
            task-runner job-reader completer]
-    :or {caller "giraffe-reread-worker" timeout-ms (* 40 60 1000) poll-ms 2000}}
+    :or {caller "giraffe-reread-worker" timeout-ms (* 40 60 1000) poll-ms 2000} :as opts}
    request prompt]
   (let [packet (java.io.File/createTempFile "giraffe-reread-" ".md")
         default-runner
@@ -252,6 +278,9 @@
                         completion-ok? (or (nil? (:exit completion))
                                            (zero? (:exit completion)))]
                     (cond
+                      (usage-failure job opts)
+                      (assoc (usage-failure job opts) :job-id job-id :task-id task-id)
+
                       (not completion-ok?)
                       {:ok false :reason :kimi-requisition-completion-failed
                        :job-id job-id :task-id task-id}
@@ -290,6 +319,11 @@
     (let [checker (io/file pointer "check_edges.py")
           contact (contact-fn request (reading-prompt request checker))]
       (cond
+        (= :reader-usage-exhausted (:reason contact))
+        {:status :paused :reason :reader-usage-exhausted
+         :retry-at-ms (:retry-at-ms contact)
+         :request (queue/release-usage-claim! store request now-ms)}
+
         (not (:ok contact))
         {:status :failed
          :request (queue/settle! store request

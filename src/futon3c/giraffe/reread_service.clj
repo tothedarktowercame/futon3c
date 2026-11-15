@@ -508,8 +508,10 @@
                             ;; only configured reader seats: a maintenance pass
                             ;; (e.g. zai-5-recovery) is not a seat to stop
                             (select-keys
-                             (queue/seat-health (queue/recent-outcomes (:store config) now-ms window-ms)
-                                                now-ms window-ms)
+                             (merge
+                              (queue/seat-health (queue/recent-outcomes (:store config) now-ms window-ms)
+                                                 now-ms window-ms)
+                              (cli/usage-health (or (:seat-pauses config) cli/usage-pauses) now-ms))
                              (:reader-seats config)))
                           (catch Exception _ nil)))]
     (merge queue-health

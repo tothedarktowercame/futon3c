@@ -225,6 +225,19 @@
                (:target_id request) (:source_sha request)]
               query-opts))))
 
+(defn release-usage-claim!
+  "Release only this claim after provider refusal, preserving its attempt count.
+   Owner and lease guards prevent a late reply releasing a newer claim."
+  [store request now-ms]
+  (jdbc/execute! (:datasource store)
+                 ["UPDATE reread_requests SET state='pending',last_error='reader-usage-exhausted',lease_until_ms=NULL,claimed_by=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed' AND claimed_by IS ? AND lease_until_ms=?"
+                  now-ms (:target_id request) (:source_sha request)
+                  (:claimed_by request) (:lease_until_ms request)])
+  (some-> (jdbc/execute-one! (:datasource store)
+                           ["SELECT * FROM reread_requests WHERE target_id=? AND source_sha=?"
+                            (:target_id request) (:source_sha request)] query-opts)
+          kw-state))
+
 (defn settle!
   "Record a terminal attempt OUTCOME for claimed REQUEST.
 

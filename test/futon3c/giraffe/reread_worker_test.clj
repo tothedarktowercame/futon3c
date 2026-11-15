@@ -1,6 +1,7 @@
 (ns futon3c.giraffe.reread-worker-test
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.giraffe.corpus-generation :as generation]
@@ -164,3 +165,42 @@
     (is (= "E-invented" (:id (jr "```json\n{\"id\": \"E-invented\"}\n```"))))
     (is (= "E-invented" (:id (jr "{\"id\": \"E-invented\"}"))))
     (is (nil? (jr "no record here")))))
+
+(deftest usage-reset-and-fallback
+  (let [job {:terminal-message (json/generate-string
+                                {:message "HTTP 429"
+                                 :body {:error {:message "Limit Exhausted. Your limit will reset at 2030-01-02 03:04:05"}}})}
+        opts {:clock (constantly 100) :usage-backoff-ms 500}]
+    (is (= 1893553445000 (:retry-at-ms (worker/usage-failure job opts))))
+    (is (= 600 (:retry-at-ms (worker/usage-failure {:terminal-message "HTTP 429"} opts))))
+    (is (nil? (worker/usage-failure {:terminal-message "HTTP 500"} opts)))))
+
+(deftest usage-refusal-releases-without-spending-attempt
+  (let [f (fixture)
+        contact #(worker/kimi-contact
+                   {:reader-seat "reader-test" :clock (constantly 20)
+                    :task-runner (constantly {:ok true :task-id "E-toy" :job-id "invoke-toy"})
+                    :job-reader (constantly {:state "failed" :terminal-message "HTTP 429"})
+                    :completer (fn [& _] {:exit 0})} %1 %2)
+        result (worker/run-once! (opts f contact))
+        row (first (queue/requests (:store f)))]
+    (is (= :paused (:status result)))
+    (is (= :pending (:state row)))
+    (is (= 0 (:attempts row)))
+    (is (= :reader-usage-exhausted (:last_error row)))
+    ;; Ordinary failures still spend attempts and reach the unchanged cap.
+    (dotimes [_ 2]
+      (worker/run-once! (opts f (fn [& _] {:ok false :reason :agency-job-failed}))))
+    (let [failed (first (queue/requests (:store f)))]
+      (is (= :failed (:state failed)))
+      (is (= 2 (:attempts failed))))))
+
+(deftest agency-terminal-message-usage-refusal
+  (with-redefs [shell/sh (fn [& _] {:exit 0 :out "invoke-123-1-ab"})
+                slurp (fn [& _] (json/generate-string
+                                 {:job {:state "done" :terminal-code "invoke-error"
+                                        :terminal-message {:message "HTTP 429"}}}))]
+    (is (= {:ok false :reason :reader-usage-exhausted :retry-at-ms 600
+            :job-id "invoke-123-1-ab"}
+           (worker/agency-contact {:reader-seat "reader-test" :clock (constantly 100)
+                                   :usage-backoff-ms 500} {} "invented")))))

@@ -63,12 +63,21 @@
                   {:run-id (:run-id latest)
                    :at-ms (.lastModified latest-file)})}))
 
+(defonce usage-pauses (atom {}))
+
+(defn usage-health
+  "Process-local, reload-safe seat cooldowns. Expired seats can claim again."
+  [pauses now-ms]
+  (into {} (keep (fn [[seat pause]]
+                  (when (> (:retry-at-ms pause) now-ms)
+                    [seat (assoc pause :stop-dispatch? true)]))) @pauses))
+
 (defn drain-once!
   "One reader round and durable mint step; no authority census.
    :parallel? false keeps reader calls on the invoking service executor."
   [{:keys [reader-seat reader-seats kimi-task-repo store pointer generations-dir
            giraffe-root edges contact-fn contact-fns mint-fn now-ms
-           new-item-cap mint-window-ms mint-state-path parallel?]
+           new-item-cap mint-window-ms mint-state-path parallel? seat-pauses]
     :or {pointer default-pointer giraffe-root default-root edges default-edges parallel? true}}]
   (let [reader-seats (vec (or (seq reader-seats)
                               (when-not (str/blank? reader-seat) [reader-seat])))]
@@ -83,6 +92,7 @@
                       {:kind :giraffe-reread/mint-window-required})))
     (let [store (or store (queue/open-store))
           now-ms (or now-ms (System/currentTimeMillis))
+          seat-pauses (or seat-pauses usage-pauses)
           ;; GIRAFFE-SEAT-HEALTH: a seat whose terminal outcomes in the last hour
           ;; are >= 25% failures over >= 5 outcomes is not dispatched this round;
           ;; the window makes the stop self-lifting as failures age out.
@@ -90,6 +100,7 @@
                         (queue/seat-health (queue/recent-outcomes store now-ms (* 60 60 1000))
                                            now-ms (* 60 60 1000))
                         (catch Exception _ nil)) ; health never blocks a dispatch round
+          seat-health (merge seat-health (usage-health seat-pauses now-ms))
           stopped (into #{} (map key) (filter (comp :stop-dispatch? val) seat-health))
           reader-seats (vec (remove stopped reader-seats))
           contact-for (fn [seat]
@@ -100,10 +111,14 @@
                                        {:reader-seat seat :kimi-task-repo kimi-task-repo})
                               (partial worker/agency-contact {:reader-seat seat}))))
           run-seat (fn [seat]
-                     (worker/run-once!
-                      {:store store :pointer pointer :generations-dir generations-dir
-                       :contact-fn (contact-for seat) :now-ms now-ms
-                       :new-item-cap new-item-cap :reader-id seat}))
+                     (let [result (worker/run-once!
+                                   {:store store :pointer pointer :generations-dir generations-dir
+                                    :contact-fn (contact-for seat) :now-ms now-ms
+                                    :new-item-cap new-item-cap :reader-id seat})]
+                       (when (= :paused (:status result))
+                         (swap! seat-pauses assoc seat
+                                (select-keys result [:reason :retry-at-ms])))
+                       result))
           results (if parallel?
                     (mapv deref (mapv #(future (run-seat %)) reader-seats))
                     (mapv run-seat reader-seats))
@@ -119,7 +134,7 @@
                                        {:readings-root pointer
                                         :giraffe-root giraffe-root :edges edges}))})]
       {:workers results :mint mint-result
-       :reader-health seat-health
+       :reader-health (merge seat-health (usage-health seat-pauses now-ms))
        :seats-stopped (vec (sort stopped))})))
 
 (defn run-once!

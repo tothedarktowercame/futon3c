@@ -68,3 +68,31 @@
                    (catch clojure.lang.ExceptionInfo exc exc))]
     (is (= :giraffe-reread/new-item-cap-required
            (:kind (ex-data error))))))
+
+(deftest usage-pause-skips-only-that-seat-and-expires
+  (let [root (temp-dir)
+        store (queue/open-store (io/file root "queue.sqlite"))
+        pauses (atom {})
+        calls (atom [])
+        opts {:store store :pointer root :reader-seats ["reader-a"]
+              :seat-pauses pauses :parallel? false :new-item-cap 1
+              :mint-window-ms 1000 :mint-state-path (io/file root "mint.edn")
+              :mint-fn (fn [] (throw (Exception. "no landed reading")))
+              :contact-fns {"reader-a" (fn [& _] (swap! calls conj :a)
+                                         {:ok false :reason :reader-usage-exhausted :retry-at-ms 200})
+                            "reader-b" (fn [& _] (swap! calls conj :b)
+                                         {:ok false :reason :agency-job-failed})}}]
+    (queue/reconcile! store [{:id "M-toy" :source-pin {:path "/invented" :sha256 "new"}}]
+                      {:members []} 1)
+    (with-redefs [worker/reading-prompt (fn [& _] "invented prompt")]
+      (let [result (cli/drain-once! (assoc opts :now-ms 100))]
+        (is (= :reader-usage-exhausted (get-in result [:reader-health "reader-a" :reason])))
+        (is (= 200 (get-in result [:reader-health "reader-a" :retry-at-ms]))))
+      (cli/drain-once! (assoc opts :now-ms 150))
+      (is (= [:a] @calls) "all paused: no claims")
+      (cli/drain-once! (assoc opts :now-ms 150 :reader-seats ["reader-a" "reader-b"]))
+      (is (= [:a :b] @calls) "other seat still claims")
+      (is (= 1 (:attempts (first (queue/requests store)))))
+      (cli/drain-once! (assoc opts :now-ms 200))
+      (is (= [:a :b :a] @calls) "claimable at retry deadline")
+      (is (= 1 (:attempts (first (queue/requests store))))))))
