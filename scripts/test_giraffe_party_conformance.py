@@ -38,6 +38,8 @@ def fixture():
     for row in party['characters'][3]['top']:
         entry = next(e for e in passage['order'] if e['id'] == row['item'])
         row['reason'] = f"on harm line H2; Giraffe pass rank {entry['rank']}"
+    for row in party['characters'][2]['top']:
+        row['reason'] = 'ready (one small handoff); names alpha (convergence 2)'
     return party, passage, pending, lexicon
 
 
@@ -55,7 +57,7 @@ class ConformanceTests(unittest.TestCase):
         results = c.audit(*fixture())
         self.assertEqual({'PASS'}, {r['status'] for r in results if r['check'] not in
                           ('run_file_digests', 'one_current_reading', 'corpus_generation_digest')})
-        self.assertEqual('ABSENT', results[-3]['status'])
+        self.assertEqual('ABSENT', results[-4]['status'])
 
     def test_thor_mutation(self):
         data = fixture()
@@ -132,12 +134,14 @@ class ConformanceTests(unittest.TestCase):
         data[3].append({'entity': 'delta', 'status': 'partly', 'relations': 'uses alpha'})
         for row in data[0]['characters'][1]['top']:
             row['score'] = 4.5
+        for row in data[0]['characters'][2]['top']:
+            row['reason'] = 'ready (one small handoff); names alpha (convergence 3)'
         self.assertEqual(set(), failures(data))
 
     def test_missing_sources_are_declared(self):
         party, _, _, _ = fixture()
         results = c.audit(party)
-        self.assertEqual(11, sum(r['status'] == 'ABSENT' for r in results))
+        self.assertEqual(12, sum(r['status'] == 'ABSENT' for r in results))
         self.assertEqual(3, sum(r['status'] == 'PASS' for r in results))
 
     def test_missing_metric_is_not_zero(self):
@@ -191,10 +195,10 @@ class RunDigestTests(unittest.TestCase):
         self.assertEqual('PASS', row['status'])
         self.assertEqual({'files': 1}, row['detail'])
         rows = c.audit(*fixture(), run=self.run)
-        self.assertEqual(14, len(rows))
+        self.assertEqual(15, len(rows))
         self.assertEqual({'PASS'}, {r['status'] for r in rows if r['check'] not in
                           ('one_current_reading', 'corpus_generation_digest')})
-        self.assertEqual('ABSENT', rows[-3]['status'])
+        self.assertEqual('ABSENT', rows[-4]['status'])
 
     def test_changed_byte(self):
         self.input.write_bytes(b'{:items [1]}')
@@ -551,6 +555,73 @@ class ThyraReasonTests(unittest.TestCase):
         self.passage['order'][0]['rank'] = 0
         self.rows[0]['reason'] = 'on harm line H2; Giraffe pass rank 0'
         self.assertEqual('PASS', self.check()['status'])
+
+
+class QuestorReasonTests(unittest.TestCase):
+    def setUp(self):
+        # alpha and beta tie at 1; dormant has a known score of zero.
+        self.lexicon = [{'entity': 'alpha', 'status': 'partly', 'relations': 'uses beta'},
+                        {'entity': 'beta', 'status': 'partly', 'relations': ''},
+                        {'entity': 'dormant', 'status': 'done', 'relations': ''}]
+        self.pending = [{'id': 'T-ember', 'pending_label': c.READY,
+                         'entities': ['dormant', 'beta', 'alpha']},
+                        {'id': 'T-flint', 'pending_label': c.READY, 'entities': ['unknown']}]
+        self.rows = [{'item': 'T-ember', 'reason': c.READY + '; names beta (convergence 1)'},
+                     {'item': 'T-flint', 'reason': c.READY + '; names no scored feature'}]
+        self.party = {'characters': [{'id': 'questor', 'top': self.rows}]}
+
+    def check(self):
+        return c.questor_reasons_faithful(self.party, self.pending, self.lexicon)
+
+    def test_named_and_no_feature(self):
+        self.assertEqual('PASS', self.check()['status'])
+        self.assertEqual({'rows': 2, 'named': 1, 'no_feature': 1}, self.check()['detail'])
+
+    def test_wrong_convergence(self):
+        self.rows[0]['reason'] = c.READY + '; names beta (convergence 2)'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_nonbest(self):
+        self.rows[0]['reason'] = c.READY + '; names dormant (convergence 0)'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_scored_claims_no_feature(self):
+        self.rows[0]['reason'] = c.READY + '; names no scored feature'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_unscored_claims_feature(self):
+        self.rows[1]['reason'] = c.READY + '; names unknown (convergence 0)'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_extra_clause(self):
+        self.rows[0]['reason'] += '; extra'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_first_tie_wins(self):
+        self.assertEqual('PASS', self.check()['status'])
+        self.rows[0]['reason'] = c.READY + '; names alpha (convergence 1)'
+        self.assertEqual('FAIL', self.check()['status'])
+        self.pending[0]['entities'] = ['alpha', 'beta']
+        self.assertEqual('PASS', self.check()['status'])
+
+    def test_done_feature_with_zero_is_scored(self):
+        self.pending[0]['entities'] = ['dormant']
+        self.rows[0]['reason'] = c.READY + '; names dormant (convergence 0)'
+        self.assertEqual('PASS', self.check()['status'])
+
+    def test_missing_pending_entry(self):
+        self.pending.pop()
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_absent_sources_and_empty_top(self):
+        self.assertEqual('ABSENT', c.questor_reasons_faithful(self.party, None, self.lexicon)['status'])
+        self.assertEqual('ABSENT', c.questor_reasons_faithful(self.party, self.pending, None)['status'])
+        self.rows.clear()
+        self.assertEqual('ABSENT', self.check()['status'])
+
+    def test_ready_clause_required(self):
+        self.rows[0]['reason'] = 'nearly ready; names beta (convergence 1)'
+        self.assertEqual('FAIL', self.check()['status'])
 
 
 if __name__ == '__main__':

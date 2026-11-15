@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only, stdlib conformance audit. Run with python3 -I.
 
-Checks source values; Thor and Thyra checks also parse displayed reasons. Missing inputs produce
+Checks source values; character reason checks also parse displayed reasons. Missing inputs produce
 explicit ABSENT results; malformed inputs FAIL. An absence is not verification.
 Lean references are relative to futon5/lean-arxana. Sortedness theorems have
 sorted-input hypotheses: a failed check does not refute their Lean proofs.
@@ -33,6 +33,7 @@ CHECKS = {
     'corpus_generation_digest': 'Circus.Reproduction.Receipt.corpusGeneration',
     'thor_missing_counts': 'Circus.Characters.missing_count_is_violation',
     'thyra_reasons_faithful': 'Circus.Characters.thyra_terms_faithful',
+    'questor_reasons_faithful': 'Circus.Characters.questor_terms_faithful',
 }
 
 
@@ -229,6 +230,7 @@ def audit(party, pass_data=None, pending=None, lexicon=None, run=None):
     results.append(corpus_generation_digest(run))
     results.append(thor_missing_counts(party, pass_data))
     results.append(thyra_reasons_faithful(party, pass_data, pending))
+    results.append(questor_reasons_faithful(party, pending, lexicon))
     return results
 
 
@@ -380,6 +382,63 @@ def thyra_reasons_faithful(party, pass_data, pending):
         return result('PASS', {'rows': len(rows), 'ranked': ranked, 'not_in_pass': not_in_pass})
     except (IndexError, KeyError, TypeError, ValueError):
         return result('FAIL', {'kind': 'invalid-thyra-reason-input'})
+
+
+def questor_reasons_faithful(party, pending, lexicon):
+    """Parse exact whole clauses; pending/lexicon are current, unpinned files.
+
+    scripts/giraffe_party.py:198-209 questor_order chooses the highest-scoring
+    entity in pending.entities, considering ALL scored features (not only
+    unfinished ones). Strict > replacement retains the FIRST entity on ties.
+    Do not use best_named: that helper filters unfinished features for Merlin.
+    Scores here come from this checker's independent convergence calculation.
+    Lean Circus/Basic.lean:315-317 renders the terms; :349-351 defines their
+    faithfulness. Characters.lean:342,432,473 defines Questor terms/facts/proof.
+    This check verifies the ready clause; questor_cost_gate separately verifies
+    the pending ready label. PASS is against the current source files only.
+    """
+    def result(status, detail):
+        return {'check': 'questor_reasons_faithful',
+                'theorem': CHECKS['questor_reasons_faithful'], 'status': status, 'detail': detail}
+
+    if pending is None or lexicon is None:
+        return result('ABSENT', {'missing': 'pending index' if pending is None else 'lexicon'})
+    try:
+        characters = [ch for ch in party['characters'] if ch['id'] == 'questor']
+        if len(characters) != 1:
+            raise ValueError('invalid Questor character')
+        rows = characters[0]['top']
+        if not rows:
+            return result('ABSENT', {'missing': 'Questor top rows'})
+        sources = {row['id']: row for row in pending}
+        if len(sources) != len(pending):
+            raise ValueError('duplicate pending item')
+        scores, _ = convergence(lexicon)
+        violations, named, no_feature = [], 0, 0
+        for row in rows:
+            item = row['item']
+            if item not in sources:
+                violations.append({'item': item, 'rule': 'item-not-in-pending-index'})
+                continue
+            candidates = [entity for entity in (sources[item].get('entities') or [])
+                          if entity in scores]
+            # Python max is stable on ties, independently of producer's loop.
+            best = max(candidates, key=scores.__getitem__) if candidates else None
+            if best is None:
+                no_feature += 1
+                clause = 'names no scored feature'
+            else:
+                named += 1
+                clause = f'names {best} (convergence {scores[best]})'
+            reason = row.get('reason')
+            actual = [part.strip() for part in reason.split(';')] if isinstance(reason, str) else []
+            if actual != [READY, clause]:
+                violations.append({'item': item, 'rule': 'rendered-clauses-mismatch'})
+        if violations:
+            return result('FAIL', violations)
+        return result('PASS', {'rows': len(rows), 'named': named, 'no_feature': no_feature})
+    except (IndexError, KeyError, TypeError, ValueError):
+        return result('FAIL', {'kind': 'invalid-questor-reason-input'})
 
 
 def run_file_digests(run):
