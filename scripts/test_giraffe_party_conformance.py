@@ -35,6 +35,9 @@ def fixture():
     for row, entry in zip(party['characters'][0]['top'], passage['order']):
         row['reason'] = (f"unblocks {entry['unblocks']} item(s); "
                          f"cone of {entry['cone']} behind it")
+    for row in party['characters'][3]['top']:
+        entry = next(e for e in passage['order'] if e['id'] == row['item'])
+        row['reason'] = f"on harm line H2; Giraffe pass rank {entry['rank']}"
     return party, passage, pending, lexicon
 
 
@@ -52,7 +55,7 @@ class ConformanceTests(unittest.TestCase):
         results = c.audit(*fixture())
         self.assertEqual({'PASS'}, {r['status'] for r in results if r['check'] not in
                           ('run_file_digests', 'one_current_reading', 'corpus_generation_digest')})
-        self.assertEqual('ABSENT', results[-2]['status'])
+        self.assertEqual('ABSENT', results[-3]['status'])
 
     def test_thor_mutation(self):
         data = fixture()
@@ -69,7 +72,7 @@ class ConformanceTests(unittest.TestCase):
     def test_thyra_harm_mutation(self):
         data = fixture()
         data[2][-1]['harm'] = ''
-        self.assertEqual({'thyra_only_harm_items'}, failures(data))
+        self.assertEqual({'thyra_only_harm_items', 'thyra_reasons_faithful'}, failures(data))
 
     def test_thyra_rank_mutation(self):
         data = fixture()
@@ -134,7 +137,7 @@ class ConformanceTests(unittest.TestCase):
     def test_missing_sources_are_declared(self):
         party, _, _, _ = fixture()
         results = c.audit(party)
-        self.assertEqual(10, sum(r['status'] == 'ABSENT' for r in results))
+        self.assertEqual(11, sum(r['status'] == 'ABSENT' for r in results))
         self.assertEqual(3, sum(r['status'] == 'PASS' for r in results))
 
     def test_missing_metric_is_not_zero(self):
@@ -188,10 +191,10 @@ class RunDigestTests(unittest.TestCase):
         self.assertEqual('PASS', row['status'])
         self.assertEqual({'files': 1}, row['detail'])
         rows = c.audit(*fixture(), run=self.run)
-        self.assertEqual(13, len(rows))
+        self.assertEqual(14, len(rows))
         self.assertEqual({'PASS'}, {r['status'] for r in rows if r['check'] not in
                           ('one_current_reading', 'corpus_generation_digest')})
-        self.assertEqual('ABSENT', rows[-2]['status'])
+        self.assertEqual('ABSENT', rows[-3]['status'])
 
     def test_changed_byte(self):
         self.input.write_bytes(b'{:items [1]}')
@@ -491,6 +494,63 @@ class ThorMissingCountsTests(unittest.TestCase):
     def test_wrong_measured_clause(self):
         self.party['characters'][0]['top'][0]['reason'] = 'unblocks 12 item(s); cone of 0 behind it'
         self.assertEqual('FAIL', self.check()['status'])
+
+
+class ThyraReasonTests(unittest.TestCase):
+    def setUp(self):
+        self.pending = [{'id': 'T-ember', 'harm': 'H2', 'pending': 3},
+                        {'id': 'M-flint', 'harm': 'H4', 'pending': 7}]
+        self.passage = {'order': [{'id': 'T-ember', 'rank': 42}]}
+        self.rows = [{'item': 'T-ember', 'reason': 'on harm line H2; Giraffe pass rank 42'},
+                     {'item': 'M-flint', 'reason': 'on harm line H4; not in the Giraffe pass; pending level 7'}]
+        self.party = {'characters': [{'id': 'thyra', 'top': self.rows}]}
+
+    def check(self):
+        return c.thyra_reasons_faithful(self.party, self.passage, self.pending)
+
+    def test_correct(self):
+        self.assertEqual('PASS', self.check()['status'])
+        self.assertEqual({'rows': 2, 'ranked': 1, 'not_in_pass': 1}, self.check()['detail'])
+
+    def test_position_not_rank(self):
+        self.rows[0]['reason'] = 'on harm line H2; Giraffe pass rank 0'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_wrong_harm(self):
+        self.rows[0]['reason'] = 'on harm line H9; Giraffe pass rank 42'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_ranked_claims_not_in_pass(self):
+        self.rows[0]['reason'] = 'on harm line H2; not in the Giraffe pass; pending level 3'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_wrong_level(self):
+        self.rows[1]['reason'] = 'on harm line H4; not in the Giraffe pass; pending level 8'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_extra_clause(self):
+        self.rows[0]['reason'] += '; unfinished work within two hops'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_missing_pending_or_harm(self):
+        self.pending.pop()
+        self.assertEqual('FAIL', self.check()['status'])
+        self.rows.pop()
+        self.pending[0]['harm'] = ''
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_absent_inputs(self):
+        self.assertEqual('ABSENT', c.thyra_reasons_faithful(self.party, self.passage, None)['status'])
+        self.assertEqual('ABSENT', c.thyra_reasons_faithful(self.party, None, self.pending)['status'])
+        self.rows.clear()
+        self.assertEqual('ABSENT', self.check()['status'])
+
+    def test_null_rank_and_measured_zero(self):
+        self.passage['order'].append({'id': 'M-flint', 'rank': None})
+        self.assertEqual('PASS', self.check()['status'])
+        self.passage['order'][0]['rank'] = 0
+        self.rows[0]['reason'] = 'on harm line H2; Giraffe pass rank 0'
+        self.assertEqual('PASS', self.check()['status'])
 
 
 if __name__ == '__main__':

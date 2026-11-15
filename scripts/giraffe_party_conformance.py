@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read-only, stdlib conformance audit. Run with python3 -I.
 
-Checks source values; thor_missing_counts also parses displayed reasons. Missing inputs produce
+Checks source values; Thor and Thyra checks also parse displayed reasons. Missing inputs produce
 explicit ABSENT results; malformed inputs FAIL. An absence is not verification.
 Lean references are relative to futon5/lean-arxana. Sortedness theorems have
 sorted-input hypotheses: a failed check does not refute their Lean proofs.
@@ -32,6 +32,7 @@ CHECKS = {
     'one_current_reading': 'Circus.Supersession.OneCurrent',
     'corpus_generation_digest': 'Circus.Reproduction.Receipt.corpusGeneration',
     'thor_missing_counts': 'Circus.Characters.missing_count_is_violation',
+    'thyra_reasons_faithful': 'Circus.Characters.thyra_terms_faithful',
 }
 
 
@@ -227,6 +228,7 @@ def audit(party, pass_data=None, pending=None, lexicon=None, run=None):
     results.append(one_current_reading(run))
     results.append(corpus_generation_digest(run))
     results.append(thor_missing_counts(party, pass_data))
+    results.append(thyra_reasons_faithful(party, pass_data, pending))
     return results
 
 
@@ -311,6 +313,73 @@ def thor_missing_counts(party, pass_data):
                                'missing_counts': missing})
     except (IndexError, KeyError, TypeError, ValueError):
         return result('FAIL', {'kind': 'invalid-thor-count-input'})
+
+
+def thyra_reasons_faithful(party, pass_data, pending):
+    """Compare whole displayed semicolon clauses with source facts.
+
+    Lean: Circus/Basic.lean:307-310 (Term.render), :341-344 (Term.faithful);
+    Circus/Characters.lean:229 (thyraTerms), :427 (thyraFacts), :444
+    (thyra_terms_faithful). The pending index path is the CURRENT file, not
+    a pinned digest: PASS is against that file as it is now. Source rank is
+    the stored pass rank, never list position. Missing pass data is ABSENT,
+    not evidence that an item has no rank. notInPass renders as two clauses.
+    """
+    def result(status, detail):
+        return {'check': 'thyra_reasons_faithful',
+                'theorem': CHECKS['thyra_reasons_faithful'], 'status': status, 'detail': detail}
+
+    if pending is None or pass_data is None:
+        return result('ABSENT', {'missing': 'pending index' if pending is None else 'pass.edn'})
+    try:
+        characters = [ch for ch in party['characters'] if ch['id'] == 'thyra']
+        if len(characters) != 1:
+            raise ValueError('invalid Thyra character')
+        rows = characters[0]['top']
+        if not rows:
+            return result('ABSENT', {'missing': 'Thyra top rows'})
+        pending_by_id = {row['id']: row for row in pending}
+        entries = pass_data['order']
+        pass_by_id = {row['id']: row for row in entries}
+        if len(pending_by_id) != len(pending) or len(pass_by_id) != len(entries):
+            raise ValueError('duplicate source item')
+        violations, ranked, not_in_pass = [], 0, 0
+        def bad(item, rule):
+            violations.append({'item': item, 'rule': rule})
+        for row in rows:
+            item = row['item']
+            if item not in pending_by_id:
+                bad(item, 'item-not-in-pending-index')
+                continue
+            source = pending_by_id[item]
+            harm = source.get('harm')
+            if not isinstance(harm, str) or not harm.strip():
+                bad(item, 'harm-line-missing')
+                continue
+            expected = ['on harm line ' + harm.strip()]
+            rank = pass_by_id.get(item, {}).get('rank')
+            if rank is not None:
+                if type(rank) is not int or rank < 0:
+                    bad(item, 'source-rank-not-nat')
+                    continue
+                ranked += 1
+                expected.append(f'Giraffe pass rank {rank}')
+            else:
+                level = source.get('pending')
+                if type(level) is not int or level < 0:
+                    bad(item, 'source-level-not-nat')
+                    continue
+                not_in_pass += 1
+                expected.extend(['not in the Giraffe pass', f'pending level {level}'])
+            reason = row.get('reason')
+            actual = [part.strip() for part in reason.split(';')] if isinstance(reason, str) else []
+            if actual != expected:
+                bad(item, 'rendered-clauses-mismatch')
+        if violations:
+            return result('FAIL', violations)
+        return result('PASS', {'rows': len(rows), 'ranked': ranked, 'not_in_pass': not_in_pass})
+    except (IndexError, KeyError, TypeError, ValueError):
+        return result('FAIL', {'kind': 'invalid-thyra-reason-input'})
 
 
 def run_file_digests(run):
