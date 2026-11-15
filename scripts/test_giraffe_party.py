@@ -71,6 +71,11 @@ thor = gp.thor_order(PASS_ORDER, 10)
 check("thor: Giraffe's own order, unblocks then cone",
       [t["item"] for t in thor] == ["M-alpha", "T-harm", "E-quick"]
       and "unblocks 3" in thor[0]["reason"] and "cone of 5" in thor[0]["reason"])
+unranked = gp.thor_order([{"id": "M-unranked", "unblocks": 1, "cone": 1}], 10)
+check("thor: a missing pass rank is said, never printed as rank 0",
+      unranked[0]["reason"].endswith("no Giraffe pass rank")
+      and "rank 0" not in unranked[0]["reason"]
+      and thor[0]["reason"].endswith("Giraffe pass rank 1"))
 
 merlin, m_abs = gp.merlin_order(PENDING, SCORES, SLUGS, 10)
 # M-alpha: is alpha (1) + half of beta (1) = 1.5; E-dead dropped;

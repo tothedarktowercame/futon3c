@@ -123,13 +123,17 @@ def thor_order(pass_order, top=10):
     """Giraffe's own order (unblocks, then cone), first `top`."""
     out = []
     for entry in pass_order[:top]:
+        rank = entry.get("rank")
+        # A missing rank is said, never printed as rank 0 (the reason must
+        # be true of its basis; futon5 Circus.Characters thor_terms_faithful).
         out.append({"item": entry["id"],
                     "score": entry.get("unblocks"),
-                    "reason": "unblocks %d item(s); cone of %d behind it; "
-                              "Giraffe pass rank %d"
+                    "reason": "unblocks %d item(s); cone of %d behind it; %s"
                               % (entry.get("unblocks") or 0,
                                  entry.get("cone") or 0,
-                                 entry.get("rank") or 0)})
+                                 "Giraffe pass rank %d" % rank
+                                 if rank is not None else
+                                 "no Giraffe pass rank")})
     return out
 
 
