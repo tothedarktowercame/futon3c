@@ -34,6 +34,7 @@ CHECKS = {
     'thor_missing_counts': 'Circus.Characters.missing_count_is_violation',
     'thyra_reasons_faithful': 'Circus.Characters.thyra_terms_faithful',
     'questor_reasons_faithful': 'Circus.Characters.questor_terms_faithful',
+    'merlin_reasons_faithful': 'Circus.Characters.merlin_terms_faithful',
 }
 
 
@@ -231,6 +232,7 @@ def audit(party, pass_data=None, pending=None, lexicon=None, run=None):
     results.append(thor_missing_counts(party, pass_data))
     results.append(thyra_reasons_faithful(party, pass_data, pending))
     results.append(questor_reasons_faithful(party, pending, lexicon))
+    results.append(merlin_reasons_faithful(party, pending, lexicon))
     return results
 
 
@@ -439,6 +441,68 @@ def questor_reasons_faithful(party, pending, lexicon):
         return result('PASS', {'rows': len(rows), 'named': named, 'no_feature': no_feature})
     except (IndexError, KeyError, TypeError, ValueError):
         return result('FAIL', {'kind': 'invalid-questor-reason-input'})
+
+
+def merlin_reasons_faithful(party, pending, lexicon):
+    """Check the EXACT producer surface, using independent source convergence.
+
+    giraffe_party.py:178-183 groups featureIs/convergence/withinTwoHops
+    (Circus/Characters.lean:304-309, Basic.lean:311-314) into one parenthesized
+    clause: that grouping is the producer's, not the model's term list.
+    best_named (:188-191) considers only unfinished scored entities and keeps
+    the first maximum in entities order. The optional clause appears iff the
+    named count is nonzero (:183), agreeing with Lean on nonnegative counts.
+    M is the FULL named convergence; only the score contribution is halved.
+    merlinKept (:301-302) excludes unwanted items and absent own features.
+    Pending and lexicon are current files, not pinned digests.
+    """
+    def result(status, detail):
+        return {'check': 'merlin_reasons_faithful',
+                'theorem': CHECKS['merlin_reasons_faithful'], 'status': status, 'detail': detail}
+
+    if pending is None or lexicon is None:
+        return result('ABSENT', {'missing': 'pending index' if pending is None else 'lexicon'})
+    try:
+        characters = [ch for ch in party['characters'] if ch['id'] == 'merlin']
+        if len(characters) != 1:
+            raise ValueError('invalid Merlin character')
+        rows = characters[0]['top']
+        if not rows:
+            return result('ABSENT', {'missing': 'Merlin top rows'})
+        sources = {row['id']: row for row in pending}
+        if len(sources) != len(pending):
+            raise ValueError('duplicate pending item')
+        scores, unfinished = convergence(lexicon)
+        violations, with_named, without_named = [], 0, 0
+        for row in rows:
+            item = row['item']
+            if item not in sources:
+                violations.append({'item': item, 'rule': 'item-not-in-pending-index'})
+                continue
+            source = sources[item]
+            match = re.fullmatch(r'[MET]-(.+)', item)
+            feature = match.group(1) if match else item
+            if source.get('pending_label') == 'may be no longer wanted' or feature not in scores:
+                violations.append({'item': item, 'rule': 'merlin-kept-excludes-row'})
+                continue
+            candidates = [entity for entity in (source.get('entities') or [])
+                          if entity in scores and entity in unfinished]
+            best = max(candidates, key=scores.__getitem__) if candidates else None
+            named = scores[best] if best is not None else 0
+            expected = f'is {feature} (convergence {scores[feature]}, unfinished work within two hops)'
+            if named != 0:
+                with_named += 1
+                expected += f'; names {best} (convergence {named}, halved)'
+            else:
+                without_named += 1
+            if row.get('reason') != expected:
+                violations.append({'item': item, 'rule': 'rendered-reason-mismatch'})
+        if violations:
+            return result('FAIL', violations)
+        return result('PASS', {'rows': len(rows), 'with_named': with_named,
+                               'without_named': without_named})
+    except (IndexError, KeyError, TypeError, ValueError):
+        return result('FAIL', {'kind': 'invalid-merlin-reason-input'})
 
 
 def run_file_digests(run):

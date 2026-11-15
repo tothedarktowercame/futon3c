@@ -40,6 +40,9 @@ def fixture():
         row['reason'] = f"on harm line H2; Giraffe pass rank {entry['rank']}"
     for row in party['characters'][2]['top']:
         row['reason'] = 'ready (one small handoff); names alpha (convergence 2)'
+    for row in party['characters'][1]['top']:
+        row['reason'] = (f"is {row['item'][2:]} (convergence 2, unfinished work within two hops)"
+                         "; names alpha (convergence 2, halved)")
     return party, passage, pending, lexicon
 
 
@@ -57,7 +60,7 @@ class ConformanceTests(unittest.TestCase):
         results = c.audit(*fixture())
         self.assertEqual({'PASS'}, {r['status'] for r in results if r['check'] not in
                           ('run_file_digests', 'one_current_reading', 'corpus_generation_digest')})
-        self.assertEqual('ABSENT', results[-4]['status'])
+        self.assertEqual('ABSENT', results[-5]['status'])
 
     def test_thor_mutation(self):
         data = fixture()
@@ -92,7 +95,7 @@ class ConformanceTests(unittest.TestCase):
         data = fixture()
         data[2][2]['entities'] = []
         data[0]['characters'][1]['top'][0]['score'] = 2
-        self.assertEqual({'merlin_monotone_score'}, failures(data))
+        self.assertEqual({'merlin_monotone_score', 'merlin_reasons_faithful'}, failures(data))
 
     def test_merlin_score_not_trusted(self):
         data = fixture()
@@ -134,6 +137,7 @@ class ConformanceTests(unittest.TestCase):
         data[3].append({'entity': 'delta', 'status': 'partly', 'relations': 'uses alpha'})
         for row in data[0]['characters'][1]['top']:
             row['score'] = 4.5
+            row['reason'] = row['reason'].replace('convergence 2', 'convergence 3')
         for row in data[0]['characters'][2]['top']:
             row['reason'] = 'ready (one small handoff); names alpha (convergence 3)'
         self.assertEqual(set(), failures(data))
@@ -141,7 +145,7 @@ class ConformanceTests(unittest.TestCase):
     def test_missing_sources_are_declared(self):
         party, _, _, _ = fixture()
         results = c.audit(party)
-        self.assertEqual(12, sum(r['status'] == 'ABSENT' for r in results))
+        self.assertEqual(13, sum(r['status'] == 'ABSENT' for r in results))
         self.assertEqual(3, sum(r['status'] == 'PASS' for r in results))
 
     def test_missing_metric_is_not_zero(self):
@@ -195,10 +199,10 @@ class RunDigestTests(unittest.TestCase):
         self.assertEqual('PASS', row['status'])
         self.assertEqual({'files': 1}, row['detail'])
         rows = c.audit(*fixture(), run=self.run)
-        self.assertEqual(15, len(rows))
+        self.assertEqual(16, len(rows))
         self.assertEqual({'PASS'}, {r['status'] for r in rows if r['check'] not in
                           ('one_current_reading', 'corpus_generation_digest')})
-        self.assertEqual('ABSENT', rows[-4]['status'])
+        self.assertEqual('ABSENT', rows[-5]['status'])
 
     def test_changed_byte(self):
         self.input.write_bytes(b'{:items [1]}')
@@ -621,6 +625,77 @@ class QuestorReasonTests(unittest.TestCase):
 
     def test_ready_clause_required(self):
         self.rows[0]['reason'] = 'nearly ready; names beta (convergence 1)'
+        self.assertEqual('FAIL', self.check()['status'])
+
+
+class MerlinReasonTests(unittest.TestCase):
+    def setUp(self):
+        self.lexicon = [{'entity': 'alpha', 'status': 'partly', 'relations': 'uses beta'},
+                        {'entity': 'beta', 'status': 'hypothesised', 'relations': ''},
+                        {'entity': 'finished', 'status': 'done', 'relations': 'uses alpha'},
+                        {'entity': 'quiet', 'status': 'partly', 'relations': ''}]
+        # finished has convergence 2 but must be skipped; beta and alpha tie at 1.
+        self.pending = [{'id': 'M-alpha', 'pending_label': 'partly',
+                         'entities': ['finished', 'beta', 'alpha']},
+                        {'id': 'T-quiet', 'pending_label': 'partly', 'entities': ['quiet']}]
+        self.rows = [{'item': 'M-alpha', 'reason':
+                      'is alpha (convergence 1, unfinished work within two hops); names beta (convergence 1, halved)'},
+                     {'item': 'T-quiet', 'reason':
+                      'is quiet (convergence 0, unfinished work within two hops)'}]
+        self.party = {'characters': [{'id': 'merlin', 'top': self.rows}]}
+
+    def check(self):
+        return c.merlin_reasons_faithful(self.party, self.pending, self.lexicon)
+
+    def test_correct(self):
+        self.assertEqual('PASS', self.check()['status'])
+        self.assertEqual({'rows': 2, 'with_named': 1, 'without_named': 1}, self.check()['detail'])
+
+    def test_wrong_own(self):
+        self.rows[0]['reason'] = self.rows[0]['reason'].replace('convergence 1, unfinished', 'convergence 2, unfinished')
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_wrong_feature(self):
+        self.rows[0]['reason'] = self.rows[0]['reason'].replace('is alpha', 'is beta')
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_finished_named(self):
+        self.rows[0]['reason'] = self.rows[0]['reason'].replace('names beta (convergence 1', 'names finished (convergence 2')
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_zero_named_clause(self):
+        self.rows[1]['reason'] += '; names quiet (convergence 0, halved)'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_required_named_missing(self):
+        self.rows[0]['reason'] = self.rows[0]['reason'].split(';')[0]
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_extra_clause(self):
+        self.rows[0]['reason'] += '; extra'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_first_tie_wins(self):
+        self.rows[0]['reason'] = self.rows[0]['reason'].replace('names beta', 'names alpha')
+        self.assertEqual('FAIL', self.check()['status'])
+        self.pending[0]['entities'] = ['alpha', 'beta']
+        self.assertEqual('PASS', self.check()['status'])
+
+    def test_excluded_rows(self):
+        self.pending[0]['pending_label'] = 'may be no longer wanted'
+        self.assertEqual('FAIL', self.check()['status'])
+        self.pending[0]['pending_label'] = 'partly'
+        self.pending[0]['id'] = self.rows[0]['item'] = 'M-absent'
+        self.assertEqual('FAIL', self.check()['status'])
+
+    def test_absent(self):
+        self.assertEqual('ABSENT', c.merlin_reasons_faithful(self.party, self.pending, None)['status'])
+        self.assertEqual('ABSENT', c.merlin_reasons_faithful(self.party, None, self.lexicon)['status'])
+        self.rows.clear()
+        self.assertEqual('ABSENT', self.check()['status'])
+
+    def test_full_named_count_not_half(self):
+        self.rows[0]['reason'] = self.rows[0]['reason'].replace('convergence 1, halved', 'convergence 0.5, halved')
         self.assertEqual('FAIL', self.check()['status'])
 
 
