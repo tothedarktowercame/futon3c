@@ -358,8 +358,15 @@
   ([] (start! {}))
   ([opts]
    (locking lock
-     (let [old-executor (:executor @state)]
-       (if (and old-executor (not (.isTerminated ^ScheduledThreadPoolExecutor old-executor)))
+     (let [old-executor (:executor @state)
+           old-preview (:preview-executor @state)]
+       ;; Refuse only a RUNNING executor. One that stop! has shut down may
+       ;; still be finishing an in-flight reading (an Agency job can take many
+       ;; minutes); start! no longer waits for it: the new executor's first
+       ;; task does, so rounds stay serial and the in-flight reading still
+       ;; settles through the queue (claude-13, 2026-11-15: restart after
+       ;; stop! returned :already-started for ~5 minutes).
+       (if (and old-executor (not (.isShutdown ^ScheduledThreadPoolExecutor old-executor)))
          {:status :already-started :service-status (:status @state)}
          (let [config (load-config opts)
                config (assoc config :store (or (:store config) (queue/open-store)) :parallel? false
@@ -382,10 +389,20 @@
                           :discussed {} :seen-turns #{}
                           :refresh-items #{} :refresh-run-id nil
                           :refresh-running? false :refresh-requested? false :last-refresh nil
-                          :unknown-turn-item-count 0 :ambiguous-turn-item-count 0})
+                          :unknown-turn-item-count 0 :ambiguous-turn-item-count 0
+                          :draining-previous? (boolean
+                                               (some #(and % (not (.isTerminated ^ScheduledThreadPoolExecutor %)))
+                                                     [old-executor old-preview]))})
            (.execute executor
                      ^Runnable
                      (fn []
+                       ;; wait out the previous executors' in-flight work
+                       (doseq [^ScheduledThreadPoolExecutor ex [old-executor old-preview]
+                               :when ex]
+                         (while (and (active? token)
+                                     (not (.awaitTermination ex 5 TimeUnit/SECONDS)))))
+                       (swap! state #(if (identical? token (:token %))
+                                       (assoc % :draining-previous? false) %))
                        (when (active? token)
                          (try
                            (let [snapshot-fn (or (:snapshot-fn config) cli/authority-snapshot)

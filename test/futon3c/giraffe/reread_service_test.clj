@@ -4,6 +4,7 @@
             [clojure.java.shell :as shell]
             [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures]]
+            [futon3c.giraffe.preview-refresh]
             [futon3c.giraffe.readings :as readings]
             [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.reread-cli :as cli]
@@ -460,3 +461,36 @@
   (let [r (futon3c.giraffe.preview-refresh/default-exec ["echo" "ok"])]
     (is (zero? (:exit r)))
     (is (= "ok" (clojure.string/trim (:out r))))))
+
+(deftest restart-during-an-in-flight-reading-starts-at-once-and-stays-serial
+  ;; claude-13, 2026-11-15: start! after stop! returned :already-started for
+  ;; as long as the old executor's reading ran (~5 min live). start! now
+  ;; returns at once; the new executor's first task waits for the old one.
+  (let [config (fixture) gate (promise) first-in (promise) second-in (promise)
+        calls (atom 0) overlap (atom false) running (atom 0)]
+    (with-redefs [worker/run-once!
+                  (fn [_]
+                    (when (> (swap! running inc) 1) (reset! overlap true))
+                    (try
+                      (case (swap! calls inc)
+                        1 (do (deliver first-in true) @gate)
+                        2 (deliver second-in true)
+                        nil)
+                      {:status :idle}
+                      (finally (swap! running dec))))]
+      (is (= :starting (:status (service/start! config))))
+      (is (= true (deref first-in 2000 :timeout)))
+      (let [old-executor (:executor (service-state))]
+        (service/stop!)
+        (is (= :starting (:status (service/start! config)))
+            "restart does not wait for the in-flight reading")
+        (is (= :already-started (:status (service/start! config)))
+            "a running executor is still refused")
+        (is (true? (:draining-previous? (service-state))))
+        (is (= :timeout (deref second-in 300 :timeout))
+            "the new boot round waits for the old reading")
+        (deliver gate true)
+        (is (.awaitTermination ^ScheduledThreadPoolExecutor old-executor 2 TimeUnit/SECONDS))
+        (is (= true (deref second-in 2000 :timeout)))
+        (is (false? @overlap) "two rounds never ran at once")
+        (is (false? (:draining-previous? (service-state))))))))
