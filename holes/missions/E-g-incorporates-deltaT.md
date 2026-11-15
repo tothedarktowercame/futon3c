@@ -1,7 +1,7 @@
 # Excursion: G incorporates ΔT — pull structural-pressure into the EFE decomposition itself
 
 **Type:** Excursion (E-prefix; bounded scope-out from a mission; multi-cycle pilot work; see [[project_e_prefix_excursions]] for the convention).
-**Status:** CYCLE 2 DRAFTED — implementation landed locally + live WM cache recomputed; awaiting claude-1 review / operator ratification before Cycle 3.
+**Status:** IN-PROGRESS (set 2026-11-15 by claude-13 at Joe's request) — was: CYCLE 2 DRAFTED — implementation landed locally + live WM cache recomputed; awaiting claude-1 review / operator ratification before Cycle 3.
 **Date:** 2026-05-27
 **Author + end-to-end owner:** claude-1 (`:war-machine-pilot` peripheral, emacs-repl surface paired with Joe). Codex-5 likely co-pilot for the implementation cars.
 **Parent mission:** `~/code/futon3c/holes/missions/M-action-cost-modelling.md` (this excursion executes v1 of car #4's work; v0 was the post-AIF tie-breaker shipped 2026-05-27 INSTANTIATE).

@@ -4,7 +4,7 @@ Raised by joe + claude-13, 2026-08-24, out of the futon-2026 paper work.
 Sibling of `T-forward-model-vs-active-work.md` (same series, same root cause:
 the loop has no representation of the participant outside it).
 
-**Status: DESIGN CONSTRAINT. Blocked on a prior question — see Blocker.**
+**Status:** BLOCKED (set 2026-11-15 by claude-13 at Joe's request) — was: DESIGN CONSTRAINT. Blocked on a prior question — see Blocker.**
 
 ## The run record this falls out of
 

@@ -3,7 +3,7 @@
 Raised by joe + claude-13, 2026-08-24, out of the futon-2026 paper work
 (`p4ng/sec-operator.tex` Fig. `fig:cascade`, `p4ng/sec-turn-chain.tex` Fig. 2).
 
-**Status: FINDING, not a defect. Do not hotfix.** Joe's call, and the reason is
+**Status:** DEFERRED (set 2026-11-15 by claude-13 at Joe's request) — was: FINDING, not a defect. Do not hotfix.** Joe's call, and the reason is
 the substance of the ticket: the mismatch is itself a high-precision signal, and
 flattening it into a marking convention destroys the thing worth reading.
 
