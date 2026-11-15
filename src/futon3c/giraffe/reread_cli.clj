@@ -82,6 +82,16 @@
       (throw (ex-info "FUTON3C_GIRAFFE_REREAD_MINT_WINDOW_MS is required"
                       {:kind :giraffe-reread/mint-window-required})))
     (let [store (or store (queue/open-store))
+          now-ms (or now-ms (System/currentTimeMillis))
+          ;; GIRAFFE-SEAT-HEALTH: a seat whose terminal outcomes in the last hour
+          ;; are >= 25% failures over >= 5 outcomes is not dispatched this round;
+          ;; the window makes the stop self-lifting as failures age out.
+          seat-health (try
+                        (queue/seat-health (queue/recent-outcomes store now-ms (* 60 60 1000))
+                                           now-ms (* 60 60 1000))
+                        (catch Exception _ nil)) ; health never blocks a dispatch round
+          stopped (into #{} (map key) (filter (comp :stop-dispatch? val) seat-health))
+          reader-seats (vec (remove stopped reader-seats))
           contact-for (fn [seat]
                         (or (get contact-fns seat)
                             contact-fn
@@ -92,7 +102,7 @@
           run-seat (fn [seat]
                      (worker/run-once!
                       {:store store :pointer pointer :generations-dir generations-dir
-                       :contact-fn (contact-for seat) :now-ms (or now-ms (System/currentTimeMillis))
+                       :contact-fn (contact-for seat) :now-ms now-ms
                        :new-item-cap new-item-cap :reader-id seat}))
           results (if parallel?
                     (mapv deref (mapv #(future (run-seat %)) reader-seats))
@@ -108,7 +118,9 @@
                                      #(mint/supported-mint!
                                        {:readings-root pointer
                                         :giraffe-root giraffe-root :edges edges}))})]
-      {:workers results :mint mint-result})))
+      {:workers results :mint mint-result
+       :reader-health seat-health
+       :seats-stopped (vec (sort stopped))})))
 
 (defn run-once!
   "One full authority reconciliation followed by a reader/mint round."

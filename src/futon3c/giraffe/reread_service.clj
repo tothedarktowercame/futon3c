@@ -430,10 +430,21 @@
                               {:status :unavailable :health-error (.getMessage e)
                                :requests (try (queue/requests (:store config))
                                               (catch Exception q
-                                                {:unavailable (.getMessage q)}))})))]
+                                                {:unavailable (.getMessage q)}))})))
+        reader-health (when config
+                        (try
+                          (let [now-ms (System/currentTimeMillis)
+                                window-ms (* 60 60 1000)]
+                            (queue/seat-health (queue/recent-outcomes (:store config) now-ms window-ms)
+                                               now-ms window-ms))
+                          (catch Exception _ nil)))]
     (merge queue-health
-           {:status (cond (or (seq errors) (= :failed (:status last-mint))
-                              (= :unavailable (:status queue-health))) :attention
+             {:reader-health reader-health
+              :seats-stopped (vec (sort (keep (fn [[seat h]] (when (:stop-dispatch? h) seat))
+                                              (or reader-health {}))))
+              :status (cond (or (seq errors) (= :failed (:status last-mint))
+                                (= :unavailable (:status queue-health))
+                                (some :stop-dispatch? (vals (or reader-health {})))) :attention
                           (= :stopped status) (if (and executor (not (.isTerminated ^ScheduledThreadPoolExecutor executor)))
                                                 :stopping :stopped)
                           :else status)

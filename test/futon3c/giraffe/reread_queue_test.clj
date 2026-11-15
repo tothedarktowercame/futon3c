@@ -29,7 +29,7 @@
              :source_path "/code/futon/holes/M-one.md" :state :pending
              :requested_at_ms 10 :updated_at_ms 10 :lease_until_ms nil
              :superseded_by_sha nil :superseded_reason nil :attempts 0
-             :last_error nil :landed_digest nil :claimed_by nil}]
+             :last_error nil :landed_digest nil :claimed_by nil :last_answer nil}]
            (queue/requests store)))
     (testing "the database is a cache of authority, not the only copy"
       (doseq [suffix ["" "-wal" "-shm"]

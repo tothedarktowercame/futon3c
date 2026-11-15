@@ -50,6 +50,11 @@
      (ensure-column! store "last_error" "last_error TEXT")
      (ensure-column! store "landed_digest" "landed_digest TEXT")
      (ensure-column! store "claimed_by" "claimed_by TEXT")
+    ;; S2/GIRAFFE-RECOVERY (2026-11-15): a parse or landing failure must keep
+    ;; the reader's raw answer so it can be re-parsed after a json-record fix,
+    ;; instead of being silently discarded (29 valid readings were lost to a
+    ;; prose-prefix bug before this column existed).
+    (ensure-column! store "last_answer" "last_answer TEXT")
      (jdbc/execute! (:datasource store)
                     ["CREATE INDEX IF NOT EXISTS reread_requests_state_idx ON reread_requests(state, requested_at_ms)"])
      store)))
@@ -248,10 +253,87 @@
           (let [attempts (inc (long (or (:attempts current) 0)))
                 state (if (>= attempts max-attempts) "failed" "pending")]
             (jdbc/execute! tx
-                           ["UPDATE reread_requests SET state=?,attempts=?,last_error=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed'"
-                            state attempts (keyword-text (:reason outcome)) now-ms
+                           ["UPDATE reread_requests SET state=?,attempts=?,last_error=?,last_answer=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed'"
+                            state attempts (keyword-text (:reason outcome))
+                            (or (:answer-text outcome) (:last_answer current))
+                            now-ms
                             (:target_id request) (:source_sha request)]))))
       (some-> (jdbc/execute-one!
                tx ["SELECT * FROM reread_requests WHERE target_id=? AND source_sha=?"
                    (:target_id request) (:source_sha request)] query-opts)
               kw-state))))
+
+(defn requeue!
+  "Return a terminally FAILED request to pending with a clean attempt
+  history (a refusal that did no work is not a spent attempt). last_answer
+  survives for the record; the stale last_error is cleared so a pending row
+  never carries a misleading reason."
+  [store request now-ms]
+  {:pre [(contains? #{:failed} (:state request))]}
+  (jdbc/execute! (:datasource store)
+                 ["UPDATE reread_requests SET state='pending',attempts=0,last_error=NULL,lease_until_ms=NULL,claimed_by=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='failed'"
+                  now-ms (:target_id request) (:source_sha request)])
+  (some-> (jdbc/execute-one! (:datasource store)
+                             ["SELECT * FROM reread_requests WHERE target_id=? AND source_sha=?"
+                              (:target_id request) (:source_sha request)]
+                             query-opts)
+          kw-state))
+
+(defn reclaim-for-retry!
+  "Move a terminally FAILED request back to 'claimed' for READER-ID so a
+  maintenance pass can settle it (settle! only writes claimed rows). Returns
+  the reclaimed row, or nil when another writer got there first."
+  [store request reader-id now-ms lease-ms]
+  (let [updated (first (jdbc/execute! (:datasource store)
+                                      ["UPDATE reread_requests SET state='claimed',claimed_by=?,lease_until_ms=?,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='failed'"
+                                       reader-id (+ (long now-ms) (long lease-ms)) now-ms
+                                       (:target_id request) (:source_sha request)]))
+        n (long (or (:next.jdbc/update-count updated) 0))]
+    (when (pos? n)
+      (assoc request :state "claimed" :claimed_by reader-id))))
+
+(def default-seat-failure-threshold 0.25)
+(def default-seat-min-outcomes 5)
+
+(defn seat-health
+  "Per reader seat, terminal outcomes inside the window ending NOW-MS:
+  landings vs failures by reason, the failure share, and a stop-dispatch
+  verdict once a seat's share passes THRESHOLD over at least MIN-OUTCOMES
+  outcomes. Pure over ROWS (recent-outcomes); the window makes the stop
+  self-lifting: failures age out and dispatch resumes without state."
+  ([rows now-ms window-ms]
+   (seat-health rows now-ms window-ms {}))
+  ([rows now-ms window-ms {:keys [threshold min-outcomes]
+                           :or {threshold default-seat-failure-threshold
+                                min-outcomes default-seat-min-outcomes}}]
+   (let [cutoff (- (long now-ms) (long window-ms))
+         acc (reduce (fn [acc {:keys [claimed_by state last_error updated_at_ms]}]
+                       (if (or (nil? claimed_by)
+                               (< (long updated_at_ms) cutoff))
+                         acc
+                         (if (= :landed state)
+                           (update-in acc [claimed_by :landed] (fnil inc 0))
+                           (update-in acc [claimed_by :failed (or last_error :unknown)]
+                                      (fnil inc 0)))))
+                     {} rows)]
+     (into {} (map (fn [[seat {:keys [landed failed] :or {landed 0 failed {}}}]]
+                     (let [failures (apply + (vals failed))
+                           total (+ landed failures)
+                           share (if (pos? total) (/ failures total) 0.0)]
+                       [seat {:landed landed
+                              :failed failed
+                              :total total
+                              :failure-share share
+                              :stop-dispatch? (and (>= total min-outcomes)
+                                                   (>= share threshold))}])))
+                   acc))))
+
+(defn recent-outcomes
+  "Terminal outcome rows (state landed/failed) updated inside the window
+  ending NOW-MS, for seat-health."
+  [store now-ms window-ms]
+  (mapv kw-state
+        (jdbc/execute! (:datasource store)
+                       ["SELECT claimed_by,state,last_error,updated_at_ms FROM reread_requests WHERE state IN ('landed','failed') AND updated_at_ms>=?"
+                        (- (long now-ms) (long window-ms))]
+                       query-opts)))
