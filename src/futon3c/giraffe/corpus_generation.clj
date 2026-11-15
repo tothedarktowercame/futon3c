@@ -76,7 +76,10 @@
 (defn- remove-target [text target-id]
   (->> (str/split-lines text)
        (remove str/blank?)
-       (remove #(= target-id (:id (json/parse-string % true))))
+       (remove #(= target-id (:id (try (json/parse-string % true)
+                                          ;; a malformed line is kept as it is;
+                                          ;; validation reports it (claude-13)
+                                          (catch Exception _ nil)))))
        (str/join "\n")))
 
 (defn- apply-replacement! [staging target-id replacement source new-item?]
@@ -189,7 +192,12 @@
         base-lines (let [base-ids (into #{} (comp (map #(get-in % [:record :id]))
                                                   (remove nil?))
                                         to-check)]
-                     (filter #(contains? base-ids (:id (:record %)))
+                     ;; the base's unparseable lines too: the staged side
+                     ;; always checks its own, so without these a malformed
+                     ;; line already in the base would count as a NEW
+                     ;; failure and block every publish (claude-13 review)
+                     (filter #(or (nil? (:record %))
+                                  (contains? base-ids (:id (:record %))))
                              (staged-lines base)))
         [staged-failing staged-checked] (checked-line-failures staging to-check)
         target-passed? (and (= 1 (count target-lines))

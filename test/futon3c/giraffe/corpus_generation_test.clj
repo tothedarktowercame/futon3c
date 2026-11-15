@@ -340,3 +340,18 @@
       (is (= :dry-run (:status report)))
       (is (= before after))
       (is (not (.exists (io/file (str (.getAbsolutePath legacy) ".generations"))))))))
+
+(deftest malformed-line-already-in-the-base-does-not-block-a-publish
+  ;; claude-13 review: the staged side checks every unparseable line; the
+  ;; base side must too, or a pre-existing malformed line reads as new.
+  (let [{:keys [pointer generations base sources]} (multi-fixture 3)
+        target (first sources)]
+    (spit (io/file base "batch-01.jsonl") "{not json\n")
+    (is (= :published
+           (:status (generation/publish-generation!
+                     {:pointer pointer :generations-dir generations
+                      :claim {:target-id (:id target) :source-path (:path target)
+                              :source-sha (:sha256 target)}
+                      :replacement {:id (:id target) :source (dissoc target :id)
+                                    :status_as_read "open" :purpose "replacement"
+                                    :edges [] :unresolved []}}))))))
