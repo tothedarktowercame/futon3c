@@ -4,6 +4,7 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon2.aif.handoff-contract :as handoff]
             [futon3c.giraffe.corpus-generation :as generation]
             [futon3c.giraffe.reread-queue :as queue]))
 
@@ -131,22 +132,17 @@
          "The worker reads the result from the finished job; end your turn with the JSON "
          "record and do not bell or whistle anyone.")))
 
+(def reading-contract
+  "The reading handoff shares the War Machine's handoff representation:
+  one contract value, decoded by the one shared response-json-object rule
+  (M-repl-circus amendment, 2026-11-15: the worker's private json-record
+  patch was reverted in favour of this)."
+  {:id :giraffe/reading :version 1
+   :response {:required [:id :source :status_as_read :purpose :edges :unresolved]}
+   :validator {:id :giraffe/reading-record :version 1}})
+
 (defn- json-record [text]
-  ;; A fenced block, else the whole text, else the span from the first "{" to
-  ;; the last "}": zai-2 prefixed a sentence ("0 problems — pin matches the
-  ;; live file.") to 44 of its 59 readings on 2026-11-15, and all 44 valid
-  ;; records were discarded as :reader-record-invalid-json (claude-13).
-  (let [t (str/trim (str text))
-        ;; Only a map counts: cheshire reads the leading "0" of "0 problems"
-        ;; as the number 0 and stops there.
-        parse #(let [v (try (json/parse-string % true) (catch Exception _ nil))]
-                 (when (map? v) v))
-        fenced (second (re-find #"(?s)```(?:json)?\s*(\{.*?\})\s*```" t))
-        i (str/index-of t "{")
-        j (str/last-index-of t "}")]
-    (or (some-> fenced parse)
-        (parse t)
-        (when (and i j (< i j)) (parse (subs t i (inc j)))))))
+  (handoff/response-json-object text))
 
 (defn- job-text [job]
   (some (fn [key]
@@ -160,6 +156,18 @@
                                  [:text :answer :content :message])
               :else nil)))
         [:result :answer :reply :output :message]))
+
+(defn parse-record
+  "The record map out of a reader's answer TEXT, or nil. Decoded by the
+  shared futon2.aif.handoff-contract/response-json-object (see
+  reading-contract). Recovery and tests use this after a format-drift fix."
+  [text]
+  (json-record text))
+
+(defn answer-text
+  "The stored answer text of a finished Agency JOB map, or nil."
+  [job]
+  (job-text job))
 
 (defn agency-contact
   "Dispatch through the existing Agency bell CLI with an explicit --from,
@@ -187,10 +195,13 @@
                 state (some-> (:state job) name)]
             (if (contains? terminal-states state)
               (if (not= "done" state)
-                {:ok false :reason :agency-job-failed :job-id job-id :state state}
-                (if-let [record (some-> (job-text job) json-record)]
-                  {:ok true :record record :job-id job-id}
-                  {:ok false :reason :reader-record-invalid-json :job-id job-id}))
+                {:ok false :reason :agency-job-failed :job-id job-id :state state
+                   :answer-text (job-text job)}
+                (let [text (job-text job)]
+                  (if-let [record (some-> text json-record)]
+                    {:ok true :record record :job-id job-id}
+                    {:ok false :reason :reader-record-invalid-json :job-id job-id
+                     :answer-text text})))
               (do (Thread/sleep poll-ms)
                   (recur (- remaining poll-ms))))))))))
 
@@ -246,16 +257,22 @@
                        :job-id job-id :task-id task-id}
 
                       (not= "done" state)
-                      {:ok false :reason :agency-job-failed :job-id job-id :state state}
+                      {:ok false :reason :agency-job-failed :job-id job-id :state state
+                       :answer-text (job-text job)}
 
                       :else
-                      (if-let [record (some-> (job-text job) json-record)]
-                        {:ok true :record record :job-id job-id :task-id task-id}
-                        {:ok false :reason :reader-record-invalid-json :job-id job-id})))
+                      (let [text (job-text job)]
+                        (if-let [record (some-> text json-record)]
+                          {:ok true :record record :job-id job-id :task-id task-id}
+                          {:ok false :reason :reader-record-invalid-json :job-id job-id
+                           :answer-text text}))))
                   (do (Thread/sleep poll-ms) (recur (- remaining poll-ms)))))))))
       (finally (.delete packet)))))
 
-(defn- record-matches-claim? [record request]
+(defn record-matches-claim
+  "Does RECORD pin the same target and source as REQUEST? Public so the
+  recovery pass can re-validate stored answers."
+  [record request]
   (and (= (:target_id request) (:id record))
        (= (:source_path request) (get-in record [:source :path]))
        (= (:source_sha request) (get-in record [:source :sha256]))))
@@ -277,13 +294,17 @@
         {:status :failed
          :request (queue/settle! store request
                                  {:status :failed :reason (or (:reason contact)
-                                                             :reader-contact-failed)}
+                                                             :reader-contact-failed)
+                                  ;; persist the raw answer with the failure so a later
+                                  ;; parser fix can recover it (queue column last_answer)
+                                  :answer-text (:answer-text contact)}
                                  now-ms max-attempts)}
 
-        (not (record-matches-claim? (:record contact) request))
+        (not (record-matches-claim (:record contact) request))
         {:status :failed
          :request (queue/settle! store request
-                                 {:status :failed :reason :reader-record-pin-mismatch}
+                                 {:status :failed :reason :reader-record-pin-mismatch
+                                  :answer-text (some-> (:record contact) json/generate-string)}
                                  now-ms max-attempts)}
 
         (not (queue/active-claim? store request))

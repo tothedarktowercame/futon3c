@@ -156,8 +156,10 @@
 
 (deftest record-is-taken-out-of-surrounding-prose
   ;; claude-13, 2026-11-15: a reader that prefixes a sentence to its JSON
-  ;; record must not have the record discarded. Invented text.
-  (let [jr #'futon3c.giraffe.reread-worker/json-record]
+  ;; record must not have the record discarded. Invented text. Decoding is
+  ;; the shared futon2 handoff validator (M-repl-circus amendment), so the
+  ;; same cases hold through parse-record.
+  (let [jr worker/parse-record]
     (is (= "E-invented" (:id (jr "0 problems — pin matches.\n\n{\"id\": \"E-invented\", \"edges\": []}"))))
     (is (= "E-invented" (:id (jr "```json\n{\"id\": \"E-invented\"}\n```"))))
     (is (= "E-invented" (:id (jr "{\"id\": \"E-invented\"}"))))
