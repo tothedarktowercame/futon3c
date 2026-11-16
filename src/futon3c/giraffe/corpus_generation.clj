@@ -145,9 +145,7 @@
                                                          "members.json"))))
       (throw (ex-info "Checker uses a different population"
                       {:kind :reading/population-mismatch})))
-    (let [checked (mapv #(readings/check-record checker (:batch %)
-                                                (:line-number %) (:line %))
-                        lines)]
+    (let [checked (readings/check-records checker lines)]
       (when-not (and (= checker-text (slurp checker))
                      (= members-text (slurp members-file)))
         (throw (ex-info "Checker or population changed during validation"

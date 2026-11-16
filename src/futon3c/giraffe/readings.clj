@@ -45,11 +45,45 @@
       (finally (.delete file)))))
 
 (defn check-record
-  "Public single-line form of the private checked-record used by consume.
-  corpus-generation's targeted staging validation calls it directly so one
-  publish runs the Python checker only on the lines it must decide."
+  "Public single-line checker for individual callers and equivalence checks.
+  consume and publication validation use check-records to batch their lines."
   [checker batch line-number line]
   (checked-record checker batch line-number line nil))
+
+(defn check-records
+  "Check entries {:batch :line-number :line} in one Python process. The
+  generation's own checker still runs main once per record; no evidence or
+  target-index caching. Driver failures and incomplete output throw."
+  ([checker entries] (check-records checker entries nil))
+  ([checker entries env]
+   (let [entries (vec entries)]
+     (if (empty? entries)
+       []
+       (let [file (java.io.File/createTempFile "giraffe-reading-batch-" ".jsonl")]
+         (try
+           (spit file (str (str/join "\n" (map :line entries)) "\n"))
+           (let [args ["python3" "-I" "scripts/giraffe_check_batch.py" (str checker) (.getPath file)]
+                 result (apply shell/sh (cond-> args env
+                                          (into [:env (merge (into {} (System/getenv)) env)])))
+                 fail #(throw (ex-info "Batch checker failed"
+                                      {:kind :reading/batch-checker-error :result result}))
+                 _ (when-not (zero? (:exit result)) (fail))
+                 results (try (mapv #(json/parse-string % true) (str/split-lines (:out result)))
+                              (catch Exception _ (fail)))]
+             (when-not (and (= (count entries) (count results))
+                            (every? true? (map-indexed
+                             (fn [i r] (and (= (inc i) (:line r))
+                                            (integer? (:exit r))
+                                            (string? (:out r)) (string? (:err r)))) results)))
+               (fail))
+             (mapv (fn [{:keys [batch line-number line]} result]
+                     (let [record (try (json/parse-string line true) (catch Exception _ nil))]
+                       {:record record
+                        :record-pin {:sha256 (sha256 line) :batch (str batch) :line line-number}
+                        :checker-result (select-keys result [:exit :out :err])
+                        :passed? (and (zero? (:exit result)) (map? record))}))
+                   entries results))
+           (finally (.delete file))))))))
 
 (def ^:private reading-classes #{"closure" "artifact" "alternative"})
 
@@ -90,8 +124,8 @@
           {:rejected (assoc retained :reason (get-in converted [:reject :reject]))})))))
 
 (defn consume
-  "Each record invokes the exact checker. Duplicate members are ambiguous even
-  when each individual record passes. Certificate hashes bind checker, member
+  "One process invokes the exact checker for each record. Duplicate members
+  are ambiguous even when each individual record passes. Certificate hashes bind checker, member
   inventory and the exact JSONL line bytes (excluding LF delimiter).
   Retired inventory entries without records are :retired; with any record they
   are :ambiguous (contradictory current/retired evidence), never admitted.
@@ -113,13 +147,15 @@
             (throw (ex-info "Checker uses a different population" {:kind :reading/population-mismatch})))
         members (json/parse-string members-text true)
         ids (set (map (comp keyword :id) members))
-        checked (vec (mapcat (fn [batch]
-                              (keep-indexed (fn [i line]
-                                              (when (and (not (str/blank? line))
-                                                         (or (nil? target-id)
-                                                             (= target-id (:id (json/parse-string line true)))))
-                                                (checked-record checker batch (inc i) line checker-env)))
-                                            (str/split (slurp batch) #"\n"))) batches))
+        checked (check-records checker
+                  (mapcat (fn [batch]
+                            (keep-indexed (fn [i line]
+                                            (when (and (not (str/blank? line))
+                                                       (or (nil? target-id)
+                                                           (= target-id (:id (json/parse-string line true)))))
+                                              {:batch batch :line-number (inc i) :line line}))
+                                          (str/split (slurp batch) #"\n"))) batches)
+                  checker-env)
         _ (when-not (and (= checker-text (slurp checker))
                          (= members-text (slurp members-file)))
             (throw (ex-info "Checker or population changed during validation"

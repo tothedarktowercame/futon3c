@@ -15,6 +15,7 @@
   (:require [clojure.test :refer [deftest is]]
             [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.java.shell]
             [clojure.string :as str]
             [futon3c.giraffe.readings :as readings]
             [futon3c.giraffe.missions :as missions]
@@ -271,9 +272,10 @@ with no reading record: the typed unread count the certificate must carry.
     (try
       (spit checker (str "#!/usr/bin/env python3\n"
                          "import sys\n"
-                         "sys.stderr.write(sys.argv[1] + ':1 E-a source file changed since the census\\n')\n"
-                         "print(sys.argv[1] + ':1 E-a source file changed since the census')\n"
-                         "sys.exit(1)\n"))
+                         "def main(paths):\n"
+                         " sys.stderr.write(paths[0] + ':1 E-a source file changed since the census\\n')\n"
+                         " print(paths[0] + ':1 E-a source file changed since the census')\n"
+                         " return 1\n"))
       (spit members "[{\"id\":\"E-a\",\"path\":\"x\",\"sha256\":\"00\"}]")
       (spit batch (str line "\n"))
       (let [opts {:checker checker :members-file members :batches [batch]
@@ -389,3 +391,43 @@ with no reading record: the typed unread count the certificate must carry.
       (is (empty? (:edges result)))
       (is (= [(keyword id)] (:unread-new drift)))
       (is (empty? (:read drift))))))
+
+(deftest batch-checker-matches-individual-processes
+  (let [{:keys [checker options batches root]} (build-world!)
+        line (first (str/split-lines (slurp (first batches))))
+        record (json/parse-string line true)
+        missing (assoc record :edges [{:to "M-fixture-boreal" :kind "depends-on"
+                                       :basis "declared" :evidence {:path (str root "/missing.md")
+                                                                  :sha256 "absent" :line 1 :quote "invented missing evidence"}}])
+        lines [line (json/generate-string (assoc record :status_as_read "invalid"))
+               "{bad json" (json/generate-string missing)]
+        entries (mapv (fn [i line] {:batch "fixture.jsonl" :line-number (inc i) :line line})
+                      (range) lines)
+        env (:checker-env options)
+        individual (mapv #(#'readings/checked-record checker (:batch %) (:line-number %) (:line %) env) entries)
+        calls (atom 0)
+        sh clojure.java.shell/sh
+        batch (with-redefs [clojure.java.shell/sh (fn [& args] (swap! calls inc) (apply sh args))]
+                (readings/check-records checker entries env))]
+    (is (= individual batch))
+    (is (= [true false false false] (mapv :passed? batch)))
+    (is (= 1 @calls))
+    (reset! calls 0)
+    (with-redefs [clojure.java.shell/sh (fn [& args] (swap! calls inc) (apply sh args))]
+      (readings/consume options))
+    (is (= 1 @calls))))
+
+(deftest batch-driver-errors-are-never-passes
+  (doseq [result [{:exit 2 :out "" :err "fixture crash"}
+                  {:exit 0 :out "" :err ""}
+                  {:exit 0 :out "not-json" :err ""}]]
+    (with-redefs [clojure.java.shell/sh (constantly result)]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Batch checker failed"
+                           (readings/check-records "fixture-checker.py"
+                                                   [{:batch "fixture" :line-number 1 :line "{}"}]))))))
+
+(deftest actual-driver-crash-is-an-error
+  (let [root (temp-dir "giraffe-driver-crash-")
+        checker (write! root "check_edges.py" "def main(paths):\n    raise RuntimeError('invented crash')\n")]
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Batch checker failed"
+                         (readings/check-records checker [{:batch "fixture" :line-number 1 :line "{}"}])))))

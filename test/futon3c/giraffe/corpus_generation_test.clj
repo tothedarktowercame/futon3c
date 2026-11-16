@@ -17,11 +17,14 @@
 (defn- checker-text []
   (str "#!/usr/bin/env python3\n"
        "import json, pathlib, sys\n"
-       "members={x['id']:x for x in json.loads((pathlib.Path(__file__).parent/'members.json').read_text())}\n"
-       "bad=False\n"
-       "for line in pathlib.Path(sys.argv[1]).read_text().splitlines():\n"
-       " r=json.loads(line); m=members.get(r.get('id')); bad = bad or r.get('reject',False) or not m or r.get('source') != {'path':m['path'],'sha256':m['sha256']}\n"
-       "sys.exit(1 if bad else 0)\n"))
+       "def main(paths):\n"
+       " members={x['id']:x for x in json.loads((pathlib.Path(__file__).parent/'members.json').read_text())}\n"
+       " bad=False\n"
+       " for line in pathlib.Path(paths[0]).read_text().splitlines():\n"
+       "  try: r=json.loads(line)\n"
+       "  except json.JSONDecodeError: bad=True; continue\n"
+       "  m=members.get(r.get('id')); bad = bad or r.get('reject',False) or not m or r.get('source') != {'path':m['path'],'sha256':m['sha256']}\n"
+       " return 1 if bad else 0\n"))
 
 (defn- record [source & [reject?]]
   (cond-> {:id "M-one" :source source :status_as_read "open"
@@ -284,7 +287,8 @@
                     :replacement {:id (:id target) :source (dissoc target :id)
                                   :status_as_read "open" :purpose "replacement"
                                   :edges [] :unresolved []}}))]
-    (with-redefs [readings/check-record (counted-check-record log)]
+    (with-redefs [readings/check-records (fn [checker lines]
+                                           (mapv #((counted-check-record log) checker (:batch %) (:line-number %) (:line %)) lines))]
       (is (= :published (:status (publish))))
       ;; Only the target's staged line and the base's copy of the same id —
       ;; the other four records stay decided.
@@ -303,7 +307,8 @@
                     :replacement {:id (:id target) :source (dissoc target :id)
                                   :status_as_read "open" :purpose "replacement"
                                   :edges [] :unresolved []}}))]
-    (with-redefs [readings/check-record (counted-check-record log)]
+    (with-redefs [readings/check-records (fn [checker lines]
+                                           (mapv #((counted-check-record log) checker (:batch %) (:line-number %) (:line %)) lines))]
       (is (= :published (:status (publish))))
     ;; M-two's edge evidence cites M-one's source path; M-three..five do not.
     ;; Each is checked in staging and (same id) in the base.
@@ -316,7 +321,8 @@
         target (first sources) second-source (second sources)
         log (atom [])
         before (:path (generation/resolve-generation pointer))
-        result (with-redefs [readings/check-record (counted-check-record log)]
+        result (with-redefs [readings/check-records (fn [checker lines]
+                                           (mapv #((counted-check-record log) checker (:batch %) (:line-number %) (:line %)) lines))]
                  (generation/publish-generation!
                   {:pointer pointer :generations-dir generations
                    :claim {:target-id (:id target)
@@ -345,7 +351,8 @@
                  :status_as_read "open" :purpose "duplicate fixture reading"
                  :edges [] :unresolved []}) "\n"))
     (let [before (generation/resolve-generation pointer)
-          result (with-redefs [readings/check-record (counted-check-record log)]
+          result (with-redefs [readings/check-records (fn [checker lines]
+                                           (mapv #((counted-check-record log) checker (:batch %) (:line-number %) (:line %)) lines))]
                    (generation/publish-generation!
                     {:pointer pointer :generations-dir generations
                      :claim {:target-id (:id target) :source-path (:path target)
@@ -402,8 +409,8 @@
         ;; targets against members, as check_edges.py does. Deleting the member
         ;; rather than retaining it makes this real subprocess check fail.
         checker (io/file base "check_edges.py")]
-    (spit checker (str/replace (slurp checker) "sys.exit(1 if bad else 0)"
-                              " bad = bad or any(e['to'] not in members for e in r.get('edges', []))\nsys.exit(1 if bad else 0)"))
+    (spit checker (str/replace (slurp checker) " return 1 if bad else 0"
+                              "  bad = bad or any(e['to'] not in members for e in r.get('edges', []))\n return 1 if bad else 0"))
     (let [base-digest (generation/generation-digest base)]
       (io/delete-file (:path (first sources)))
       (let [result (retire! f ["M-one"])
