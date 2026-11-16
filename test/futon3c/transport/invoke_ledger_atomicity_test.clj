@@ -287,13 +287,14 @@
         active-id "active-job"
         parked-id "parked-terminal-job"
         bulky (apply str (repeat 10000 "recorded packet text "))
-        old {:job-id old-id :state "failed"
+        old {:job-id old-id :state "failed" :failure-kind "invoke/failed"
              :created-at "2026-08-26T13:29:55.295079374Z"
              :finished-at "2026-08-26T13:29:56.668288653Z"
              :event-seq 5 :result-text bulky :result bulky
              :events [{:seq 1 :type "accepted" :at "2026-08-26T13:29:55.295079374Z"
                        :text bulky}
                       {:seq 5 :type "failed" :at "2026-08-26T13:29:56.668288653Z"
+                       :failure-kind "invoke/failed"
                        :message "ended"}]}
         active (assoc old :job-id active-id :state "running" :finished-at nil)
         parked (assoc old :job-id parked-id)
@@ -314,6 +315,8 @@
            (into {} (map (fn [[id job]] [id (:state job)])) (:jobs compacted)))
         "expiry retains every id and lifecycle state")
     (is (= :d13/rolling-expiry (get-in compacted [:jobs old-id :events-trimmed])))
+    (is (= "invoke/failed" (get-in compacted [:jobs old-id :failure-kind])))
+    (is (= "invoke/failed" (get-in compacted [:jobs old-id :events 1 :failure-kind])))
     (is (nil? (get-in compacted [:jobs old-id :result-text])))
     (is (< (count (pr-str (get-in compacted [:jobs old-id]))) 2000)
         "expired terminal payload has a fixed small bound")

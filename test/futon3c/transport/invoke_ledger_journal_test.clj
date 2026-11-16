@@ -146,7 +146,10 @@
                          (#'http/load-invoke-jobs-ledger))]
           (is (= "failed" (get-in recovered [:jobs "a" :state])))
           (is (= "worker-lost-on-restart"
-                 (get-in recovered [:jobs "a" :terminal-code]))))))))
+                 (get-in recovered [:jobs "a" :terminal-code])))
+          (is (= "invoke/failed" (get-in recovered [:jobs "a" :failure-kind])))
+          (is (= "invoke/failed"
+                 (get-in recovered [:jobs "a" :events 0 :failure-kind]))))))))
 
 (deftest request-commission-sees-latest-journal-state
   (with-store

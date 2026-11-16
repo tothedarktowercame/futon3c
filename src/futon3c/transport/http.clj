@@ -540,13 +540,13 @@
   [job]
   (let [event-edge (fn [event]
                      (some-> event
-                             (select-keys [:seq :type :at :code :message])
+                             (select-keys [:seq :type :at :code :message :failure-kind])
                              (update :message #(when % (subs (str %) 0 (min 220 (count (str %))))))))
         events (:events job)]
     (-> (select-keys job [:job-id :agent-id :caller :surface :harness :request-digest
                           :request-commission
                           :bellback-of :mode :state :created-at :started-at :finished-at
-                          :terminal-code :terminal-message :session-id :trace-id
+                          :terminal-code :terminal-message :failure-kind :session-id :trace-id
                           :result-summary :artifact-ref :execution :invocation/model
                           :delivery :event-seq :auto-bellback])
         (update :terminal-message #(when % (subs (str %) 0 (min 220 (count (str %))))))
@@ -566,7 +566,7 @@
                   :job-join (select-keys
                              job [:agent-id :caller :surface :artifact-ref :bellback-of :result
                                   :trace-id :created-at :started-at :finished-at
-                                  :state :terminal-code :execution :delivery
+                                  :state :terminal-code :failure-kind :execution :delivery
                                   :invocation/model])
                   :archived-at (str archived-at)}]
       (assoc record :archive-digest
@@ -1262,8 +1262,10 @@
                             (assoc :state "failed"
                                    :finished-at failed-at
                                    :terminal-code "worker-lost-on-restart"
+                                   :failure-kind "invoke/failed"
                                    :terminal-message "job did not reach terminal state before restart")
                             (append-job-event "failed" {:code "worker-lost-on-restart"
+                                                        :failure-kind "invoke/failed"
                                                         :message "recovered on startup"}))
                         job))
         recovered-jobs (into {}
@@ -2147,6 +2149,37 @@
        (name code)
        msg])))
 
+(defn- terminal-failure-kind
+  "Controlled failure class at the one runner-result -> terminal-job boundary.
+  Typed adapter signals win. Quota prose is retained only as an ingestion
+  compatibility parser for adapters that flatten provider errors."
+  [result terminal-state terminal-code terminal-message]
+  (when-not (= "done" (str terminal-state))
+    (let [error (:error result)
+          error-map (when (map? error) error)
+          code (some-> (or (:error/code result)
+                           (:error/code error-map)
+                           (get-in result [:error-data :error/code])
+                           terminal-code)
+                       str (str/replace-first #"^:" ""))
+          status (or (:status result)
+                     (:status error-map)
+                     (:http/status result)
+                     (:http/status error-map)
+                     (get-in result [:error-data :status]))
+          message (str (or (:error/message error-map)
+                           (when (string? error) error)
+                           terminal-message ""))]
+      (cond
+        (contains? #{"clock/store-busy" "store-busy"} code) :clock/store-busy
+        (= "futon1b-read-rejected" code) :evidence/read-rejected
+        (= 429 status) :provider/quota
+        (re-find #"(?i)usage limit|quota|HTTP 429|rate.limit" message) :provider/quota
+        :else :invoke/failed))))
+
+(defn- failure-kind-string [kind]
+  (some-> kind str (str/replace-first #"^:" "")))
+
 (defn- normalized-invoke-commission
   "Return the exact normalized invoke request that Agency hashes. This value is
   retained before prompt events can be trimmed; it is evidence, not a prompt
@@ -2207,7 +2240,7 @@
                    (:job-join archived)
                    (select-keys job [:agent-id :caller :surface :artifact-ref
                                      :trace-id :created-at :started-at :finished-at
-                                     :state :terminal-code :execution :delivery
+                                     :state :terminal-code :failure-kind :execution :delivery
                                      :invocation/model]))
        :source (if job :hot-ledger :commission-archive)})))
 
@@ -2263,6 +2296,7 @@
                                :finished-at nil
                                :terminal-code nil
                                :terminal-message nil
+                               :failure-kind nil
                                :session-id nil
                                :trace-id nil
                                :result-summary nil
@@ -2588,6 +2622,9 @@
   [job-id terminal-state terminal-code terminal-message result sid]
   (locking invoke-lifecycle-order-lock
     (let [invoke-meta (:invoke-meta result)
+        failure-kind (failure-kind-string
+                      (terminal-failure-kind result terminal-state terminal-code
+                                             terminal-message))
         execution (invoke-execution-evidence result job-id)
         trace-id (extract-trace-id invoke-meta)
         result-text (when (string? (:result result)) (:result result))
@@ -2620,6 +2657,7 @@
                                           :finished-at finished-at
                                           :terminal-code terminal-code
                                           :terminal-message terminal-message
+                                          :failure-kind failure-kind
                                           :session-id sid
                                           :trace-id trace-id
                                           :result result-text
@@ -2633,9 +2671,11 @@
                                           :usage (:usage result)
                                           :total-cost-usd (:total-cost-usd result)
                                           :execution execution)
-                                   (append-job-event terminal-state
-                                                     {:code terminal-code
-                                                      :message terminal-message}))]
+                                   (append-job-event
+                                    terminal-state
+                                    (cond-> {:code terminal-code
+                                             :message terminal-message}
+                                      failure-kind (assoc :failure-kind failure-kind))))]
                (cond-> (assoc-in ledger [:jobs job-id] updated-job)
                  (and (string? trace-id) (not (str/blank? trace-id)))
                  (assoc-in [:trace->job trace-id] job-id))))
@@ -2853,7 +2893,7 @@
         view
         (select-keys job [:job-id :agent-id :caller :surface :harness :mode :state
                           :created-at :started-at :finished-at
-                          :terminal-code :terminal-message
+                          :terminal-code :terminal-message :failure-kind
                           :session-id :trace-id :invocation/model
                           :result :result-summary :artifact-ref
                           :usage :total-cost-usd

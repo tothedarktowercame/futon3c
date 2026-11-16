@@ -28,6 +28,7 @@
             [futon3c.agency.federation :as federation]
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.agency.clock-store :as clock-store]
+            [futon3c.agency.work-orders :as work-orders]
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.xiang.turn-store :as turn-store]
             [futon3c.test-registry.sqlite-backend :as registry-sqlite]
@@ -394,6 +395,67 @@
         view ((var-get #'http/invoke-job-public-view)
               {:job-id "job-1" :trace/delivery-observation observation})]
     (is (= observation (:trace/delivery-observation view)))))
+
+(deftest terminal-failure-kind-prefers-typed-signals-and-bounds-prose-fallback
+  (let [classify #'http/terminal-failure-kind]
+    (is (= :clock/store-busy
+           (classify {:error {:error/code :clock/store-busy}}
+                     "failed" "invoke-error" "invented")))
+    (is (= :clock/store-busy
+           (classify {:error {:error/code :store-busy}}
+                     "failed" "store-busy" "invented")))
+    (is (= :evidence/read-rejected
+           (classify {:error {:error/code :futon1b-read-rejected}}
+                     "failed" "futon1b-read-rejected" "invented")))
+    (is (= :provider/quota
+           (classify {:error "invented provider refusal" :error-data {:status 429}}
+                     "failed" "invoke-error" "invented")))
+    (is (= :provider/quota
+           (classify {:error "You've hit your usage limit; try later"}
+                     "failed" "invoke-error" nil)))
+    (is (= :invoke/failed
+           (classify {:error "futon1b busy but no typed code"}
+                     "failed" "invoke-error" nil))
+        "store-busy prose is not a second ingestion parser")
+    (is (= :invoke/failed
+           (classify {:error {:error/code :invented-failure}}
+                     "failed" "invented-failure" "invented")))
+    (is (nil? (classify {:ok true :result "done"} "done" nil nil)))))
+
+(deftest finalize-persists-failure-kind-on-job-event-and-public-view
+  (let [create! (fn [id]
+                  (#'http/create-invoke-job-ledger!
+                   {:requested-job-id id :agent-id "invented-worker"
+                    :prompt "invented prompt" :caller "invented-caller"
+                    :surface "test" :mode "brief"}))
+        finalize! (fn [id state code message result]
+                    (is (#'http/mark-invoke-job-running! id))
+                    (with-redefs-fn
+                      {#'http/parked-on-notify! (constantly {})
+                       #'http/auto-bellback-enabled? (constantly false)
+                       #'reg/get-agent (constantly {})
+                       #'work-orders/job-terminal! (fn [& _])
+                       #'http/note-turn-text! (fn [& _])}
+                      (fn []
+                        (binding [http/*schedule-work-order-check!* (fn [& _])]
+                          (#'http/finalize-invoke-job!
+                           id state code message result "invented-session")))))]
+    (let [failed-id (create! "failure-kind-failed")]
+      (is (finalize! failed-id "failed" "invoke-error" "HTTP 429 invented"
+                     {:ok false :error "HTTP 429 invented"}))
+      (let [job (#'http/get-invoke-job failed-id)
+            event (last (:events job))
+            public (#'http/invoke-job-public-view job)]
+        (is (= "provider/quota" (:failure-kind job)))
+        (is (= "provider/quota" (:failure-kind event)))
+        (is (= "provider/quota" (:failure-kind public)))))
+    (let [done-id (create! "failure-kind-done")]
+      (is (finalize! done-id "done" nil nil {:ok true :result "invented"}))
+      (let [job (#'http/get-invoke-job done-id)
+            public (#'http/invoke-job-public-view job)]
+        (is (nil? (:failure-kind job)))
+        (is (nil? (:failure-kind (last (:events job)))))
+        (is (nil? (:failure-kind public)))))))
 
 (defn- parse-body
   "Parse the JSON body string from a Ring response."
