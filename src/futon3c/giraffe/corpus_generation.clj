@@ -93,7 +93,10 @@
         found? (some #(= target-id (:id %)) members)
         members' (if found?
                    (mapv #(if (= target-id (:id %))
-                            (merge % (select-keys source [:path :sha256]))
+                            ;; a fresh reading un-retires the member (claude-13
+                            ;; review): left in place, :retired + a record
+                            ;; reads as :ambiguous forever
+                            (dissoc (merge % (select-keys source [:path :sha256])) :retired)
                             %)
                          members)
                    (conj members (assoc (select-keys source [:path :sha256])

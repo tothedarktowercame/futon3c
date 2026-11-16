@@ -474,3 +474,25 @@
           ;; claude-13 review: a reading that ALREADY fails in the base (the
           ;; live corpus has stale ones) must not block retiring another member.
           (is (= :published (:status (retire! f ["M-one"])))))))))
+
+(deftest replacement-after-retirement-clears-retired
+  ;; claude-13 review of R2: a reopened, reread member must not stay retired
+  (let [{:keys [pointer generations sources] :as f} (multi-fixture 2)
+        one (first sources)]
+    (io/delete-file (:path one))
+    (is (= :published (:status (retire! f ["M-one"]))))
+    (spit (:path one) "source one, restored\n")
+    (let [sha (generation/file-sha (io/file (:path one)))]
+      (is (= :published
+             (:status (generation/publish-generation!
+                       {:pointer pointer :generations-dir generations
+                        :claim {:target-id "M-one" :source-path (:path one) :source-sha sha
+                                :old-sha (:sha256 one)}
+                        :replacement {:id "M-one" :source {:path (:path one) :sha256 sha}
+                                      :status_as_read "open" :purpose "reread"
+                                      :edges [] :unresolved []}}))))
+      (let [members (json/parse-string
+                     (slurp (io/file (:path (generation/resolve-generation pointer)) "members.json")) true)
+            m (first (filter #(= "M-one" (:id %)) members))]
+        (is (= sha (:sha256 m)))
+        (is (nil? (:retired m)))))))
