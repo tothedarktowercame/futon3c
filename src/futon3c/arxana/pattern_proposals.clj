@@ -23,7 +23,10 @@
 
 (defn plan [cfg turn lu]
   (if-let [turn-ref (:reference (mentions/field-evidence cfg turn :source_text))]
-    (let [rows (mapcat
+    (let [skipped (->> (:ranked lu)
+                       (remove #(pattern-reference (or (:pattern-library cfg) default-library) (:id %)))
+                       (mapv :id))
+          rows (mapcat
                 (fn [{:keys [id rank quote]}]
                   (when-let [pattern-ref (pattern-reference (or (:pattern-library cfg) default-library) id)]
                     (let [p (records/make-clusion
@@ -43,16 +46,16 @@
                        {:operation :clusion/assert :record p}
                        {:operation :evidence/append :record a}])))
                 (:ranked lu))]
-      {:rows (vec rows) :turn-reference turn-ref})
+      {:rows (vec rows) :turn-reference turn-ref :skipped skipped})
     {:failed :operator-evidence-unavailable}))
 
 (defn write! [cfg turn lu]
-  (let [{:keys [rows failed] :as p} (plan cfg turn lu)]
+  (let [{:keys [rows failed skipped] :as p} (plan cfg turn lu)]
     (cond failed p
           (empty? rows) {:failed :patterns-unavailable}
           :else (let [r (http/append-batch! (:graph-store cfg)
                                              (str "pattern-proposals/" (:id turn)) rows)]
-                  (if (:ok r) {:written (count (:ranked lu))}
+                  (if (:ok r) {:written (quot (count rows) 4) :skipped skipped}
                       {:failed :proposal-write-refused})))))
 
 (defn read-ranked [cfg turn]
@@ -63,11 +66,17 @@
                                         :limit 200 :order :asc}))
           ps (mapv #(-> (store/get-entity (:graph-store cfg) %) :ok) (:edge-ids q))]
       (if (empty? ps) {:pending :lu-proposals-pending}
-          ;; Attestation rank is reflected by the original deterministic append order.
-          {:ids (mapv (fn [p]
-                        (let [ref-id (get-in p [:endpoints 1 :target :ref/id])]
-                          (get-in (store/get-entity (:graph-store cfg) ref-id) [:ok :store/id])))
-                      ps)}))
+          {:ids (->> ps
+                     (map (fn [p]
+                            (let [aq (:ok (store/bounded-query! (:graph-store cfg)
+                                                               {:query/type :attestations
+                                                                :subject/id (:id p) :query/limit 20}))
+                                  aid (first (:result/attestation-ids aq))
+                                  a (:ok (store/get-entity (:graph-store cfg) aid))
+                                  ref-id (get-in p [:endpoints 1 :target :ref/id])
+                                  pattern (get-in (store/get-entity (:graph-store cfg) ref-id) [:ok :store/id])]
+                              [(get-in a [:content :rank]) pattern])))
+                     (sort-by first) (mapv second))}))
     {:pending :lu-proposals-pending}))
 
 (defn backfill! [cfg {:keys [write? pause-ms] :or {write? false pause-ms 200}}]

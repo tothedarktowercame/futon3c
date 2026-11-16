@@ -164,9 +164,7 @@
         groups [["embedding" (distinct (concat proposed
                                                (ranked-ids (:embedding_ranked record))))]
                 ["驴/m40" (ranked-ids (:ranked (:m40_ranked record)))]
-                ["驴" (if (contains? record :lu_proposal_ids)
-                         (map #(hash-map :id %) (:lu_proposal_ids record))
-                         (ranked-ids (:ranked (:lu_ranked record))))]]
+                ["驴" (:lu_proposal_ids record)]]
         entries (mapcat (fn [[source ids]]
                           (for [i (take per-source-cap ids)]
                             {:id i :source source}))
@@ -316,11 +314,10 @@
          window-n (:window-n defaults)}}
    store record-id]
   (let [record (ts/read-record store record-id)
-        lu (when (contains? record :lu_proposals)
-             (proposals/read-ranked (or (:proposal-config opts)
-                                        (mention-writer/default-config))
-                                    (assoc record :id record-id)))
-        record (if lu (assoc record :lu_proposal_ids (:ids lu)) record)
+        lu ((or (:proposal-reader opts) proposals/read-ranked)
+            (or (:proposal-config opts) (mention-writer/default-config))
+            (assoc record :id record-id))
+        record (assoc record :lu_proposal_ids (:ids lu))
         window (chain-window store record-id window-n)
         window-ids (into #{} (map :id) window)
         texts (window-texts window)
@@ -385,14 +382,19 @@
   [{:keys [store notify!] :as opts} id]
   (try
     (let [record (and store (ts/read-record store id))
-          lu (when (and record (contains? record :lu_proposals))
-               (proposals/read-ranked (or (:proposal-config opts)
-                                          (mention-writer/default-config))
-                                      (assoc record :id id)))
-          record (when record (if lu (assoc record :lu_proposal_ids (:ids lu)) record))
+          lu (when record
+               ((or (:proposal-reader opts) proposals/read-ranked)
+                (or (:proposal-config opts) (mention-writer/default-config))
+                (assoc record :id id)))
+          record (when record (assoc record :lu_proposal_ids (:ids lu)))
           proposed (some-> record patterns-of)]
-      (when (:pending lu) (throw (ex-info "Lu proposals pending" {:reason :lu-proposals-pending})))
-      (when (and record
+      (if (:pending lu)
+        (let [pending {:version 1 :at (str (java.time.Instant/now))
+                       :reader "none" :state :lu-proposals-pending
+                       :why "lu proposals pending" :patterns []}]
+          (ts/update-record! store id #(assoc % :pattern_verdicts pending))
+          pending)
+        (when (and record
                  (= "operator" (:origin record))
                  (seq proposed))
         (let [existing (:pattern_verdicts record)]
@@ -402,7 +404,7 @@
             (let [verdicts (verdict-map opts store id)]
               (ts/update-record! store id #(assoc % :pattern_verdicts verdicts))
               (when notify! (notify! {:event :pattern-verdicts :id id}))
-              verdicts)))))
+              verdicts))))))
     (catch Exception _ nil)))
 
 ;; ------------------------------------------------------------ live wiring

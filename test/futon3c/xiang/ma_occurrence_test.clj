@@ -81,11 +81,32 @@
 
 (defn- ask-reply [rows] (json/generate-string rows))
 
+(defn- fixture-proposals [_ record]
+  {:ids (mapv #(str/replace-first (str (:id %)) #"^~" "")
+              (get-in record [:lu_ranked :ranked]))})
+
 (defn- run-with [store id ask]
-  (mo/verdict! {:store store :library (temp-library) :ask ask :seat "馬-sonnet"} id))
+  (mo/verdict! {:store store :library (temp-library) :ask ask :seat "馬-sonnet"
+                :proposal-reader fixture-proposals} id))
 
 (defn- verdicts [store id]
   (:pattern_verdicts (ts/read-record store id)))
+
+(deftest absent-gcc-proposals-record-a-retryable-pending-outcome
+  (let [store (temp-store)]
+    (record! store "turn-pending" {:lu_ranked {:ranked [{:id "must/not/fallback" :rank 1}]}})
+    (let [out (mo/verdict! {:store store
+                            :proposal-reader (fn [& _] {:pending :lu-proposals-pending})}
+                           "turn-pending")]
+      (is (= :lu-proposals-pending (:state out)))
+      (is (= "lu proposals pending" (:why out)))
+      (is (= "lu-proposals-pending" (:state (verdicts store "turn-pending")))))))
+
+(deftest patterns-of-never-reads-the-legacy-lu-ranked-field
+  (let [forbidden (reify clojure.lang.ILookup
+                    (valAt [_ _] (throw (AssertionError. "legacy lu_ranked fallback")))
+                    (valAt [_ _ _] (throw (AssertionError. "legacy lu_ranked fallback"))))]
+    (is (= [] (mo/patterns-of {:lu_ranked forbidden :lu_proposal_ids []})))))
 
 (deftest a-wrong-quote-is-voided-with-its-reason
   (let [store (base-records (temp-store))]
@@ -122,7 +143,7 @@
               :source_text (q "turn-new" "operator")
               :reply_text (q "turn-new" "reply")
               :proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]})
-    (mo/verdict! {:store store :library (temp-library) :window-n 1
+    (mo/verdict! {:store store :library (temp-library) :window-n 1 :proposal-reader fixture-proposals
               :ask (constantly
                     (ask-reply
                      [{:pattern pid
@@ -178,7 +199,7 @@
               :proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]})
     ;; :ask nil (seat not wired) and :ask answering nil (failed whistle):
     ;; both leave a typed record, never a success.
-    (mo/verdict! {:store store :library (temp-library)} "turn-new")
+    (mo/verdict! {:store store :library (temp-library) :proposal-reader fixture-proposals} "turn-new")
     (let [v (verdicts store "turn-new")]
       (is (map? v) "the record is still written")
       (is (= "none" (:reader v)))
@@ -189,7 +210,7 @@
           "the stored window is the chain, oldest first"))
     (record! store "turn-new"
              {:proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]})
-    (mo/verdict! {:store store :library (temp-library)
+    (mo/verdict! {:store store :library (temp-library) :proposal-reader fixture-proposals
                   :ask (fn [_] (throw (ex-info "whistle failed" {})))}
                  "turn-new")
     (let [v (verdicts store "turn-new")]
@@ -219,7 +240,7 @@
 (deftest an-aligned-event-writes-verdicts-a-ported-event-alone-does-not
   (let [store (base-records (temp-store))
         asks (atom 0)
-        opts {:store store :library (temp-library)
+        opts {:store store :library (temp-library) :proposal-reader fixture-proposals
               :ask (fn [_]
                      (swap! asks inc)
                      (ask-reply [{:pattern pid :turn {} :chain {}}]))}]
@@ -241,7 +262,8 @@
           "the stored verdict is left alone, not overwritten")))
   ;; a non-operator record is left alone even on :aligned
   (let [store (temp-store)
-        opts {:store store :library (temp-library) :ask (constantly "[]")}]
+        opts {:store store :library (temp-library) :ask (constantly "[]")
+              :proposal-reader fixture-proposals}]
     (record! store "turn-bell2" {:origin "agent"
                                  :proposed_patterns [{:patterns [pid]}]})
     (mo/handle-event opts {:event :aligned :id "turn-bell2"})
@@ -261,7 +283,7 @@
                     ;; the (= :aligned event) check, deleted
                     (let [store (if (fn? (:store opts)) ((:store opts)) (:store opts))]
                       (when (and id store)
-                        (mo/verdict! (assoc opts :store store) id))))]
+                        (mo/verdict! (assoc opts :store store :proposal-reader fixture-proposals) id))))]
       (mo/handle-event opts {:event :ported :id "turn-del"})
       (is (map? (verdicts store "turn-del"))
           "with the filter deleted a :ported event DOES write — so the
@@ -303,14 +325,12 @@
           {:id "l/two" :sources ["驴"]}]
          (mo/patterns-of
           {:proposed_patterns [{:patterns ["~e/one"]}]
-           :lu_ranked {:source "驴"
-                       :ranked [{:id "l/one" :rank 1} {:id "l/two" :rank 2}]}}))
+           :lu_proposal_ids ["l/one" "l/two"]}))
       "the lu_ranked ids follow the proposed ids, deduplicated")
   (is (= [{:id "x/both" :sources ["embedding" "驴"]}]
          (mo/patterns-of
           {:proposed_patterns [{:patterns ["~x/both"]}]
-           :lu_ranked {:source "embedding-fallback"
-                       :ranked [{:id "x/both" :rank 1}]}}))
+           :lu_proposal_ids ["x/both"]}))
       "an id proposed by both carries both sources, whatever lu's source"))
 
 (deftest patterns-of-unions-all-sources-with-shown-and-cap
@@ -322,9 +342,7 @@
                  :m40_ranked {:source "驴/m40"
                               :ranked [{:id "m40/one" :rank 1} {:id "emb/one" :rank 2}
                                        {:id "m40/two" :rank 3} {:id "m40/three" :rank 4}]}
-                 :lu_ranked {:source "驴"
-                             :ranked [{:id "m40/one" :rank 1} {:id "lu/one" :rank 2}
-                                      {:id "lu/two" :rank 3} {:id "lu/three" :rank 4}]}})]
+                 :lu_proposal_ids ["m40/one" "lu/one" "lu/two" "lu/three"]})]
     ;; embedding top 3 (emb/nine and emb/four capped out), 驴/m40's new ids
     ;; (emb/one merges, m40/three capped out), 驴's new ids (lu/three capped
     ;; out): 7 ids, never more than 9.
