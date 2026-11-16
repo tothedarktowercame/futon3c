@@ -64,7 +64,10 @@
           ps (mapv #(-> (store/get-entity (:graph-store cfg) %) :ok) (:edge-ids q))]
       (if (empty? ps) {:pending :lu-proposals-pending}
           ;; Attestation rank is reflected by the original deterministic append order.
-          {:ids (mapv #(get-in % [:endpoints 1 :target :ref/id]) ps)}))
+          {:ids (mapv (fn [p]
+                        (let [ref-id (get-in p [:endpoints 1 :target :ref/id])]
+                          (get-in (store/get-entity (:graph-store cfg) ref-id) [:ok :store/id])))
+                      ps)}))
     {:pending :lu-proposals-pending}))
 
 (defn backfill! [cfg {:keys [write? pause-ms] :or {write? false pause-ms 200}}]
