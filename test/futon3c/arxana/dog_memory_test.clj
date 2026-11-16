@@ -178,7 +178,48 @@
                                     (= "dog/repetition" (get-in % [:record :method :id])))
                               (first @calls)))))
       (is (not (str/includes? (pr-str (first @calls)) secret)))
-      (is (not (str/includes? (pr-str (first @calls)) "private words"))))))
+      (is (not-any? #(str/includes? (pr-str (first @calls)) %)
+                    ["private" "words" "other"])
+          "no shared bigram token is written, only its count"))))
+
+(deftest an-unresolvable-burial-is-skipped-and-counted
+  (let [calls (atom [])
+        lookups (atom 0)
+        buried {:status "ok" :at "2026-11-16T21:02:00Z"
+                :items [{:slug "known" :status "buried" :basis {:act-id "a1" :range [0 4]}}
+                        {:slug "lagging" :status "buried" :basis {:act-id "a2" :range [5 9]}}]}
+        lookup (fn [base handle]
+                 (if (str/ends-with? handle "lagging")
+                   (do (swap! lookups inc) [])
+                   (memory-results base handle)))]
+    (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref})
+                  http/append-batch! (fn [_ _ rows] (swap! calls conj rows) {:ok {}})]
+      (is (= {:written 1 :burials 1 :repetitions 0 :skipped ["狗/lagging"]}
+             (sut/write-buried! {:graph-store :stub :memory-lookup lookup
+                                 :memory-resolution-retry-ms 0} turn buried)))
+      (is (= 2 @lookups) "a lagging new memory is retried once before the skip")
+      (is (= 1 (count (filter #(= [:memory/burial 1] (get-in % [:record :type-revision]))
+                              (first @calls))))))))
+
+(deftest a-later-use-check-with-items-replaces-a-written-zero-outcome
+  (let [dir (str (java.nio.file.Files/createTempDirectory
+                  "dog-use-marker-" (make-array java.nio.file.attribute.FileAttribute 0)))
+        st (turns/store dir) id "turn-dogUSEM"
+        cfg {:graph-store :stub :memory-lookup memory-results}]
+    (turns/write-record-id! st id (assoc turn :dog_use {:status "ok" :items []}))
+    (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref})
+                  http/append-batch! (fn [& _] {:ok {}})]
+      (sut/write-use-turn! cfg st id)
+      (is (= 0 (get-in (turns/read-record st id) [:dog_use_gcc :written])))
+      (turns/update-record! st id #(assoc % :dog_use {:status "ok" :at "2026-11-16T21:05:00Z"
+                                                      :items [{:memory "p/one" :used true
+                                                               :kind "named"}]}))
+      (sut/write-use-turn! cfg st id)
+      (is (= 1 (get-in (turns/read-record st id) [:dog_use_gcc :written])))
+      (turns/update-record! st id #(assoc % :dog_use {:status "pending" :items []}))
+      (sut/write-use-turn! cfg st id)
+      (is (= 1 (get-in (turns/read-record st id) [:dog_use_gcc :written]))
+          "a later pending check never replaces a real write"))))
 
 (deftest readers-ignore-index-order-and-repetitions-preserve-events
   (let [claims {"cu" {:id "cu"} "cr" {:id "cr"}}
