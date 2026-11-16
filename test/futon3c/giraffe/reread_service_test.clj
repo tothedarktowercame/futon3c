@@ -341,6 +341,9 @@
                         (spit (io/file out "party.json")
                               (json/generate-string
                                {:party {:top [{:rank 1 :item "M-party-top"}]}})))
+                      (when (some #(str/ends-with? % "giraffe_party_conformance.py") args)
+                        (spit (io/file out "conformance.json")
+                              (json/generate-string {:summary {:PASS 1 :FAIL 0 :ABSENT 0} :failing []})))
                       {:exit 0 :out "" :err ""})))}))
 
 (defn- party-calls [calls]

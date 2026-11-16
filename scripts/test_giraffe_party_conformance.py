@@ -904,5 +904,40 @@ class ReadingSourceTests(unittest.TestCase):
         self.assertFalse(self.queue.exists())
 
 
+class JsonReportTests(unittest.TestCase):
+    def test_atomic_report_and_exit(self):
+        from unittest.mock import patch
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            party = root / 'party.json'
+            report = root / 'conformance.json'
+            party.write_text(json.dumps({'generated_at': 'invented-time',
+                                        'sources': {'giraffe_run': 'toy-run'}}))
+            report.write_text('old report')
+            result = [{'check': 'toy-check', 'theorem': 'toy', 'status': 'FAIL', 'detail': {}}]
+            replace = c.os.replace
+            observed = []
+            def check_replace(src, dst):
+                self.assertEqual('old report', report.read_text())
+                self.assertEqual(report.parent, Path(src).parent)
+                self.assertEqual(['toy-check'], json.loads(Path(src).read_text())['failing'])
+                observed.append(True)
+                replace(src, dst)
+            with patch.object(c, 'audit', return_value=result), patch.object(c.os, 'replace', check_replace):
+                with contextlib.redirect_stdout(io.StringIO()) as output:
+                    code = c.main([str(party), '--run', str(root / 'toy-run'), '--json-out', str(report)])
+            self.assertEqual(1, code)
+            self.assertTrue(observed)
+            self.assertIn('toy-check', output.getvalue())
+            data = json.loads(report.read_text())
+            self.assertEqual('invented-time', data['generated_at'])
+            self.assertEqual('toy-run', data['run'])
+            self.assertEqual({'PASS': 0, 'FAIL': 1, 'ABSENT': 0}, data['summary'])
+            self.assertEqual(result, data['results'])
+            self.assertGreater(data['checked_at_ms'], 0)
+
+
 if __name__ == '__main__':
     unittest.main()

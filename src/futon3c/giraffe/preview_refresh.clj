@@ -16,6 +16,7 @@
    :repo-dir (str (System/getProperty "user.home") "/code/futon3c")
    :out-dir (str (System/getProperty "user.home") "/storage/gcc-preview")
    :party-script "scripts/giraffe_party.py"
+   :conformance-script "scripts/giraffe_party_conformance.py"
    :preview-script "scripts/gcc_preview.py"})
 
 (defn default-exec
@@ -59,19 +60,38 @@
                     ["--source" "futon1b" "--items" (str/join "," (sort items))
                      "--out" (:out-dir cfg)])))
 
+(defn- run-conformance! [cfg run-dir]
+  (let [file (io/file (:out-dir cfg) "conformance.json")]
+    (try
+      ;; Never mistake a previous successful report for this process's output.
+      (when (.exists file) (io/delete-file file))
+      (let [result ((or (:exec-fn cfg) default-exec)
+                    (command cfg :conformance-script
+                             [(str (io/file (:out-dir cfg) "party.json"))
+                              "--run" run-dir "--json-out" (str file)]))
+            report (json/parse-string (slurp file) true)]
+        (when-not (and (#{0 1} (:exit result))
+                       (map? (:summary report)) (vector? (:failing report))
+                       (every? #(nat-int? (get-in report [:summary %])) [:PASS :FAIL :ABSENT])
+                       (= (:exit result) (if (seq (:failing report)) 1 0)))
+          (throw (ex-info "Conformance process failed or report invalid" {})))
+        {:conformance (select-keys report [:summary :failing])})
+      (catch Exception e {:error (str "conformance: " (.getMessage e))}))))
+
 (defn refresh!
-  "Both page refreshes as one summary {:ok? :items :error}. A failed script
-   is reported, never thrown; the caller records it in health."
+  "Party, conformance, then preview. A conformance FAIL is a reported result;
+   a crashed checker/unreadable report is an error, but preview still runs."
   [{:keys [out-dir] :as cfg} run-dir items]
   (if-not run-dir
     {:ok? false :items [] :error "no giraffe run id for preview refresh"}
     (let [party (run-party! cfg run-dir)]
       (if-not (:ok? party)
         {:ok? false :items [] :error (str "giraffe_party.py failed: " (:error party))}
-        (let [items (vec (distinct (concat items (party-top-items out-dir))))]
-          (if (empty? items)
-            {:ok? true :items []}
-            (let [preview (run-preview! cfg items)]
-              (cond-> {:ok? (:ok? preview) :items items}
-                (:error preview) (assoc :error
-                                        (str "gcc_preview.py failed: " (:error preview)))))))))))
+        (let [conformance (run-conformance! cfg run-dir)
+              items (vec (distinct (concat items (party-top-items out-dir))))
+              preview (if (seq items) (run-preview! cfg items) {:ok? true})
+              errors (remove nil? [(:error conformance)
+                                   (when (:error preview) (str "gcc_preview.py failed: " (:error preview)))])]
+          (cond-> (merge {:ok? (and (:ok? preview) (empty? errors)) :items items}
+                         (select-keys conformance [:conformance]))
+            (seq errors) (assoc :error (str/join "; " errors))))))))

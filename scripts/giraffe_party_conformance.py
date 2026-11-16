@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Read-only, stdlib conformance audit. Run with python3 -I.
+"""Read-only source audit using stdlib. Run with python3 -I.
+Optional --json-out atomically writes a report; it never modifies sources.
 
 Checks source values; character reason checks also parse displayed reasons. Missing inputs produce
 explicit ABSENT results; malformed inputs FAIL. An absence is not verification.
@@ -17,6 +18,8 @@ from pathlib import Path
 import re
 import sys
 import sqlite3
+import tempfile
+import time
 
 CHARACTERS = ('thor', 'merlin', 'questor', 'thyra')
 READY = 'ready (one small handoff)'
@@ -865,6 +868,27 @@ def load(path, edn=False, strict=False):
     return module.edn_load(text)
 
 
+def write_report(path, party, run, results):
+    report = {'generated_at': (party or {}).get('generated_at'), 'run': run,
+              'checked_at_ms': int(time.time() * 1000),
+              'summary': {status: sum(r['status'] == status for r in results)
+                          for status in ('PASS', 'FAIL', 'ABSENT')},
+              'failing': [r['check'] for r in results if r['status'] == 'FAIL'],
+              'results': results}
+    path = Path(path)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=path.parent,
+                                         prefix='.' + path.name, delete=False) as stream:
+            temporary = stream.name
+            json.dump(report, stream, ensure_ascii=False)
+            stream.write('\n')
+        os.replace(temporary, path)
+    finally:
+        if temporary and os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('party', type=Path, nargs='?',
@@ -872,7 +896,9 @@ def main(argv=None):
     parser.add_argument('--run', type=Path)
     parser.add_argument('--pending', type=Path)
     parser.add_argument('--lexicon', type=Path)
+    parser.add_argument('--json-out', type=Path)
     args = parser.parse_args(argv)
+    party, run = None, None
     try:
         party = load(args.party)
         if party is None:
@@ -895,9 +921,16 @@ def main(argv=None):
             print(f"{row['check']:28} {row['status']:7} {row['theorem']}")
             if row['detail']:
                 print(json.dumps(row['detail'], ensure_ascii=False, sort_keys=True))
+        if args.json_out:
+            write_report(args.json_out, party, run.name if run else None, results)
         return int(any(row['status'] == 'FAIL' for row in results))
     except (OSError, IndexError, ValueError, KeyError, TypeError) as exc:
         print('FAIL invalid-input:', str(exc))
+        if args.json_out:
+            write_report(args.json_out, party if isinstance(party, dict) else None,
+                         run.name if isinstance(run, Path) else None,
+                         [{'check': 'invalid-input', 'theorem': '', 'status': 'FAIL',
+                           'detail': {'error': str(exc)}}])
         return 1
 
 
