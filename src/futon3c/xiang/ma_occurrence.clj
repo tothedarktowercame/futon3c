@@ -392,7 +392,13 @@
         (let [pending {:version 1 :at (str (java.time.Instant/now))
                        :reader "none" :state :lu-proposals-pending
                        :why "lu proposals pending" :patterns []}]
-          (ts/update-record! store id #(assoc % :pattern_verdicts pending))
+          ;; Never clobber a real verdict (a re-fired :aligned on a turn
+          ;; read before CL-3); only an absent or pending one is replaced.
+          (ts/update-record! store id
+                             #(let [v (:pattern_verdicts %)]
+                                (if (or (nil? v) (= "lu-proposals-pending" (some-> v :state name)))
+                                  (assoc % :pattern_verdicts pending)
+                                  %)))
           pending)
         (when (and record
                  (= "operator" (:origin record))

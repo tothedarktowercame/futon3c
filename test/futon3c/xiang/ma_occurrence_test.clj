@@ -100,7 +100,15 @@
                            "turn-pending")]
       (is (= :lu-proposals-pending (:state out)))
       (is (= "lu proposals pending" (:why out)))
-      (is (= "lu-proposals-pending" (:state (verdicts store "turn-pending")))))))
+      (is (= "lu-proposals-pending" (:state (verdicts store "turn-pending"))))))
+  (let [store (temp-store)
+        real {:version 1 :reader "馬-sonnet" :patterns [{:pattern "x/y" :verdict "occurs"}]}]
+    (record! store "turn-read" {:pattern_verdicts real})
+    (mo/verdict! {:store store
+                  :proposal-reader (fn [& _] {:pending :lu-proposals-pending})}
+                 "turn-read")
+    (is (= "馬-sonnet" (:reader (verdicts store "turn-read")))
+        "pending never overwrites a stored verdict")))
 
 (deftest patterns-of-never-reads-the-legacy-lu-ranked-field
   (let [forbidden (reify clojure.lang.ILookup
