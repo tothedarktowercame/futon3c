@@ -137,6 +137,7 @@
    pure function of the record."
   [store id f]
   (let [path (record-path store id)]
+    #_{:clj-kondo/ignore [:locking-suspicious-lock]} ; the lock is shared, from record-locks
     (locking (record-lock path)
       (let [record (or (read-json path)
                        (throw (ex-info "Record not found" {:reason :record-not-found :id id})))
