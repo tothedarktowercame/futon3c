@@ -1147,7 +1147,22 @@
                       ;; prompt is subsequently registered before that init.
                       "task_notification" (do (swap! notification-seq inc)
                                               (vreset! agent-initiated? true))
-                      (do (ensure-open!) (claim-compaction! event) (emit! event)))
+                      ;; Between turns, a system event only opens a turn if it
+                      ;; is a compaction. Claude Code 2.1.325 sends
+                      ;; task_updated, task_started, task_progress and
+                      ;; background_tasks_changed after a turn's `result`
+                      ;; whenever a background task outlives that turn. Each
+                      ;; one used to open an ownerless "autonomous" turn that
+                      ;; no `result` would ever close, and the next prompt
+                      ;; waited in await-demux-idle! with no limit (claude-13,
+                      ;; claude-1, claude-3 on 2026-11-16: the "queued claude").
+                      ;; A real autonomous turn is announced by
+                      ;; task_notification and opened by its init.
+                      (cond
+                        @open? (do (claim-compaction! event) (emit! event))
+                        (compaction-event? event)
+                        (do (ensure-open!) (claim-compaction! event) (emit! event))
+                        :else nil))
 
                     "assistant"
                     (do (ensure-open!)
@@ -1167,7 +1182,10 @@
                       (emit! event)
                       (finish-turn! event false))
 
-                      (do (ensure-open!) (emit! event))))))
+                      ;; rate_limit_event, user tool_results and other
+                      ;; metadata belong to an open turn; on their own they
+                      ;; are not evidence that a turn began.
+                      (when @open? (emit! event))))))
               (recur))
             ;; stdout closed: fail every outstanding waiter rather than
             ;; leaving them to time out one by one.

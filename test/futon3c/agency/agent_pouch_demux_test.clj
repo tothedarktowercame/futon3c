@@ -600,3 +600,48 @@
     (is (= "reply:after" (:result (pouch/feed-turn! "demux-notify-compact" "after"
                                                     {:claude-bin bin :timeout-ms 5000})))
         "the next fed turn reads its own reply")))
+
+(defn- post-result-task-events-bin
+  "Answer a turn, then emit the background-task bookkeeping that Claude Code
+   2.1.325 sends after `result` when a background task outlives the turn
+   (measured 2026-11-16), with NO turn following it. Then answer the next
+   input normally."
+  []
+  (let [f (java.io.File/createTempFile "fake-claude-post-result-task-" ".py")]
+    (spit f
+          (str "#!/usr/bin/env python3\n"
+               "import json, sys\n"
+               "def emit(o): print(json.dumps(o), flush=True)\n"
+               "n = 0\n"
+               "for line in sys.stdin:\n"
+               "    n += 1\n"
+               "    text = json.loads(line)['message']['content'][0]['text']\n"
+               "    emit({'type':'system','subtype':'init','session_id':'post-task'})\n"
+               "    emit({'type':'assistant','message':{'content':[{'type':'text','text':'reply:' + text}]}})\n"
+               "    emit({'type':'result','session_id':'post-task','is_error':False})\n"
+               "    if n == 1:\n"
+               "        emit({'type':'system','subtype':'task_updated','task_id':'t1','patch':{'status':'killed'}})\n"
+               "        emit({'type':'system','subtype':'background_tasks_changed','tasks':[]})\n"
+               "        emit({'type':'rate_limit_event','rate_limit_info':{'status':'allowed'}})\n"))
+    (.setExecutable f true)
+    (.deleteOnExit f)
+    (.getAbsolutePath f)))
+
+(deftest post-result-task-events-do-not-open-a-phantom-turn
+  ;; 2026-11-16 claude-13/claude-1/claude-3: task_updated after `result` opened
+  ;; an ownerless turn that nothing closed; the next prompt waited forever.
+  (demux-on!)
+  (let [bin (post-result-task-events-bin)
+        first-result (pouch/feed-turn! "demux-post-task" "one"
+                                       {:claude-bin bin :timeout-ms 3000
+                                        :turn-id "turn-one"})
+        open? (get-in (#'pouch/ensure-pouch! "demux-post-task" {:claude-bin bin})
+                      [:demux :open?])]
+    (is (= "reply:one" (:result first-result)))
+    (Thread/sleep 300)
+    (is (false? @open?) "task bookkeeping after result is not a turn")
+    (let [second-result (pouch/feed-turn! "demux-post-task" "two"
+                                          {:claude-bin bin :timeout-ms 3000
+                                           :turn-id "turn-two"})]
+      (is (= "reply:two" (:result second-result)))
+      (is (= "turn-two" (:turn-id second-result))))))
