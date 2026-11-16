@@ -116,13 +116,15 @@
                                     {:target {:intent/id :collect}}]}
         new {:id "new" :endpoints [{:target {:locator {:codepoint-range [0 6]}}}
                                     {:target {:intent/id :collect}}]}
+        ;; unstamped (pre-stamp) old claim; index returns new FIRST, so
+        ;; neither "last in index order" nor "first" picks it by accident
         ents {"old" old "new" new "a-old" {:content {:act/id "act-1"}}
-              "a-new" {:content {:act/id "act-1"}}}]
+              "a-new" {:content {:act/id "act-1" :written-at "2026-11-16T20:00:00Z"}}}]
     (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref :text (:source_text turn)})
                   store/bounded-query!
                   (fn [_ q]
                     (if (= :role-reverse (:query/type q))
-                      {:ok {:edge-ids ["old" "new"]}}
+                      {:ok {:edge-ids ["new" "old"]}}
                       {:ok {:attestation-ids [(str "a-" (:subject-id q))]}}))
                   store/get-entity (fn [_ id] {:ok (get ents id)})]
       (is (= [{:id "act-1" :start 0 :end 6}]

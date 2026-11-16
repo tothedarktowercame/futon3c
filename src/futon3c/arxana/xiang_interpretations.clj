@@ -74,6 +74,10 @@
                                        :parameters {:interpretation-version (:interpretation_version turn)
                                                     :vocabulary-version (:vocabulary_version turn)}}
                               :content {:act/id (:id act) :about (:about act) :to (:to act)
+                                        ;; futon1b's reverse index keeps no append order
+                                        ;; (these records carry no :event-time), so the
+                                        ;; reader orders corrected claims by this stamp.
+                                        :written-at (str (java.time.Instant/now))
                                         :text-sha256 (digest/sha256-hex (.getBytes (str (:text act)) "UTF-8"))}
                               :source-refs [{:evidence/id (:evidence_id turn) :range span}]})]
                     (cond-> [{:operation :external-reference/assert :record reference}]
@@ -112,18 +116,23 @@
                            (let [aq (:ok (store/bounded-query! (:graph-store cfg)
                                                               {:query/type :attestations
                                                                :subject-id (:id claim) :limit 20}))
-                                 att (:ok (store/get-entity (:graph-store cfg) (first (:attestation-ids aq))))
+                                 atts (keep #(:ok (store/get-entity (:graph-store cfg) %))
+                                            (:attestation-ids aq))
+                                 att (last (sort-by #(str (get-in % [:content :written-at])) atts))
                                  [start end] (get-in claim [:endpoints 0 :target :locator :codepoint-range])]
                              {:id (get-in att [:content :act/id])
+                              :written-at (str (get-in att [:content :written-at]))
                               :kind (name (get-in claim [:endpoints 1 :target :intent/id]))
                               :author "operator" :start start :end end
                               :text (subs text (.offsetByCodePoints ^String text 0 start)
                                           (.offsetByCodePoints ^String text 0 end))})))
-                    ;; Claims arrive oldest first (futon1b role-reverse orders by
-                    ;; event time). A corrected or re-analysed act is a new claim
-                    ;; with the same act id: the latest one stands.
-                    (reduce (fn [m act] (assoc m (:id act) act)) {})
-                    vals (sort-by :start) vec)}))
+                    ;; A corrected or re-analysed act is a new claim with the
+                    ;; same act id: the latest :written-at stands (an unstamped
+                    ;; claim predates the stamp). Index order is not append order.
+                    (group-by :id)
+                    vals
+                    (map #(dissoc (last (sort-by :written-at %)) :written-at))
+                    (sort-by :start) vec)}))
     {:pending :interpretations-pending}))
 
 (defn backfill! [cfg {:keys [write? pause-ms] :or {write? false pause-ms 200}}]
