@@ -7,6 +7,7 @@
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.arxana.xiang-interpretations :as interpretations]
             [futon3c.xiang.ma-reading :as ma]
+            [futon3c.xiang.turn-record :as turn-record]
             [futon3c.xiang.turn-service :as svc]
             [futon3c.xiang.turn-store :as ts]))
 
@@ -34,7 +35,11 @@
                      {:id "claude-3-turn-9-f-s1-1" :kind "explain" :author "operator"
                       :text "why it matters"}
                      {:id "claude-3-turn-9-r-0" :kind "report" :author "claude-3"
-                      :text "did the thing exactly as asked."}]}
+                      :mark "㊢"
+                      :text "did the thing exactly as asked."}
+                     {:id "claude-3-turn-9-r-1" :kind "defer" :author "claude-3"
+                      :mark "🈝"
+                      :text "the reasons are deferred to tomorrow."}]}
         {:keys [id]} (ts/write-record! store (merge base over))]
     [store id])))
 
@@ -76,10 +81,12 @@
                                      :author "operator" :text "why it matters"}
                                     ;; quotes the operator's words: classical
                                     {:id "claude-3-turn-9-r-0" :kind "report"
-                                     :author "claude-3" :target "claude-3-turn-9-f-s1-0"
+                                     :author "claude-3" :mark "㊢"
+                                     :target "claude-3-turn-9-f-s1-0"
                                      :text "\"do the thing\" — done"}
                                     {:id "claude-3-turn-9-r-1" :kind "explain"
-                                     :author "claude-3" :target "claude-3-turn-9-f-s1-1"
+                                     :author "claude-3" :mark "🈖"
+                                     :target "claude-3-turn-9-f-s1-1"
                                      :text "\"why it matters\" — explained"}]})
         asked (atom [])
         events (atom [])]
@@ -91,8 +98,36 @@
     (let [a (by-act store id "claude-3-turn-9-f-s1-0")]
       (is (= "answered" (:verdict a)))
       (is (= "claude-3-turn-9-r-0" (:by a)))
+      (is (= "㊢" (:mark a)))
       (is (= "quote" (:method a))))
     (is (= [{:event :aligned :id id}] @events))))
+
+(deftest classical-pass-reads-marks-only-from-typed-reply-acts
+  (let [record {:turn_id "claude-3-turn-9"
+                :reply_text "㊩ [prose] This must not be parsed."
+                :operator_interpretation_acts
+                [{:id "claude-3-turn-9-f-s1-0" :kind "delegate"
+                  :author "operator" :text "do it"}]
+                :acts [{:id "claude-3-turn-9-r-0" :kind "report"
+                        :author "claude-3" :mark "㊢"
+                        :target "claude-3-turn-9-f-s1-0" :text "done"}]}
+        out (with-redefs [turn-record/reply-marks
+                          (fn [& _] (throw (AssertionError. "reply prose was reparsed")))]
+              (ma/classical-pass record))]
+    (is (= "㊢" (get-in out [:entries 0 :mark])))
+    (is (= 0 (:reply-marks-absent out)))))
+
+(deftest classical-pass-types-an-absent-reply-mark
+  (let [record {:turn_id "claude-3-turn-9"
+                :operator_interpretation_acts
+                [{:id "claude-3-turn-9-f-s1-0" :kind "delegate"
+                  :author "operator" :text "do it"}]
+                :acts [{:id "claude-3-turn-9-r-0" :kind "report"
+                        :author "claude-3" :target "claude-3-turn-9-f-s1-0"
+                        :text "done"}]}
+        out (ma/classical-pass record)]
+    (is (nil? (get-in out [:entries 0 :mark])))
+    (is (= 1 (:reply-marks-absent out)))))
 
 (deftest an-open-act-is-answered-by-the-model-with-a-verbatim-quote
   (let [[store id] (record!)

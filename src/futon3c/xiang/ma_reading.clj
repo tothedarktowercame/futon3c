@@ -35,7 +35,6 @@
             [clojure.java.io :as io]
             [futon3c.arxana.turn-mention-writer :as mention-writer]
             [futon3c.arxana.xiang-interpretations :as interpretations]
-            [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts])
   (:import [java.util.concurrent Executors ExecutorService ThreadFactory]))
@@ -77,19 +76,6 @@
          (filter #(and (string? (:id %))
                        (str/starts-with? (:id %) base))))))
 
-(defn- paragraphs
-  "The reply's marked paragraphs with their act ids: [{:id :mark :text}],
-  id = \"<turn-id>-r-<n>\" as reply-acts numbers them (the index into
-  reply-marks, the same enumeration both use)."
-  [record]
-  (let [turn-id (:turn_id record)]
-    (->> (tr/reply-marks (str (or (:reply_text record) "")))
-         (map-indexed (fn [idx {:keys [mark text]}]
-                        {:id (str turn-id "-r-" idx)
-                         :mark (some-> mark name)
-                         :text (str text)}))
-         vec)))
-
 (defn classical-pass
   "Pass 1, no model: every operator act of RECORD, `answered` with method
   `quote` when a reply act of the same turn targets it, else open (nil
@@ -98,7 +84,8 @@
   [record]
   (let [replies (reply-acts record)
         targeters (into {} (keep (fn [a] (when-let [t (:target a)] [t a])) replies))
-        marks (into {} (map (juxt :id :mark) (paragraphs record)))]
+        marks (into {} (map (juxt :id :mark) replies))
+        reply-marks-absent (count (remove :mark replies))]
     (letfn [(entry [a]
               {:act (:id a)
                :kind (some-> (:kind a) name)
@@ -114,6 +101,7 @@
                               (entry a)))
                           (operator-acts record))]
         {:entries entries
+         :reply-marks-absent reply-marks-absent
          :open (filterv #(nil? (:verdict %)) entries)}))))
 
 (defn- extract-json-array
@@ -223,9 +211,9 @@
   "The version-1 alignment map for RECORD, running both passes.  Pure
   apart from the (bounded, injected) ask."
   [opts record]
-  (let [{:keys [entries open]} (classical-pass record)
+  (let [{:keys [entries open reply-marks-absent]} (classical-pass record)
         reply-text (str (or (:reply_text record) ""))
-        paragraphs (paragraphs record)
+        paragraphs (mapv #(select-keys % [:id :mark :text]) (reply-acts record))
         {:keys [seat] model-entries :entries}
         (model-pass opts open reply-text paragraphs)
         marks (into {} (map (juxt :id :mark) paragraphs))
@@ -243,6 +231,7 @@
      :at (:at opts)
      :seat seat
      :acts acts
+     :reply-marks-absent reply-marks-absent
      :unread unread-n}))
 
 (defn align!

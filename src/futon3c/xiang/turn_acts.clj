@@ -143,11 +143,12 @@
   [record reply-text base]
   (let [turn-id (:turn_id record)
         at (or (:reply_at record) (:created_at record))]
-    (reduce (fn [acc [idx {:keys [intent text]}]]
+    (reduce (fn [acc [idx {:keys [intent mark text]}]]
               (if-let [kind (mark-kind intent text)]
                 (update acc :acts conj
                         (cond-> {:id (str base "-r-" idx)
                                  :kind kind
+                                 :mark (some-> mark name)
                                  :author (:agent_id record)
                                  :at at
                                  :to "operator"

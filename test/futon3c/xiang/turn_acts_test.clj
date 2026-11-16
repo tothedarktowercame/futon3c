@@ -61,9 +61,12 @@
       (is (= :report-problem (:kind (by-id "claude-17-turn-391-f-s2-0"))))
       (is (= "operator" (:author (by-id "claude-17-turn-391-f-s1-0")))))
     (testing "reply paragraphs take the kind their mark declares"
-      (let [kinds (mapv :kind (filter #(str/includes? (:id %) "-r-") acts))]
+      (let [reply-acts (filterv #(str/includes? (:id %) "-r-") acts)
+            kinds (mapv :kind reply-acts)]
         (is (= [:report-problem :approve :ask-action] kinds)
             "㊩ ㊣ and 🈸; the ㊥ gist has no kind and is skipped"))
+      (is (= ["㊩" "㊣" "🈸"]
+             (mapv :mark (filter #(str/includes? (:id %) "-r-") acts))))
       (is (= 1 (:skipped (meta acts))) "the gist paragraph alone"))
     (testing "a 🈸 without options is :ask-action, not :offer"
       (is (some #(= :ask-action (:kind %)) acts))
@@ -72,6 +75,18 @@
       (is (= :commit (:kind (by-id "claude-17-turn-391-c-1ee5fea7")))))
     (testing "every kind is from the kernel's table"
       (is (every? #(contains? lx/kinds (:kind %)) acts)))))
+
+(deftest reply-act-marks-keep-the-original-paragraph-index
+  (let [record {:turn_id "agent-turn-1" :created_at "2026-11-17T00:00:00Z"
+                :agent_id "agent" :session_id "session"}
+        reply (str "㊢ [first] First report.\n\n"
+                   "㊥ [middle] Skipped gist.\n\n"
+                   "🈸 [third] Shall I continue?")
+        acts (ta/turn->acts record {:sentences []} reply [])
+        replies (filterv #(str/includes? (:id %) "-r-") acts)]
+    (is (= ["agent-turn-1-r-0" "agent-turn-1-r-2"] (mapv :id replies)))
+    (is (= ["㊢" "🈸"] (mapv :mark replies)))
+    (is (= 1 (:skipped (meta acts))))))
 
 (deftest reply-and-commit-acts-use-the-reply-time
   (let [{:keys [record reading reply commits]} (first (fixture-turns))
