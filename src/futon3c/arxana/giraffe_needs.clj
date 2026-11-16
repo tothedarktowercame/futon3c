@@ -19,9 +19,24 @@
 (defn- require! [ok reason]
   (when-not ok (throw (ex-info "Giraffe needs evidence refused" {:reason reason}))))
 
-(defn current-run [cfg]
-  (let [party (json/parse-string (slurp (:party-path cfg)) true)
-        run (get-in party [:sources :giraffe_run])
+(defn default-config []
+  (merge (mentions/default-config)
+         {:party-path (str (System/getProperty "user.home") "/storage/gcc-preview/party.json")
+          :runs-dir (str (System/getProperty "user.home") "/storage/giraffe")
+          :pause-ms 200}))
+
+(defn party-run
+  "The Giraffe run the party (Mojira's GCC pages) is built from."
+  [cfg]
+  (let [run (get-in (json/parse-string (slurp (:party-path cfg)) true) [:sources :giraffe_run])]
+    (require! (and (string? run) (= run (.getName (io/file run)))) :invalidEvidence)
+    run))
+
+(defn current-run
+  "The run to write: :giraffe-run when given (the reread service writes a
+  freshly minted run before the party is repointed at it), else the party's."
+  [cfg]
+  (let [run (or (:giraffe-run cfg) (party-run cfg))
         _ (require! (and (string? run) (= run (.getName (io/file run)))) :invalidEvidence)
         dir (io/file (:runs-dir cfg) run)
         manifest (edn/read-string (slurp (io/file dir "manifest.edn")))
@@ -129,7 +144,7 @@
      (newThread [_ r] (doto (Thread. ^Runnable r "giraffe-needs-read")
                         (.setDaemon true))))))
 
-(defn- read-needs-gcc* [cfg]
+(defn- read-needs-gcc* [cfg run]
   (let [items (vec (:item-ids cfg))
         tasks (mapv #(.submit read-executor ^Callable (fn [] (query-needing cfg %))) items)
         ids (->> tasks (mapcat #(.get %)) distinct vec)]
@@ -141,8 +156,14 @@
                        (when-let [att (latest-attestation cfg claim)]
                          (let [from (item-by-ref (get-in claim [:endpoints 0 :target :ref/id]))
                                to (item-by-ref (get-in claim [:endpoints 1 :target :ref/id]))]
-                           (when (and from to)
+                           ;; Giraffe mints a new run every few minutes; a claim
+                           ;; whose latest attestation is from another run is
+                           ;; not an edge of the reading the party shows.
+                           (when (and from to (= run (get-in att [:content :run])))
                              {:claim claim :att att :from from :to to})))) claims)
+          _ (when (empty? rows)
+              (throw (ex-info "GCC needs unavailable for the party's run"
+                              {:reason :needs-unavailable :run run})))
           by-member (sort-by key (group-by #(get-in % [:att :content :reading-member]) rows))
           sources (atom [])
           readings
@@ -193,7 +214,8 @@
   by store and inventory census. Typed unavailability is cached for five
   seconds only, so repeated per-turn reads stay cheap without hiding backfill."
   [cfg]
-  (let [k [(:graph-store cfg) (hash (vec (:item-ids cfg)))]
+  (let [run (party-run cfg)
+        k [(:graph-store cfg) (hash (vec (:item-ids cfg))) run]
         now (System/currentTimeMillis)
         cached (get @read-cache k)]
     (cond
@@ -202,13 +224,22 @@
       (throw (:error cached))
       :else
       (try
-        (let [result (read-needs-gcc* cfg)]
+        (let [result (read-needs-gcc* cfg run)]
           (when (:cache-needs? cfg) (swap! read-cache assoc k {:result result :at now}))
           result)
         (catch clojure.lang.ExceptionInfo e
           (when (and (:cache-needs? cfg) (= :needs-unavailable (:reason (ex-data e))))
             (swap! read-cache assoc k {:error e :at now}))
           (throw e))))))
+
+(defn write-run!
+  "Write RUN's needs (the reread service calls this for each minted run,
+  before the party is repointed at it). Never throws."
+  ([run] (write-run! (assoc (default-config) :pause-ms 50) run))
+  ([cfg run]
+   (try (write! (assoc cfg :giraffe-run run :item-ids (mentions/inventory cfg nil)))
+        (catch Exception e {:run run :failed (or (:reason (ex-data e)) :needs-write-exception)
+                            :detail (.getMessage e)}))))
 
 (defn backfill! [cfg {:keys [write?] :or {write? false}}]
   (let [p (plan cfg)
@@ -226,11 +257,7 @@
     (throw (ex-info "usage: --dry-run (default) | --write" {})))
   (when (= #{"--dry-run" "--write"} (set args))
     (throw (ex-info "choose dry-run or write" {})))
-  (let [base (merge (mentions/default-config)
-                    {:party-path (str (System/getProperty "user.home")
-                                      "/storage/gcc-preview/party.json")
-                     :runs-dir (str (System/getProperty "user.home") "/storage/giraffe")
-                     :pause-ms 200})
+  (let [base (default-config)
         cfg (assoc base :item-ids (mentions/inventory base nil))]
     (try (prn (backfill! cfg {:write? (boolean (some #{"--write"} args))}))
          (finally (shutdown-agents)))))

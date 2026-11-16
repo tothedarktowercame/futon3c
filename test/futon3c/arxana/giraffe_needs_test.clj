@@ -64,13 +64,17 @@
             (sut/plan {:item-ids ["M-a" "M-b"] :written-at "2026-11-16T20:00:00Z"}))
         rows (get-in p [:readings 0 :rows])
         claim (:record (first (filter #(= :clusion/assert (:operation %)) rows)))
-        old (:record (first (filter #(= :evidence/append (:operation %)) rows)))
-        new (assoc-in old [:content :written-at] "2026-11-16T20:01:00Z")
+        planned (:record (first (filter #(= :evidence/append (:operation %)) rows)))
+        ;; The older attestation is from an earlier run, so picking it (by
+        ;; index order) is visible: its edge is not the party run's.
+        old (assoc-in planned [:content :run] "run-0")
+        new (assoc-in planned [:content :written-at] "2026-11-16T20:01:00Z")
         new (assoc new :id "att-new")
         entities {(:id claim) claim (:id old) old (:id new) new}
         run-order
         (fn [att-ids]
-          (with-redefs [store/bounded-query!
+          (with-redefs [sut/party-run (constantly "run-1")
+                        store/bounded-query!
                         (fn [_ q]
                           (case (:query/type q)
                             :role-reverse {:ok {:status :ok :truncated? false
@@ -93,3 +97,35 @@
                   http/append-batch! (fn [& _] (throw (AssertionError. "dry run wrote")))]
       (is (= {:would-write 1 :empty 0}
              (:outcomes (sut/backfill! {:item-ids ["M-a" "M-b"]} {:write? false})))))))
+
+(deftest reader-keeps-only-the-party-runs-edges-and-rereads-on-a-new-run
+  ;; An edge whose latest attestation is from an older run is not an edge of
+  ;; the reading the party now shows; a new party run is not served from cache.
+  (let [{:keys [run]} (fixture)
+        p (with-redefs [sut/current-run (constantly run)]
+            (sut/plan {:item-ids ["M-a" "M-b"] :written-at "2026-11-16T20:00:00Z"}))
+        rows (get-in p [:readings 0 :rows])
+        claim (:record (first (filter #(= :clusion/assert (:operation %)) rows)))
+        att (:record (first (filter #(= :evidence/append (:operation %)) rows)))
+        party (atom "run-2") queries (atom 0)
+        cfg {:graph-store :stub-run-scope :item-ids ["M-a" "M-b"] :cache-needs? true}]
+    (with-redefs [sut/party-run (fn [_] @party)
+                  store/bounded-query!
+                  (fn [_ q]
+                    (case (:query/type q)
+                      :role-reverse (do (swap! queries inc)
+                                        {:ok {:status :ok :truncated? false
+                                              :edge-ids (if (= (:endpoint-id q)
+                                                               (:id (inventory/item-record "M-a")))
+                                                          [(:id claim)] [])}})
+                      :attestations {:ok {:attestation-ids [(:id att)]}}))
+                  store/get-entity (fn [_ id] {:ok (get {(:id claim) claim (:id att) att} id)})]
+      (is (= :needs-unavailable
+             (try (sut/read-needs-gcc cfg) nil
+                  (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))
+          "run-1's edge is not served for party run-2")
+      (reset! party "run-1")
+      (is (= [["M-a" "M-b"]] (mapcat :needs (:readings (sut/read-needs-gcc cfg)))))
+      (let [n @queries]
+        (sut/read-needs-gcc cfg)
+        (is (= n @queries) "same run: cached")))))

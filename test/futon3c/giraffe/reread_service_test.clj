@@ -50,7 +50,9 @@
      :inventory-sync-fn (fn [& _] (throw (AssertionError. "empty inventory called store")))
      :inventory-config {}
      :snapshot-fn (fn [_] {:open-items [] :coverage {:members []}})
-     :mint-fn (fn [] {:status :minted :run-id "fixture-run"})}))
+     :mint-fn (fn [] {:status :minted :run-id "fixture-run"})
+     ;; The default writes the minted run's needs to the live GCC.
+     :needs-writer! (fn [run] {:run run :written 0})}))
 
 (def path "/invented/holes/missions/M-event-fixture.md")
 (defn- snapshot [path _]
@@ -405,6 +407,26 @@
         (is (= ["M-event-fixture" "M-party-top"] (:items refresh)))
         (is (pos-int? (:at-ms refresh))))
       (is (empty? (:errors (service/health)))))))
+
+(deftest a-minted-runs-needs-are-written-before-the-party-is-refreshed
+  (let [config (fixture) recorded (atom []) order (atom []) boot (promise)]
+    (with-redefs [service/item-snapshot (fn [p c] (snapshot p c))
+                  worker/run-once!
+                  (fn [{:keys [store now-ms new-item-cap reader-id]}]
+                    (if-let [claim (queue/claim! store now-ms 1000 new-item-cap reader-id)]
+                      {:status :landed :request (queue/settle! store claim {:status :landed :digest "fixture"} now-ms 3)}
+                      (do (deliver boot true) {:status :idle})))
+                  futon3c.giraffe.preview-refresh/refresh!
+                  (fn [& _] (swap! order conj :party) {:ok? true :items []})]
+      (service/start! (assoc config
+                             :preview (preview-config (temp-dir) recorded)
+                             :needs-writer! (fn [run] (swap! order conj [:needs run])
+                                              {:run run :written 3})))
+      (is (= true (deref boot 2000 :timeout)))
+      (service/notify-doc-changed! path)
+      (is (true? (wait-for #(some? (:last-refresh (service/health))) 2000)))
+      (is (= [[:needs "fixture-run"] :party] @order))
+      (is (= 3 (:written (:last-needs-write (service-state))))))))
 
 (deftest two-mints-during-one-refresh-yield-one-follow-up
   (let [config (fixture) gate (promise) entered (promise)

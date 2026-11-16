@@ -9,6 +9,7 @@
             [futon2.aif.mission-registry :as registry]
             [futon2.aif.task-requisition :as requisition]
             [futon3c.giraffe.missions :as missions]
+            [futon3c.arxana.giraffe-needs :as giraffe-needs]
             [futon3c.giraffe.preview-refresh :as preview]
             [futon3c.giraffe.readings :as readings]
             [futon3c.giraffe.reread-cli :as cli]
@@ -108,6 +109,7 @@
                        :inventory-config (mention-writer/default-config)
                        :inventory-items-fn item-inventory/current-items
                        :inventory-sync-fn item-inventory/sync-items!
+                       :needs-writer! giraffe-needs/write-run!
                        :turn-store live-turn-store}
                       (dissoc opts :env-file :environment :preview))]
     (when-not (and (seq (:reader-seats config))
@@ -185,6 +187,15 @@
   (loop []
     (let [{:keys [config refresh-run-id refresh-items]} @state]
       (swap! state assoc :refresh-requested? false :refresh-items #{})
+      ;; The minted run's needs go to the GCC before the party is repointed
+      ;; at it, so 猴's GCC needs reader never sees a party run it lacks.
+      (when-let [w (and refresh-run-id (:needs-writer! config))]
+        (let [r (try (w refresh-run-id)
+                     (catch Exception e {:failed :needs-write-exception :detail (.getMessage e)}))]
+          (when (active? token)
+            (swap! state assoc :last-needs-write
+                   (assoc (select-keys r [:run :written :skipped :failed :detail])
+                          :run refresh-run-id :at-ms (System/currentTimeMillis))))))
       (let [summary (try
                       (preview/refresh! (:preview config)
                                         (when refresh-run-id
