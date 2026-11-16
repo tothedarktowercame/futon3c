@@ -129,3 +129,31 @@
       (let [n @queries]
         (sut/read-needs-gcc cfg)
         (is (= n @queries) "same run: cached")))))
+
+(deftest a-reading-with-two-needs-edges-reads-both
+  ;; Stamps are strings; live readings carry several edges each.
+  (let [{:keys [run]} (fixture)
+        run (update-in run [:input :edges] conj
+                       {:from "M-a" :to "M-c" :class :closure :reading-member "reading-a"})
+        p (with-redefs [sut/current-run (constantly run)]
+            (sut/plan {:item-ids ["M-a" "M-b" "M-c"] :written-at "2026-11-16T20:00:00Z"}))
+        rows (get-in p [:readings 0 :rows])
+        claims (map :record (filter #(= :clusion/assert (:operation %)) rows))
+        atts (map :record (filter #(= :evidence/append (:operation %)) rows))
+        att-of (into {} (map (fn [a] [(:subject-clusion-id a) a]) atts))
+        entities (merge (into {} (map (juxt :id identity) claims))
+                        (into {} (map (juxt :id identity) atts)))]
+    (with-redefs [sut/party-run (constantly "run-1")
+                  store/bounded-query!
+                  (fn [_ q]
+                    (case (:query/type q)
+                      :role-reverse {:ok {:status :ok :truncated? false
+                                          :edge-ids (if (= (:endpoint-id q)
+                                                           (:id (inventory/item-record "M-a")))
+                                                      (mapv :id claims) [])}}
+                      :attestations {:ok {:attestation-ids [(:id (att-of (:subject-id q)))]}}))
+                  store/get-entity (fn [_ id] {:ok (get entities id)})]
+      (is (= #{["M-a" "M-b"] ["M-a" "M-c"]}
+             (set (mapcat :needs (:readings (sut/read-needs-gcc
+                                              {:graph-store :stub-two
+                                               :item-ids ["M-a" "M-b" "M-c"]})))))))))

@@ -169,7 +169,7 @@
           readings
           (mapv
            (fn [[member rs]]
-             (let [latest-stamp (apply max (map #(str (get-in % [:att :content :written-at])) rs))
+             (let [latest-stamp (last (sort (map #(str (get-in % [:att :content :written-at])) rs)))
                    rs (filterv #(= latest-stamp (str (get-in % [:att :content :written-at]))) rs)
                    att (:att (first rs))
                    pin (get-in att [:content :record-pin])
