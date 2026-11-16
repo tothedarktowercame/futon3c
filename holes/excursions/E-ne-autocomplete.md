@@ -45,3 +45,12 @@ named items alone found nothing. Entities Joe introduces with `[[X]]` would give
 - **Retroactive:** once `[[猴]]` exists, earlier exact occurrences of 猴 can be
   proposed as mentions (the same kind of retroactive claiming as unfiled work,
   e.g. claude-3's notmuch.el turns under a later M-futon-comms).
+
+## Later: the exact rules for referents (Joe, 2026-11-16)
+
+Joe: "'Referents go from entity to entity' is clear enough for now. I reckon
+dealing with the exact details is something we can come back to later."
+Open details: a referent must already be an entity (`[[Mojira | Quetzalcōātl]]`
+links nothing until `[[Quetzalcōātl]]` exists); referents cannot point at item
+ids; which stored forms attestation governs a word's switch is not pinned by a
+test (futon3c `473a8fad3`'s planted check did not fail).
