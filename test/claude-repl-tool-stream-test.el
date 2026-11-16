@@ -2,6 +2,25 @@
 (require 'ert)
 (require 'claude-repl)
 
+(ert-deftest claude-repl-stream-timeout-is-configurable-and-not-one-hour ()
+  (dolist (setting '(21600 nil))
+    (with-temp-buffer
+      (setq-local agent-chat--prompt-marker (copy-marker (point) t))
+      (let (command output-buffer)
+        (unwind-protect
+            (let ((claude-repl-stream-max-time setting))
+              (cl-letf (((symbol-function 'make-process)
+                         (lambda (&rest args)
+                           (setq command (plist-get args :command)
+                                 output-buffer (plist-get args :buffer))
+                           'test-process)))
+                (claude-repl--call-claude-streaming "long turn" #'ignore)
+                (should-not (member "3660" command))
+                (if setting
+                    (should (equal (cadr (member "--max-time" command)) "21600"))
+                  (should-not (member "--max-time" command)))))
+          (when (buffer-live-p output-buffer) (kill-buffer output-buffer)))))))
+
 (ert-deftest claude-repl-tool-first-stream-keeps-commands-and-prose ()
   ;; Exercise the actual NDJSON filter, including fragmented network input.
   (dolist (with-details '(t nil))

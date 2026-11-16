@@ -67,6 +67,14 @@
   :type 'number
   :group 'claude-repl)
 
+(defcustom claude-repl-stream-max-time 21600
+  "Seconds before the invoke stream's curl gives up, or nil for no limit.
+The agent's turn runs on regardless; only this buffer stops hearing it.  The
+old 3660-second literal detached claude-7 from a healthy parked/resumed turn
+on 2026-11-16.  This matches the supervised-turn allowance in codex-repl."
+  :type '(choice (const :tag "No limit" nil) number)
+  :group 'claude-repl)
+
 (defcustom claude-repl-drawbridge-url "http://localhost:6768"
   "Drawbridge REPL URL used as a fallback for session reset."
   :type 'string
@@ -1078,9 +1086,13 @@ CALLBACK is called with the final response text on completion."
            (make-process
             :name "futon3c-invoke-stream"
             :buffer outbuf
-            :command (list "curl" "-N" "-sS" "--max-time" "3660"
-                           "-H" "Content-Type: application/json"
-                           "-d" json-body url)
+            :command (append
+                      (list "curl" "-N" "-sS")
+                      (when claude-repl-stream-max-time
+                        (list "--max-time"
+                              (number-to-string claude-repl-stream-max-time)))
+                      (list "-H" "Content-Type: application/json"
+                            "-d" json-body url))
             :noquery t
             :connection-type 'pipe
             :filter
