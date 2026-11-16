@@ -1,0 +1,64 @@
+{:capture
+ {:date "2026-11-16"
+  :authority "read-only futon1b API on :7073"
+  :entity-endpoint "/api/alpha/entities/latest?type=arxana/link-strategy&limit=1"
+  :hyperedge-endpoint "/api/alpha/hyperedges?type=mission-scope%2Fpattern&limit=1"}
+ :records
+ [{:xt/id "strategy:1770ded39c43961023ed192bb384dbdc"
+   :type "arxana/link-strategy"
+   :scope {:repo "futon4" :code-roots ["dev" "test"] :docbook "futon4"}
+   :finders [{:type "symbol-as-term"
+              :def-patterns ["defun" "defmacro" "defsubst" "defvar"
+                             "defvar-local" "defcustom" "defconst"
+                             "define-derived-mode" "define-minor-mode"
+                             "defn" "defn-"]
+              :auto-link? true}
+             {:type "filename-mention" :auto-link? true}
+             {:type "surface-form-hybrid" :auto-link? true}]
+   :created-at "2026-02-08T19:05:45Z"
+   :created-by "joe"}
+  {:prop/binder-type "pattern"
+   :hx/endpoints ["futon0-d/mission/c-bayesian-structure-learning-family"
+                  "C-bayesian-structure-learning-family/pattern/orchestration-consent-gate"
+                  "orchestration/consent-gate"
+                  "scope/concept/pattern"
+                  "scope/concept/superpod"]
+   :prop/canonical-id "C-bayesian-structure-learning-family/pattern/orchestration-consent-gate"
+   :hx/id "hx|mission-scope|C-bayesian-structure-learning-family/pattern/orchestration-consent-gate"
+   :prop/stable-id "C-bayesian-structure-learning-family/pattern/orchestration-consent-gate"
+   :hx/ends [{:entity-id "futon0-d/mission/c-bayesian-structure-learning-family" :role :entity}
+             {:entity-id "C-bayesian-structure-learning-family/pattern/orchestration-consent-gate" :role :environment}
+             {:entity-id "orchestration/consent-gate" :role :target-pattern}
+             {:entity-id "scope/concept/pattern" :role :concept}
+             {:entity-id "scope/concept/superpod" :role :concept}]
+   :prop/heading-slug "pattern/orchestration-consent-gate"
+   :prop/name "pattern: orchestration/consent-gate"
+   :hx/props {:scope/id "C-bayesian-structure-learning-family/pattern/orchestration-consent-gate"
+              :anchor/state :anchored
+              :anchor/resolve-by :verbatim-search
+              :pattern/ident "orchestration/consent-gate"
+              :scope/original-id "C-bayesian-structure-learning-family:scope-006"
+              :anchor/passage "(the WM-overnight guardrails posture; `orchestration/consent-gate` + `pattern-warranted-choice-point`)."
+              :anchor/fingerprint "129164e35508bbe2"
+              :scope/duplicate-heading? false
+              :scope/binder-type "pattern"
+              :mission "C-bayesian-structure-learning-family"
+              :scope/canonical-id "C-bayesian-structure-learning-family/pattern/orchestration-consent-gate"
+              :pattern/ref "futon3/library/orchestration/consent-gate.flexiarg"
+              :scope/stable-id "C-bayesian-structure-learning-family/pattern/orchestration-consent-gate"
+              :anchor/source :content-position
+              :scope/heading-slug "pattern/orchestration-consent-gate"
+              :pattern/state :linked
+              :scope/name "pattern: orchestration/consent-gate"}
+   :prop/source :content-position
+   :prop/id "C-bayesian-structure-learning-family/pattern/orchestration-consent-gate"
+   :hx/labels [:mission-scope/pattern]
+   :prop/state :linked
+   :prop/ident "orchestration/consent-gate"
+   :prop/resolve-by :verbatim-search
+   :prop/mission "C-bayesian-structure-learning-family"
+   :prop/original-id "C-bayesian-structure-learning-family:scope-006"
+   :prop/passage "(the WM-overnight guardrails posture; `orchestration/consent-gate` + `pattern-warranted-choice-point`)."
+   :prop/duplicate-heading? false
+   :hx/type :mission-scope/pattern
+   :prop/fingerprint "129164e35508bbe2"}]}

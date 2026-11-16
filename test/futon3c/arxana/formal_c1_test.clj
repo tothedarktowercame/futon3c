@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is]]
+            [futon3c.arxana.legacy-records :as legacy]
             [futon3c.arxana.records :as records]
             [futon3c.arxana.type-registry :as types]))
 
@@ -95,6 +96,31 @@
                (records/record-id type-revision content))))
       (doseq [{attestation :record expected-attestation-id :expected-id} attestations]
         (is (= expected-attestation-id (records/attestation-id attestation)))))))
+
+(deftest observed-legacy-xtdb-records-round-trip-without-loss
+  (let [resource (io/file "test/resources/arxana/formal_arxana/c1/legacy-xtdb-records.edn")
+        {:keys [capture records]} (edn/read-string (slurp resource))
+        [entity hyperedge] records
+        entity-view (legacy/normalize entity)
+        hyperedge-view (legacy/normalize hyperedge)]
+    (is (= "read-only futon1b API on :7073" (:authority capture)))
+    (is (= :legacy/entity (:record/family entity-view)))
+    (is (= (:xt/id entity) (:record/id entity-view)))
+    (is (= :legacy/hyperedge (:record/family hyperedge-view)))
+    (is (= (:hx/id hyperedge) (:record/id hyperedge-view)))
+    (is (= :frozen (:legacy/write-state hyperedge-view)))
+    (is (= (select-keys hyperedge (filter #(= "prop" (namespace %))
+                                          (keys hyperedge)))
+           (:legacy/properties hyperedge-view)))
+    (doseq [record records]
+      (is (= record (-> record legacy/normalize legacy/denormalize))))))
+
+(deftest legacy-normalizer-refuses-to-invent-an-original
+  (is (= :arxana.legacy/original-required
+         (try
+           (legacy/denormalize {:record/family :legacy/entity})
+           nil
+           (catch clojure.lang.ExceptionInfo e (:error (ex-data e)))))))
 
 (deftest intent-vocabulary-generated-presentations-do-not-drift
   (let [{:keys [exit out err]}
