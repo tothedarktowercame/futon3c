@@ -3,6 +3,7 @@
             [clojure.java.io :as io]
             [futon3c.arxana.digest :as digest]
             [clojure.test :refer [deftest is]]
+            [clojure.string :as str]
             [futon3c.arxana.records :as records]
             [futon3c.arxana.store :as store]
             [futon3c.arxana.store-http :as http]
@@ -99,6 +100,37 @@
       (spit (:doc w) "toy evidence")
       (spit (:batch w) "{}\n")
       (is (= :invalidEvidence (try (sut/read-needs (:cfg w)) (catch Exception e (:reason (ex-data e))))))
+      (finally (delete-world! w)))))
+
+(deftest readings-outside-the-current-item-inventory-do-not-poison-focus
+  (let [w (temp-world)]
+    (try
+      (let [sha #(digest/sha256-hex (.getBytes % "UTF-8"))
+            input-file (io/file (:run w) "input.edn")
+            manifest-file (io/file (:run w) "manifest.edn")
+            input (read-string (slurp input-file))
+            old-raw {:id "E-old-requisition" :source {:path (str (:doc w)) :sha256 (sha "toy evidence")}
+                     :edges [{:kind "depends-on" :to "E-old-input"
+                              :evidence {:path (str (:doc w)) :sha256 (sha "toy evidence")}}]}
+            old-line (json/generate-string old-raw)
+            old-pin {:batch (str (:batch w)) :line 2 :sha256 (sha old-line)}
+            input (-> input
+                      (update :edges conj {:from :E-old-requisition :to :E-old-input
+                                           :class :closure :reading-member "E-old-requisition"})
+                      (update-in [:graph-coverage :members] conj
+                                 {:id "E-old-requisition" :status :read :record-pin old-pin}))
+            first-line (first (str/split-lines (slurp (:batch w))))]
+        (spit (:batch w) (str first-line "\n" old-line "\n"))
+        (spit input-file (pr-str input))
+        (spit manifest-file
+              (pr-str {:files [{:file "input.edn" :sha256 (sha (pr-str input))}]
+                       :readings-generation {:path (str (io/file (:root w) "generation"))}}))
+        (let [out (sut/read-needs (:cfg w))]
+          (is (= ["giraffe-reading/M-b"] (mapv #(get-in % [:record :id]) (:readings out))))
+          (is (not-any? #(= "giraffe-reading/E-old-requisition" (first %))
+                        (get-in (hou/hou-run
+                                 (assoc (toy/fixture) :readings (:readings out)))
+                                [:written :asserted-content :hou/evidence-pin])))))
       (finally (delete-world! w)))))
 
 (deftest newest-empty-focus-does-not-resurrect-old-relations

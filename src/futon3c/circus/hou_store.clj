@@ -50,8 +50,9 @@
         members (into {} (map (fn [m] [(id-text (:id m)) m])) (get-in inp [:graph-coverage :members]))
         generation (get-in manifest [:readings-generation :path])
         source-files (atom [{:kind :file :path path :sha256 sha}])
+        item-set (some-> (:item-ids cfg) set)
         readings
-        (mapv (fn [[owner es]]
+        (into [] (keep (fn [[owner es]]
                 (let [member (get members owner)
                       pin (:record-pin member)
                       batch (io/file generation (.getName (io/file (:batch pin))))
@@ -59,19 +60,26 @@
                       _ (require! (= (:sha256 pin) (digest/sha256-hex (.getBytes line "UTF-8"))) :invalidEvidence)
                       raw (json/parse-string line true)
                       _ (require! (and (= :read (:status member)) (= owner (:id raw))) :invalidEvidence)
-                      pins (cons (:source raw) (keep :evidence (:edges raw)))]
-                  (doseq [p pins]
-                    (require! (and (string? (:path p)) (string? (:sha256 p))
-                                   (= (:sha256 p) (sha-file (:path p)))) :evidenceChanged)
-                    (swap! source-files conj {:kind :file :path (:path p) :sha256 (:sha256 p)}))
-                  (swap! source-files conj {:kind :file :path (str batch) :sha256 (sha-file batch)})
-                  {:record {:id (str "giraffe-reading/" owner) :reading raw :line-sha256 (:sha256 pin)}
-                   :needs (mapv #(vector (id-text (:from %)) (id-text (:to %))) es)
-                   ;; Basic.GCC.incident uses every accepted edge of this
-                   ;; reading, including part-of/relates-to, not only needs.
-                   :incident-items (vec (distinct (mapcat (fn [e] [owner (:to e)])
-                                            (remove #(= "alternative" (or (:intended_class %) (:intended-class %)))
-                                                    (:edges raw)))))}))
+                      pins (cons (:source raw) (keep :evidence (:edges raw)))
+                      ;; The Giraffe generation can retain readings for files
+                      ;; deliberately excluded from the GCC item inventory
+                      ;; (for example completed requisition packets). Such a
+                      ;; reading is not a GCC record: admitting it makes
+                      ;; LoopBuilt false because it has no item endpoint.
+                      incident-items (vec (distinct (mapcat (fn [e] [owner (:to e)])
+                                                  (remove #(= "alternative" (or (:intended_class %) (:intended-class %)))
+                                                          (:edges raw)))))]
+                  (when (or (nil? item-set) (some item-set incident-items))
+                    (doseq [p pins]
+                      (require! (and (string? (:path p)) (string? (:sha256 p))
+                                     (= (:sha256 p) (sha-file (:path p)))) :evidenceChanged)
+                      (swap! source-files conj {:kind :file :path (:path p) :sha256 (:sha256 p)}))
+                    (swap! source-files conj {:kind :file :path (str batch) :sha256 (sha-file batch)})
+                    {:record {:id (str "giraffe-reading/" owner) :reading raw :line-sha256 (:sha256 pin)}
+                     :needs (mapv #(vector (id-text (:from %)) (id-text (:to %))) es)
+                     ;; Basic.GCC.incident uses every accepted edge of this
+                     ;; reading, including part-of/relates-to, not only needs.
+                     :incident-items incident-items}))))
               (sort-by key owners))
         basis {:id (str "giraffe-input/" run-name) :sha256 sha
                :generation (:readings-generation manifest)
