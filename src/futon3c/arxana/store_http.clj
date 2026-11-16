@@ -36,8 +36,8 @@
         403 :forbidden
         404 :missing
         409 :conflict
-        503 :unavailable
-        :internal)))
+        503 :overload
+        :failed)))
 
 (defn- response-code [body]
   (let [code (or (get-in body [:error :context :code])
@@ -72,7 +72,7 @@
             :else {:error (env/error :failed :arxana.store/query-invalid-response
                                      body nil)}))
         (catch Exception e
-          {:error (env/error :unavailable :arxana.store/http-unavailable
+          {:error (env/error :failed :arxana.store/http-unavailable
                              {:message (.getMessage e)} [:retry])}))))
   (find-entities [_ _] (unsupported :entity/query))
   (put-entity! [_ _] (unsupported :entity/put))
@@ -102,7 +102,7 @@
                                 :futon1b/error (:error body)}
                                (get-in body [:error :context :recoverable :choices]))}))
         (catch Exception e
-          {:error (env/error :unavailable :arxana.store/http-unavailable
+          {:error (env/error :failed :arxana.store/http-unavailable
                              {:message (.getMessage e) :base-url base-url}
                              [:retry])}))))
   (bounded-query! [_ query]
@@ -121,7 +121,7 @@
               {:error (env/error (category-for-status status body)
                                  :arxana.store/query-http-error body nil)}))
         (catch Exception e
-          {:error (env/error :unavailable :arxana.store/http-unavailable
+          {:error (env/error :failed :arxana.store/http-unavailable
                              {:message (.getMessage e)} [:retry])}))))
   )
 

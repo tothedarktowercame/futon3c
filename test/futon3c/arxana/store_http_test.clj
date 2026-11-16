@@ -61,3 +61,13 @@
             (is (= 409 (get-in stale [:error :error/detail :http/status])))))
         (finally
           (f1-server/stop-server! server))))))
+
+(deftest refusal-code-and-category-contract
+  (testing "unqualified server reasons become valid D3 codes"
+    (is (= :arxana.store/arxana-immutable-record-conflict
+           (#'store-http/response-code {:error {:reason :arxana-immutable-record-conflict}})))
+    (is (= :arxana/stale-head
+           (#'store-http/response-code {:error {:context {:code :arxana/stale-head}}}))))
+  (testing "server unavailability and errors stay in the D3 category algebra"
+    (is (= :overload (#'store-http/category-for-status 503 {})))
+    (is (= :failed (#'store-http/category-for-status 504 {})))))
