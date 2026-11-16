@@ -1557,6 +1557,21 @@
     (is (= ["first" "settled"] @calls))
     (is (empty? @(:scheduled h)))))
 
+(deftest hou-retries-evidence-that-changed-during-a-giraffe-refresh
+  (let [calls (atom 0)
+        h (harness {:hou-enabled? true :mentions-enabled? false
+                    :hou-retry-delays [5]
+                    :hou-writer! (fn [& _]
+                                   (if (= 1 (swap! calls inc))
+                                     {:failed :evidenceChanged}
+                                     {:written {:id "focus-fresh"}}))})]
+    (svc/write-mentions-async!
+     (:svc h) {:id "turn-refresh" :origin "operator" :analysis_status "analyzed"
+               :source_text "M-toy" :reply_text "done"} :reply_text)
+    (is (= [5] (mapv first @(:scheduled h))))
+    (is (= {:written {:id "focus-fresh"}} (second (run-next! h))))
+    (is (= 2 @calls))))
+
 (deftest hou-does-not-retry-a-terminal-focus-refusal
   (let [calls (atom 0)
         h (harness {:hou-enabled? true :mentions-enabled? false

@@ -105,7 +105,7 @@
    ;; clusions.  futon1b can acknowledge the append before its entity view is
    ;; visible, so retry the complete audited snapshot rather than weakening
    ;; that read-after-write check.
-   :hou-retry-delays [5 30 120]
+   :hou-retry-delays [5 30 120 300 600]
    ;; Likewise for the 小象 draft of a turn not dispatched at once.
    :draft-async! nil})
 
@@ -560,7 +560,7 @@
     (not= (get old id) sig)))
 
 (def ^:private hou-retryable-failures
-  #{:invalidEvidence :readerFailedAfterRetries})
+  #{:invalidEvidence :evidenceChanged :readerFailedAfterRetries})
 
 (defn- write-hou-with-retry!
   [svc turn delays]

@@ -145,7 +145,12 @@
               (not (reply-landed? turn)) {:failed :replyNotLanded}
               (not= "operator" (or (:origin turn) "operator")) {:failed :invalidEvidence}
               :else (try (hou/hou-run (snapshot cfg turn))
-                         (catch Exception e {:failed (or (:reason (ex-data e)) :invalidEvidence)})))]
+                         (catch Exception e
+                           (let [reason (or (:reason (ex-data e)) :invalidEvidence)]
+                             (binding [*out* *err*]
+                               (println "[hou] snapshot refused" (:id turn) reason
+                                        (.getName (class e)) (.getMessage e) (pr-str (ex-data e))))
+                             {:failed reason}))))]
     (if-let [header (:written out)]
       (let [att (records/make-attestation {:subject-clusion-id (:id header) :basis :parser
                                          :standing :verified :coverage :complete :producer "futon3c/hou"
