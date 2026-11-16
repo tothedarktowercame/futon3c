@@ -63,6 +63,8 @@
       (is (= 2 (count (distinct @ids)))))))
 
 (deftest reader-uses-live-keys-and-latest-stamped-attestation
+  ;; futon1b's index has no append order: serve the attestations both ways.
+  (doseq [served [["new" "old"] ["old" "new"]]]
   (let [claim {:id "c" :endpoints [{:target {:ref/id "p"}} {:target {:ref/id "t"}}]}
         entities {"c" claim "p" {:store/id "p/one"}
                   "new" {:content {:status "partial" :written-at "2026-11-16T20:02:00Z"}}
@@ -74,11 +76,11 @@
                       :role-reverse (do (is (= :turn (:endpoint-role q))) {:ok {:edge-ids ["c"]}})
                       :attestations (do (is (= "c" (:subject-id q)))
                                         (is (= 50 (:limit q)))
-                                        {:ok {:attestation-ids ["new" "old"]}})))
+                                        {:ok {:attestation-ids served}})))
                   store/get-entity (fn [_ id] {:ok (get entities id)})]
       (is (= [{:pattern "p/one" :status "partial"
                :written-at "2026-11-16T20:02:00Z"}]
-             (:rows (sut/read-turn {:graph-store :stub} turn)))))))
+             (:rows (sut/read-turn {:graph-store :stub} turn))))))))
 
 (deftest backfill-dry-run-does-not-write
   (with-redefs [turns/list-records

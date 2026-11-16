@@ -101,6 +101,23 @@
       (is (= ["first" "second"] (lu/seed-patterns :stub "turn-now" :stub)))
       (is (= 0 (:skipped-turns (meta (lu/seed-patterns :stub "turn-now" :stub))))))))
 
+(deftest seeds-read-only-the-last-n-earlier-turns
+  ;; list-records serves newest first; ten earlier turns, so the two oldest
+  ;; fall outside the bound and a later turn is not read at all.
+  (let [read (atom [])
+        rec (fn [i] {:id (format "turn-%02d" i)
+                     :record {:session_id "sess-1" :origin "operator"
+                              :created_at (format "2026-10-24T00:%02d:00Z" i)}})]
+    (with-redefs [ts/read-record
+                  (fn [_ _] {:session_id "sess-1" :created_at "2026-10-24T00:10:00Z"})
+                  ts/list-records (fn [& _] (mapv rec (range 11 -1 -1)))
+                  occurrences/read-turn
+                  (fn [_ t] (swap! read conj (:id t))
+                    {:rows [{:pattern (str "p" (:id t)) :status "occurrence"}]})]
+      (is (= (mapv #(str "pturn-" (format "%02d" %)) (range 2 10))
+             (lu/seed-patterns :stub "turn-now" :stub)))
+      (is (= lu/seed-turn-limit (count @read))))))
+
 (deftest a-pick-with-a-non-verbatim-quote-is-dropped-and-next-taken
   (let [store (temp-store)]
     (record! store "turn-q" {:source_text
