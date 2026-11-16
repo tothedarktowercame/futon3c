@@ -25,6 +25,8 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.arxana.pattern-proposals :as proposals]
+            [futon3c.arxana.turn-mention-writer :as mention-writer]
             [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts])
   (:import [java.nio.file Files]
@@ -162,7 +164,9 @@
         groups [["embedding" (distinct (concat proposed
                                                (ranked-ids (:embedding_ranked record))))]
                 ["驴/m40" (ranked-ids (:ranked (:m40_ranked record)))]
-                ["驴" (ranked-ids (:ranked (:lu_ranked record)))]]
+                ["驴" (if (contains? record :lu_proposal_ids)
+                         (map #(hash-map :id %) (:lu_proposal_ids record))
+                         (ranked-ids (:ranked (:lu_ranked record))))]]
         entries (mapcat (fn [[source ids]]
                           (for [i (take per-source-cap ids)]
                             {:id i :source source}))
@@ -306,12 +310,17 @@
 (defn- verdict-map
   "The version-1 :pattern_verdicts map for RECORD under OPTS.  Pure apart
   from the (bounded, injected) ask."
-  [{:keys [seat ask timeout-ms library window-n]
+  [{:keys [seat ask timeout-ms library window-n] :as opts
     :or {seat (:seat defaults)
          timeout-ms (:timeout-ms defaults)
          window-n (:window-n defaults)}}
    store record-id]
   (let [record (ts/read-record store record-id)
+        lu (when (contains? record :lu_proposals)
+             (proposals/read-ranked (or (:proposal-config opts)
+                                        (mention-writer/default-config))
+                                    (assoc record :id record-id)))
+        record (if lu (assoc record :lu_proposal_ids (:ids lu)) record)
         window (chain-window store record-id window-n)
         window-ids (into #{} (map :id) window)
         texts (window-texts window)
@@ -376,7 +385,13 @@
   [{:keys [store notify!] :as opts} id]
   (try
     (let [record (and store (ts/read-record store id))
+          lu (when (and record (contains? record :lu_proposals))
+               (proposals/read-ranked (or (:proposal-config opts)
+                                          (mention-writer/default-config))
+                                      (assoc record :id id)))
+          record (when record (if lu (assoc record :lu_proposal_ids (:ids lu)) record))
           proposed (some-> record patterns-of)]
+      (when (:pending lu) (throw (ex-info "Lu proposals pending" {:reason :lu-proposals-pending})))
       (when (and record
                  (= "operator" (:origin record))
                  (seq proposed))

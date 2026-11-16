@@ -17,6 +17,8 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agency.pattern-search :as pattern-search]
+            [futon3c.arxana.pattern-proposals :as proposals]
+            [futon3c.arxana.turn-mention-writer :as mention-writer]
             [futon3c.xiang.ma-occurrence :as ma]
             [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts])
@@ -312,16 +314,20 @@
             (when (and (= "operator" (or (:origin record) "operator"))
                        (not (str/blank? (str (or (:source_text record) ""))))
                        (not (:lu_ranked record)))
-              (let [{:keys [ranked source ms reason]} (rerank opts store (str id))]
+              (let [{:keys [ranked source ms reason]} (rerank opts store (str id))
+                    lu {:version 1
+                          :at (str (java.time.Instant/now))
+                          :ms (long (or ms 0)) :source (str source) :reason reason
+                          :ranked (mapv (fn [r] (select-keys r [:id :rank :quote]))
+                                        (or ranked []))}]
                 (ts/update-record! store (str id)
-                                   #(assoc % :lu_ranked
-                                           {:version 1
-                                            :at (str (java.time.Instant/now))
-                                            :ms (long (or ms 0))
-                                            :source (str source)
-                                            :reason reason
-                                            :ranked (mapv (fn [r] (select-keys r [:id :rank :quote]))
-                                                          (or ranked []))})))))
+                                   #(assoc % :lu_ranked lu))
+                (let [result (try (proposals/write! (or (:proposal-config opts)
+                                                        (mention-writer/default-config))
+                                                    (assoc record :id (str id)) lu)
+                                  (catch Throwable e {:failed :proposal-write-exception
+                                                      :detail (.getMessage e)}))]
+                  (ts/update-record! store (str id) #(assoc % :lu_proposals result))))))
           (catch Throwable _ nil))))))
 
 (defn start!
