@@ -11,7 +11,8 @@
             [futon3c.agency.prompt-line :as prompt-line]
             [futon3c.xiang.turn-store :as turn-store])
   (:import [java.nio.file Files]
-           [java.nio.file.attribute FileAttribute]))
+           [java.nio.file.attribute FileAttribute]
+           [java.util.concurrent CyclicBarrier TimeUnit]))
 
 (defn- fixture [name]
   (json/parse-string (slurp (io/resource (str "fixtures/dog/" name))) true))
@@ -26,6 +27,17 @@
    derives its own keywords from whatever text the test passes)."
   [fixtures]
   (fn [_url] (:response (first fixtures))))
+
+(def invented-memory-response
+  {:results [{:score 0.9
+              :entry {:evidence/id "invented-version"
+                      :evidence/at "2026-11-16T23:00:00Z"
+                      :evidence/subject {:ref/type :memory
+                                         :ref/id "cc:invented/example"}
+                      :evidence/body {:source "claude-code"
+                                      :project "invented"
+                                      :name "example"
+                                      :hook "short public hook"}}}]})
 
 (defn- tmp-store []
   {:dir (str (Files/createTempDirectory "dog-test" (into-array FileAttribute [])))})
@@ -71,6 +83,42 @@
   (is (= "none" (:status (dog/recall "the and of" {}))) "no keywords → none, no request")
   (is (= "failed" (:status (dog/recall "some operator text about giraffes"
                                        {:request-fn (fn [_] (throw (ex-info "store down" {})))})))))
+
+(deftest recall-uses-memory-sidecar-limit-ten
+  (let [urls (atom [])]
+    (dog/recall "invented keyword query"
+                {:lu-terms ["invented-seed"]
+                 :request-fn (fn [url] (swap! urls conj url) invented-memory-response)})
+    (is (= 2 (count @urls)))
+    (is (every? #(and (str/includes? % "source=memory-sidecar")
+                      (str/includes? % "limit=10")
+                      (not (str/includes? % "scope="))
+                      (not (str/includes? % "tags="))) @urls))))
+
+(deftest recall-searches-are-concurrent
+  (let [barrier (CyclicBarrier. 2)
+        result (dog/recall
+                "invented keyword query"
+                {:lu-terms ["invented-seed"]
+                 :request-fn (fn [_]
+                               ;; Serial execution times out/breaks this barrier.
+                               (.await barrier 1 TimeUnit/SECONDS)
+                               invented-memory-response)})]
+    (is (not= "failed" (:status result)))
+    (is (seq (:items result)))))
+
+(deftest one-search-failure-preserves-the-other
+  (let [result (dog/recall
+                "invented keyword query"
+                {:lu-terms ["failing-seed"]
+                 :request-fn (fn [url]
+                               (if (str/includes? url "failing-seed")
+                                 (throw (ex-info "invented branch failure" {}))
+                                 invented-memory-response))})]
+    (is (= "partial" (:status result)))
+    (is (= ["invented/example"] (mapv :memory (:items result))))
+    (is (= "keywords" (:query-source result)))
+    (is (= [:lu] (mapv :source (:failures result))))))
 
 ;; The synthetic record ids below ending in "-s" hash to arm "shown"
 ;; (packet B); the arm itself is tested at the end of this file.

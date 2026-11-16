@@ -94,6 +94,7 @@
 (def max-items 3)
 (def ^:private keyword-count 6)
 (def ^:private search-limit 50)
+(def ^:private recall-search-limit 10)
 (def ^:private query-timeout-ms 5000)
 (def ^:private lu-pattern-count 5)
 (def ^:private lu-term-count 8)
@@ -309,11 +310,18 @@
   (let [url (str base
                  "/api/alpha/evidence/text-search?q="
                  (URLEncoder/encode query "UTF-8")
-                 "&limit=" search-limit
-                 ;; memories only: the live futon1b's text search defaults to
-                 ;; scope=acts, which excludes them (2026-11-12 migration)
-                 "&scope=all&tags=source%2Fclaude-code")]
+                 "&source=memory-sidecar&limit=" recall-search-limit)]
     (recall-from-response (or (request-fn url) {}))))
+
+(defn- recall-branch [request-fn base source query]
+  (if (str/blank? (str query))
+    {:source source :attempted? false :items []}
+    (try
+      {:source source :attempted? true
+       :items (mapv #(assoc % :source (name source))
+                    (search-memories request-fn base query))}
+      (catch Throwable t
+        {:source source :attempted? true :error (.getMessage t) :items []}))))
 
 (defn- merge-items
   "Merge 驴-seeded and keyword items into the MAX-ITEMS slots, ALTERNATING
@@ -347,7 +355,8 @@
    the other. Each item records which source produced it (:source
    \"lu\" or \"keywords\"). Returns {:at :items [{:memory :display :score
    :why :source}...] :query-ms :query :query-source}, with :status
-   \"none\" when no memory matched and \"failed\" on any error. Never
+   \"none\" when no memory matched, \"partial\" when one attempted search
+   failed, and \"failed\" only when every attempted search failed. Never
    throws. OPTS as per defaults; :request-fn receives the query URL and
    returns the parsed JSON response."
   ([text] (recall text {}))
@@ -363,28 +372,43 @@
        (if (and (str/blank? (or lu-query "")) (str/blank? kw-query))
          {:status "none" :at (str (Instant/now)) :query-ms (elapsed) :query ""
           :query-source "none" :items []}
-         (let [;; Always run both queries; merge alternates the slots.
-               lu-items (when-not (str/blank? (or lu-query ""))
-                          (mapv #(assoc % :source "lu")
-                                (search-memories request-fn base lu-query)))
-               kw-items (when-not (str/blank? kw-query)
-                          (mapv #(assoc % :source "keywords")
-                                (search-memories request-fn base kw-query)))
-               items (merge-items lu-items kw-items)]
-           (if (seq items)
-             {:at (str (Instant/now)) :query-ms (elapsed)
-              :query (str/join " || " (remove str/blank? [lu-query kw-query]))
-              :query-source (let [sources (set (map :source items))]
-                              (cond (= sources #{"lu"}) "lu"
-                                    (= sources #{"keywords"}) "keywords"
-                                    :else "mixed"))
-              :items items}
-             {:status "none" :at (str (Instant/now)) :query-ms (elapsed)
-              :query (str/join " || " (remove str/blank? [lu-query kw-query]))
-              :query-source (cond (and lu-query (not (str/blank? kw-query))) "mixed"
-                                  lu-query "lu"
-                                  :else "keywords")
-              :items []})))
+         (let [;; Start both reads together. HTTP and deref bounds are the same,
+               ;; so an injected reader cannot hold the recall thread forever.
+               tasks {:lu (future (recall-branch request-fn base :lu lu-query))
+                      :keywords (future (recall-branch request-fn base :keywords kw-query))}
+               branches
+               (into {}
+                     (map (fn [[source task]]
+                            (let [r (deref task query-timeout-ms ::timeout)]
+                              (if (= ::timeout r)
+                                (do (future-cancel task)
+                                    [source {:source source :attempted? true
+                                             :error "query-timeout" :items []}])
+                                [source r]))))
+                     tasks)
+               lu-items (get-in branches [:lu :items])
+               kw-items (get-in branches [:keywords :items])
+               items (merge-items lu-items kw-items)
+               attempted (filter :attempted? (vals branches))
+               failures (filter :error attempted)
+               successes (- (count attempted) (count failures))
+               status (cond
+                        (and (seq failures) (pos? successes)) "partial"
+                        (and (seq failures) (zero? successes)) "failed"
+                        (empty? items) "none")]
+           (cond-> {:at (str (Instant/now)) :query-ms (elapsed)
+                    :query (str/join " || " (remove str/blank? [lu-query kw-query]))
+                    :query-source (let [sources (set (map :source items))]
+                                    (cond (= sources #{"lu"}) "lu"
+                                          (= sources #{"keywords"}) "keywords"
+                                          (seq sources) "mixed"
+                                          (and lu-query (not (str/blank? kw-query))) "mixed"
+                                          lu-query "lu"
+                                          :else "keywords"))
+                    :items items}
+             status (assoc :status status)
+             (seq failures) (assoc :failures
+                                   (mapv #(select-keys % [:source :error]) failures)))))
        (catch Throwable t
          {:status "failed" :reason (str "recall-error: " (.getMessage t))
           :at (str (Instant/now)) :query-ms (elapsed)
