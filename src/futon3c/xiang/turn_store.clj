@@ -118,16 +118,31 @@
   [store id]
   (read-json (record-path store id)))
 
+(defonce ^:private ^java.util.concurrent.ConcurrentHashMap record-locks
+  (java.util.concurrent.ConcurrentHashMap.))
+
+(defn- record-lock [^String path]
+  (.computeIfAbsent record-locks path
+                    (reify java.util.function.Function (apply [_ _] (Object.)))))
+
 (defn update-record!
   "Replace ID's record with (F record) atomically; returns the new record.
-   Throws {:reason :record-not-found} when there is none."
+   Throws {:reason :record-not-found} when there is none.
+
+   The read-modify-write holds a per-record lock, so two updates in this
+   JVM never interleave. Without it, two animals updating the same turn
+   at once each wrote back the record they had read, and one field was
+   lost (狗's :dog_buried on 2026-11-16, overwritten by its own GCC
+   outcome write on another thread). F runs inside the lock: keep it a
+   pure function of the record."
   [store id f]
-  (let [path (record-path store id)
-        record (or (read-json path)
-                   (throw (ex-info "Record not found" {:reason :record-not-found :id id})))
-        updated (f record)]
-    (write-json! path updated)
-    updated))
+  (let [path (record-path store id)]
+    (locking (record-lock path)
+      (let [record (or (read-json path)
+                       (throw (ex-info "Record not found" {:reason :record-not-found :id id})))
+            updated (f record)]
+        (write-json! path updated)
+        updated))))
 
 (defn read-analysis
   "The published analysis for ID, or nil."

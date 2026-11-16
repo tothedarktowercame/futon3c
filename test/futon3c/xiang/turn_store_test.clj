@@ -77,3 +77,17 @@
       (is (= "moved to another session"
              (:happened_summary (:record (first (ts/list-records s :session-id "s2")))))
           "the listed record is the rewritten one, not the indexed copy"))))
+
+(deftest concurrent-updates-to-one-record-lose-no-field
+  (let [s (temp-store)
+        {:keys [id]} (ts/write-record! s (record "s1" "an invented turn"))
+        fields (mapv #(keyword (str "field_" %)) (range 24))
+        start (java.util.concurrent.CountDownLatch. 1)
+        workers (mapv (fn [k]
+                        (future (.await start)
+                                (ts/update-record! s id #(assoc % k true))))
+                      fields)]
+    (.countDown start)
+    (run! deref workers)
+    (is (every? true? (map (ts/read-record s id) fields))
+        "each concurrent update's field survives the others")))
