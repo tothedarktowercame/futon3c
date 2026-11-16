@@ -160,3 +160,14 @@
       (is (str/includes? (with-out-str (bootstrap/start-giraffe-reread!)) "boot continues"))
       (is (= {:status :failed :error "fixture failure"}
              ((:state-fn @registered)))))))
+
+(deftest giraffe-reread-starts-after-agents
+  ;; claude-13 review: the service's first round dispatches reader seats, so
+  ;; it must start after start-agents! (Agency HTTP + seat registration).
+  (let [source (slurp "dev/futon3c/dev/bootstrap.clj")
+        body (subs source (str/index-of source "(defn run-main!"))
+        agents (str/index-of body "_ (start-agents!)")
+        reread (str/index-of body "_ (start-giraffe-reread!)")]
+    (is (some? agents))
+    (is (some? reread))
+    (is (< agents reread))))

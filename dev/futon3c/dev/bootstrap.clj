@@ -562,7 +562,6 @@
               :state-fn #(let [s @!f1-sys]
                            {:port (:http/port s)
                             :direct-xtdb? direct-xtdb?})}))
-        _ (start-giraffe-reread!)
         ;; Multi-repo watcher (E-live-means-live Path B): in-JVM
         ;; replacement for the separate bb watcher process. Polls
         ;; the watched roots, dispatches per-file ingest into
@@ -647,6 +646,11 @@
                             :relay-bridge? (boolean (:relay-bridge s))})}))
         _ (reg/set-on-invoke-complete! on-agent-invoke-complete!)
         _ (start-agents!)
+        ;; After Agency and the reader seats exist: the service's first round
+        ;; dispatches readers, and earlier it would spend attempts on
+        ;; agent-not-found (claude-13 review). Watcher events before this point
+        ;; are logged as :stopped and caught by the startup reconciliation.
+        _ (start-giraffe-reread!)
         webarxana-sys (try
                         (start-webarxana!)
                         (catch Throwable t
