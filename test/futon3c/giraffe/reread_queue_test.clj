@@ -149,3 +149,24 @@
       (queue/settle! store claim {:status :failed :reason :toy-failure} 202 1))
     (is (false? (queue/retry-failed! store (first (queue/requests store)) 400 100 1)))
     (is (= :failed (:state (first (queue/requests store)))))))
+
+(deftest late-owner-cannot-settle-reclaimed-row
+  ;; codex-7 review 2026-11-16 (its plant, reproduced): after the lease
+  ;; expires and another reader reclaims, the former owner's late outcome
+  ;; must not clear the new claim or spend its attempt.
+  (let [store (queue/open-store (temp-db))]
+    (queue/reconcile! store [(item "new")] (coverage "old") 10)
+    (let [old-claim (queue/claim! store 20 100 1 "old-reader")
+          new-claim (queue/claim! store 130 100 1 "new-reader")]
+      (is (= "new-reader" (:claimed_by new-claim)))
+      (is (false? (queue/active-claim? store old-claim)))
+      (is (true? (queue/active-claim? store new-claim)))
+      (queue/settle! store old-claim {:status :failed :reason :late} 140 3)
+      (let [row (first (queue/requests store))]
+        (is (= :claimed (:state row)))
+        (is (= "new-reader" (:claimed_by row)))
+        (is (= 0 (:attempts row))))
+      (queue/settle! store old-claim {:status :landed :digest "late"} 141 3)
+      (is (= :claimed (:state (first (queue/requests store)))))
+      (queue/settle! store new-claim {:status :landed :digest "d"} 150 3)
+      (is (= :landed (:state (first (queue/requests store))))))))

@@ -219,11 +219,15 @@
   "Is REQUEST still the live claimed row? Reconciliation may supersede it
   while an Agency job is running."
   [store request]
+  ;; Owner AND lease identify the claim: after a lease expires and another
+  ;; reader reclaims the row, the former owner's claim is no longer live
+  ;; (codex-7 review, 2026-11-16).
   (= "claimed"
      (:state (jdbc/execute-one!
               (:datasource store)
-              ["SELECT state FROM reread_requests WHERE target_id=? AND source_sha=?"
-               (:target_id request) (:source_sha request)]
+              ["SELECT state FROM reread_requests WHERE target_id=? AND source_sha=? AND claimed_by IS ? AND lease_until_ms IS ?"
+               (:target_id request) (:source_sha request)
+               (:claimed_by request) (:lease_until_ms request)]
               query-opts))))
 
 (defn release-usage-claim!
@@ -255,23 +259,26 @@
         (case (:status outcome)
           :landed
           (jdbc/execute! tx
-                         ["UPDATE reread_requests SET state='landed',landed_digest=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed'"
-                          (:digest outcome) now-ms (:target_id request) (:source_sha request)])
+                         ["UPDATE reread_requests SET state='landed',landed_digest=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed' AND claimed_by IS ? AND lease_until_ms IS ?"
+                          (:digest outcome) now-ms (:target_id request) (:source_sha request)
+                          (:claimed_by request) (:lease_until_ms request)])
 
           :superseded
           (jdbc/execute! tx
-                         ["UPDATE reread_requests SET state='superseded',superseded_reason=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed'"
-                          (keyword-text (:reason outcome)) now-ms (:target_id request) (:source_sha request)])
+                         ["UPDATE reread_requests SET state='superseded',superseded_reason=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed' AND claimed_by IS ? AND lease_until_ms IS ?"
+                          (keyword-text (:reason outcome)) now-ms (:target_id request) (:source_sha request)
+                          (:claimed_by request) (:lease_until_ms request)])
 
           :failed
           (let [attempts (inc (long (or (:attempts current) 0)))
                 state (if (>= attempts max-attempts) "failed" "pending")]
             (jdbc/execute! tx
-                           ["UPDATE reread_requests SET state=?,attempts=?,last_error=?,last_answer=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed'"
+                           ["UPDATE reread_requests SET state=?,attempts=?,last_error=?,last_answer=?,lease_until_ms=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='claimed' AND claimed_by IS ? AND lease_until_ms IS ?"
                             state attempts (keyword-text (:reason outcome))
                             (or (:answer-text outcome) (:last_answer current))
                             now-ms
-                            (:target_id request) (:source_sha request)]))))
+                            (:target_id request) (:source_sha request)
+                          (:claimed_by request) (:lease_until_ms request)]))))
       (some-> (jdbc/execute-one!
                tx ["SELECT * FROM reread_requests WHERE target_id=? AND source_sha=?"
                    (:target_id request) (:source_sha request)] query-opts)
@@ -317,7 +324,9 @@
                                        (:target_id request) (:source_sha request)]))
         n (long (or (:next.jdbc/update-count updated) 0))]
     (when (pos? n)
-      (assoc request :state "claimed" :claimed_by reader-id))))
+      ;; return the NEW lease: settle! guards on owner and lease
+      (assoc request :state "claimed" :claimed_by reader-id
+             :lease_until_ms (+ (long now-ms) (long lease-ms))))))
 
 (def default-seat-failure-threshold 0.25)
 (def default-seat-min-outcomes 5)
