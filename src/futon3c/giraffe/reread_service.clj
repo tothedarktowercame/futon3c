@@ -205,9 +205,10 @@
   ;; A single outstanding batch gets one deadline, not a polling loop. Failed
   ;; mints remain visible until another event or an explicit restart retries.
   (locking lock
-    (when-let [^ScheduledFuture task (:mint-task @state)]
-      (.cancel task false)
-      (swap! state dissoc :mint-task))
+    (when (active? token)
+      (when-let [^ScheduledFuture task (:mint-task @state)]
+        (.cancel task false)
+        (swap! state dissoc :mint-task)))
     (when (and (active? token) (= :deferred (:status result))
                (pos? (:pending-landings result)) (nil? (:mint-task @state)))
       (let [{:keys [config executor]} @state
@@ -230,11 +231,13 @@
 (defn- schedule-lease! [token]
   ;; A claim left by a prior process needs one expiry event; it must not sit
   ;; forever merely because no document changes after startup.
+  ;; Only the live token may touch the task handle: an old executor finishing
+  ;; after a restart must not cancel the new service's deadline (codex-7 review).
   (locking lock
-    (when-let [^ScheduledFuture task (:lease-task @state)]
-      (.cancel task false)
-      (swap! state dissoc :lease-task))
     (when (active? token)
+      (when-let [^ScheduledFuture task (:lease-task @state)]
+        (.cancel task false)
+        (swap! state dissoc :lease-task))
       (let [{:keys [config executor]} @state
             deadline (first (sort (keep :lease_until_ms
                                          (queue/requests (:store config) {:state :claimed}))))]
@@ -246,7 +249,10 @@
                             TimeUnit/MILLISECONDS)))))))
 
 (defn- record-round! [token result]
-  (swap! state assoc :last-round result :last-mint (:mint result))
+  ;; A round finished by a stopped service's executor writes nothing into the
+  ;; new service's state (codex-7 review, 2026-11-16).
+  (when (active? token)
+    (swap! state assoc :last-round result :last-mint (:mint result)))
   (after-mint! token (:mint result))
   (schedule-mint! token (:mint result))
   (schedule-lease! token)

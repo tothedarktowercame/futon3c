@@ -823,3 +823,22 @@
         (spit (io/file out "party.json") (json/generate-string {:sources {:giraffe_run "run-old"}}))
         (catch-up token)
         (is (= ["run-new"] @refreshed) "stopped -> nothing")))))
+
+(deftest old-token-round-cannot-touch-the-new-service
+  ;; codex-7 review 2026-11-16: an old executor's round completing after a
+  ;; restart overwrote :last-round and cancelled the new mint/lease tasks.
+  (let [executor (ScheduledThreadPoolExecutor. 1)
+        new-token (Object.) old-token (Object.)
+        mint-task (.schedule executor ^Runnable (fn []) 1 TimeUnit/HOURS)
+        lease-task (.schedule executor ^Runnable (fn []) 1 TimeUnit/HOURS)
+        state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
+        record! (ns-resolve 'futon3c.giraffe.reread-service 'record-round!)]
+    (reset! state-atom {:running? true :status :running :token new-token :executor executor
+                        :config (fixture) :errors {} :pending {}
+                        :last-round {:marker :new} :mint-task mint-task :lease-task lease-task})
+    (record! old-token {:mint {:status :deferred :pending-landings 1} :workers [{:status :landed}]})
+    (is (= {:marker :new} (:last-round (service-state))))
+    (is (not (.isCancelled mint-task)))
+    (is (not (.isCancelled lease-task)))
+    (swap! state-atom assoc :running? false)
+    (.shutdownNow executor)))
