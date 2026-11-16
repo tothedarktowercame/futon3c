@@ -503,3 +503,11 @@
             m (first (filter #(= "M-one" (:id %)) members))]
         (is (= sha (:sha256 m)))
         (is (nil? (:retired m)))))))
+
+(deftest pointer-target-resolves-without-hashing-generation
+  (let [{:keys [pointer base]} (fixture)
+        expected (.getCanonicalPath base)]
+    (with-redefs [generation/generation-digest
+                  (fn [_] (throw (ex-info "pointer comparison must not hash" {})))]
+      (is (= expected (#'generation/pointer-target pointer)))
+      (is (= expected (generation/resolve-generation-path base))))))

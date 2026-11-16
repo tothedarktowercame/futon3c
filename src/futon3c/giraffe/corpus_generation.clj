@@ -36,15 +36,23 @@
         (.update digest (Files/readAllBytes path))))
     (apply str (map #(format "%02x" %) (.digest digest)))))
 
+(defn resolve-generation-path
+  "Resolve ROOT to its existing real path without reading generation contents.
+  Accepts both a generation symlink and a legacy directory root."
+  [root]
+  (.toString (.toRealPath (.toPath (.getAbsoluteFile (io/file root)))
+                          (make-array LinkOption 0))))
+
 (defn resolve-generation
-  "Resolve ROOT exactly once. The returned path remains valid after a pointer
-  switch. Legacy directory roots are accepted until the one-shot migration."
+  "Resolve ROOT exactly once and digest its contents. The returned path remains
+  valid after a pointer switch. Legacy directory roots are accepted until the
+  one-shot migration. Use resolve-generation-path for path-only comparisons."
   [root]
   (let [requested (.toPath (.getAbsoluteFile (io/file root)))
-        resolved (.toRealPath requested (make-array LinkOption 0))]
+        resolved (resolve-generation-path (.toFile requested))]
     {:pointer (.toString requested)
-     :path (.toString resolved)
-     :digest (generation-digest (.toFile resolved))}))
+     :path resolved
+     :digest (generation-digest resolved)}))
 
 (defn- copy-tree! [source destination]
   (let [src (.toPath (io/file source)) dst (.toPath (io/file destination))]
@@ -219,7 +227,7 @@
     {:checked-lines (count to-check)}))
 
 (defn- pointer-target [pointer]
-  (:path (resolve-generation pointer)))
+  (resolve-generation-path pointer))
 
 (defn- atomic-link! [pointer generation]
   (let [pointer-path (.toPath (.getAbsoluteFile (io/file pointer)))
