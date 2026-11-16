@@ -177,6 +177,18 @@ prefix (the bare `*象 stepper*' or an indexed `*象 stepper:<agent>*')."
                       (string-prefix-p prefix (buffer-name b))))
                 (buffer-list))))
 
+(defun turn-stepper--migrate-attachments ()
+  "Repair stepper attachments after loading a newer definition.
+Retire a stepper whose recorded source is absent or dead.  For a stepper
+with a live source, install the source-local death hook introduced after the
+stepper may have been created.  A live reload thereby converges to the same
+state as opening every surviving stepper afresh."
+  (dolist (stepper (turn-stepper--buffers))
+    (let ((source (buffer-local-value 'turn-stepper--source-buffer stepper)))
+      (if (buffer-live-p source)
+          (turn-stepper--attach-source source)
+        (kill-buffer stepper)))))
+
 (defun turn-stepper--find-buffer (session-id &optional source)
   "Live stepper buffer reading SESSION-ID, attached to SOURCE when given.
 A nil SESSION-ID matches any session."
@@ -1443,6 +1455,12 @@ REPL is not cut and the agent is not told, so the two never disagree."
 
 (define-derived-mode turn-stepper-rewind-mode special-mode "象-rewind"
   "What rewinding a turn would undo, per repo.")
+
+;; A source-death hook added by a reload cannot have been installed by
+;; steppers opened under the previous definition.  Repair those attachments
+;; now; source-less legacy steppers are retired so `M-x turn-stepper' creates
+;; or attaches a current one instead of leaving the invariant noisy.
+(turn-stepper--migrate-attachments)
 
 (provide 'turn-stepper)
 ;;; turn-stepper.el ends here

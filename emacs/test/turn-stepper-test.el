@@ -282,6 +282,40 @@ second window must end as ONE window, right of the REPL it reads."
       (dolist (buffer (list old-source new-source old-stepper new-stepper))
         (when (buffer-live-p buffer) (kill-buffer buffer))))))
 
+(ert-deftest turn-stepper-reload-migration-retires-orphan ()
+  "A source-less stepper left by an older definition is retired on reload."
+  (let ((stepper (get-buffer-create "*象 stepper:reload-orphan*")))
+    (unwind-protect
+        (progn
+          (with-current-buffer stepper
+            (turn-stepper-mode)
+            (setq turn-stepper--session-id nil
+                  turn-stepper--source-buffer nil))
+          (turn-stepper--migrate-attachments)
+          (should-not (buffer-live-p stepper)))
+      (when (buffer-live-p stepper) (kill-buffer stepper)))))
+
+(ert-deftest turn-stepper-reload-migration-backfills-source-hook ()
+  "A valid pre-existing attachment gains the source-death hook on reload."
+  (let ((source (get-buffer-create " *ts-reload-source*"))
+        (stepper (get-buffer-create "*象 stepper:reload-valid*")))
+    (unwind-protect
+        (progn
+          (with-current-buffer stepper
+            (turn-stepper-mode)
+            (setq turn-stepper--session-id "s-reload"
+                  turn-stepper--source-buffer source))
+          (with-current-buffer source
+            (remove-hook 'kill-buffer-hook #'turn-stepper--source-killed t)
+            (should-not (memq #'turn-stepper--source-killed kill-buffer-hook)))
+          (turn-stepper--migrate-attachments)
+          (with-current-buffer source
+            (should (memq #'turn-stepper--source-killed kill-buffer-hook)))
+          (kill-buffer source)
+          (should-not (buffer-live-p stepper)))
+      (dolist (buffer (list source stepper))
+        (when (buffer-live-p buffer) (kill-buffer buffer))))))
+
 (ert-deftest turn-stepper-reload-keeps-an-older-frame ()
   (let ((buf (get-buffer-create turn-stepper-buffer-name)))
     (unwind-protect
