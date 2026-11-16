@@ -845,6 +845,26 @@
     (is (= [["M-a"] ["M-new"]] @calls))
     (is (= ["M-new"] (get-in (service/health) [:last-inventory-sync :written])))))
 
+(deftest existing-item-source-change-reaches-inventory-sync
+  (let [state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
+        sync-var (ns-resolve 'futon3c.giraffe.reread-service 'sync-item-inventory!)
+        token (Object.) census (atom [{:id "M-a" :status-line "OPEN"
+                                      :source {:sha256 "one"}}])
+        calls (atom [])
+        config (assoc (fixture) :inventory-items-fn (fn [_] @census)
+                      :inventory-sync-fn
+                      (fn [cfg items]
+                        (is (= @census (:inventory-items cfg)))
+                        (swap! calls conj (mapv #(get-in % [:source :sha256]) items))
+                        {:checked (mapv :id items) :written [] :batch-count 0}))]
+    (reset! state-atom {:running? true :token token :config config :errors {}})
+    (sync-var token)
+    (swap! census assoc-in [0 :source :sha256] "two")
+    (sync-var token)
+    (sync-var token)
+    (is (= [["one"] ["two"]] @calls)
+        "a changed existing item is checked once; the next unchanged tick is free")))
+
 (deftest inventory-store-error-is-visible-and-backstop-continues
   (let [state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
         tick-var (ns-resolve 'futon3c.giraffe.reread-service 'backstop-tick!)

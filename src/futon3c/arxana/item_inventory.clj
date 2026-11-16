@@ -12,7 +12,8 @@
             [futon3c.arxana.digest :as digest]
             [futon3c.arxana.records :as records]
             [futon3c.arxana.store :as store]
-            [futon3c.arxana.store-http :as http]))
+            [futon3c.arxana.store-http :as http])
+  (:import [java.time Instant]))
 
 (defn item-record [id]
   (records/make-clusion {:type-revision [:workplan/item 1] :endpoints []
@@ -65,12 +66,85 @@
     (when-not (zero? (:exit r)) (throw (ex-info "git provenance unavailable" {:root root :args args})))
     (str/trim (:out r))))
 
+(defn- source-root [path]
+  (first (str/split (str path) #"/holes/")))
+
+(defn- batch-message-id [prefix rows]
+  (str prefix
+       (digest/sha256-hex
+        (.getBytes (str/join "," (map #(get-in % [:record :id]) rows)) "UTF-8"))))
+
+(defn- roots-and-commits [items]
+  (into {} (for [root (distinct (map #(source-root (:path %)) items))
+                 :when (seq root)]
+             [root (git! root "rev-parse" "HEAD")])))
+
+(defn- superseded? [item]
+  (boolean (re-find #"(?i)^\s*SUPERSEDED\b" (or (:status-line item) ""))))
+
+(defn- declared-successors
+  "The sole mission-prose parser for supersession. GCC readers never open an
+  item file."
+  [item]
+  (->> (re-seq #"(?i)superseded by\s+`?([MET]-[A-Za-z0-9_-]+)"
+               (slurp (:path item)))
+       (map second) distinct vec))
+
+(defn supersession-plan
+  "Plan exact [:supersedes 1] claims for CHANGED-ITEMS against INVENTORY."
+  [inventory changed-items]
+  (let [by-id (into {} (map (juxt :id identity)) inventory)
+        candidates (filter superseded? changed-items)
+        commits (roots-and-commits candidates)
+        planned
+        (mapv
+         (fn [{:keys [id path source] :as item}]
+           (let [successors (declared-successors item)]
+             (cond
+               (empty? successors) {:reason :no-successor :item id}
+               (> (count successors) 1) {:reason :ambiguous :item id}
+               (nil? (by-id (first successors)))
+               {:reason :unknown-successor :item id :successor (first successors)}
+               :else
+               (let [successor (first successors)
+                     claim (records/make-clusion
+                            {:type-revision [:supersedes 1]
+                             :endpoints [{:role :successor :kind :clusion
+                                          :target {:clusion/id (:id (item-record successor))}}
+                                         {:role :predecessor :kind :clusion
+                                          :target {:clusion/id (:id (item-record id))}}]
+                             :asserted-content {}})
+                     root (source-root path)
+                     commit (commits root)
+                     sha (:sha256 source)
+                     written-at (str (Instant/ofEpochMilli (.lastModified (io/file path))))
+                     att (records/make-attestation
+                          {:subject-clusion-id (:id claim) :basis :exact
+                           :standing :verified :coverage :complete
+                           :producer "futon3c/item-inventory"
+                           :method {:name :supersession-census :version 1}
+                           :content {:path path :git/commit commit :file/sha256 sha
+                                     :written-at written-at}
+                           :source-refs [{:path path :git/commit commit :sha256 sha}]})]
+                 {:item id :successor successor
+                  :rows [{:operation :clusion/assert :record claim}
+                         {:operation :evidence/append :record att}]}))))
+         candidates)
+        rows (vec (mapcat :rows planned))
+        counts (frequencies (keep :reason planned))]
+    {:rows rows
+     :written (count (filter :rows planned))
+     :no-successor (get counts :no-successor 0)
+     :ambiguous (get counts :ambiguous 0)
+     :unknown-successor (get counts :unknown-successor 0)
+     :message-id (when (seq rows)
+                   (batch-message-id "item-supersession/inventory/" rows))}))
+
 (defn publication-plan [items]
-  (let [roots (into {} (for [root (distinct (map #(first (str/split (:path %) #"/holes/")) items))]
-                         [root (git! root "rev-parse" "HEAD")]))
+  (let [roots (roots-and-commits items)
         rows (mapcat
               (fn [{:keys [id path source]}]
-                (let [r (item-record id) root (first (str/split path #"/holes/"))
+                (let [r (item-record id) root (source-root path)
                       a (records/make-attestation
                          {:subject-clusion-id (:id r) :basis :exact :standing :verified :coverage :complete
                           :producer "futon3c/item-inventory" :method {:name :file-census :version 1}
@@ -84,28 +158,47 @@
   "Dry-run is the default; it prints precisely the batches --write will send."
   [{:keys [graph-store write?] :as cfg}]
   (let [items (current-items cfg) missing (missing-items graph-store items)
-        plan (publication-plan missing)]
+        plan (publication-plan missing)
+        supersession (supersession-plan items items)]
     (when write?
       (doseq [{:keys [message-id records]} plan]
         (let [r (http/append-batch! graph-store message-id records)]
-          (when-not (:ok r) (throw (ex-info "inventory publication refused" {:result r}))))))
-    {:items (count items) :missing (mapv :id missing) :batches plan :write? (boolean write?)}))
+          (when-not (:ok r) (throw (ex-info "inventory publication refused" {:result r})))))
+      (when-let [message-id (:message-id supersession)]
+        (let [r (http/append-batch! graph-store message-id (:rows supersession))]
+          (when-not (:ok r)
+            (throw (ex-info "supersession publication refused" {:result r}))))))
+    {:items (count items) :missing (mapv :id missing) :batches plan
+     :supersession (dissoc supersession :rows :message-id)
+     :supersession-batch (select-keys supersession [:message-id :rows])
+     :write? (boolean write?)}))
 
 (defn sync-items!
   "Check only ITEMS and publish all missing records plus exact attestations in
   one atomic batch. Intended for a caller that remembers confirmed IDs."
-  [{:keys [graph-store]} items]
-  (let [missing (missing-items graph-store items)
-        plan (publication-plan missing)]
+  [{:keys [graph-store inventory-items inventory-items-fn] :as cfg} items]
+  (let [inventory (or inventory-items
+                      (when inventory-items-fn (inventory-items-fn cfg))
+                      items)
+        missing (missing-items graph-store items)
+        plan (publication-plan missing)
+        supersession (supersession-plan inventory items)]
     (when (> (count plan) 1)
       (throw (ex-info "incremental inventory exceeds one batch"
                       {:items (mapv :id missing) :batches (count plan)})))
-    (when-let [{:keys [message-id records]} (first plan)]
-      (let [r (http/append-batch! graph-store message-id records)]
-        (when-not (:ok r)
-          (throw (ex-info "inventory publication refused" {:result r})))))
+    (let [rows (into (vec (mapcat :records plan)) (:rows supersession))
+          message-id (when (seq rows)
+                       (batch-message-id "item-inventory-sync/inventory/" rows))]
+      (when (> (count rows) 500)
+        (throw (ex-info "incremental inventory exceeds one batch"
+                        {:records (count rows)})))
+      (when message-id
+        (let [r (http/append-batch! graph-store message-id rows)]
+          (when-not (:ok r)
+            (throw (ex-info "inventory publication refused" {:result r}))))))
     {:checked (mapv :id items) :written (mapv :id missing)
-     :batch-count (count plan)}))
+     :batch-count (if (or (seq plan) (:message-id supersession)) 1 0)
+     :supersession (dissoc supersession :rows :message-id)}))
 
 (defn -main [& args]
   (when-not (every? #{"--dry-run" "--write"} args)

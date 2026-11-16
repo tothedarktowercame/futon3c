@@ -5,6 +5,7 @@
             [futon3c.arxana.digest :as digest]
             [futon3c.arxana.giraffe-needs :as giraffe-needs]
             [futon3c.arxana.item-inventory :as inventory]
+            [futon3c.arxana.store :as store]
             [futon3c.circus.hou :as hou]
             [futon3c.circus.hou-store :as hou-store]
             [futon3c.giraffe.missions :as missions]
@@ -17,18 +18,56 @@
 (defn in-window? [until hours at]
   (< (- (millis until) (* hours 3600000)) (millis at) (inc (millis until))))
 
-(defn with-successors
-  "Read explicit successor declarations from SUPERSEDED items only. Ambiguous
-  declarations refuse resolution instead of arbitrarily choosing a successor."
-  [items]
-  (mapv (fn [item]
-          (if (re-find #"(?i)^\s*SUPERSEDED\b" (or (:status-line item) ""))
-            (let [ids (distinct (map second (re-seq #"(?i)superseded by\s+`?([MET]-[A-Za-z0-9_-]+)"
-                                                   (slurp (:path item)))))]
-              (cond-> item
-                (= 1 (count ids)) (assoc :successor (first ids))
-                (> (count ids) 1) (assoc :successor-ambiguous? true)))
-            item)) items))
+(defn read-successors
+  "Current, exactly attested successor IDs for ITEM. A claim whose attested
+  predecessor source SHA no longer matches the inventory is stale (including
+  an un-superseded item) and is ignored."
+  [cfg item]
+  (let [predecessor (:id (inventory/item-record (:id item)))
+        q (:ok (store/bounded-query! (:graph-store cfg)
+                                     {:query/type :role-reverse
+                                      :edge-type [:supersedes 1]
+                                      :endpoint-role :predecessor
+                                      :endpoint-id predecessor
+                                      :limit 200 :order :desc}))
+        claims (keep #(-> (store/get-entity (:graph-store cfg) %) :ok)
+                     (:edge-ids q))]
+    (->> claims
+         (keep (fn [claim]
+                 (let [aq (:ok (store/bounded-query! (:graph-store cfg)
+                                                     {:query/type :attestations
+                                                      :subject-id (:id claim)
+                                                      :limit 50}))
+                       current? (some (fn [aid]
+                                        (let [a (:ok (store/get-entity (:graph-store cfg) aid))]
+                                          (and (= "futon3c/item-inventory" (:producer a))
+                                               (= :supersession-census (get-in a [:method :name]))
+                                               (= (get-in item [:source :sha256])
+                                                  (get-in a [:content :file/sha256])))))
+                                      (:attestation-ids aq))]
+                   (when current?
+                     (some (fn [{:keys [role target]}]
+                             (when (= :successor role)
+                               ((:item-id-by-clusion cfg) (:clusion/id target))))
+                           (:endpoints claim))))))
+         distinct vec)))
+
+(defn with-gcc-successors
+  "Attach GCC successor sets for ROOTS and the chains reachable from them."
+  [cfg items roots]
+  (let [by-id (into {} (map (juxt :id identity)) items)
+        cfg (assoc cfg :items-by-id by-id
+                   :item-id-by-clusion
+                   (into {} (map (fn [id] [(:id (inventory/item-record id)) id]))
+                         (keys by-id)))]
+    (loop [todo (vec (distinct (filter by-id roots))) seen #{} successors {}]
+      (if-let [id (first todo)]
+        (if (seen id)
+          (recur (subvec todo 1) seen successors)
+          (let [ids (read-successors cfg (by-id id))]
+            (recur (into (subvec todo 1) (filter by-id ids))
+                   (conj seen id) (assoc successors id ids))))
+        (mapv (fn [item] (assoc item :successors (get successors (:id item) []))) items)))))
 
 (defn resolve-tag
   "Follow at most eight explicit SUPERSEDED successors. Named
@@ -36,13 +75,11 @@
   and emit a notice rather than inventing a successor."
   [by-id tag]
   (loop [id tag path []]
-    (let [status (:status-line (by-id id))
-          successor (when (and status (re-find #"(?i)^\s*SUPERSEDED\b" status))
-                      (or (:successor (by-id id))
-                          (second (re-find #"(?i)superseded by\s+`?([MET]-[A-Za-z0-9_-]+)" status))))]
+    (let [successors (:successors (by-id id))
+          successor (first successors)]
       (cond
         (some #{id} path) {:item tag :notice {:item tag :reason :supersession-cycle :path (conj path id)}}
-        (:successor-ambiguous? (by-id id)) {:item tag :notice {:item id :reason :supersession-ambiguous}}
+        (> (count successors) 1) {:item tag :notice {:item id :reason :supersession-ambiguous}}
         (nil? successor) {:item id}
         (>= (count path) 8) {:item tag :notice {:item tag :reason :supersession-limit :path (conj path id)}}
         :else (recur successor (conj path id))))))
@@ -174,13 +211,15 @@
 (defn operator-focus
   ([opts] (operator-focus (hou-store/default-config) opts))
   ([cfg {:keys [until window-hours] :or {window-hours 6} :as opts}]
-   (let [items (with-closures (with-successors (inventory/current-items cfg)) until window-hours)
-         ;; This read-only report recognizes the current census, including IDs
-         ;; not yet published as clusions. It writes no dangling references.
-         cfg (assoc cfg :item-ids (mapv :id items))
+   (let [raw-items (with-closures (inventory/current-items cfg) until window-hours)
          records (filter #(and (= "operator" (get-in % [:record :origin]))
                                (in-window? until window-hours (get-in % [:record :created_at])))
                          (turns/list-records (:turn-store cfg) :limit Long/MAX_VALUE))
+         items (with-gcc-successors cfg raw-items
+                                    (keep #(get-in % [:record :mission_id]) records))
+         ;; This read-only report recognizes the current census, including IDs
+         ;; not yet published as clusions. It writes no dangling references.
+         cfg (assoc cfg :item-ids (mapv :id items))
          read (mapv #(read-turn cfg %) records)
          nd (try {:data ((or (:read-needs cfg) giraffe-needs/read-needs-gcc) cfg)}
                  (catch Exception e {:notice {:reason :needs-unavailable :detail (:reason (ex-data e))}}))

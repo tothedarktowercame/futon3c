@@ -4,6 +4,8 @@
             [clojure.test :refer [deftest is]]
             [futon3c.circus.operator-focus :as sut]
             [futon3c.circus.hou-store :as hou-store]
+            [futon3c.arxana.records :as records]
+            [futon3c.arxana.store :as store]
             [futon3c.arxana.turn-mention-writer :as writer]
             [futon3c.arxana.item-inventory :as inventory]
             [futon3c.xiang.turn-store :as turns]))
@@ -46,6 +48,7 @@
 (deftest stored-headers-drive-window-and-pending-blocks-mission-fallback
   (with-redefs [inventory/current-items (fn [_] items)
                 sut/with-closures (fn [xs _ _] xs)
+                sut/with-gcc-successors (fn [_ xs _] xs)
                 turns/list-records (fn [& _]
                                      [{:id "headered" :record {:origin "operator" :created_at "2026-01-01T03:00:00Z"}}
                                       {:id "pending" :record {:origin "operator" :created_at "2026-01-01T04:00:00Z"}}
@@ -87,7 +90,7 @@
       (finally (doseq [f (reverse (file-seq root))] (io/delete-file f))))))
 
 (deftest superseded-tags-follow-successors-but-names-do-not
-  (let [old {:id "M-old" :state :closed :status-line "SUPERSEDED; superseded by `M-new`"}
+  (let [old {:id "M-old" :state :closed :successors ["M-new"]}
         opts (assoc base :items [old {:id "M-new" :state :open}]
                     :turns [(turn "tagged" "03" "seat-a" [] "M-old")
                             (turn "named" "04" "seat-b" ["M-old"] "M-new")])
@@ -97,23 +100,86 @@
     (is (= 1 (:turn-count (first (get-in out [:report :notices])))))
     (is (= "M-old" (:item (first (get-in out [:report :notices]))))))
   (let [out (sut/focus-window
-             (assoc base :items [{:id "M-a" :state :closed :status-line "SUPERSEDED; superseded by `M-b`"}
-                                {:id "M-b" :state :closed :status-line "SUPERSEDED; superseded by `M-a`"}]
+             (assoc base :items [{:id "M-a" :state :closed :successors ["M-b"]}
+                                {:id "M-b" :state :closed :successors ["M-a"]}]
                     :turns [(turn "cycle" "03" "seat-a" [] "M-a")]))]
     (is (= :supersession-cycle (:reason (first (get-in out [:report :notices])))))
     (is (empty? (get-in out [:report :focus]))))
   (let [by-id (into {} (for [n (range 10)]
-                        [(str "M-" n) {:status-line (str "SUPERSEDED; superseded by `M-" (inc n) "`")}]))]
-    (is (= :supersession-limit (get-in (sut/resolve-tag by-id "M-0") [:notice :reason])))))
+                        [(str "M-" n) {:successors [(str "M-" (inc n))]}]))]
+    (is (= :supersession-limit (get-in (sut/resolve-tag by-id "M-0") [:notice :reason]))))
+  (is (= {:item "M-c"}
+         (sut/resolve-tag {"M-a" {:successors ["M-b"]}
+                           "M-b" {:successors ["M-c"]}
+                           "M-c" {:successors []}}
+                          "M-a")))
+  (is (= :supersession-ambiguous
+         (get-in (sut/resolve-tag {"M-a" {:successors ["M-b" "M-c"]}} "M-a")
+                 [:notice :reason]))))
 
-(deftest successor-can-be-declared-below-status-line
-  (let [f (java.io.File/createTempFile "hou-successor" ".md")]
-    (try
-      (spit f "Status: SUPERSEDED\nThis item is superseded by `M-new`.\n")
-      (let [item (first (sut/with-successors [{:id "M-old" :status-line "SUPERSEDED" :path (str f)}]))]
-        (is (= "M-new" (:successor item)))
-        (is (= {:item "M-new"} (sut/resolve-tag {"M-old" item} "M-old"))))
-      (spit f "Status: SUPERSEDED\nsuperseded by `M-a`; superseded by `M-b`\n")
-      (let [item (first (sut/with-successors [{:id "M-old" :status-line "SUPERSEDED" :path (str f)}]))]
-        (is (= :supersession-ambiguous (get-in (sut/resolve-tag {"M-old" item} "M-old") [:notice :reason]))))
-      (finally (.delete f)))))
+(deftest gcc-successors-ignore-stale-attestations-and-never-read-files
+  (let [old {:id "M-old" :source {:sha256 "current"}}
+        new {:id "M-new" :source {:sha256 "new"}}
+        old-ref (inventory/item-record "M-old") new-ref (inventory/item-record "M-new")
+        claim (records/make-clusion
+               {:type-revision [:supersedes 1]
+                :endpoints [{:role :successor :kind :clusion :target {:clusion/id (:id new-ref)}}
+                            {:role :predecessor :kind :clusion :target {:clusion/id (:id old-ref)}}]
+                :asserted-content {}})
+        att (records/make-attestation
+             {:subject-clusion-id (:id claim) :basis :exact :standing :verified :coverage :complete
+              :producer "futon3c/item-inventory"
+              :method {:name :supersession-census :version 1}
+              :content {:file/sha256 "current"}})
+        entities {(:id claim) claim (:id att) att}
+        cfg {:graph-store :stub
+             :items-by-id {"M-old" old "M-new" new}
+             :item-id-by-clusion {(:id old-ref) "M-old" (:id new-ref) "M-new"}}]
+    (with-redefs [clojure.core/slurp (fn [& _] (throw (AssertionError. "read mission file")))
+                  store/bounded-query!
+                  (fn [_ q]
+                    (case (:query/type q)
+                      :role-reverse (do (is (= #{:edge-type :endpoint-role :endpoint-id :limit :order :query/type}
+                                                (set (keys q))))
+                                        {:ok {:edge-ids [(:id claim)]}})
+                      :attestations (do (is (= #{:subject-id :limit :query/type} (set (keys q))))
+                                        {:ok {:attestation-ids [(:id att)]}})))
+                  store/get-entity (fn [_ id] {:ok (entities id)})]
+      (is (= ["M-new"] (sut/read-successors cfg old)))
+      (is (= [] (sut/read-successors cfg (-> old
+                                             (assoc :status-line "OPEN")
+                                             (assoc-in [:source :sha256] "changed"))))
+          "un-superseding changes the source SHA, so the immutable old claim is stale"))))
+
+(deftest two-gcc-claims-for-one-predecessor-are-ambiguous
+  (let [ids ["M-b" "M-c"]
+        refs (into {} (map (fn [id] [id (inventory/item-record id)]))
+                   (conj ids "M-a"))
+        claims (mapv (fn [id]
+                       (records/make-clusion
+                        {:type-revision [:supersedes 1]
+                         :endpoints [{:role :successor :kind :clusion
+                                      :target {:clusion/id (:id (refs id))}}
+                                     {:role :predecessor :kind :clusion
+                                      :target {:clusion/id (:id (refs "M-a"))}}]
+                         :asserted-content {}})) ids)
+        atts (mapv #(records/make-attestation
+                     {:subject-clusion-id (:id %) :basis :exact :standing :verified :coverage :complete
+                      :producer "futon3c/item-inventory"
+                      :method {:name :supersession-census :version 1}
+                      :content {:file/sha256 "same"}}) claims)
+        entities (into {} (map (juxt :id identity)) (concat claims atts))
+        cfg {:graph-store :stub
+             :item-id-by-clusion (into {} (map (fn [[id r]] [(:id r) id])) refs)}]
+    (with-redefs [store/bounded-query!
+                  (fn [_ q]
+                    (if (= :role-reverse (:query/type q))
+                      {:ok {:edge-ids (mapv :id claims)}}
+                      {:ok {:attestation-ids
+                            [(:id (first (filter #(= (:subject-id q) (:subject-clusion-id %)) atts)))]}}))
+                  store/get-entity (fn [_ id] {:ok (entities id)})]
+      (let [successors (sut/read-successors cfg {:id "M-a" :source {:sha256 "same"}})]
+        (is (= ids successors))
+        (is (= :supersession-ambiguous
+               (get-in (sut/resolve-tag {"M-a" {:successors successors}} "M-a")
+                       [:notice :reason])))))))

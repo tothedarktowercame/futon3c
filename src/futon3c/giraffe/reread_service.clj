@@ -9,6 +9,7 @@
             [futon2.aif.mission-registry :as registry]
             [futon2.aif.task-requisition :as requisition]
             [futon3c.giraffe.missions :as missions]
+            [futon3c.arxana.digest :as digest]
             [futon3c.arxana.giraffe-needs :as giraffe-needs]
             [futon3c.giraffe.preview-refresh :as preview]
             [futon3c.giraffe.readings :as readings]
@@ -408,14 +409,19 @@
     (try
       (let [config (:config @state)
             items ((:inventory-items-fn config) (:inventory-config config))
-            confirmed (or (:inventory-confirmed-ids @state) #{})
-            unchecked (filterv #(not (contains? confirmed (:id %))) items)
+            fingerprint #(digest/canonical-digest
+                          (select-keys % [:id :path :status-line :source]))
+            confirmed (or (:inventory-confirmed-items @state) {})
+            unchecked (filterv #(not= (fingerprint %) (confirmed (:id %))) items)
             result (if (empty? unchecked)
                      {:checked [] :written [] :batch-count 0}
-                     ((:inventory-sync-fn config) (:inventory-config config) unchecked))]
+                     ((:inventory-sync-fn config)
+                      (assoc (:inventory-config config) :inventory-items items)
+                      unchecked))]
         (when (active? token)
           (swap! state assoc
-                 :inventory-confirmed-ids (into confirmed (map :id unchecked))
+                 :inventory-confirmed-ids (set (map :id items))
+                 :inventory-confirmed-items (into {} (map (juxt :id fingerprint)) items)
                  :last-inventory-sync (assoc result :at-ms (System/currentTimeMillis)))
           (swap! state update :errors dissoc :item-inventory)))
       (catch Exception e
