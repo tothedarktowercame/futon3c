@@ -127,6 +127,10 @@
                  [{:role :item :endpoint/kinds #{:clusion}}
                   {:role :evidence :endpoint/kinds #{:external-ref}}]
                  [:mention/role])
+   (clusion-type :workplan/mention 2
+                 [{:role :item :endpoint/kinds #{:clusion}}
+                  {:role :evidence :endpoint/kinds #{:external-ref}}]
+                 [:mention/role :mention/range :mention/quote])
    (clusion-type :code-definition 1 []
                  [:artifact/revision-id :scope/kind :symbol/name :definition/form])
    (clusion-type :doc-entry 1 []
