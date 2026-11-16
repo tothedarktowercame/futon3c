@@ -1531,3 +1531,39 @@
         {:keys [id]} (turn! h {:dispatch :none :origin "agent"})]
     (svc/attach-happened! (:svc h) id {:reply "M-toy" :commits []})
     (is (empty? @calls))))
+
+(deftest hou-retries-a-transient-independent-read-with-a-fresh-snapshot
+  (let [calls (atom [])
+        h (harness {:hou-enabled? true :mentions-enabled? false
+                    :hou-config {}
+                    :hou-retry-delays [5 30]
+                    :hou-writer! (fn [_ turn]
+                                   (let [n (count (swap! calls conj (:reply_text turn)))]
+                                     (if (= 1 n)
+                                       {:failed :invalidEvidence}
+                                       {:written {:id "focus-ok"}})))})
+        turn {:id "turn-hou-retry" :origin "operator" :analysis_status "analyzed"
+              :source_text "M-toy" :reply_text "first"}]
+    (ts/write-record-id! (get-in (:svc h) [:config :store]) (:id turn) turn)
+    (svc/write-mentions-async! (:svc h) turn :reply_text)
+    (is (= ["first"] @calls))
+    (is (= [5] (mapv first @(:scheduled h))))
+    ;; The retry must re-read the turn rather than preserve an early record.
+    (ts/update-record! (get-in (:svc h) [:config :store]) (:id turn)
+                       #(assoc % :reply_text "settled"))
+    (let [[delay out] (run-next! h)]
+      (is (= 5 delay))
+      (is (= {:written {:id "focus-ok"}} out)))
+    (is (= ["first" "settled"] @calls))
+    (is (empty? @(:scheduled h)))))
+
+(deftest hou-does-not-retry-a-terminal-focus-refusal
+  (let [calls (atom 0)
+        h (harness {:hou-enabled? true :mentions-enabled? false
+                    :hou-retry-delays [5]
+                    :hou-writer! (fn [& _] (swap! calls inc) {:failed :focusNotLocated})})]
+    (svc/write-mentions-async!
+     (:svc h) {:id "turn-terminal" :origin "operator" :analysis_status "analyzed"
+               :source_text "M-toy" :reply_text "done"} :reply_text)
+    (is (= 1 @calls))
+    (is (empty? @(:scheduled h)))))

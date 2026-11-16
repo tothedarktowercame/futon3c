@@ -101,6 +101,11 @@
    :hou-enabled? (not= "0" (System/getenv "FUTON3C_HOU"))
    :hou-writer! hou-store/write-focus!
    :hou-config nil
+   ;; A focus snapshot independently re-reads freshly appended mention
+   ;; clusions.  futon1b can acknowledge the append before its entity view is
+   ;; visible, so retry the complete audited snapshot rather than weakening
+   ;; that read-after-write check.
+   :hou-retry-delays [5 30 120]
    ;; Likewise for the 小象 draft of a turn not dispatched at once.
    :draft-async! nil})
 
@@ -554,6 +559,28 @@
         [old _] (swap-vals! !announced-readings assoc id sig)]
     (not= (get old id) sig)))
 
+(def ^:private hou-retryable-failures
+  #{:invalidEvidence :readerFailedAfterRetries})
+
+(defn- write-hou-with-retry!
+  [svc turn delays]
+  (let [current (assoc (or (ts/read-record (cfg svc :store) (:id turn)) turn)
+                       :id (:id turn))
+        out (try
+              ((cfg svc :hou-writer!)
+               (or (cfg svc :hou-config) (hou-store/default-config)) current)
+              (catch Exception e
+                (if (contains? hou-retryable-failures (:reason (ex-data e)))
+                  {:failed (:reason (ex-data e))}
+                  (throw e))))]
+    (when (and (contains? hou-retryable-failures (:failed out)) (seq delays))
+      (let [delay (first delays)]
+        (binding [*out* *err*]
+          (println "[turn-mentions/hou] retrying" (:id turn) (:failed out)
+                   "in" delay "seconds"))
+        ((cfg svc :schedule!) delay #(write-hou-with-retry! svc turn (next delays)))))
+    out))
+
 (defn write-mentions-async!
   "Queue field mentions and, once settled AND replied, focus. Re-read the turn
   on the worker: whichever field lands last triggers the ready snapshot. Ensure
@@ -577,7 +604,7 @@
                 (doseq [f (if ready? [:source_text :reply_text] [field])]
                   ((cfg svc :mentions-writer!) mention-cfg current f)))
               (when ready?
-                ((cfg svc :hou-writer!) (or (cfg svc :hou-config) (hou-store/default-config)) current)))
+                (write-hou-with-retry! svc current (cfg svc :hou-retry-delays))))
             (catch Exception e (failed e))))
         (catch Exception e (failed e))))))
 
