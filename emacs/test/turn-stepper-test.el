@@ -316,6 +316,32 @@ second window must end as ONE window, right of the REPL it reads."
       (dolist (buffer (list source stepper))
         (when (buffer-live-p buffer) (kill-buffer buffer))))))
 
+(ert-deftest turn-stepper-reload-migration-renames-legacy-live-attachments ()
+  "Reload repairs both the old global-default name and the old bare name."
+  (let ((codex-source (get-buffer-create " *ts-reload-codex-6*"))
+        (claude-source (get-buffer-create " *ts-reload-claude-9*"))
+        (wrong (get-buffer-create "*象 stepper:claude-1*"))
+        (bare (get-buffer-create "*象 stepper*")))
+    (unwind-protect
+        (progn
+          (with-current-buffer codex-source
+            (setq-local codex-repl-agency-agent-id "codex-6"))
+          (with-current-buffer claude-source
+            (setq-local claude-repl-agent-id "claude-9"))
+          (with-current-buffer wrong
+            (turn-stepper-mode)
+            (setq turn-stepper--session-id "s-codex-6"
+                  turn-stepper--source-buffer codex-source))
+          (with-current-buffer bare
+            (turn-stepper-mode)
+            (setq turn-stepper--session-id "s-claude-9"
+                  turn-stepper--source-buffer claude-source))
+          (turn-stepper--migrate-attachments)
+          (should (equal "*象 stepper:codex-6*" (buffer-name wrong)))
+          (should (equal "*象 stepper:claude-9*" (buffer-name bare))))
+      (dolist (buffer (list codex-source claude-source wrong bare))
+        (when (buffer-live-p buffer) (kill-buffer buffer))))))
+
 (ert-deftest turn-stepper-reload-keeps-an-older-frame ()
   (let ((buf (get-buffer-create turn-stepper-buffer-name)))
     (unwind-protect

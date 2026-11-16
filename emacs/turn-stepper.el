@@ -177,6 +177,17 @@ prefix (the bare `*象 stepper*' or an indexed `*象 stepper:<agent>*')."
                       (string-prefix-p prefix (buffer-name b))))
                 (buffer-list))))
 
+(defun turn-stepper--rename-for-source (stepper source)
+  "Rename STEPPER to SOURCE's indexed name when that name is available.
+Return non-nil when STEPPER already has, or was given, the correct name.  A
+real collision is left visible for the duplicate/attachment invariant rather
+than inventing an ambiguous `<N>' buffer name."
+  (let ((wanted (turn-stepper--buffer-name-for source)))
+    (cond
+     ((equal (buffer-name stepper) wanted) t)
+     ((get-buffer wanted) nil)
+     (t (with-current-buffer stepper (rename-buffer wanted)) t))))
+
 (defun turn-stepper--migrate-attachments ()
   "Repair stepper attachments after loading a newer definition.
 Retire a stepper whose recorded source is absent or dead.  For a stepper
@@ -186,7 +197,9 @@ state as opening every surviving stepper afresh."
   (dolist (stepper (turn-stepper--buffers))
     (let ((source (buffer-local-value 'turn-stepper--source-buffer stepper)))
       (if (buffer-live-p source)
-          (turn-stepper--attach-source source)
+          (progn
+            (turn-stepper--attach-source source)
+            (turn-stepper--rename-for-source stepper source))
         (kill-buffer stepper)))))
 
 (defun turn-stepper--find-buffer (session-id &optional source)
@@ -210,10 +223,7 @@ to the indexed name when SOURCE's agent id is known (this is how a bare
          (existing (turn-stepper--find-buffer session-id source)))
     (if existing
         (progn
-          (unless (or (equal (buffer-name existing) wanted)
-                      (get-buffer wanted))
-            (with-current-buffer existing
-              (rename-buffer wanted)))
+          (turn-stepper--rename-for-source existing source)
           existing)
       (get-buffer-create wanted))))
 
