@@ -1012,7 +1012,36 @@ are what would have caught it.
 - Whether the shown top ten is a cascade in more than name: excursion
   [E-stands-alone](../excursions/E-stands-alone.md), for the end of this
   mission (Joe, 2026-11-15). The proved `top_ten_is_a_cascade` counts any
-  nonempty reason as "standing alone".
+  nonempty reason as "standing alone". *2026-11-16:* strengthened cascade
+  adopted (Joe) and proved, futon5 `Circus/Cascade.lean` (`c75ac12`); the
+  producer and conformance checks follow it (futon3c `bcd007992`,
+  `af23fd878`, `cb1911d31`). Joe's QA at mission end.
+
+- Carried from M-formal-arxana, closed 2026-11-16. Joe: "we'll take over the
+  remaining issues 1 3 4 here, I consider the formalisation done and it
+  becomes a question of what's practical and useful". From futon4
+  `holes/excursions/E-gcc-schema.md` Part C:
+  - Joe's own: (1) his corrections to Part A; (3) owners for the B14 vocabulary
+    rows, this mission by default; (4) introducing `[[M-formal-arxana]]`,
+    `[[E-gcc-schema]]` and the Part B kinds, or settling on the DOCUMENT.md
+    glossary.
+  - When practical and useful: (2) a worked record or a finding for port,
+    want, dated benefit claim, institution statement and construction; (5) a
+    writer/reader row for each B3/B4 kind; (6) the route text in "Decided:
+    where derived output goes" (claude-8, 11-05: general hyperedge batch
+    route) against Joe's 11-09 ruling in E-gcc-schema B10 (the Arxana route on
+    futon1b). The mention records (below) follow B10.
+
+- Mention records and 猴 (2026-11-16). Mentions are Arxana 'clusions
+  `[:workplan/mention 2]` with exact codepoint standoff into the fixed turn
+  text (Joe: "something like TEI so that the offset markup is exact"); the
+  quote is stored only when it differs from the item id (futon3c `8a07bf071`,
+  `8b0563277`). The live GCC reads futon1b :7073, where none of the 323 item
+  'clusions exist and the Arxana route takes one record per append. Plan (Joe
+  OK): a batch append on that route; the 323 items in one batch; then the
+  mention writer at settlement and reply, a paced backfill (about 25,000
+  mentions in about 4,300 turn texts), and 猴 version 1 (focus = the items a
+  turn names, associated = their `needs` neighbours; no model call).
 
 - Making XTQL itself fast (Joe, 2026-11-12: run the zone maps through the
   pattern cascade): the follow-on mission futon1b `holes/M-xtdb-fast.md`.
