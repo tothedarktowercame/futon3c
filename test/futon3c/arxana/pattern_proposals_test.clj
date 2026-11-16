@@ -56,10 +56,17 @@
                   store/bounded-query! (fn [_ q]
                                          (if (= :role-reverse (:query/type q))
                                            {:ok {:edge-ids ["proposal-1" "proposal-2"]}}
-                                           {:ok {:result/attestation-ids
-                                                 [(if (= "proposal-1" (:subject/id q)) "att-1" "att-2")]}}))
+                                           ;; futon1b's live :attestations route: reads
+                                           ;; :subject-id, answers :attestation-ids.
+                                           {:ok {:attestation-ids
+                                                 (case (:subject-id q)
+                                                   "proposal-1" ["att-1"] "proposal-2" ["att-2"] [])}}))
                   store/get-entity (fn [_ id] {:ok (get entities id)})]
-      (is (= ["p/b" "p/a"] (:ids (sut/read-ranked {:graph-store :stub} turn)))))))
+      (is (= ["p/b" "p/a"] (:ids (sut/read-ranked {:graph-store :stub} turn))))
+      (with-redefs [store/get-entity (fn [_ id] {:ok (get (assoc entities "att-2" {:content {}}) id)})]
+        (is (= {:pending :lu-proposal-rank-unreadable}
+               (sut/read-ranked {:graph-store :stub} turn))
+            "a missing rank is pending, never a guessed order")))))
 
 (deftest backfill-dry-run-never-writes
   (with-redefs [turns/list-records (fn [& _] [{:id "turn-p" :record (assoc turn :created_at (str (java.time.Instant/now))

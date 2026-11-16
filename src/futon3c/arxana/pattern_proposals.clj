@@ -66,17 +66,23 @@
                                         :limit 200 :order :asc}))
           ps (mapv #(-> (store/get-entity (:graph-store cfg) %) :ok) (:edge-ids q))]
       (if (empty? ps) {:pending :lu-proposals-pending}
-          {:ids (->> ps
-                     (map (fn [p]
-                            (let [aq (:ok (store/bounded-query! (:graph-store cfg)
-                                                               {:query/type :attestations
-                                                                :subject/id (:id p) :query/limit 20}))
-                                  aid (first (:result/attestation-ids aq))
-                                  a (:ok (store/get-entity (:graph-store cfg) aid))
-                                  ref-id (get-in p [:endpoints 1 :target :ref/id])
-                                  pattern (get-in (store/get-entity (:graph-store cfg) ref-id) [:ok :store/id])]
-                              [(get-in a [:content :rank]) pattern])))
-                     (sort-by first) (mapv second))}))
+          ;; futon1b's :attestations query reads :subject-id and :limit and
+          ;; answers :attestation-ids (futon1b_server.clj, arxana query route).
+          (let [ranked (mapv (fn [p]
+                               (let [aq (:ok (store/bounded-query! (:graph-store cfg)
+                                                                  {:query/type :attestations
+                                                                   :subject-id (:id p) :limit 20}))
+                                     aid (first (:attestation-ids aq))
+                                     a (when aid (:ok (store/get-entity (:graph-store cfg) aid)))
+                                     ref-id (get-in p [:endpoints 1 :target :ref/id])
+                                     pattern (get-in (store/get-entity (:graph-store cfg) ref-id) [:ok :store/id])]
+                                 [(get-in a [:content :rank]) pattern]))
+                             ps)]
+            ;; A proposal whose rank cannot be read gives no order at all:
+            ;; report it pending rather than guess one.
+            (if (some (comp not number? first) ranked)
+              {:pending :lu-proposal-rank-unreadable}
+              {:ids (->> ranked (sort-by first) (mapv second))}))))
     {:pending :lu-proposals-pending}))
 
 (defn backfill! [cfg {:keys [write? pause-ms] :or {write? false pause-ms 200}}]
