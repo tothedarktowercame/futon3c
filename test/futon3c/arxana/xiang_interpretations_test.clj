@@ -110,3 +110,21 @@
   (let [a [{:record {:id "c1"}}] b [{:record {:id "c2"}}]]
     (is (= (sut/batch-message-id "x/" turn a) (sut/batch-message-id "x/" turn a)))
     (is (not= (sut/batch-message-id "x/" turn a) (sut/batch-message-id "x/" turn b)))))
+
+(deftest the-latest-claim-for-an-act-stands
+  (let [old {:id "old" :endpoints [{:target {:locator {:codepoint-range [0 3]}}}
+                                    {:target {:intent/id :collect}}]}
+        new {:id "new" :endpoints [{:target {:locator {:codepoint-range [0 6]}}}
+                                    {:target {:intent/id :collect}}]}
+        ents {"old" old "new" new "a-old" {:content {:act/id "act-1"}}
+              "a-new" {:content {:act/id "act-1"}}}]
+    (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref :text (:source_text turn)})
+                  store/bounded-query!
+                  (fn [_ q]
+                    (if (= :role-reverse (:query/type q))
+                      {:ok {:edge-ids ["old" "new"]}}
+                      {:ok {:attestation-ids [(str "a-" (:subject-id q))]}}))
+                  store/get-entity (fn [_ id] {:ok (get ents id)})]
+      (is (= [{:id "act-1" :start 0 :end 6}]
+             (mapv #(select-keys % [:id :start :end])
+                   (:acts (sut/read-acts {:graph-store :stub} turn))))))))

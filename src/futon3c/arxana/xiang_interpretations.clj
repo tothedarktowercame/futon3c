@@ -119,7 +119,11 @@
                               :author "operator" :start start :end end
                               :text (subs text (.offsetByCodePoints ^String text 0 start)
                                           (.offsetByCodePoints ^String text 0 end))})))
-                    (sort-by :start) vec)}))
+                    ;; Claims arrive oldest first (futon1b role-reverse orders by
+                    ;; event time). A corrected or re-analysed act is a new claim
+                    ;; with the same act id: the latest one stands.
+                    (reduce (fn [m act] (assoc m (:id act) act)) {})
+                    vals (sort-by :start) vec)}))
     {:pending :interpretations-pending}))
 
 (defn backfill! [cfg {:keys [write? pause-ms] :or {write? false pause-ms 200}}]
