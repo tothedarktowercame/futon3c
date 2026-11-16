@@ -16,6 +16,8 @@
             [futon3c.giraffe.reread-service :as service]
             [futon3c.giraffe.reread-worker :as worker]
             [futon3c.giraffe.run :as run]
+            [futon3c.arxana.turn-mention-writer :as mention-writer]
+            [futon3c.circus.hou-store :as hou-store]
             [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts]
             [next.jdbc :as jdbc])
@@ -258,6 +260,8 @@
                                                    (is (= :futon3c.giraffe.reread-service/giraffe key))
                                                    (reset! listener f))
                   worker/run-once! (fn [_] (swap! workers inc) (deliver boot true) {:status :idle})
+                  hou-store/headers-for-turn (fn [& _] {:headers [{:id "header"}]})
+                  mention-writer/read-turn-mentions (fn [& _] {:item-ids ["M-x" "T-y" "M-unknown"]})
                   service/item-snapshot (fn [& _] (throw (ex-info "Turn must not reread a document" {})))
                   queue/reconcile-item! (fn [& _] (throw (ex-info "Turn must not enqueue" {})))]
       (service/start! (assoc config :mint-fn #(do (swap! mints inc) (deliver minted true)
@@ -286,7 +290,11 @@
     (ts/write-record-id! (:turn-store config) "turn-fixtureNone" {:source_text "No task identifiers here."})
     (ts/write-record-id! (:turn-store config) "turn-fixtureUnknown" {:reply_text "M-unknown M-unknown"})
     (with-redefs [turn-service/add-turn-listener! (fn [_ f] (reset! listener f))
-                  worker/run-once! (fn [_] (deliver boot true) {:status :idle})]
+                  worker/run-once! (fn [_] (deliver boot true) {:status :idle})
+                  hou-store/headers-for-turn (fn [& _] {:headers [{:id "header"}]})
+                  mention-writer/read-turn-mentions
+                  (fn [_ record] {:item-ids (if (= "turn-fixtureUnknown" (:id record))
+                                              ["M-unknown"] [])})]
       (service/start! (assoc config :mint-fn #(do (swap! mints inc) {:status :minted})))
       (is (= true (deref boot 2000 :timeout)))
       (@listener {:event :settled :id "turn-fixtureNone"})
@@ -299,18 +307,28 @@
       (is (nil? (:turn-mint-task (service-state))))
       (is (= 0 @mints)))))
 
-(deftest turn-resolution-is-read-only-and-rejects-ambiguous-document-identities
+(deftest typed-turn-resolution-ignores-prose-and-rejects-ambiguous-identities
   (let [config (turn-fixture)]
-    (is (= ["E-z"] (mapv :external-id (:items (service/items-touched-by-turn {:象 {:referent "E-z"}} config)))))
-    (jdbc/execute! (:fixture-db config) ["INSERT INTO ent_node VALUES('other/x','M-x',':mission/doc')"])
-    (let [result (service/items-touched-by-turn {:source_text "M-x T-y M-absent"} config)]
-      (is (= ["T-y"] (mapv :external-id (:items result))))
-      (is (= ["M-x"] (:ambiguous-ids result)))
-      (is (= ["M-absent"] (:unknown-ids result))))
-    (let [missing (io/file (temp-dir) "missing.sqlite")]
-      (is (thrown? java.sql.SQLException
-                   (service/items-touched-by-turn {:source_text "M-x"} {:entity-sidecar (str missing)})))
-      (is (not (.exists missing))))))
+    (with-redefs [hou-store/headers-for-turn (fn [& _] {:headers [{:id "header"}]})
+                  mention-writer/read-turn-mentions (fn [& _] {:item-ids ["M-x" "T-y" "M-absent"]})]
+      (jdbc/execute! (:fixture-db config) ["INSERT INTO ent_node VALUES('other/x','M-x',':mission/doc')"])
+      (let [result (service/items-touched-by-turn
+                    {:id "turn" :analysis "象 says E-z but it has no typed mention"} config)]
+        (is (= ["T-y"] (mapv :external-id (:items result))))
+        (is (= ["M-x"] (:ambiguous-ids result)))
+        (is (= ["M-absent"] (:unknown-ids result)))
+        (is (not-any? #{"E-z"} (map :external-id (:items result))))
+        (with-redefs [clojure.core/re-seq
+                      (fn [& _] (throw (AssertionError. "old regex path called")))]
+          (is (= ["T-y"]
+                 (mapv :external-id
+                       (:items (service/items-touched-by-turn
+                                {:id "turn" :analysis "M-x E-z T-y"} config)))))))))
+  (let [config (turn-fixture)]
+    (with-redefs [hou-store/headers-for-turn (fn [& _] {:pending :header-absent})
+                  mention-writer/read-turn-mentions
+                  (fn [& _] (throw (AssertionError. "mention read before completion")))]
+      (is (= :header-absent (:pending (service/items-touched-by-turn {:id "turn"} config)))))))
 
 (deftest stop-removes-the-circus-listener
   (let [removed (atom [])]

@@ -15,6 +15,8 @@
             [futon3c.giraffe.reread-mint-batch :as mint-batch]
             [futon3c.giraffe.reread-queue :as queue]
             [futon3c.giraffe.run :as giraffe-run]
+            [futon3c.arxana.turn-mention-writer :as mention-writer]
+            [futon3c.circus.hou-store :as hou-store]
             [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts])
   (:import [java.sql DriverManager]
@@ -32,21 +34,20 @@
       (get-in (service) [:config :store]))))
 
 (defn items-touched-by-turn
-  "Temporary mention projection, replaceable by the Circus turn projector.
-   Resolve explicit M-/E-/T- tokens in turn text and 象 readings to document
-   entities, never legacy workplan items. Read-only SQLite; ambiguous identities
-   are reported separately, never selected arbitrarily. IDs repeat once per turn."
+  "Resolve stored typed mentions to document entities, never scanning prose or
+   selecting legacy workplan items. A Hou header is the completion barrier for
+   the asynchronous source/reply mention writes; absence remains :pending."
   ([record] (items-touched-by-turn record {:entity-sidecar default-entity-sidecar}))
-  ([record {:keys [entity-sidecar]}]
-   (let [fields (select-keys record [:source_text :reply_text :analysis :reading :draft
-                                     :xiang :象 :happened_summary])
-         ids (->> (tree-seq coll? seq fields)
-                  (filter string?)
-                  (mapcat #(re-seq #"(?<![A-Za-z0-9_-])[MET]-[A-Za-z0-9][A-Za-z0-9_-]*" %))
-                  distinct sort)
+  ([record {:keys [entity-sidecar mention-config]}]
+   (let [mention-config (or mention-config (mention-writer/default-config))
+         header-read (hou-store/headers-for-turn mention-config record)
+         mention-read (when (seq (:headers header-read))
+                        (mention-writer/read-turn-mentions mention-config record))
+         pending (or (:pending header-read) (:pending mention-read))
+         ids (:item-ids mention-read)
          empty-result {:items [] :unknown-ids [] :ambiguous-ids []}]
-     (if (empty? ids)
-       empty-result
+     (if pending
+       (assoc empty-result :pending pending)
        (with-open [db (DriverManager/getConnection
                        (str "jdbc:sqlite:" (.toASCIIString (.toURI (io/file entity-sidecar))) "?mode=ro"))
                    query (.prepareStatement db "SELECT id FROM ent_node WHERE external_id=? AND type IN (?,?)")]
@@ -101,7 +102,9 @@
                        :reconcile-interval-ms (or (number "FUTON3C_GIRAFFE_REREAD_RECONCILE_INTERVAL_MS")
                                                   600000)
                        :preview (merge preview/default-config (:preview opts))
-                       :entity-sidecar default-entity-sidecar :turn-store live-turn-store}
+                       :entity-sidecar default-entity-sidecar
+                       :mention-config (mention-writer/default-config)
+                       :turn-store live-turn-store}
                       (dissoc opts :env-file :environment :preview))]
     (when-not (and (seq (:reader-seats config))
                    (every? #(and (string? %) (not (str/blank? %))) (:reader-seats config))
@@ -507,15 +510,16 @@
       (let [config (:config @state)
             store (:turn-store config)
             store (if (fn? store) (store) store)
-            record (when store (ts/read-record store id))]
+            record (some-> (when store (ts/read-record store id)) (assoc :id id))]
         (when-not record
           (throw (ex-info "Settled turn record unavailable" {:turn-id id})))
         (let [analysis (ts/read-analysis store id)
               draft (ts/read-draft store id)
               record (cond-> record analysis (assoc :analysis analysis) draft (assoc :draft draft))
-              {:keys [items unknown-ids ambiguous-ids]} (items-touched-by-turn record config)
+              {:keys [items unknown-ids ambiguous-ids pending]} (items-touched-by-turn record config)
               now (System/currentTimeMillis)]
-          (swap! state
+          (when-not pending
+            (swap! state
                  (fn [s]
                    (-> (reduce (fn [s item]
                                  (assoc-in s [:discussed (:external-id item)]
@@ -523,9 +527,9 @@
                        (update :seen-turns conj id)
                        (update :unknown-turn-item-count + (count unknown-ids))
                        (update :ambiguous-turn-item-count + (count ambiguous-ids)))))
-          (swap! state update :refresh-items (fnil into #{}) (map :external-id items))
-          (when (seq items) (schedule-turn-mint! token))
-          (swap! state update :errors dissoc [:turn id])))
+            (swap! state update :refresh-items (fnil into #{}) (map :external-id items))
+            (when (seq items) (schedule-turn-mint! token))
+            (swap! state update :errors dissoc [:turn id]))))
       (catch Exception e (failure! token [:turn id] e)))))
 
 (defn- listen-for-turns! [token]

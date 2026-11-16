@@ -144,6 +144,44 @@
     (write-plan! cfg plan)
     {:mentions (count (:mentions plan)) :requests (count (:batches plan))}))
 
+(defn read-turn-mentions
+  "Read stored v2 mention clusions for both immutable turn-field references.
+  Returns :pending when no stored mention is visible yet; callers use the Hou
+  header as the completion barrier for the two asynchronous field writes."
+  [cfg turn]
+  (let [plans (mapv #(field-evidence cfg turn %) [:source_text :reply_text])
+        refs (vec (keep :reference plans))]
+    (if (< (count refs) 2)
+      {:pending :turn-field-reference-unavailable}
+      (let [mention-ids
+            (mapcat (fn [ref]
+                      (let [q (:ok (store/bounded-query!
+                                    (:graph-store cfg)
+                                    {:query/type :role-reverse :edge-type [:workplan/mention 2]
+                                     :endpoint-role :evidence :endpoint-id (:id ref)
+                                     :limit 200 :order :asc}))]
+                        (when-not (and (= :ok (:status q)) (not (:truncated? q)))
+                          (throw (ex-info "turn mention read refused" {:reason :invalidEvidence})))
+                        (:edge-ids q))) refs)
+            records (mapv (fn [id]
+                            (let [r (:ok (store/get-entity (:graph-store cfg) id))]
+                              (when-not (and (= [:workplan/mention 2] (:type-revision r))
+                                             (some #{(get-in r [:endpoints 1 :target :ref/id])}
+                                                   (map :id refs)))
+                                (throw (ex-info "invalid stored turn mention" {:reason :invalidEvidence})))
+                              r)) (distinct mention-ids))]
+        (if (empty? records)
+          {:pending :mentions-not-written}
+          {:mentions records
+           :item-ids (->> records
+                          (map #(get-in % [:endpoints 0 :target :clusion/id]))
+                          (map (fn [id]
+                                 (let [item (:ok (store/get-entity (:graph-store cfg) id))]
+                                   (when-not (= [:workplan/item 1] (:type-revision item))
+                                     (throw (ex-info "mention item unavailable" {:reason :invalidEvidence})))
+                                   (get-in item [:asserted-content :item/id]))))
+                          distinct sort vec)})))))
+
 (defn backfill!
   "Dry-run by default. Calls no write port unless :write? is true. The same
   plans drive reporting and execution; each request contains up to 500 records."

@@ -71,3 +71,25 @@
     (is (= "futon3c/turns" (get-in p [:reference :store/id])))
     (is (= "turn-toy/reply_text" (get-in p [:reference :record/id])))
     (is (= "M-toy" (:text p)))))
+
+(deftest typed-reader-joins-both-turn-fields-through-reverse-index
+  (let [t (assoc turn :reply_text "M-toy")
+        plans (mapv #(writer/plan-field cfg t %) [:source_text :reply_text])
+        mentions (mapv first (map :mentions plans))
+        item (records/make-clusion {:type-revision [:workplan/item 1] :endpoints []
+                                    :asserted-content {:item/id "M-toy"}})
+        by-id (into {(:id item) item} (map (juxt :id identity)) mentions)]
+    (with-redefs [store/bounded-query!
+                  (fn [_ q]
+                    {:ok {:status :ok :truncated? false
+                          :edge-ids (->> mentions
+                                         (filter #(= (:endpoint-id q)
+                                                     (get-in % [:endpoints 1 :target :ref/id])))
+                                         (mapv :id))}})
+                  store/get-entity (fn [_ id] {:ok (get by-id id)})]
+      (let [result (writer/read-turn-mentions cfg t)]
+        (is (= 2 (count (:mentions result))))
+        (is (= ["M-toy"] (:item-ids result)))))
+    (with-redefs [store/bounded-query! (fn [& _] {:ok {:status :ok :truncated? false :edge-ids []}})]
+      (is (= {:pending :mentions-not-written}
+             (writer/read-turn-mentions cfg t))))))
