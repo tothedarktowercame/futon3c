@@ -287,14 +287,23 @@
 (defn- mentioned-ids [text]
   (distinct (re-seq #"(?<![A-Za-z0-9_-])[MCET]-[A-Za-z0-9][A-Za-z0-9_-]*" (or text ""))))
 
+(defn- requisition-target [text]
+  (let [targets (->> (re-seq #"(?m)^Requisition:[ \\t]*([MCET]-[A-Za-z0-9][A-Za-z0-9_-]*)[ \\t]*(?:—|--)[ \\t]*\\S.*$"
+                              (or text ""))
+                     (map second)
+                     distinct)]
+    (when (= 1 (count targets)) (first targets))))
+
 (defn decide
-  "Precedence: explicit target/mention, current session, attributed activity,
-   typed absence. Target ambiguity never chooses the first filesystem hit."
+  "Precedence: operator target, dispatched requisition, explicit mission,
+   current session, attributed activity, typed absence. Target ambiguity never
+   chooses the first filesystem hit."
   [{:keys [agent-id session-id mission-id text edited-path surface inherited-clock phase]}]
   (let [mentions (mentioned-ids text)
+        requisition (requisition-target text)
         ;; REPL payloads forward the buffer's OLD clock. A newly named target
         ;; in the operator text must supersede that carried value. For dispatch,
-        ;; the explicit --mission option remains authoritative.
+        ;; an explicit requisition names the work before --mission or inheritance.
         operator? (contains? #{"emacs-repl" "emacs-claude-repl" "emacs-codex-repl"} surface)
         current (clock/current-clock agent-id session-id)
         clocked? (some val current)
@@ -302,6 +311,7 @@
         ;; mention only fills an empty clock; operator turns (Joe's, and the
         ;; followup reminders posted as Joe) switch it (Joe, 2026-09-24).
         ids (cond (and operator? (seq mentions)) mentions
+                  requisition [requisition]
                   (seq mission-id) [mission-id]
                   clocked? nil
                   :else mentions)]

@@ -100,6 +100,32 @@
         (agent-chat--sync-clock-from-server!)
         (should (equal agent-chat--excursion-id "E-old"))))))
 
+(ert-deftest agent-chat-operator-exact-target-reflects-durable-decision ()
+  "A bare operator mention may remain floor-only locally, but the displayed
+clock must agree after Agency durably decides that exact operator turn."
+  (with-temp-buffer
+    (agent-chat-test--init-buffer)
+    (setq-local agent-chat--agent-name "claude-test")
+    (setq-local agent-chat--session-id "s-1")
+    (setq-local agent-chat--mission-id "M-old")
+    (let ((agent-chat-sync-clock-from-server t))
+      (cl-letf (((symbol-function 'agent-chat--clock-target-candidates)
+                 (lambda (kind)
+                   (and (eq kind 'mission) '("M-old" "M-new"))))
+                ((symbol-function 'futon-url-retrieve-synchronously)
+                 (lambda (&rest _)
+                   (let ((b (generate-new-buffer " *clock-resp*")))
+                     (with-current-buffer b
+                       (insert "HTTP/1.1 200 OK\n\n"
+                               "{\"ok\":true,\"mission-id\":\"M-new\"}"))
+                     b))))
+        ;; Non-operator/before-decision behavior remains floor-only.
+        (should-not (agent-chat--maybe-auto-clock-from-turn "please work on M-new"))
+        (should (equal agent-chat--mission-id "M-old"))
+        ;; The turn-end read reflects the durable operator decision.
+        (agent-chat--sync-clock-from-server!)
+        (should (equal agent-chat--mission-id "M-new"))))))
+
 (ert-deftest agent-chat-annotate-turn-flair-is-idempotent ()
   (with-temp-buffer
     (insert "hello\nCooked for 1m 03s\n─── *no mission*\n> ")

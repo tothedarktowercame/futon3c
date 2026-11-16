@@ -161,10 +161,13 @@
 
 (defn- with-docs [f]
   ;; The canonical mission parser recognizes /home/joe/code paths. Put genuine
-  ;; isolated fixture files there; no parser stub or fake path association.
-  (let [root (.toFile (Files/createTempDirectory
-                       (.toPath (io/file "/home/joe/code"))
-                       "futon-clock-test-" (make-array FileAttribute 0)))
+  ;; isolated fixture files under this checkout's writable target directory;
+  ;; /home/joe/code itself is intentionally read-only.
+  (let [parent (doto (io/file "target") .mkdirs)
+        root (.getCanonicalFile
+              (.toFile (Files/createTempDirectory
+                        (.toPath parent)
+                        "futon-clock-test-" (make-array FileAttribute 0))))
         source (io/file root "src" "work.clj")
         mission (io/file root "holes" "missions" "M-clock-fixture.md")]
     (try
@@ -200,6 +203,26 @@
                  ((juxt :status :reason)
                   (decision/record! (assoc (operator "fresh" "M-missing")
                                            :session-id "fresh-session"))))))))))
+
+(deftest requisition-target-is-authoritative-only-when-unambiguous
+  (with-docs
+    (fn [root _ _]
+      (spit (io/file root "holes" "missions" "M-override.md") "# override")
+      (let [inherited {:clock {:mission-id "M-clock-fixture"}
+                       :evidence {:caller-id "caller"}}
+            valid (decision/decide
+                   (assoc (context "valid-requisition")
+                          :text "Requisition: M-override — do it"
+                          :inherited-clock inherited))
+            ambiguous (decision/decide
+                       (assoc (context "ambiguous-requisition")
+                              :text (str "Requisition: M-override — first\n"
+                                         "Requisition: M-clock-fixture — second")
+                              :inherited-clock inherited))]
+        (is (= [1 "M-override"]
+               [(:source valid) (get-in valid [:clock :mission-id])]))
+        (is (= [:unclocked :ambiguous]
+               ((juxt :status :reason) ambiguous)))))))
 
 (deftest bell-mentions-fill-an-empty-clock-but-do-not-switch
   ;; claude-8 (2026-09-24): bellbacks naming M-futon-seams in passing kept
@@ -516,12 +539,14 @@
                                           :session-id "caller-session" :text "M-clock-fixture"
                                           :evidence-store backend)
                     parent (decision/record! caller-context)
-                    dispatch (fn [surface mission]
-                               (let [request {:evidence-store backend :agent-id "clock-worker"
-                                              :caller "caller" :surface surface :prompt "Continue"
-                                              :mission-id mission}
-                                     id (#'http/create-invoke-job! request)]
-                                 [id request]))
+                    dispatch (fn dispatch
+                               ([surface mission] (dispatch surface mission "Continue"))
+                               ([surface mission prompt]
+                                (let [request {:evidence-store backend :agent-id "clock-worker"
+                                               :caller "caller" :surface surface :prompt prompt
+                                               :mission-id mission}
+                                      id (#'http/create-invoke-job! request)]
+                                  [id request])))
                     run (fn [[id request]]
                           (is (:ok (:result (#'http/run-invoke-job! (assoc request :job-id id)))))
                           (:decision (clock/current-state "clock-worker"
@@ -536,10 +561,22 @@
                 (decision/record! (assoc caller-context :turn-id "caller-clocked-again"))
                 (is (= "M-override" (get-in (run (dispatch "bell" "M-override")) [:clock :mission-id])))
                 (is (= 1 (get-in (clock/current-state "clock-worker" "clock-session") [:decision :source])))
+                ;; A requisition is the dispatched seat turn's explicit target.
+                ;; It must supersede the captured caller clock so the target the
+                ;; seat is told equals the target recorded for that same turn.
+                (reg/update-agent! "clock-worker" :agent/session-id "requisition-child")
+                (let [d (run (dispatch "bell" nil
+                                       "Requisition: M-override — prove target agreement\n\nContinue"))]
+                  (is (= "M-override" (get-in d [:clock :mission-id])))
+                  (is (= 1 (:source d))))
                 (decision/record! (assoc caller-context :turn-id "caller-unresolvable" :text "M-missing"))
                 (reg/update-agent! "clock-worker" :agent/session-id "empty-child")
-                (is (= [:unclocked :no-source 4]
-                       ((juxt :status :reason :source) (run (dispatch "bell" nil)))))
+                ;; A refusal retains the caller's real clock, and that retained
+                ;; decision remains inheritable.
+                (let [d (run (dispatch "bell" nil))]
+                  (is (= [:clocked :inherited]
+                         ((juxt :status :source) d)))
+                  (is (= "M-clock-fixture" (get-in d [:clock :mission-id]))))
                 ;; A clocked returning worker must not clock its original caller.
                 (decision/record! (assoc (context "returning-worker") :session-id "empty-child"
                                          :text "M-clock-fixture" :evidence-store backend))
@@ -548,9 +585,9 @@
                       id (#'http/create-invoke-job! request)]
                   (is (nil? (:inherited-clock (#'http/get-invoke-job id))))
                   (is (:ok (:result (#'http/run-invoke-job! (assoc request :job-id id)))))
-                  (is (= [:unclocked :no-source 4]
-                         ((juxt :status :reason :source)
-                          (:decision (clock/current-state "caller" "caller-session"))))))
+                  (let [d (:decision (clock/current-state "caller" "caller-session"))]
+                    (is (= [:clocked 2] ((juxt :status :source) d)))
+                    (is (= "M-clock-fixture" (get-in d [:clock :mission-id])))))
                 (is (seq (store/query* (f1b/make-futon1b-backend (:base-url backend))
                                        {:query/tags [:clock-decision] :query/author "clock-worker"}))))))
           (finally (http/reset-invoke-jobs!) (stop! server) (.close ^java.lang.AutoCloseable node)))))))
