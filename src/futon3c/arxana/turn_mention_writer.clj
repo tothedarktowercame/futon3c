@@ -16,6 +16,23 @@
   {:graph-store (http/http-store "http://localhost:7073" "arxana-service")
    :turn-store (turns/store) :pause-ms 200})
 
+(def ^:private !slice-ids (atom nil))
+
+(defn- slice-item-ids
+  "Candidate item ids from the workplan slice, re-read only when the file
+  changes: the hook runs per turn field, and the slice is ~2.7 MB of EDN."
+  []
+  (let [f (java.io.File. ^String workplan/default-slice)
+        stamp [(.lastModified f) (.length f)]
+        cached @!slice-ids]
+    (if (= stamp (:stamp cached))
+      (:ids cached)
+      (let [ids (vec (distinct (keep #(when (= [:workplan/item 1] (:type-revision %))
+                                        (get-in % [:identity :item/id]))
+                                     (:records (workplan/read-slice)))))]
+        (reset! !slice-ids {:stamp stamp :ids ids})
+        ids))))
+
 (defn inventory
   "Read candidate IDs from the slice and verify their exact clusions. A text
   limits queries to possible matches; nil verifies the whole slice for CLI.
@@ -24,9 +41,7 @@
   [cfg text]
   (if (contains? cfg :item-ids)
     (filterv #(or (nil? text) (str/includes? text %)) (:item-ids cfg))
-    (let [ids (distinct (keep #(when (= [:workplan/item 1] (:type-revision %))
-                                (get-in % [:identity :item/id]))
-                             (:records (workplan/read-slice))))]
+    (let [ids (slice-item-ids)]
       (into []
             (keep (fn [id]
                     (when (or (nil? text) (str/includes? text id))
