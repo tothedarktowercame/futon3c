@@ -14,10 +14,15 @@ from datetime import datetime, timezone
 import edn_format
 from edn_format import Keyword as K
 
-LIBRARY = Path(__file__).resolve().parents[2] / "futon3" / "library"
-RNODE_DEFINITIONS = Path("/home/joe/code/futon0/analysis/audits/rnode-tree/rnode-definitions.edn")
-RNODE_VOCABULARY = Path("/home/joe/code/futon0/analysis/audits/rnode-tree/rnode-vocabulary.json")
-RNODE_STAGES = Path("/home/joe/code/p4ng/empirics-futon/control-stages.edn")
+# Resolve every input from this script's own code root, as LIBRARY always did:
+# an isolated serving tree (Lucy's wm-sandbox) has no /home/joe/code/p4ng, and the
+# hard-coded path failed every target-reading validation there with Errno 2
+# (wm-click-046be689, ladder 02). On zone parents[2] is /home/joe/code.
+CODE_ROOT = Path(__file__).resolve().parents[2]
+LIBRARY = CODE_ROOT / "futon3" / "library"
+RNODE_DEFINITIONS = CODE_ROOT / "futon0" / "analysis/audits/rnode-tree/rnode-definitions.edn"
+RNODE_VOCABULARY = CODE_ROOT / "futon0" / "analysis/audits/rnode-tree/rnode-vocabulary.json"
+RNODE_STAGES = CODE_ROOT / "p4ng" / "empirics-futon/control-stages.edn"
 INTENT_VOCABULARY = Path.home() / ".emacs-graph/session-turn-vocabulary.json"
 ROLES = {"context", "condition", "contrast", "action", "rationale", "goal", "dependency"}
 RNODE_DROP_REASONS = ("unknown_node", "invalid_operation", "empty_justification",

@@ -32,7 +32,12 @@
 # not finished.
 set -euo pipefail
 REPO="${KIMI_TASK_REPO:-/home/joe/code/futon2}"; DIR=$REPO/holes/excursions
-AGENCY_URL="${AGENCY_URL:-http://localhost:7070}"
+# 127.0.0.1, not localhost: where localhost resolves to ::1 and the Agency
+# listens on IPv4 only (Lucy), every bell was refused.
+AGENCY_URL="${AGENCY_URL:-http://127.0.0.1:7070}"
+# Sibling scripts come from this checkout, never a fixed /home/joe/code path
+# (a box can hold a stale, unrelated ~/code/futon3c).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # One id, one document (Joe, 2026-11-14, M-repl-circus): a task ledger that
 # shares futon2's E-kimi-task names collides with it — the giraffe re-read
@@ -114,8 +119,8 @@ if [ -n "$CASCADE" ]; then
   [ -f "$CASCADE" ] || { echo "no such cascade file: $CASCADE" >&2; exit 2; }
   # Refuse before minting: a cascade that does not lint would be refused by
   # agency_send after the excursion file exists.
-  python3 /home/joe/code/futon3c/scripts/xlate.py lint "$CASCADE" | tail -1 | grep -q ' 0 problem(s)$' \
-    || { echo "refusal:cascade-does-not-lint — $CASCADE" >&2; python3 /home/joe/code/futon3c/scripts/xlate.py lint "$CASCADE" >&2 || true; exit 2; }
+  python3 "$SCRIPT_DIR/xlate.py" lint "$CASCADE" | tail -1 | grep -q ' 0 problem(s)$' \
+    || { echo "refusal:cascade-does-not-lint — $CASCADE" >&2; python3 "$SCRIPT_DIR/xlate.py" lint "$CASCADE" >&2 || true; exit 2; }
 fi
 N=$(ls "$DIR" 2>/dev/null | sed -n "s/^${PREFIX}-\([0-9]*\)\.md$/\1/p" | sort -n | tail -1); N=$(( ${N:-0} + 1 ))
 ID="$PREFIX-$N"; FILE="$DIR/$ID.md"; TODAY=$(date -u +%Y-%m-%d)
@@ -130,7 +135,7 @@ ID="$PREFIX-$N"; FILE="$DIR/$ID.md"; TODAY=$(date -u +%Y-%m-%d)
   fi
 } > "$FILE"
 AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-JOB=$( { echo "Requisition: $ID — $PURPOSE"; echo; cat "$@"; } | python3 /home/joe/code/futon3c/scripts/agency_send.py --from "$FROM" --to "$TO" --kind bell --base "$AGENCY_URL" --mode work --requisition "$ID — $PURPOSE" ${CASCADE:+--cascade "$CASCADE"} 2>&1 | grep -oE 'invoke-[0-9]+-[0-9]+-[0-9a-f]+' | head -1 || true)
+JOB=$( { echo "Requisition: $ID — $PURPOSE"; echo; cat "$@"; } | python3 "$SCRIPT_DIR/agency_send.py" --from "$FROM" --to "$TO" --kind bell --base "$AGENCY_URL" --mode work --requisition "$ID — $PURPOSE" ${CASCADE:+--cascade "$CASCADE"} 2>&1 | grep -oE 'invoke-[0-9]+-[0-9]+-[0-9a-f]+' | head -1 || true)
 if [ -z "$JOB" ]; then
   rm -f "$FILE"
   echo "refusal:no-job — the bell to $TO returned no job id; $ID removed, nothing committed" >&2

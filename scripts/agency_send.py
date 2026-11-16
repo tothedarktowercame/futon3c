@@ -23,7 +23,7 @@ ap.add_argument("--to", help="recipient agent-id")
 ap.add_argument("--from", dest="frm", help="sender agent-id (recorded as the mesh edge's caller; "
                                            "enables mesh_trace + auto-bellback routing)")
 ap.add_argument("--kind", choices=["bell", "whistle"], default="bell")
-ap.add_argument("--base", default="http://localhost:7070")
+ap.add_argument("--base", default="http://127.0.0.1:7070")  # IPv4: localhost may be ::1
 ap.add_argument("--type", choices=["query", "answer", "assert", "challenge", "agree",
                                    "define", "retract", "suggest", "request"],
                 help="typed-bell performative; server accepts it only when FUTON3C_TYPED_BELLS is on")
