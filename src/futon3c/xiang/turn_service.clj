@@ -49,6 +49,7 @@
             [clojure.string :as str]
             [futon3c.agency.registry :as registry]
             [futon3c.arxana.turn-mention-writer :as mention-writer]
+            [futon3c.arxana.xiang-interpretations :as interpretations]
             [futon3c.circus.hou-store :as hou-store]
             [futon3c.evidence.invoke-preview :as invoke-preview]
             [futon3c.xiang.reply-target :as rt]
@@ -101,6 +102,9 @@
    :hou-enabled? (not= "0" (System/getenv "FUTON3C_HOU"))
    :hou-writer! hou-store/write-focus!
    :hou-config nil
+   :interpretations-enabled? (not= "0" (System/getenv "FUTON3C_XIANG_INTERPRETATIONS"))
+   :interpretation-writer! interpretations/write!
+   :interpretation-config nil
    ;; A focus snapshot independently re-reads freshly appended mention
    ;; clusions.  futon1b can acknowledge the append before its entity view is
    ;; visible, so retry the complete audited snapshot rather than weakening
@@ -1117,6 +1121,20 @@
                                                         (assoc :mark operator-mark)))
                                                     (:still-open ports))
                                   :inferred (:inferred ports)})))
+      (when (and (cfg svc :interpretations-enabled?)
+                 (= "operator" (:origin (ts/read-record (cfg svc :store) id))))
+        ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
+         #(let [turn-store (cfg svc :store)
+                current (assoc (ts/read-record turn-store id) :id id)
+                result (try
+                         ((or (cfg svc :interpretation-writer!) interpretations/write!)
+                          (or (cfg svc :interpretation-config) (mention-writer/default-config)) current)
+                         (catch Throwable e {:failed :interpretation-write-exception
+                                             :detail (.getMessage e)}))]
+            (ts/update-record! turn-store id (fn [r]
+                                          ;; A retryable failure never replaces a success.
+                                          (if (:written (:xiang_interpretations r)) r
+                                              (assoc r :xiang_interpretations result)))))))
       ;; 馬 alignment (futon3c.xiang.ma-reading) listens for this: ports are
       ;; computed and stored, so the turn is ready to be read agent-reply-side.
       (notify-turn! svc {:event :ported :id id})

@@ -33,6 +33,8 @@
   (:require [cheshire.core :as json]
             [clojure.string :as str]
             [clojure.java.io :as io]
+            [futon3c.arxana.turn-mention-writer :as mention-writer]
+            [futon3c.arxana.xiang-interpretations :as interpretations]
             [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts])
@@ -62,7 +64,7 @@
   fragment namespace (\"<turn-id>-f-…\")."
   [record]
   (let [base (str (:turn_id record) "-f-")]
-    (->> (:acts record)
+    (->> (:operator_interpretation_acts record)
          (filter #(and (= "operator" (:author %))
                        (string? (:id %))
                        (str/starts-with? (:id %) base))))))
@@ -250,16 +252,26 @@
   :notify! with {:event :aligned :id id} after storing.  Never throws."
   [{:keys [store notify!] :as opts} id]
   (try
-    (let [record (and store (ts/read-record store id))]
+    (let [record (and store (ts/read-record store id))
+          read-result (when (and record (= "operator" (:origin record)))
+                        ((or (:interpretation-reader opts) interpretations/read-acts)
+                         (or (:interpretation-config opts) (mention-writer/default-config))
+                         (assoc record :id id)))
+          record (when record (assoc record :operator_interpretation_acts (:acts read-result)))]
       (when (and record
                  (= "operator" (:origin record))
                  (seq (str (or (:reply_text record) "")))
                  (= "computed" (get-in record [:ports_status :state])))
-        (let [alignment (-> (alignment-map (assoc opts :at (str (java.time.Instant/now)))
-                                           record))]
-          (ts/update-record! store id #(assoc % :alignment alignment))
-          (when notify! (notify! {:event :aligned :id id}))
-          alignment)))
+        (if (:pending read-result)
+          (let [pending {:state :interpretations-pending :why "interpretations pending"
+                         :at (str (java.time.Instant/now))}]
+            (ts/update-record! store id #(assoc % :alignment_pending pending))
+            pending)
+          (let [alignment (-> (alignment-map (assoc opts :at (str (java.time.Instant/now)))
+                                             record))]
+            (ts/update-record! store id #(-> % (assoc :alignment alignment) (dissoc :alignment_pending)))
+            (when notify! (notify! {:event :aligned :id id}))
+            alignment))))
     (catch Exception _ nil)))
 
 (defonce ^:private ^ExecutorService executor

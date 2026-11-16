@@ -34,7 +34,8 @@
   [& [overrides]]
   (let [bells (atom []) scheduled (atom []) jobs (atom {}) posted (atom [])
         clock (atom 1000000)
-        s (svc/service (merge {:hou-enabled? false :mentions-enabled? false :store (temp-store)
+        s (svc/service (merge {:hou-enabled? false :mentions-enabled? false
+                               :interpretations-enabled? false :store (temp-store)
                                ;; Most tests predate Platform-primary routing and
                                ;; exercise the historical pool-primary behavior.
                                :seat "象" :alternate "象-sonnet"

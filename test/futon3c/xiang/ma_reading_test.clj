@@ -4,10 +4,17 @@
   and bell turns left unread. Run:
   FUTON3C_INVOKE_JOBS_FILE=$(mktemp -d)/i.edn clojure -M:test -n futon3c.xiang.ma-reading-test"
   (:require [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.arxana.xiang-interpretations :as interpretations]
             [futon3c.xiang.ma-reading :as ma]
             [futon3c.xiang.turn-service :as svc]
             [futon3c.xiang.turn-store :as ts]))
+
+(use-fixtures :each
+  (fn [f]
+    (with-redefs [interpretations/read-acts
+                  (fn [_ record] {:acts (filterv #(= "operator" (:author %)) (:acts record))})]
+      (f))))
 
 (defn- temp-store []
   (ts/store (str (java.nio.file.Files/createTempDirectory
@@ -35,6 +42,25 @@
 
 (defn- by-act [store id act]
   (some #(when (= act (:act %)) %) (:acts (alignment store id))))
+
+(deftest gcc-interpretations-supply-operator-acts-in-offset-order
+  (let [[store id] (record! {:acts [{:id "claude-3-turn-9-r-0" :author "agent"}]})
+        read (fn [_ _] {:acts [{:id "claude-3-turn-9-f-s1-0" :kind "report" :author "operator"
+                                :start 0 :end 6 :text "first"}
+                               {:id "claude-3-turn-9-f-s1-1" :kind "explain" :author "operator"
+                                :start 10 :end 20 :text "second"}]})]
+    (ma/align! {:store store :interpretation-reader read} id)
+    (is (= ["claude-3-turn-9-f-s1-0" "claude-3-turn-9-f-s1-1"]
+           (mapv :act (:acts (alignment store id)))))))
+
+(deftest pending-interpretations-never-overwrite-real-alignment
+  (let [[store id] (record! {:alignment {:version 1 :acts [{:act "real"}]}})
+        out (ma/align! {:store store :interpretation-reader
+                        (fn [& _] {:pending :interpretations-pending})} id)]
+    (is (= :interpretations-pending (:state out)))
+    (is (= [{:act "real"}] (get-in (ts/read-record store id) [:alignment :acts])))
+    (is (= "interpretations-pending"
+           (get-in (ts/read-record store id) [:alignment_pending :state])))))
 
 (deftest a-targeted-reply-act-answers-classically-without-a-bell
   (let [[store id] (record! {:acts [{:id "claude-3-turn-9-f-s1-0" :kind "delegate"
