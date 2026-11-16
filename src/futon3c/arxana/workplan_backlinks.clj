@@ -166,6 +166,36 @@
                                                                             (map #(get-in % [:record :id]) referents)))}
           truncated? (assoc :result/truncation :limit))))))
 
+(defn entity-rules-view
+  "Bounded Sessionista catalogue: every effective form in one projection."
+  [read!]
+  (let [rules (vec (stored-rules read!))]
+    {:result/status :complete
+     :result/total (count rules)
+     :entities
+     (mapv (fn [{:keys [entity] rule-atts :attestations}]
+             (let [slug (get-in entity [:asserted-content :entity/slug])
+                   introductions (reverse-ids read! [:workplan/introduction 1]
+                                              :entity (:id entity))
+                   referent-ids (reverse-ids read! [:workplan/referent 1]
+                                             :entity (:id entity))
+                   referent-ok? (boolean
+                                 (some (fn [rid]
+                                         (not= :rejected
+                                               (:verdict (first (assessments read! rid)))))
+                                       referent-ids))
+                   forms (get-in (first rule-atts) [:content :forms])]
+               {:entity/slug slug
+                :introduced-without-referent? (boolean (and (seq introductions)
+                                                            (not referent-ok?)))
+                :forms (mapv (fn [form]
+                               {:form/text (:form/text form)
+                                :enabled? (if (seq introductions)
+                                            referent-ok?
+                                            (true? (:enabled? form)))})
+                             forms)}))
+           rules)}))
+
 (defn -main [& [responses-dir output]]
   (let [rules (read-rules) index (build-index rules (recorded-responses (or responses-dir "test/resources/arxana/backlinks")))]
     (write-index! (or output default-index) index)

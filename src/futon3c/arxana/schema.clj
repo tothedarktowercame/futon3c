@@ -183,6 +183,10 @@
     :projection [:operation :entity :rule [:backlinks] :dropped/metadata-only
                  :index/as-of :result/status :result/truncation :result/total [:record/ids]]}
 
+   :workplan/entity-rules
+   {:schema-version 1 :required #{} :allowed #{}
+    :projection [:operation [:entities] :result/status :result/total]}
+
    :workplan/introduce
    {:schema-version 1 :required #{:evidence/id :text :actor}
     :allowed #{:evidence/id :text :actor :time :candidate/slugs}

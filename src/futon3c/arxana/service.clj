@@ -407,6 +407,17 @@
                                 (backlinks/entity-view read! (or (:workplan/backlinks-index cfg)
                                                                  backlinks/default-index) body))))
 
+           (= op :workplan/entity-rules)
+           (let [read! (fn [read-op read-body]
+                         (dispatch cfg {:protocol/version env/protocol-version
+                                        :message/id (str (:message/id ok) ":entity-rules:"
+                                                         (hash [read-op read-body]))
+                                        :operation read-op
+                                        :principal/id "workplan/backlink-projector"
+                                        :body read-body}))]
+             (env/response ok (with-semantic-digest op
+                                (backlinks/entity-rules-view read!))))
+
            (= op :lexicon/entity-index)
            ;; Bounded and cacheable: seeds come from the loader's sources,
            ;; content comes only from the store.  A 60 s cache keeps the

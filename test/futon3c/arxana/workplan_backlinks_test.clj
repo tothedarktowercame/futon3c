@@ -146,3 +146,23 @@
         (is (true? (get-in (call cfg "explicit-view" :workplan/entity-backlinks
                                  {:entity/slug "sessionista-mode"})
                            [:ok :forms/effective 0 :enabled?])))))))
+
+(deftest entity-rules-returns-all-effective-forms-in-one-bounded-read
+  (with-stack
+    (fn [cfg]
+      (sut/materialise-rules!
+       #(service/dispatch cfg %)
+       {:rules (mapv (fn [n]
+                       {:entity/slug (str "fixture-entity-" n)
+                        :forms [{:form/text (str "Fixture " n)
+                                 :enabled? (even? n)}]})
+                     (range 8))})
+      (let [started (System/nanoTime)
+            view (:ok (call cfg "all-rules" :workplan/entity-rules {}))
+            elapsed-ms (/ (- (System/nanoTime) started) 1e6)]
+        (println (format "ENTITY_RULES_8_TIME_MS %.3f" elapsed-ms))
+        (is (= :complete (:result/status view)))
+        (is (= 8 (:result/total view)))
+        (is (= (set (map #(str "fixture-entity-" %) (range 8)))
+               (set (map :entity/slug (:entities view)))))
+        (is (every? boolean? (map :introduced-without-referent? (:entities view))))))))
