@@ -28,7 +28,7 @@
     (is (= [{:target_id "M-one" :source_sha "new" :old_sha "old"
              :source_path "/code/futon/holes/M-one.md" :state :pending
              :requested_at_ms 10 :updated_at_ms 10 :lease_until_ms nil
-             :superseded_by_sha nil :superseded_reason nil :attempts 0
+             :superseded_by_sha nil :superseded_reason nil :attempts 0 :retries 0
              :last_error nil :landed_digest nil :claimed_by nil :last_answer nil}]
            (queue/requests store)))
     (testing "the database is a cache of authority, not the only copy"
@@ -128,3 +128,24 @@
       (is (= "old" (:old_sha (first (queue/requests store {:target-id "M-one"}))))))
     (queue/reconcile-item! store "M-one" nil nil 40)
     (is (= :item-not-open (:superseded_reason (first (queue/requests store {:target-id "M-one"})))))))
+
+(deftest cooled-failure-retries-preserve-error-and-stop-at-limit
+  (let [store (queue/open-store (temp-db))]
+    (queue/reconcile! store [(item "new")] (coverage "old") 1)
+    (dotimes [i 3]
+      (let [claim (queue/claim! store (+ 2 i) 100 1 "toy")]
+        (queue/settle! store claim {:status :failed :reason :toy-failure} (+ 2 i) 3)))
+    (let [failed (first (queue/requests store))]
+      (is (= :failed (:state failed)))
+      (is (= 3 (:attempts failed)))
+      (is (false? (queue/retry-failed! store failed 10 100 1)))
+      (is (true? (queue/retry-failed! store failed 200 100 1)))
+      (let [pending (first (queue/requests store))]
+        (is (= :pending (:state pending)))
+        (is (= 0 (:attempts pending)))
+        (is (= 1 (:retries pending)))
+        (is (= :toy-failure (:last_error pending)))))
+    (let [claim (queue/claim! store 201 100 1 "toy")]
+      (queue/settle! store claim {:status :failed :reason :toy-failure} 202 1))
+    (is (false? (queue/retry-failed! store (first (queue/requests store)) 400 100 1)))
+    (is (= :failed (:state (first (queue/requests store)))))))

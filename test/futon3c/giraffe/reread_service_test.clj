@@ -545,13 +545,14 @@
         (queue/settle! store (queue/claim! store 11 1000 1 "fixture-reader") outcome 12 1)
         (with-redefs [worker/run-once! (fn [_] (deliver boot true) {:status :idle})]
           (try
-            (service/start! (assoc config :snapshot-fn snap :reconcile-interval-ms 60))
+            (service/start! (assoc config :snapshot-fn snap :reconcile-interval-ms 60
+                                    :clock (constantly 100)))
             (is (= true (deref boot 2000 :timeout)))
             (flush-events!)
             (is (= (:status outcome) (:state (first (queue/requests store))))
                 "startup has not revived the terminal request before the missed edit")
             ;; For failed, leave the source unchanged: terminal failure must
-            ;; survive repeated full reconciliations with its attempt/error.
+            ;; survive reconciliations during the cool-off with its attempt/error.
             (when-not (= :failed (:status outcome)) (spit doc "invented version two\n"))
             (is (true? (wait-for #(some? (:last-backstop-at-ms (service-state))) 2000)))
             (let [rows (queue/requests store)
@@ -706,3 +707,46 @@
   (is (= 2 (:retire-cap (service/load-config (assoc (fixture) :retire-cap 2)))))
   (is (thrown? clojure.lang.ExceptionInfo
                (service/load-config (assoc (fixture) :retire-cap 0)))))
+
+(deftest failed-retries-use-current-doc-age-identities-and-budget
+  (let [config (service/load-config (assoc (fixture) :failed-retry-after-ms 100
+                                          :failed-retry-limit 3 :clock (constantly 1000)))
+        store (:store config)
+        root (temp-dir)
+        ids ["M-old" "M-young" "M-changed" "M-exhausted" "M-gone"]
+        paths (into {} (for [id ids :let [file (io/file root (str id ".md"))]]
+                         (do (spit file "invented source") [id (str file)])))
+        items (mapv (fn [[id path]] {:id id :source-pin {:path path :sha256 (generation/file-sha path)}}) paths)
+        state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
+        token (Object.)
+        retry! (ns-resolve 'futon3c.giraffe.reread-service 'retry-failed!)]
+    (queue/reconcile! store items {:members []} 1)
+    (doseq [i (range 5)]
+      (let [claim (queue/claim! store (+ 2 i) 100 1 "toy")]
+        (queue/settle! store claim {:status :failed :reason :toy-failure} 10 1)))
+    (jdbc/execute! (:datasource store) ["UPDATE reread_requests SET updated_at_ms=950 WHERE target_id='M-young'"])
+    (jdbc/execute! (:datasource store) ["UPDATE reread_requests SET retries=3 WHERE target_id='M-exhausted'"])
+    (spit (get paths "M-changed") "changed document")
+    (reset! state-atom {:running? true :status :running :token token :config config
+                        :identities (dissoc paths "M-gone") :errors {} :pending {}})
+    (retry! token)
+    (let [rows (into {} (map (juxt :target_id identity)) (queue/requests store))]
+      (is (= :pending (get-in rows ["M-old" :state])))
+      (is (= 1 (get-in rows ["M-old" :retries])))
+      (is (= 0 (get-in rows ["M-old" :attempts])))
+      (is (= :toy-failure (get-in rows ["M-old" :last_error])))
+      (doseq [id (rest ids)] (is (= :failed (get-in rows [id :state])))))
+    (is (= {:retried 1 :exhausted 1} (:last-failed-retry (service/health))))
+    (is (= ["M-exhausted"] (:failed-exhausted (service/health))))
+    (swap! state-atom assoc :running? false)
+    (let [before (queue/requests store)]
+      (retry! token)
+      (is (= before (queue/requests store))))))
+
+(deftest failed-retry-config-defaults
+  (let [config (service/load-config (fixture))]
+    (is (= 86400000 (:failed-retry-after-ms config)))
+    (is (= 3 (:failed-retry-limit config))))
+  (is (= 500 (:failed-retry-after-ms
+              (service/load-config (assoc (fixture) :environment
+                                          {"FUTON3C_GIRAFFE_REREAD_FAILED_RETRY_AFTER_MS" "500"}))))))

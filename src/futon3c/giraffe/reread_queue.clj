@@ -47,6 +47,7 @@
      ;; REREAD-1 databases predate worker outcomes. Keep the durable queue
      ;; forward-compatible rather than requiring deletion/reconciliation.
      (ensure-column! store "attempts" "attempts INTEGER NOT NULL DEFAULT 0")
+     (ensure-column! store "retries" "retries INTEGER NOT NULL DEFAULT 0")
      (ensure-column! store "last_error" "last_error TEXT")
      (ensure-column! store "landed_digest" "landed_digest TEXT")
      (ensure-column! store "claimed_by" "claimed_by TEXT")
@@ -275,6 +276,19 @@
                tx ["SELECT * FROM reread_requests WHERE target_id=? AND source_sha=?"
                    (:target_id request) (:source_sha request)] query-opts)
               kw-state))))
+
+(defn retry-failed!
+  "Retry a cooled-off failed row without erasing its last error/answer.
+   Compare the observed update time too: a concurrent newer failure must cool
+   off independently. Returns true only when this call requeued the row."
+  [store request now-ms retry-after-ms retry-limit]
+  {:pre [(pos-int? retry-after-ms) (nat-int? retry-limit)]}
+  (= 1 (:next.jdbc/update-count
+        (jdbc/execute-one!
+         (:datasource store)
+         ["UPDATE reread_requests SET state='pending',attempts=0,retries=retries+1,lease_until_ms=NULL,claimed_by=NULL,updated_at_ms=? WHERE target_id=? AND source_sha=? AND state='failed' AND updated_at_ms=? AND updated_at_ms<? AND retries<?"
+          now-ms (:target_id request) (:source_sha request) (:updated_at_ms request)
+          (- now-ms retry-after-ms) retry-limit]))))
 
 (defn requeue!
   "Return a terminally FAILED request to pending with a clean attempt

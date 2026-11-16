@@ -94,6 +94,8 @@
                        :giraffe-root (or (get env "GIRAFFE_ROOT") cli/default-root)
                        :edges (or (get env "GIRAFFE_EDGES") cli/default-edges)
                        :mint-state-path mint-batch/default-state-path :debounce-ms 4000
+                       :failed-retry-after-ms (or (number "FUTON3C_GIRAFFE_REREAD_FAILED_RETRY_AFTER_MS") 86400000)
+                       :failed-retry-limit (or (number "FUTON3C_GIRAFFE_REREAD_FAILED_RETRY_LIMIT") 3)
                        :retire-cap (or (number "FUTON3C_GIRAFFE_REREAD_RETIRE_CAP") 200)
                        :reconcile-interval-ms (or (number "FUTON3C_GIRAFFE_REREAD_RECONCILE_INTERVAL_MS")
                                                   600000)
@@ -105,7 +107,9 @@
                    (integer? (:new-item-cap config)) (<= 0 (:new-item-cap config))
                    (pos-int? (:mint-window-ms config)) (pos-int? (:debounce-ms config))
                    (pos-int? (:reconcile-interval-ms config))
-                   (pos-int? (:retire-cap config)))
+                   (pos-int? (:retire-cap config))
+                   (pos-int? (:failed-retry-after-ms config))
+                   (nat-int? (:failed-retry-limit config)))
       (throw (ex-info "Readers, nonnegative new-item cap and positive mint/debounce/reconcile windows required"
                       {:kind :giraffe-reread/invalid-config})))
     config))
@@ -314,6 +318,32 @@
                    {:at-ms at-ms :retired 0 :refused (or (ex-data e) {:message (.getMessage e)})})
             (failure! token :retirement e)))))))
 
+(defn- retry-failed! [token]
+  (when (active? token)
+    (try
+      (let [{:keys [config identities]} @state
+            {:keys [store failed-retry-after-ms failed-retry-limit]} config
+            now-ms ((or (:clock config) #(System/currentTimeMillis)))
+            failed (queue/requests store {:state :failed})
+            exhausted (->> failed (filter #(>= (:retries %) failed-retry-limit))
+                           (map :target_id) distinct sort vec)
+            retried (reduce
+                     (fn [n request]
+                       (let [path (get identities (:target_id request))]
+                         (if (and (active? token) path
+                                  (< (:retries request) failed-retry-limit)
+                                  (< (:updated_at_ms request) (- now-ms failed-retry-after-ms))
+                                  (.isFile (io/file path))
+                                  (= (:source_sha request) (generation/file-sha path))
+                                  (queue/retry-failed! store request now-ms
+                                                       failed-retry-after-ms failed-retry-limit))
+                           (inc n) n))) 0 failed)]
+        (when (active? token)
+          (swap! state assoc :last-failed-retry {:retried retried :exhausted (count exhausted)}
+                 :failed-exhausted exhausted)
+          (swap! state update :errors dissoc :failed-retry)))
+      (catch Exception e (failure! token :failed-retry e)))))
+
 (declare schedule-backstop!)
 
 (defn- backstop-tick! [token _due-ns]
@@ -328,6 +358,7 @@
         (do
           (full-round! token (:config @state))
           (retire-missing! token)
+          (retry-failed! token)
           (when (active? token)
             (swap! state assoc :last-backstop-at-ms (System/currentTimeMillis))
             (swap! state update :errors dissoc :backstop))))
@@ -566,6 +597,8 @@
             :discussed (:discussed @state)
             :unknown-turn-item-count (:unknown-turn-item-count @state)
             :ambiguous-turn-item-count (:ambiguous-turn-item-count @state)
+            :last-failed-retry (:last-failed-retry @state)
+            :failed-exhausted (:failed-exhausted @state)
             :last-retirement (:last-retirement @state)
             :last-backstop-at-ms (:last-backstop-at-ms @state)
             :backstop-skipped (:backstop-skipped @state)
