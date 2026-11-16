@@ -190,27 +190,99 @@ def audit(party, pass_data=None, pending=None, lexicon=None, run=None):
         return bad
 
     def turns():
-        # Declarative fresh-head rotation, independent of producer's pop loop.
-        remaining = [(name, [r['item'] for r in character(name)]) for name in CHARACTERS]
-        seen, expected = set(), []
-        while remaining and len(expected) < len(chosen()):
+        """Replay complete-chain turns (giraffe_party.py:263-324 party_vote).
+
+        Pulled entries are exempt from ordinary fresh-head rotation, but must
+        form the declared need chain immediately before their ordinary pick.
+        They enter seen before subsequent turns. Deferred turns consume their
+        head without emitting it. Dependency replay uses the pinned run when
+        available; supplied needs support fixture/legacy audits only.
+        """
+        block = party['party']
+        capacity = block.get('capacity', len(chosen()))
+        if type(capacity) is not int or capacity < 0:
+            raise ValueError('invalid-party-capacity')
+        needs = {r['item']: {n['item'] for n in r.get('needs', [])} for r in chosen()}
+        if run is not None and 'capacity' in block:
+            inputs = load(Path(run) / 'input.edn', edn=True)
+            if inputs is None or 'edges' not in inputs:
+                raise Missing('pinned-input-edges')
+            needs = {}
+            for edge in inputs['edges']:
+                if edge.get('class') != 'alternative':
+                    needs.setdefault(edge['from'], set()).add(edge['to'])
+        elif block.get('cascade_deferred'):
+            raise Missing('pinned-input-edges-for-deferred-turns')
+        positions = {}
+        remaining = []
+        for ci, name in enumerate(CHARACTERS):
+            items = [r['item'] for r in character(name)]
+            remaining.append((name, items))
+            for i, item in enumerate(items):
+                positions[item] = min(positions.get(item, (i, ci, item)), (i, ci, item))
+        seen, expected, deferred, exceptions = set(), [], [], []
+        while remaining and len(expected) < capacity:
             name, items = remaining.pop(0)
             fresh = [item for item in items if item not in seen]
-            if fresh:
-                item = fresh[0]
+            if not fresh:
+                continue
+            root = fresh[0]
+            remaining.append((name, fresh[1:]))
+            path, cursor = [], root
+            while cursor not in path:
+                path.append(cursor)
+                prerequisites = needs.get(cursor, set())
+                if not prerequisites or prerequisites.intersection(seen):
+                    cursor = None
+                    break
+                cursor = min(prerequisites, key=lambda x: positions.get(x, (float('inf'), float('inf'), x)))
+            if cursor is not None:
+                exceptions.append({'item': root, 'cycle': path[path.index(cursor):]})
+                path = [root]
+            if len(path) > capacity - len(expected):
+                deferred.append({'item': root, 'needs_slots': len(path)})
+                continue
+            for item in reversed(path):
+                row = {'item': item, 'chosen_by': name}
+                if item != root:
+                    row['pulled_for'] = root
+                expected.append(row)
                 seen.add(item)
-                expected.append({'item': item, 'chosen_by': name})
-                remaining.append((name, fresh[1:]))
-        actual = [{k: r[k] for k in ('item', 'chosen_by')} for r in chosen()]
-        return [] if expected == actual else [{'expected': expected, 'actual': actual}]
+        actual = [{k: r[k] for k in ('item', 'chosen_by', 'pulled_for') if k in r}
+                  for r in chosen()]
+        bad = []
+        if expected != actual:
+            bad.append({'expected': expected, 'actual': actual})
+        if deferred != block.get('cascade_deferred', []):
+            bad.append({'rule': 'deferred-turns', 'expected': deferred})
+        if exceptions != block.get('cascade_exceptions', []):
+            bad.append({'rule': 'cycle-exceptions', 'expected': exceptions})
+        # Check the supplied chain too: the pinned graph must not conceal a
+        # missing/incorrect needs field on a pulled run's displayed entries.
+        pulled = []
+        for row in chosen():
+            if 'pulled_for' in row:
+                pulled.append(row)
+            else:
+                for left, right in zip(pulled, pulled[1:] + [row]):
+                    if (left['pulled_for'] != row['item'] or
+                            left['chosen_by'] != row['chosen_by'] or
+                            left['item'] not in {n['item'] for n in right.get('needs', [])}):
+                        bad.append({'rule': 'pulled-chain', 'item': left['item']})
+                pulled = []
+        if pulled:
+            bad.append({'rule': 'unfinished-pulled-chain'})
+        return bad
 
     def relative():
+        """Ordinary picks preserve character order; giraffe_party.py:263-324 chains
+        are exempt here and validated by turns instead."""
         bad = []
         for name in CHARACTERS:
             source_items = [r['item'] for r in character(name)]
             offset = 0
             for row in chosen():
-                if row['chosen_by'] == name:
+                if row['chosen_by'] == name and 'pulled_for' not in row:
                     try:
                         offset = source_items.index(row['item'], offset) + 1
                     except ValueError:

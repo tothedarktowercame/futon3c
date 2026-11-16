@@ -142,11 +142,11 @@ check("thor: measured zeros have no missing qualifier",
       and count_rows[2]["score"] == 0)
 
 
-def fixture_party(entries, top):
+def fixture_party(entries, top, inputs=None):
     """Exercise main's actual party.json writer using only invented inputs."""
     with tempfile.TemporaryDirectory() as root:
         with patch.object(gp, "load_pass", return_value={"order": entries}), \
-             patch.object(gp, "load_input", return_value={"items": [], "edges": []}), \
+             patch.object(gp, "load_input", return_value=inputs or {"items": [], "edges": []}), \
              patch.object(gp, "load_pending", return_value={}), \
              patch.object(gp, "load_lexicon", return_value=[]), \
              patch.object(gp.gcc_preview, "load_corpus", return_value=([], [], [])):
@@ -223,6 +223,70 @@ class PartyNeedsTests(unittest.TestCase):
         self.assertEqual({"top": [], "linearised": [], "cycle": [], "unshown_needs": []},
                          gp.party_dependencies([], {"items": [], "edges": []}))
 
+
+class CascadeTests(unittest.TestCase):
+    def vote(self, lists, needs, count=10):
+        meta = {}
+        orderings = {c: [{'item': x, 'reason': 'reason ' + x} for x in xs]
+                     for c, xs in lists.items()}
+        rows = gp.party_vote(orderings, count, needs=needs, cascade=meta)
+        return rows, meta
+
+    def test_chain_and_preference(self):
+        rows, meta = self.vote({'thor': ['A'], 'merlin': ['X', 'Y', 'Z']},
+                              {'X': {'Y', 'outside'}, 'Y': {'Z'}})
+        self.assertEqual(['A', 'Z', 'Y', 'X'], [r['item'] for r in rows])
+        self.assertEqual(['X', 'X'], [r['pulled_for'] for r in rows[1:3]])
+        self.assertEqual('needed by X; reason Z', rows[1]['reason'])
+        self.assertEqual([], meta['cascade_exceptions'])
+        rows, _ = self.vote({'thor': ['X']}, {'X': {'outside'}})
+        self.assertEqual('needed by X', rows[0]['reason'])
+        self.assertEqual(['outside', 'X'], [r['item'] for r in rows])
+
+    def test_seen_prerequisite_and_capacity(self):
+        rows, _ = self.vote({'thor': ['Y', 'X']}, {'X': {'Y'}})
+        self.assertTrue(all('pulled_for' not in r for r in rows))
+        rows, meta = self.vote({'thor': ['X', 'Z']}, {'X': {'Y'}}, 1)
+        self.assertEqual(['Z'], [r['item'] for r in rows])
+        self.assertEqual([{'item': 'X', 'needs_slots': 2}], meta['cascade_deferred'])
+        rows, meta = self.vote({'thor': ['X']}, {'X': {'Y'}}, 1)
+        self.assertEqual([], rows)
+        self.assertEqual(2, meta['cascade_deferred'][0]['needs_slots'])
+
+    def test_writer_preserves_pulled_metadata_and_needs(self):
+        result = fixture_party([{"id": "X", "rank": 1, "unblocks": 0, "cone": 0}], 1,
+                               {"items": [], "edges": [{"from": "X", "to": "Y"}]})
+        rows = result['party']['top']
+        self.assertEqual(['Y', 'X'], [r['item'] for r in rows])
+        self.assertEqual('X', rows[0]['pulled_for'])
+        self.assertEqual([], rows[0]['needs'])
+        self.assertEqual([{'item': 'Y', 'shown_rank': 1, 'state': None}], rows[1]['needs'])
+        self.assertEqual(['X'], [r['item'] for r in result['characters'][0]['top']])
+        self.assertEqual(['Y', 'X'], result['party']['linearised'])
+
+    def test_cycle(self):
+        rows, meta = self.vote({'thor': ['X']}, {'X': {'Y'}, 'Y': {'X'}})
+        self.assertEqual(['X'], [r['item'] for r in rows])
+        self.assertEqual([{'item': 'X', 'cycle': ['X', 'Y']}], meta['cascade_exceptions'])
+
+    def test_random_dags(self):
+        import random
+        rng = random.Random(7331)
+        for _ in range(200):
+            ids = ['toy-' + str(i) for i in range(rng.randrange(1, 25))]
+            needs = {x: {y for y in ids[:i] if rng.random() < .2}
+                     for i, x in enumerate(ids)}
+            lists = {c: rng.sample(ids, rng.randrange(len(ids) + 1))
+                     for c in ['thor', 'merlin', 'questor', 'thyra']}
+            capacity = rng.randrange(1, 15)
+            rows, meta = self.vote(lists, needs, capacity)
+            seen = set()
+            for row in rows:
+                self.assertTrue(not needs[row['item']] or needs[row['item']] & seen)
+                self.assertNotIn(row['item'], seen)
+                seen.add(row['item'])
+            self.assertLessEqual(len(rows), capacity)
+            self.assertEqual([], meta['cascade_exceptions'])
 
 if __name__ == "__main__":
     unittest.main()

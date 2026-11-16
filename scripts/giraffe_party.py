@@ -250,10 +250,37 @@ def thyra_order(pending, pass_rank, top=10):
     return rows[:top], []
 
 
-def party_vote(orderings, count=12, skip_seen=True):
-    """Round robin over the characters in order, skipping items already
-    chosen (unless skip_seen is False — the plant)."""
-    ids = list(orderings.keys())
+def input_needs(inputs):
+    """Pinned edges already have needs direction; alternatives do not count."""
+    needs = {}
+    for edge in inputs["edges"]:
+        if edge.get("class") != "alternative":
+            needs.setdefault(edge["from"], set()).add(edge["to"])
+    return needs
+
+
+def party_vote(orderings, count=12, skip_seen=True, needs=None, cascade=None):
+    """Round robin with complete prerequisite chains before ordinary picks.
+
+    Choose prerequisites by earliest (position, character) in the original
+    character lists, then id; unlisted items follow listed ones. A pulled run
+    shares its ordinary pick's character and pulled_for. Complete chains that
+    exceed capacity consume the turn but are deferred, never partly emitted.
+    """
+    needs = needs or {}
+    cascade = cascade if cascade is not None else {}
+    cascade.update(cascade_exceptions=[], cascade_deferred=[], capacity=count)
+    ids = list(orderings)
+    positions, natural = {}, {}
+    for ci, character in enumerate(ids):
+        natural[character] = {r["item"]: r["reason"] for r in orderings[character]}
+        for pos, row in enumerate(orderings[character]):
+            key = (pos, ci, row["item"])
+            positions[row["item"]] = min(positions.get(row["item"], key), key)
+
+    def preference(item):
+        return positions.get(item, (float("inf"), float("inf"), item))
+
     chosen, seen, ptr = [], set(), 0
     while len(chosen) < count and any(orderings[c] for c in ids):
         c = ids[ptr % len(ids)]
@@ -261,15 +288,40 @@ def party_vote(orderings, count=12, skip_seen=True):
         if not orderings[c]:
             continue
         cand = orderings[c].pop(0)
-        # A duplicate does not burn the character's turn: keep drawing from
-        # the same character until a fresh item or an empty list.
         while skip_seen and cand["item"] in seen and orderings[c]:
             cand = orderings[c].pop(0)
         if skip_seen and cand["item"] in seen:
             continue
-        seen.add(cand["item"])
-        chosen.append({"item": cand["item"], "chosen_by": c,
-                       "reason": cand["reason"]})
+        root = cand["item"]
+        chain, indices, item, cycle = [], {}, root, []
+        while item not in seen:
+            if item in indices:
+                cycle = chain[indices[item]:]
+                break
+            indices[item] = len(chain)
+            chain.append(item)
+            prerequisites = needs.get(item, set())
+            if not prerequisites or prerequisites & seen:
+                break
+            item = min(prerequisites, key=preference)
+        if not chain and not skip_seen:
+            chain = [root]
+        if cycle:
+            cascade["cascade_exceptions"].append({"item": root, "cycle": cycle})
+            chain = [root]
+        if len(chain) > count - len(chosen):
+            cascade["cascade_deferred"].append({"item": root, "needs_slots": len(chain)})
+            continue
+        for item in reversed(chain):
+            row = {"item": item, "chosen_by": c}
+            if item == root:
+                row["reason"] = cand["reason"]
+            else:
+                row["pulled_for"] = root
+                clause = natural[c].get(item)
+                row["reason"] = "needed by " + root + ("; " + clause if clause else "")
+            seen.add(item)
+            chosen.append(row)
     return chosen
 
 
@@ -390,8 +442,10 @@ def main(argv=None):
 
     orderings = {"thor": list(thor), "merlin": list(merlin),
                  "questor": list(questor), "thyra": list(thyra)}
+    inputs = load_input(run_dir)
+    cascade = {}
     party = party_vote({k: [dict(r) for r in v] for k, v in orderings.items()},
-                       args.party)
+                       args.party, needs=input_needs(inputs), cascade=cascade)
     absences = thor_absences(pass_order, args.top) + m_abs + q_abs
     out = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -419,13 +473,15 @@ def main(argv=None):
                      "rank)",
              "top": dress(thyra)}],
         "party": {"rule": "round robin Thor, Merlin, Questor, Thyra; skip "
-                          "items already chosen",
+                          "items already chosen; complete prerequisite chains first",
                   "top": [{"rank": i + 1, "item": p["item"],
                            "title": title(p["item"]),
-                           "chosen_by": p["chosen_by"], "reason": p["reason"]}
+                           "chosen_by": p["chosen_by"], "reason": p["reason"],
+                           **({"pulled_for": p["pulled_for"]} if "pulled_for" in p else {})}
                           for i, p in enumerate(party)]},
         "absences": absences}
-    out["party"].update(party_dependencies(out["party"]["top"], load_input(run_dir)))
+    out["party"].update(cascade)
+    out["party"].update(party_dependencies(out["party"]["top"], inputs))
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, "party.json")
     with open(path, "w", encoding="utf-8") as f:

@@ -939,5 +939,57 @@ class JsonReportTests(unittest.TestCase):
             self.assertGreater(data['checked_at_ms'], 0)
 
 
+class CascadeReplayTests(unittest.TestCase):
+    def party(self, outside=False):
+        y = 'E-outside' if outside else 'Y'
+        return {'characters': [
+            {'id': 'thor', 'top': [{'item': 'X'}]},
+            {'id': 'merlin', 'top': [{'item': 'Y'}, {'item': 'Z'}]},
+            {'id': 'questor', 'top': []}, {'id': 'thyra', 'top': []}],
+            'party': {'top': [
+                {'item': y, 'chosen_by': 'thor', 'pulled_for': 'X', 'needs': []},
+                {'item': 'X', 'chosen_by': 'thor', 'needs': [{'item': y}]},
+                {'item': 'Y' if outside else 'Z', 'chosen_by': 'merlin', 'needs': []}]}}
+
+    def statuses(self, p, run=None):
+        return {r['check']: r['status'] for r in c.audit(p, run=run)
+                if r['check'] in ('party_turns', 'party_relative_order')}
+
+    def test_accepted_counterexamples(self):
+        for outside in (False, True):
+            self.assertEqual({'party_turns': 'PASS', 'party_relative_order': 'PASS'},
+                             self.statuses(self.party(outside)))
+
+    def test_bad_chains_and_markers(self):
+        for mutation in ('separated', 'unneeded', 'missing-marker', 'false-marker'):
+            p = self.party()
+            rows = p['party']['top']
+            if mutation == 'separated':
+                rows[1], rows[2] = rows[2], rows[1]
+            elif mutation == 'unneeded':
+                rows[1]['needs'] = []
+            elif mutation == 'missing-marker':
+                del rows[0]['pulled_for']
+            else:
+                rows[2]['pulled_for'] = 'X'
+            self.assertEqual('FAIL', self.statuses(p)['party_turns'], mutation)
+
+    def test_ordinary_relative_order(self):
+        p = self.party()
+        p['party']['top'].append({'item': 'Y', 'chosen_by': 'merlin'})
+        self.assertEqual('FAIL', self.statuses(p)['party_relative_order'])
+
+    def test_deferred_turn(self):
+        p = self.party()
+        p['characters'][0]['top'].append({'item': 'A'})
+        p['party'] = {'capacity': 1, 'cascade_deferred': [{'item': 'X', 'needs_slots': 2}],
+                      'top': [{'item': 'Y', 'chosen_by': 'merlin', 'needs': []}]}
+        with tempfile.TemporaryDirectory() as root:
+            run = Path(root)
+            (run / 'input.edn').write_text('{:edges [{:from "X" :to "Y"}]}')
+            self.assertEqual('PASS', self.statuses(p, run)['party_turns'])
+            p['party']['cascade_deferred'][0]['needs_slots'] = 1
+            self.assertEqual('FAIL', self.statuses(p, run)['party_turns'])
+
 if __name__ == '__main__':
     unittest.main()
