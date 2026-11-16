@@ -60,7 +60,7 @@ class ConformanceTests(unittest.TestCase):
     def test_conforming(self):
         results = c.audit(*fixture())
         self.assertEqual({'PASS'}, {r['status'] for r in results if r['check'] not in
-                          ('run_file_digests', 'one_current_reading', 'corpus_generation_digest', 'reading_source_current')})
+                          ('run_file_digests', 'one_current_reading', 'corpus_generation_digest', 'reading_source_current', 'needs_supplied', 'cascade_strong')})
         self.assertEqual('ABSENT', next(r for r in results if r['check'] == 'corpus_generation_digest')['status'])
 
     def test_thor_mutation(self):
@@ -146,7 +146,7 @@ class ConformanceTests(unittest.TestCase):
     def test_missing_sources_are_declared(self):
         party, _, _, _ = fixture()
         results = c.audit(party)
-        self.assertEqual(14, sum(r['status'] == 'ABSENT' for r in results))
+        self.assertEqual(16, sum(r['status'] == 'ABSENT' for r in results))
         self.assertEqual(3, sum(r['status'] == 'PASS' for r in results))
 
     def test_missing_metric_is_not_zero(self):
@@ -200,9 +200,9 @@ class RunDigestTests(unittest.TestCase):
         self.assertEqual('PASS', row['status'])
         self.assertEqual({'files': 1}, row['detail'])
         rows = c.audit(*fixture(), run=self.run)
-        self.assertEqual(17, len(rows))
+        self.assertEqual(19, len(rows))
         self.assertEqual({'PASS'}, {r['status'] for r in rows if r['check'] not in
-                          ('one_current_reading', 'corpus_generation_digest', 'reading_source_current')})
+                          ('one_current_reading', 'corpus_generation_digest', 'reading_source_current', 'needs_supplied', 'cascade_strong')})
         self.assertEqual('ABSENT', next(r for r in rows if r['check'] == 'corpus_generation_digest')['status'])
 
     def test_changed_byte(self):
@@ -1000,6 +1000,92 @@ class CascadeReplayTests(unittest.TestCase):
             self.assertEqual('PASS', self.statuses(p, run)['party_turns'])
             p['party']['cascade_deferred'][0]['needs_slots'] = 1
             self.assertEqual('FAIL', self.statuses(p, run)['party_turns'])
+
+class PinnedCascadeTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.run = Path(self.tmp.name)
+        self.write_input()
+        self.party = {'party': {'top': [
+            {'item': 'A', 'rank': 1, 'needs': []},
+            {'item': 'B', 'rank': 2, 'needs': [
+                {'item': 'A', 'shown_rank': 1, 'state': 'started'},
+                {'item': 'C', 'shown_rank': None, 'state': 'completed'},
+                {'item': 'outside', 'shown_rank': None, 'state': None}]}],
+            'cascade_exceptions': []}}
+
+    def write_input(self, extra=''):
+        (self.run / 'input.edn').write_text(
+            '{:items [{:id "A" :state-group :started} '
+            '{:id "C" :state-group :completed}] :edges ['
+            '{:from "B" :to "A" :reading-kind "unblocks"} '
+            '{:from "B" :to "C"} {:from "B" :to "outside" :kind :external} '
+            '{:from "A" :to "B" :class :alternative} ' + extra + ']}')
+
+    def test_exact_and_strong(self):
+        self.assertEqual('PASS', c.needs_supplied(self.party, self.run)['status'])
+        result = c.cascade_strong(self.party, self.run)
+        self.assertEqual('PASS', result['status'])
+        self.assertEqual({'entries': 2, 'pulled': 0, 'standalone': 1, 'exceptions': []},
+                         result['detail'])
+
+    def test_needs_mutations(self):
+        for mutation in ('missing', 'extra', 'rank', 'state', 'absent-list', 'null-list',
+                         'missing-rank', 'missing-state'):
+            with self.subTest(mutation=mutation):
+                p = copy.deepcopy(self.party)
+                needs = p['party']['top'][1]['needs']
+                if mutation == 'missing':
+                    needs.pop()
+                elif mutation == 'extra':
+                    needs.append({'item': 'invented', 'shown_rank': None, 'state': None})
+                elif mutation == 'rank':
+                    needs[0]['shown_rank'] = 2
+                elif mutation == 'state':
+                    needs[1]['state'] = 'started'
+                elif mutation == 'absent-list':
+                    del p['party']['top'][0]['needs']
+                elif mutation == 'null-list':
+                    p['party']['top'][0]['needs'] = None
+                elif mutation == 'missing-rank':
+                    del needs[2]['shown_rank']
+                else:
+                    del needs[2]['state']
+                self.assertEqual('FAIL', c.needs_supplied(p, self.run)['status'])
+
+    def test_uses_run_not_displayed_needs(self):
+        self.party['party']['top'].insert(0, {'item': 'root', 'rank': 0, 'needs': []})
+        self.party['party']['top'][1:3] = list(reversed(self.party['party']['top'][1:3]))
+        self.party['party']['top'][1]['needs'] = []  # hide the later prerequisite
+        result = c.cascade_strong(self.party, self.run)
+        self.assertEqual('FAIL', result['status'])
+        self.assertIn({'item': 'B', 'rule': 'no-earlier-need'}, result['detail']['violations'])
+
+    def test_cycles_real_fake_and_unrelated(self):
+        self.party['party']['top'] = [self.party['party']['top'][0],
+                                      {'item': 'X', 'rank': 2, 'needs': []}]
+        self.write_input('{:from "X" :to "Y"} {:from "Y" :to "X"} '
+                         '{:from "U" :to "V"} {:from "V" :to "U"}')
+        for cycle, status in [(['X', 'Y'], 'PASS'), (['X', 'A'], 'FAIL'),
+                              (['U', 'V'], 'FAIL'), ([], 'FAIL')]:
+            with self.subTest(cycle=cycle):
+                exception = {'item': 'X', 'cycle': cycle}
+                self.party['party']['cascade_exceptions'] = [exception]
+                result = c.cascade_strong(self.party, self.run)
+                self.assertEqual(status, result['status'])
+                self.assertEqual([exception], result['detail']['exceptions'])
+
+    def test_missing_empty_and_malformed(self):
+        for check in (c.needs_supplied, c.cascade_strong):
+            self.assertEqual('ABSENT', check(self.party, None)['status'])
+            self.assertEqual('ABSENT', check({'party': {'top': []}}, self.run)['status'])
+        (self.run / 'input.edn').unlink()
+        for check in (c.needs_supplied, c.cascade_strong):
+            self.assertEqual('ABSENT', check(self.party, self.run)['status'])
+        (self.run / 'input.edn').write_text('{:edges [')
+        for check in (c.needs_supplied, c.cascade_strong):
+            self.assertEqual('FAIL', check(self.party, self.run)['status'])
 
 if __name__ == '__main__':
     unittest.main()

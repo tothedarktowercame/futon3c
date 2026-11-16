@@ -41,6 +41,8 @@ CHECKS = {
     'questor_reasons_faithful': 'Circus.Characters.questor_terms_faithful',
     'merlin_reasons_faithful': 'Circus.Characters.merlin_terms_faithful',
     'reading_source_current': 'Circus.Freshness.readingMatches; reason',
+    'needs_supplied': 'Circus.Basic.NeedsSupplied',
+    'cascade_strong': 'Circus.Loop.top_ten_is_a_cascade',
 }
 
 
@@ -312,7 +314,123 @@ def audit(party, pass_data=None, pending=None, lexicon=None, run=None):
     results.append(questor_reasons_faithful(party, pending, lexicon))
     results.append(merlin_reasons_faithful(party, pending, lexicon))
     results.append(reading_source_current(run))
+    results.append(needs_supplied(party, run))
+    results.append(cascade_strong(party, run))
     return results
+
+
+def run_needs(run):
+    """Independent pinned input reader; never uses displayed needs or producer.
+
+    Mirror giraffe_party.py:253-260,335-351: from needs to, alternatives
+    excluded, external/completed prerequisites retained. Direction originates
+    in readings.clj:110-114 (unblocks reversed), pass.clj:56-61,337.
+    """
+    if run is None:
+        raise Missing('run/input.edn')
+    inputs = load(Path(run) / 'input.edn', edn=True)
+    if inputs is None:
+        raise Missing('run/input.edn')
+    if 'edges' not in inputs or 'items' not in inputs:
+        raise Missing('input.edn edges/items')
+    needs, states = {}, {}
+    for item in inputs['items']:
+        states[item['id']] = item.get('state-group')
+    for edge in inputs['edges']:
+        if edge.get('class') != 'alternative':
+            needs.setdefault(edge['from'], set()).add(edge['to'])
+    return needs, states
+
+
+def needs_supplied(party, run):
+    """Every displayed need and its rank/state agrees with the pinned run.
+
+    Mirror the producer's party_dependencies (giraffe_party.py:335-351),
+    independently parsed via run_needs. An explicit [] is required for roots.
+    """
+    def result(status, detail):
+        return {'check': 'needs_supplied', 'theorem': CHECKS['needs_supplied'],
+                'status': status, 'detail': detail}
+    try:
+        needs, states = run_needs(run)
+        rows = party['party']['top']
+        if not rows:
+            raise Missing('party top rows')
+        ranks = {r['item']: r['rank'] for r in rows}
+        bad = []
+        for row in rows:
+            item = row['item']
+            displayed = row.get('needs')
+            if not isinstance(displayed, list):
+                bad.append({'item': item, 'rule': 'needs-list-required'})
+                continue
+            if {n['item'] for n in displayed} != needs.get(item, set()):
+                bad.append({'item': item, 'rule': 'needs-set'})
+            for need in displayed:
+                target = need['item']
+                if 'shown_rank' not in need or need['shown_rank'] != ranks.get(target):
+                    bad.append({'item': item, 'need': target, 'rule': 'shown-rank'})
+                if 'state' not in need or need['state'] != states.get(target):
+                    bad.append({'item': item, 'need': target, 'rule': 'state'})
+        return result('FAIL' if bad else 'PASS',
+                      {'entries': len(rows), 'violations': bad} if bad else {'entries': len(rows)})
+    except Missing as exc:
+        return result('ABSENT', {'missing': str(exc)})
+    except (OSError, IndexError, KeyError, TypeError, ValueError, RuntimeError) as exc:
+        return result('FAIL', {'kind': 'invalid-input', 'reason': str(exc)})
+
+
+def cascade_strong(party, run):
+    """After the first row, need an earlier row or nothing, using RUN edges.
+
+    Cycle exceptions are explicitly reported, and must be genuine directed
+    cycles reachable from the excepted item, not unrelated cycles used as an
+    excuse. No displayed needs are trusted by this check.
+    """
+    def result(status, detail):
+        return {'check': 'cascade_strong', 'theorem': CHECKS['cascade_strong'],
+                'status': status, 'detail': detail}
+    try:
+        needs, _ = run_needs(run)
+        rows = party['party']['top']
+        if not rows:
+            raise Missing('party top rows')
+        exceptions = party['party'].get('cascade_exceptions', [])
+        shown = {r['item'] for r in rows}
+        valid, bad = set(), []
+        for exception in exceptions:
+            item, cycle = exception['item'], exception['cycle']
+            reached, todo = set(), [item]
+            while todo:
+                node = todo.pop()
+                if node not in reached:
+                    reached.add(node)
+                    todo.extend(needs.get(node, set()) - reached)
+            if (item not in shown or item in valid or not isinstance(cycle, list) or
+                    not cycle or len(set(cycle)) != len(cycle) or
+                    cycle[0] not in reached or
+                    not all(b in needs.get(a, set())
+                            for a, b in zip(cycle, cycle[1:] + cycle[:1]))):
+                bad.append({'item': item, 'rule': 'invalid-cycle-exception'})
+            else:
+                valid.add(item)
+        seen = set()
+        for index, row in enumerate(rows):
+            item = row['item']
+            required = needs.get(item, set())
+            if index and required and not required & seen and item not in valid:
+                bad.append({'item': item, 'rule': 'no-earlier-need'})
+            seen.add(item)
+        detail = {'entries': len(rows), 'pulled': sum('pulled_for' in r for r in rows),
+                  'standalone': sum(not needs.get(r['item']) for r in rows),
+                  'exceptions': exceptions}
+        if bad:
+            detail['violations'] = bad
+        return result('FAIL' if bad else 'PASS', detail)
+    except Missing as exc:
+        return result('ABSENT', {'missing': str(exc)})
+    except (OSError, IndexError, KeyError, TypeError, ValueError, RuntimeError) as exc:
+        return result('FAIL', {'kind': 'invalid-input', 'reason': str(exc)})
 
 
 def thor_missing_counts(party, pass_data):
