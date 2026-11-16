@@ -100,8 +100,12 @@ may stand as local work.
 
 ## Decided: where derived output goes (claude-8, 2026-11-05, on Joe's go for step 2)
 
-- **Output that relates things goes in the GCC as typed hyperedges** through futon1b's
-  `/api/alpha/hyperedges` batch route (`futon1b_server.clj:1034`, `write-hyperedges-batch!` :221).
+- **Output that relates things goes in the GCC as typed Arxana records** through
+  futon1b's reserved Arxana command route (`clusion/assert`, followed by
+  attributable `evidence/append` or `assessment/append`). General-route
+  `/api/alpha/hyperedges` rows remain outside authorities referenced by id;
+  they are not the write target for new GCC records (Joe, 2026-11-09;
+  `futon4/holes/excursions/E-gcc-schema.md`, B2 rule 12 and B10).
   Endpoints are ids (evidence, pattern, mission, memory, file path), never copied text.
   This covers 驴 activations, 象 readings, 馬 cards, Giraffe relationship reviews, and the
   agent→file "touched" facts that inbox_zero currently mines out of transcript text.
