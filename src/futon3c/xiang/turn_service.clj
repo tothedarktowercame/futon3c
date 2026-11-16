@@ -48,6 +48,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agency.registry :as registry]
+            [futon3c.arxana.turn-mention-writer :as mention-writer]
             [futon3c.evidence.invoke-preview :as invoke-preview]
             [futon3c.xiang.reply-target :as rt]
             [futon3c.xiang.relationship-review :as relationship-review]
@@ -93,6 +94,9 @@
    ;; How a settled turn's append is run off the caller's path (fn [thunk]); nil
    ;; means on the scheduler at delay 0.
    :evidence-async! nil
+   :mentions-enabled? (not= "0" (System/getenv "FUTON3C_TURN_MENTIONS"))
+   :mentions-writer! mention-writer/write-turn-mentions!
+   :mentions-config nil
    ;; Likewise for the 小象 draft of a turn not dispatched at once.
    :draft-async! nil})
 
@@ -546,6 +550,20 @@
         [old _] (swap-vals! !announced-readings assoc id sig)]
     (not= (get old id) sig)))
 
+(defn write-mentions-async!
+  "Queue one immutable field snapshot; failure cannot fail the turn."
+  [svc record field]
+  (when (cfg svc :mentions-enabled?)
+    (let [failed (fn [e]
+                   (binding [*out* *err*]
+                     (println "[turn-mentions] failed" (:id record) field (.getMessage e))))]
+      (try
+        ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
+         #(try ((cfg svc :mentions-writer!)
+                (or (cfg svc :mentions-config) (mention-writer/default-config)) record field)
+               (catch Exception e (failed e))))
+        (catch Exception e (failed e))))))
+
 (defn- settle-evidence!
   "Write settled turn ID as evidence, off the caller's path. The packet
    should carry both the reading and the happened summary, so a turn whose
@@ -557,6 +575,7 @@
    either arrival order) the turn's ports are (re)computed alongside it."
   [svc id reading how]
   (when (reading-changed? id reading how)
+    (write-mentions-async! svc (assoc (ts/read-record (cfg svc :store) id) :id id) :source_text)
     (notify-turn! svc {:event :reading :id id :how how}))
   (let [store (cfg svc :store)
         write! (fn []
@@ -1245,6 +1264,8 @@
            (catch Exception _ nil)))
     (let [record (ts/read-record store id)
           status (:analysis_status record)]
+      (when (and reply? summary (= reply (:reply_text record)) (= reply-at (:reply_at record)))
+        (write-mentions-async! svc (assoc record :id id) :reply_text))
       (cond
         (nil? record) {:dispatched false :reason :record-not-found}
         (= (cfg svc :seat) (:agent_id record)) {:dispatched false :reason :addressed-to-seat}
@@ -1262,6 +1283,7 @@
           ;; computed here, off the caller's path (E-agency-work-orders W1).
           ;; Operator "declared" records keep the old reading — nothing runs.
           (when (and (= "declared" status) (= "agent" (:origin record)))
+            (write-mentions-async! svc (assoc record :id id) :source_text)
             ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
              #(compute-ports! svc id)))
           {:dispatched false :reason (keyword status)})

@@ -33,7 +33,7 @@
   [& [overrides]]
   (let [bells (atom []) scheduled (atom []) jobs (atom {}) posted (atom [])
         clock (atom 1000000)
-        s (svc/service (merge {:store (temp-store)
+        s (svc/service (merge {:mentions-enabled? false :store (temp-store)
                                ;; Most tests predate Platform-primary routing and
                                ;; exercise the historical pool-primary behavior.
                                :seat "象" :alternate "象-sonnet"
@@ -1457,3 +1457,36 @@
           "a repeat settle of the same reading is silent (its :ported is the 馬 trigger re-running)")
       (is (= 2 (count @appended)))
       (finally (svc/remove-turn-listener! ::test)))))
+
+(deftest mention-hooks-use-fixed-fields-and-contain-failure
+  (let [calls (atom []) tasks (atom [])
+        h (harness {:mentions-enabled? true :mentions-config {}
+                    :mentions-writer! (fn [_ record field] (swap! calls conj [(:id record) field (get record field)]))
+                    :evidence-async! #(swap! tasks conj %)})
+        {:keys [id record]} (turn! h)]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (is (empty? @calls) "writer is off the caller's path")
+    (doseq [task @tasks] (task))
+    (reset! tasks [])
+    (is (= [:source_text] (mapv second @calls)))
+    (reset! calls [])
+    (svc/attach-happened! (:svc h) id {:reply "M-toy" :commits []})
+    (doseq [task @tasks] (task))
+    (is (= [[id :reply_text "M-toy"]] @calls))
+    (let [bad (assoc-in (:svc h) [:config :mentions-writer!] (fn [& _] (throw (ex-info "toy failure" {}))))]
+      (reset! tasks [])
+      (svc/write-mentions-async! bad {:id id :source_text "M-toy"} :source_text)
+      (is (nil? ((first @tasks)))))))
+
+(deftest mention-hook-disabled
+  (let [h (harness {:mentions-enabled? false :evidence-async! (fn [_] (throw (AssertionError. "scheduled")))})]
+    (is (nil? (svc/write-mentions-async! (:svc h) {:id "turn-toy"} :reply_text)))))
+
+(deftest declared-agent-turn-mentions-settle-with-reply
+  (let [calls (atom [])
+        h (harness {:mentions-enabled? true :mentions-config {}
+                    :evidence-async! (fn [f] (f))
+                    :mentions-writer! (fn [_ _ field] (swap! calls conj field))})
+        {:keys [id]} (turn! h {:dispatch :none :origin "agent"})]
+    (svc/attach-happened! (:svc h) id {:reply "M-toy" :commits []})
+    (is (= [:reply_text :source_text] @calls))))
