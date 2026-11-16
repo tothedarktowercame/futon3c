@@ -331,6 +331,10 @@
                      (fn [n request]
                        (let [path (get identities (:target_id request))]
                          (if (and (active? token) path
+                                  ;; an operator's withdrawal is a decision,
+                                  ;; not a failure to retry (claude-13 review)
+                                  (not (re-find #"operator-withdrawn"
+                                                (str (:last_error request))))
                                   (< (:retries request) failed-retry-limit)
                                   (< (:updated_at_ms request) (- now-ms failed-retry-after-ms))
                                   (.isFile (io/file path))

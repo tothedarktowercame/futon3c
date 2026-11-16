@@ -713,7 +713,7 @@
                                           :failed-retry-limit 3 :clock (constantly 1000)))
         store (:store config)
         root (temp-dir)
-        ids ["M-old" "M-young" "M-changed" "M-exhausted" "M-gone"]
+        ids ["M-old" "M-young" "M-changed" "M-exhausted" "M-gone" "M-withdrawn"]
         paths (into {} (for [id ids :let [file (io/file root (str id ".md"))]]
                          (do (spit file "invented source") [id (str file)])))
         items (mapv (fn [[id path]] {:id id :source-pin {:path path :sha256 (generation/file-sha path)}}) paths)
@@ -721,11 +721,12 @@
         token (Object.)
         retry! (ns-resolve 'futon3c.giraffe.reread-service 'retry-failed!)]
     (queue/reconcile! store items {:members []} 1)
-    (doseq [i (range 5)]
+    (doseq [i (range 6)]
       (let [claim (queue/claim! store (+ 2 i) 100 1 "toy")]
         (queue/settle! store claim {:status :failed :reason :toy-failure} 10 1)))
     (jdbc/execute! (:datasource store) ["UPDATE reread_requests SET updated_at_ms=950 WHERE target_id='M-young'"])
     (jdbc/execute! (:datasource store) ["UPDATE reread_requests SET retries=3 WHERE target_id='M-exhausted'"])
+    (jdbc/execute! (:datasource store) ["UPDATE reread_requests SET last_error='operator-withdrawn: invented triage' WHERE target_id='M-withdrawn'"])
     (spit (get paths "M-changed") "changed document")
     (reset! state-atom {:running? true :status :running :token token :config config
                         :identities (dissoc paths "M-gone") :errors {} :pending {}})
