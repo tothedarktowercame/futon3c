@@ -31,7 +31,7 @@ CHECKS = {
     'questor_cost_gate': 'Circus.Characters.questor_cost_gate',
     'questor_never_lists_unready': 'Circus.Characters.questor_never_lists_unready',
     'party_nodup': 'Circus.Retro.partyVote_fresh_and_nodup',
-    'party_turns': 'Circus.Retro.sweep_head_contributes; partyVote',
+    'party_turns': 'Circus.Retro.sweep_head_contributes; partyVote; Circus.Cascade.cascadeVote_pulled_chain',
     'party_relative_order': 'Circus.drawFresh_survivor; Circus.Retro.drawFresh',
     'run_file_digests': 'Circus.Reproduction.Receipt.passInputDigest',
     'one_current_reading': 'Circus.Supersession.OneCurrent',
@@ -41,8 +41,8 @@ CHECKS = {
     'questor_reasons_faithful': 'Circus.Characters.questor_terms_faithful',
     'merlin_reasons_faithful': 'Circus.Characters.merlin_terms_faithful',
     'reading_source_current': 'Circus.Freshness.readingMatches; reason',
-    'needs_supplied': 'Circus.Basic.NeedsSupplied',
-    'cascade_strong': 'Circus.Loop.top_ten_is_a_cascade',
+    'needs_supplied': 'Circus.Cascade.NeedsSupplied',
+    'cascade_strong': 'Circus.Cascade.cascadeVote_strong; cascadeVote_exceptions_real',
 }
 
 
