@@ -974,6 +974,16 @@ class CascadeReplayTests(unittest.TestCase):
                 rows[2]['pulled_for'] = 'X'
             self.assertEqual('FAIL', self.statuses(p)['party_turns'], mutation)
 
+    def test_displayed_needs_checked_against_pinned_run(self):
+        # claude-13 review: with a pinned run, replay uses the run's edges, so
+        # only the chain rule catches a pulled run whose displayed needs omit it.
+        p = self.party()
+        p['party']['top'][1]['needs'] = []
+        with tempfile.TemporaryDirectory() as root:
+            run = Path(root)
+            (run / 'input.edn').write_text('{:edges [{:from "X" :to "Y"}]}')
+            self.assertEqual('FAIL', self.statuses(p, run)['party_turns'])
+
     def test_ordinary_relative_order(self):
         p = self.party()
         p['party']['top'].append({'item': 'Y', 'chosen_by': 'merlin'})
