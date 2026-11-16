@@ -154,8 +154,6 @@
    Scheduled on the preview executor, never blocking the mint or turn path."
   [token mint-result]
   (when (= :minted (:status mint-result))
-    ;; the mint's own check may have seen cited evidence change: recheck once
-    (cli/invalidate-coverage!)
     (schedule-preview-refresh! token (get-in mint-result [:last-result :run-id]))))
 
 (defn- schedule-preview-refresh!
@@ -635,7 +633,6 @@
                                                 :stopping :stopped)
                           :else status)
             :queue-status (:status queue-health) :pending-items (vec (keys pending))
-            :coverage-checks (cli/coverage-check-count)
             :errors errors :last-round last-round :mint-batch last-mint
             :discussed (:discussed @state)
             :unknown-turn-item-count (:unknown-turn-item-count @state)

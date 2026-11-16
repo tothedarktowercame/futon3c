@@ -99,33 +99,19 @@
       (is (= [:a :b :a] @calls) "claimable at retry deadline")
       (is (= 1 (:attempts (first (queue/requests store))))))))
 
-(deftest coverage-is-checked-once-per-generation
-  ;; claude-13 2026-11-16: the backstop ran the Python checker on every
-  ;; reading every 10 minutes; coverage is now cached per generation dir.
+(deftest every-snapshot-checks-fresh
+  ;; codex-7 review finding 4: a cache keyed by generation hid changed cited
+  ;; evidence. With one checker process per pass, every snapshot rechecks.
   (let [root (doto (io/file (System/getProperty "java.io.tmpdir")
                             (str "c13-cov-" (System/nanoTime))) .mkdirs)
-        gen-a (doto (io/file root "gen-a") .mkdirs)
-        gen-b (doto (io/file root "gen-b") .mkdirs)
+        gen (doto (io/file root "gen") .mkdirs)
         pointer (io/file root "corpus")
-        calls (atom 0)
-        point! (fn [target]
-                 (java.nio.file.Files/deleteIfExists (.toPath pointer))
-                 (java.nio.file.Files/createSymbolicLink
-                  (.toPath pointer) (.toPath target)
-                  (make-array java.nio.file.attribute.FileAttribute 0)))]
-    (cli/invalidate-coverage!)
-    (with-redefs [readings/consume
-                  (fn [_] (swap! calls inc) {:coverage {:members [] :n @calls}})
-                  excursions/missions-and-excursions->input
-                  (fn [_] {:input {:items []}})]
-      (point! gen-a)
-      (let [a1 (cli/authority-snapshot {:pointer (str pointer) :edges "unused"})
-            a2 (cli/authority-snapshot {:pointer (str pointer) :edges "unused"})]
-        (is (= 1 @calls) "same generation: the checker runs once")
-        (is (= (:coverage a1) (:coverage a2))))
-      (point! gen-b)
-      (cli/authority-snapshot {:pointer (str pointer) :edges "unused"})
-      (is (= 2 @calls) "a new generation is checked")
-      (cli/invalidate-coverage!)
-      (cli/authority-snapshot {:pointer (str pointer) :edges "unused"})
-      (is (= 3 @calls) "after invalidation (a mint) it is checked again"))))
+        calls (atom 0)]
+    (java.nio.file.Files/createSymbolicLink
+     (.toPath pointer) (.toPath gen) (make-array java.nio.file.attribute.FileAttribute 0))
+    (with-redefs [readings/consume (fn [_] (swap! calls inc) {:coverage {:members [] :n @calls}})
+                  excursions/missions-and-excursions->input (fn [_] {:input {:items []}})]
+      (let [a (cli/authority-snapshot {:pointer (str pointer) :edges "unused"})
+            b (cli/authority-snapshot {:pointer (str pointer) :edges "unused"})]
+        (is (= 2 @calls) "same generation, still checked each time")
+        (is (not= (:coverage a) (:coverage b)))))))

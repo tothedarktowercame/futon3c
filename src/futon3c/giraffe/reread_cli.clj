@@ -28,41 +28,21 @@
        (sort-by #(.getName %))
        (mapv #(.getAbsolutePath %))))
 
-;; Checked coverage per generation directory. A generation is immutable and
-;; digest-named, so its checker verdicts are recomputed only when the pointer
-;; moves to another generation, or after a mint (whose own check may have seen
-;; cited evidence change). Before this, every 10-minute backstop pass ran the
-;; Python checker once per reading: 657 processes, ~89 s (claude-13,
-;; 2026-11-16, measured in the serving JVM; Joe: automatic updates must be light).
-(defonce ^:private coverage-cache (atom nil))
-(defonce ^:private coverage-checks (atom 0))
-
-(defn invalidate-coverage!
-  "Forget cached coverage; the next snapshot runs the checker once."
-  []
-  (reset! coverage-cache nil))
-
-(defn coverage-check-count
-  "How many full checker passes this process has run (for health)."
-  []
-  @coverage-checks)
-
-(defn- checked-coverage [root]
-  (let [cached @coverage-cache]
-    (if (= root (:path cached))
-      (:coverage cached)
-      (let [coverage (:coverage (readings/consume
-                                 {:checker (str (io/file root "check_edges.py"))
-                                  :members-file (str (io/file root "members.json"))
-                                  :batches (batches root) :repos missions/default-repos
-                                  :scope :population/missions-excursions-tickets}))]
-        (swap! coverage-checks inc)
-        (reset! coverage-cache {:path root :coverage coverage})
-        coverage))))
+(defn- checked-coverage
+  "Fresh checker verdicts for generation ROOT. One Python process per pass
+  (scripts/giraffe_check_batch.py; ~0.5 s for the live set), so no cache:
+  a cache keyed by generation hid changed cited evidence (codex-7 review,
+  2026-11-16, finding 4)."
+  [root]
+  (:coverage (readings/consume
+              {:checker (str (io/file root "check_edges.py"))
+               :members-file (str (io/file root "members.json"))
+               :batches (batches root) :repos missions/default-repos
+               :scope :population/missions-excursions-tickets})))
 
 (defn authority-snapshot
-  "Rebuild open items from the census; checked coverage comes from the
-  per-generation cache (see checked-coverage)."
+  "Rebuild open items from the census and checked coverage from the
+  generation (see checked-coverage)."
   [{:keys [pointer edges] :or {pointer default-pointer edges default-edges}}]
   (let [root (str (.toRealPath (.toPath (.getAbsoluteFile (io/file pointer)))
                                (make-array java.nio.file.LinkOption 0)))
