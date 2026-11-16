@@ -43,3 +43,23 @@
         (is (= "futon3c/item-inventory" (:producer a)))
         (is (= [{:path "/invented/holes/M-a.md" :git/commit "toy-commit"
                  :sha256 "toy-sha" :worktree-dirty? false}] (:source-refs a)))))))
+
+(deftest incremental-sync-writes-one-batch-only-for-missing-items
+  (let [item {:id "M-new"} calls (atom [])]
+    (with-redefs [store/get-entity (fn [& _] {:error {:error/category :missing}})
+                  sut/publication-plan
+                  (fn [_] [{:message-id "inventory/new"
+                            :records [{:operation :clusion/assert :record (sut/item-record "M-new")}
+                                      {:operation :evidence/append :record {:id "attestation"}}]}])
+                  http/append-batch! (fn [_ message rows]
+                                       (swap! calls conj [message rows]) {:ok {}})]
+      (is (= {:checked ["M-new"] :written ["M-new"] :batch-count 1}
+             (sut/sync-items! {:graph-store :stub} [item])))
+      (is (= 1 (count @calls)))
+      (is (= [:clusion/assert :evidence/append]
+             (mapv :operation (second (first @calls)))))))
+  (let [calls (atom []) item {:id "M-present"}]
+    (with-redefs [store/get-entity (fn [& _] {:ok (sut/item-record "M-present")})
+                  http/append-batch! (fn [& _] (swap! calls conj :write) {:ok {}})]
+      (is (= [] (:written (sut/sync-items! {:graph-store :stub} [item]))))
+      (is (empty? @calls)))))

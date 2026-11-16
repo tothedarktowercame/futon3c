@@ -46,6 +46,9 @@
     {:pointer corpus :store store :env-file false :environment {} :reader-seats ["fixture-reader"]
      :new-item-cap 1 :mint-window-ms 100 :debounce-ms 30
      :mint-state-path (io/file root "mint.edn")
+     :inventory-items-fn (constantly [])
+     :inventory-sync-fn (fn [& _] (throw (AssertionError. "empty inventory called store")))
+     :inventory-config {}
      :snapshot-fn (fn [_] {:open-items [] :coverage {:members []}})
      :mint-fn (fn [] {:status :minted :run-id "fixture-run"})}))
 
@@ -787,6 +790,60 @@
   (is (= 500 (:failed-retry-after-ms
               (service/load-config (assoc (fixture) :environment
                                           {"FUTON3C_GIRAFFE_REREAD_FAILED_RETRY_AFTER_MS" "500"}))))))
+
+(deftest unchanged-inventory-tick-makes-zero-store-calls
+  (let [state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
+        sync-var (ns-resolve 'futon3c.giraffe.reread-service 'sync-item-inventory!)
+        token (Object.) calls (atom []) census (atom [{:id "M-a"}])
+        config (assoc (fixture)
+                      :inventory-items-fn (fn [_] @census)
+                      :inventory-sync-fn (fn [_ items]
+                                           (swap! calls conj (mapv :id items))
+                                           {:checked (mapv :id items) :written [] :batch-count 0}))]
+    (reset! state-atom {:running? true :token token :config config :errors {}})
+    (sync-var token)
+    (is (= [["M-a"]] @calls) "the first run seeds confirmed IDs")
+    (sync-var token)
+    (is (= [["M-a"]] @calls) "an unchanged census makes zero additional store calls")
+    (is (= [] (get-in (service/health) [:last-inventory-sync :checked])))))
+
+(deftest census-change-checks-only-the-new-item
+  (let [state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
+        sync-var (ns-resolve 'futon3c.giraffe.reread-service 'sync-item-inventory!)
+        token (Object.) census (atom [{:id "M-a"}]) calls (atom [])
+        config (assoc (fixture) :inventory-items-fn (fn [_] @census)
+                      :inventory-sync-fn
+                      (fn [_ items]
+                        (swap! calls conj (mapv :id items))
+                        {:checked (mapv :id items) :written (mapv :id items) :batch-count 1}))]
+    (reset! state-atom {:running? true :token token :config config :errors {}})
+    (sync-var token)
+    (swap! census conj {:id "M-new"})
+    (sync-var token)
+    (is (= [["M-a"] ["M-new"]] @calls))
+    (is (= ["M-new"] (get-in (service/health) [:last-inventory-sync :written])))))
+
+(deftest inventory-store-error-is-visible-and-backstop-continues
+  (let [state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
+        tick-var (ns-resolve 'futon3c.giraffe.reread-service 'backstop-tick!)
+        token (Object.) continued (atom [])
+        config (assoc (fixture)
+                      :inventory-items-fn (constantly [{:id "M-new"}])
+                      :inventory-sync-fn (fn [& _] (throw (ex-info "store refused" {}))))]
+    (reset! state-atom {:running? true :token token :config config :errors {}
+                        :pending {} :refresh-items #{}})
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.giraffe.reread-service 'full-round!)
+       (fn [& _] (swap! continued conj :round))
+       (ns-resolve 'futon3c.giraffe.reread-service 'retire-missing!)
+       (fn [& _] (swap! continued conj :retire))
+       (ns-resolve 'futon3c.giraffe.reread-service 'retry-failed!) (fn [& _] nil)
+       (ns-resolve 'futon3c.giraffe.reread-service 'refresh-if-behind!) (fn [& _] nil)
+       (ns-resolve 'futon3c.giraffe.reread-service 'schedule-backstop!) (fn [& _] nil)}
+      (fn [] (tick-var token)))
+    (is (= [:round :retire] @continued))
+    (is (= "store refused" (get-in (service/health) [:last-inventory-sync :error])))
+    (is (contains? (:errors (service/health)) :item-inventory))))
 
 (deftest retirement-on-an-idle-queue-mints-at-once
   ;; claude-13 2026-11-16 (Joe: event driven, no fixed cadence): with nothing

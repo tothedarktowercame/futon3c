@@ -15,6 +15,7 @@
             [futon3c.giraffe.reread-mint-batch :as mint-batch]
             [futon3c.giraffe.reread-queue :as queue]
             [futon3c.giraffe.run :as giraffe-run]
+            [futon3c.arxana.item-inventory :as item-inventory]
             [futon3c.arxana.turn-mention-writer :as mention-writer]
             [futon3c.circus.hou-store :as hou-store]
             [futon3c.xiang.turn-service :as turn-service]
@@ -104,6 +105,9 @@
                        :preview (merge preview/default-config (:preview opts))
                        :entity-sidecar default-entity-sidecar
                        :mention-config (mention-writer/default-config)
+                       :inventory-config (mention-writer/default-config)
+                       :inventory-items-fn item-inventory/current-items
+                       :inventory-sync-fn item-inventory/sync-items!
                        :turn-store live-turn-store}
                       (dissoc opts :env-file :environment :preview))]
     (when-not (and (seq (:reader-seats config))
@@ -388,11 +392,34 @@
 
 (declare schedule-backstop!)
 
+(defn- sync-item-inventory! [token]
+  (when (active? token)
+    (try
+      (let [config (:config @state)
+            items ((:inventory-items-fn config) (:inventory-config config))
+            confirmed (or (:inventory-confirmed-ids @state) #{})
+            unchecked (filterv #(not (contains? confirmed (:id %))) items)
+            result (if (empty? unchecked)
+                     {:checked [] :written [] :batch-count 0}
+                     ((:inventory-sync-fn config) (:inventory-config config) unchecked))]
+        (when (active? token)
+          (swap! state assoc
+                 :inventory-confirmed-ids (into confirmed (map :id unchecked))
+                 :last-inventory-sync (assoc result :at-ms (System/currentTimeMillis)))
+          (swap! state update :errors dissoc :item-inventory)))
+      (catch Exception e
+        ;; This independent port must not prevent the rest of the backstop.
+        (when (active? token)
+          (swap! state assoc :last-inventory-sync
+                 {:error (.getMessage e) :at-ms (System/currentTimeMillis)}))
+        (failure! token :item-inventory e)))))
+
 (defn- backstop-tick! [token]
   (when (active? token)
     (try
       ;; Ticks and rounds share one worker. A delayed tick runs once after
       ;; the round finishes, then schedules its successor without a backlog.
+      (sync-item-inventory! token)
       (full-round! token (:config @state))
       (retire-missing! token)
       (retry-failed! token)
@@ -576,6 +603,7 @@
            (reset! state {:status :starting :running? true :token token :executor executor
                           :preview-executor preview-executor
                           :config config :pending {} :errors {} :identities {}
+                          :inventory-confirmed-ids nil :last-inventory-sync nil
                           :discussed {} :seen-turns #{}
                           :refresh-items #{} :refresh-run-id nil
                           :refresh-running? false :refresh-requested? false :last-refresh nil
@@ -664,4 +692,5 @@
             :last-retirement (:last-retirement @state)
             :last-backstop-at-ms (:last-backstop-at-ms @state)
             :last-turn-mint (:last-turn-mint @state)
-            :last-refresh (:last-refresh @state)})))
+            :last-refresh (:last-refresh @state)
+            :last-inventory-sync (:last-inventory-sync @state)})))

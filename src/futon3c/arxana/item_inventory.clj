@@ -91,6 +91,22 @@
           (when-not (:ok r) (throw (ex-info "inventory publication refused" {:result r}))))))
     {:items (count items) :missing (mapv :id missing) :batches plan :write? (boolean write?)}))
 
+(defn sync-items!
+  "Check only ITEMS and publish all missing records plus exact attestations in
+  one atomic batch. Intended for a caller that remembers confirmed IDs."
+  [{:keys [graph-store]} items]
+  (let [missing (missing-items graph-store items)
+        plan (publication-plan missing)]
+    (when (> (count plan) 1)
+      (throw (ex-info "incremental inventory exceeds one batch"
+                      {:items (mapv :id missing) :batches (count plan)})))
+    (when-let [{:keys [message-id records]} (first plan)]
+      (let [r (http/append-batch! graph-store message-id records)]
+        (when-not (:ok r)
+          (throw (ex-info "inventory publication refused" {:result r})))))
+    {:checked (mapv :id items) :written (mapv :id missing)
+     :batch-count (count plan)}))
+
 (defn -main [& args]
   (when-not (every? #{"--dry-run" "--write"} args)
     (throw (ex-info "usage: --dry-run (default) | --write" {})))
