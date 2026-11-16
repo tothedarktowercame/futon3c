@@ -84,12 +84,19 @@
       {:rows (vec rows) :acts (count acts) :reference reference :text text})))
     {:failed :operator-evidence-unavailable}))
 
+;; futon1b replays a repeated message id as the earlier result (:ok, nothing
+;; created), so the id carries the batch's record ids: a changed batch for
+;; the same turn is a new message, an identical one stays a no-op.
+(defn batch-message-id [prefix turn rows]
+  (str prefix (:id turn) "/"
+       (digest/sha256-hex (.getBytes (str/join "," (map #(get-in % [:record :id]) rows)) "UTF-8"))))
+
 (defn write! [cfg turn]
   (let [{:keys [rows acts failed] :as p} (plan cfg turn)]
     (cond failed p
           (zero? acts) {:written 0}
           :else (let [r (http/append-batch! (:graph-store cfg)
-                                             (str "xiang-interpretations/" (:id turn)) rows)]
+                                             (batch-message-id "xiang-interpretations/" turn rows) rows)]
                   (if (:ok r) {:written acts} {:failed :interpretation-write-refused})))))
 
 (defn read-acts [cfg turn]

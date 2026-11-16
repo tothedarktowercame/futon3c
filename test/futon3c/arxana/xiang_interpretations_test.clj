@@ -103,3 +103,10 @@
       (is (= {:no-operator-acts 1}
              (:outcomes (sut/backfill! {:turn-store :stub} {:write? true :pause-ms 0}))))
       (is (= {:written 0} (:xiang_interpretations @saved))))))
+
+(deftest a-changed-batch-for-a-turn-is-a-new-message
+  ;; futon1b replays a repeated message id, so a fixed per-turn id would
+  ;; silently drop a corrected batch.
+  (let [a [{:record {:id "c1"}}] b [{:record {:id "c2"}}]]
+    (is (= (sut/batch-message-id "x/" turn a) (sut/batch-message-id "x/" turn a)))
+    (is (not= (sut/batch-message-id "x/" turn a) (sut/batch-message-id "x/" turn b)))))

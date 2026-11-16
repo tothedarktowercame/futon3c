@@ -49,12 +49,19 @@
       {:rows (vec rows) :turn-reference turn-ref :skipped skipped})
     {:failed :operator-evidence-unavailable}))
 
+;; futon1b replays a repeated message id as the earlier result (:ok, nothing
+;; created), so the id carries the batch's record ids: a changed batch for
+;; the same turn is a new message, an identical one stays a no-op.
+(defn batch-message-id [prefix turn rows]
+  (str prefix (:id turn) "/"
+       (digest/sha256-hex (.getBytes (str/join "," (map #(get-in % [:record :id]) rows)) "UTF-8"))))
+
 (defn write! [cfg turn lu]
   (let [{:keys [rows failed skipped] :as p} (plan cfg turn lu)]
     (cond failed p
           (empty? rows) {:failed :patterns-unavailable}
           :else (let [r (http/append-batch! (:graph-store cfg)
-                                             (str "pattern-proposals/" (:id turn)) rows)]
+                                             (batch-message-id "pattern-proposals/" turn rows) rows)]
                   (if (:ok r) {:written (quot (count rows) 4) :skipped skipped}
                       {:failed :proposal-write-refused})))))
 

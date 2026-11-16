@@ -75,3 +75,14 @@
                 sut/plan (constantly {:rows []})
                 http/append-batch! (fn [& _] (throw (AssertionError. "dry run wrote")))]
     (is (= :dry-run (:mode (sut/backfill! {:turn-store :stub} {:write? false}))))))
+
+(deftest a-changed-batch-for-a-turn-is-a-new-message
+  (let [ids (atom [])]
+    (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref})
+                  sut/pattern-reference (fn [_ id] (pattern-ref (str id)))
+                  http/append-batch! (fn [_ mid _] (swap! ids conj mid) {:ok {}})]
+      (sut/write! {:graph-store :stub} turn {:ranked [{:id "p/a" :rank 1}]})
+      (sut/write! {:graph-store :stub} turn {:ranked [{:id "p/a" :rank 1}]})
+      (sut/write! {:graph-store :stub} turn {:ranked [{:id "p/b" :rank 1}]})
+      (is (= (first @ids) (second @ids)) "identical batch, same message")
+      (is (not= (first @ids) (nth @ids 2)) "changed batch, new message"))))
