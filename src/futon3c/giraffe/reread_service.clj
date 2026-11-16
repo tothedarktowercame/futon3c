@@ -308,6 +308,15 @@
                            (generation/retire-readings!
                             {:pointer (:pointer config) :generations-dir (:generations-dir config)
                              :targets targets :reason :source-missing :now-ms at-ms}))]
+              (when (and (active? token) (= :published (:status result)))
+                ;; The corpus changed, so the pinned run must follow: count the
+                ;; retirement as one landing in the batched mint, exactly as a
+                ;; landed reading does (claude-13 review: otherwise the run,
+                ;; party and conformance wait for an unrelated landing).
+                (let [mint (mint-step! config 1 false)]
+                  (swap! state assoc :last-mint mint)
+                  (after-mint! token mint)
+                  (schedule-mint! token mint)))
               (when (active? token)
                 (swap! state assoc :last-retirement
                        {:at-ms at-ms :retired (count (:retired result)) :refused nil})

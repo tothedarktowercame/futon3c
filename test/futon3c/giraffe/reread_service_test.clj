@@ -649,6 +649,7 @@
         executor (ScheduledThreadPoolExecutor. 1)
         token (Object.)
         scheduled (atom 0)
+        mints (atom [])
         state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
         tick-var (ns-resolve 'futon3c.giraffe.reread-service 'backstop-tick!)
         tick (fn [] (.get (.submit executor ^Runnable #(tick-var token 0))))]
@@ -670,10 +671,15 @@
        (ns-resolve 'futon3c.giraffe.reread-service 'schedule-backstop!)
        (fn [_] (swap! scheduled inc))
        #'readings/check-record (fn [_ _ _ line]
-                                {:passed? true :record (json/parse-string line true)})}
+                                {:passed? true :record (json/parse-string line true)})
+       (ns-resolve 'futon3c.giraffe.reread-service 'mint-step!)
+       (fn [_ landed _] (swap! mints conj landed) {:status :deferred :pending-landings landed})
+       (ns-resolve 'futon3c.giraffe.reread-service 'after-mint!) (fn [& _] nil)
+       (ns-resolve 'futon3c.giraffe.reread-service 'schedule-mint!) (fn [& _] nil)}
       (fn []
         (tick)
         (is (= 2 (get-in (service/health) [:last-retirement :retired])))
+        (is (= [1] @mints) "a published retirement counts as one landing toward the next mint")
         (let [current (:path (generation/resolve-generation pointer))
               rows (json/parse-string (slurp (io/file current "members.json")) true)]
           (is (= ["M-a" "M-b"] (mapv :id (filter :retired rows))))
@@ -683,6 +689,7 @@
         (let [rows (json/parse-string
                     (slurp (io/file (:path (generation/resolve-generation pointer)) "members.json")) true)]
           (is (= ["M-a" "M-b" "M-c"] (mapv :id (filter :retired rows)))))
+        (is (= [1 1] @mints))
         (is (empty? (:refresh-items (service-state))))
         ;; A new missing member becomes eligible; refusal stays visible and
         ;; does not prevent scheduling the next tick, which retries it.
