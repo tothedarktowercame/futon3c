@@ -4,9 +4,13 @@
 check_edges.py:30-35 binds HERE from __file__ and CODE from home (or the
 fixture env override). main:60-157 rereads adjacent members.json, walks
 CODE's canonical repositories for target ids, and reads source/evidence
-bytes and quote windows. Keep ALL that setup per call: the filesystem is
-mutable during a batch, so hoisting index_ids would assume a frozen tree.
-No cwd/env changes, bytecode writes, or cross-record hash caches.
+bytes and quote windows. index_ids (the code-root walk, ~0.27 s of a
+~0.27 s run; claude-13 profile 2026-11-16) is taken ONCE per batch: the
+batch is then checked against one snapshot of which task ids exist,
+which is at least as consistent as per-record runs, each of which saw the
+tree at a different moment. Everything else (members.json, source and
+evidence bytes) stays per call. No cwd/env changes, bytecode writes, or
+cross-record hash caches.
 """
 import contextlib
 import importlib.util
@@ -22,6 +26,9 @@ def main(checker, records):
     spec = importlib.util.spec_from_file_location("giraffe_generation_checker", checker)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    if callable(getattr(module, "index_ids", None)):
+        ids = module.index_ids()
+        module.index_ids = lambda: dict(ids)
     lines = Path(records).read_text().split("\n")
     if lines[-1] == "":
         lines.pop()
