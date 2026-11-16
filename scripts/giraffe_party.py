@@ -33,6 +33,7 @@ Usage: python3 scripts/giraffe_party.py [--run DIR] [--pending FILE]
 """
 
 import argparse
+import heapq
 import json
 import os
 import re
@@ -274,6 +275,60 @@ def party_vote(orderings, count=12, skip_seen=True):
 
 # ---------------------------------------------------------------- main ----
 
+def load_input(run_dir):
+    with open(os.path.join(run_dir, "input.edn"), encoding="utf-8") as stream:
+        return gcc_preview.edn_load(stream.read())
+
+
+def party_dependencies(rows, inputs):
+    """Annotate the unchanged party order from its pinned pass input.
+
+    pass.clj:56-61,337 uses from -> to for needs, excluding alternatives
+    but including external needs. readings.clj:110-114 already reverses raw
+    unblocks into this direction; never reverse the input edges again.
+    Completed prerequisites remain disclosed, even when already satisfied.
+    """
+    ranks = {row["item"]: row["rank"] for row in rows}
+    states = {item["id"]: item.get("state-group") for item in inputs["items"]}
+    needs = {item: set() for item in ranks}
+    for edge in inputs["edges"]:
+        if edge["from"] in needs and edge.get("class") != "alternative":
+            needs[edge["from"]].add(edge["to"])
+    top = [dict(row, needs=[{"item": item, "shown_rank": ranks.get(item),
+                             "state": states.get(item)}
+                            for item in sorted(needs[row["item"]])]) for row in rows]
+    unshown = sorted(set().union(*needs.values()) - ranks.keys()) if needs else []
+    waiting = {item: prerequisites & ranks.keys() for item, prerequisites in needs.items()}
+    followers = {item: [] for item in ranks}
+    for item, prerequisites in waiting.items():
+        for prerequisite in prerequisites:
+            followers[prerequisite].append(item)
+    ready = [(ranks[item], item) for item in ranks if not waiting[item]]
+    heapq.heapify(ready)
+    linearised = []
+    while ready:
+        _, item = heapq.heappop(ready)
+        linearised.append(item)
+        for dependant in followers[item]:
+            waiting[dependant].remove(item)
+            if not waiting[dependant]:
+                heapq.heappush(ready, (ranks[dependant], dependant))
+    cycle = []
+    if len(linearised) != len(rows):
+        # Follow remaining prerequisites until a node repeats: every remaining
+        # node has one, so this yields a cycle, excluding any incoming tail.
+        item = min((x for x in ranks if waiting[x]), key=ranks.get)
+        path, positions = [], {}
+        while item not in positions:
+            positions[item] = len(path)
+            path.append(item)
+            item = min(waiting[item], key=ranks.get)
+        cycle = path[positions[item]:]
+        linearised = None
+    return {"top": top, "linearised": linearised, "cycle": cycle,
+            "unshown_needs": [{"item": item, "state": states.get(item)} for item in unshown]}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", default=None, help="giraffe run dir")
@@ -370,6 +425,7 @@ def main(argv=None):
                            "chosen_by": p["chosen_by"], "reason": p["reason"]}
                           for i, p in enumerate(party)]},
         "absences": absences}
+    out["party"].update(party_dependencies(out["party"]["top"], load_input(run_dir)))
     os.makedirs(args.out, exist_ok=True)
     path = os.path.join(args.out, "party.json")
     with open(path, "w", encoding="utf-8") as f:

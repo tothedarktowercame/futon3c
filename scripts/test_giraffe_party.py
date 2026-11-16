@@ -11,6 +11,7 @@ Exit 0 when all checks pass, 1 otherwise.
 import os
 import json
 import tempfile
+import unittest
 from unittest.mock import patch
 import sys
 
@@ -145,6 +146,7 @@ def fixture_party(entries, top):
     """Exercise main's actual party.json writer using only invented inputs."""
     with tempfile.TemporaryDirectory() as root:
         with patch.object(gp, "load_pass", return_value={"order": entries}), \
+             patch.object(gp, "load_input", return_value={"items": [], "edges": []}), \
              patch.object(gp, "load_pending", return_value={}), \
              patch.object(gp, "load_lexicon", return_value=[]), \
              patch.object(gp.gcc_preview, "load_corpus", return_value=([], [], [])):
@@ -177,4 +179,50 @@ check("party.json: complete pass and empty top have no count violations",
 
 failed = [l for l, ok in RESULTS if not ok]
 print("%d/%d PASS" % (len(RESULTS) - len(failed), len(RESULTS)))
-sys.exit(1 if failed else 0)
+class ExistingPartyChecks(unittest.TestCase):
+    def test_existing_checks(self):
+        self.assertEqual([], failed)
+
+
+class PartyNeedsTests(unittest.TestCase):
+    def test_pinned_direction_and_stable_linearisation(self):
+        rows = [{"item": x, "rank": i + 1, "reason": "unchanged"}
+                for i, x in enumerate(["A", "B", "C", "D"])]
+        inputs = {"items": [{"id": "X", "state-group": "completed"}], "edges": [
+            # Raw C unblocks A has ALREADY been reversed by readings/convert-edge.
+            {"from": "A", "to": "C", "reading-kind": "unblocks"},
+            {"from": "A", "to": "X"}, {"from": "A", "to": "X"},
+            {"from": "D", "to": "Z", "kind": "external"},
+            {"from": "B", "to": "A", "class": "alternative"}]}
+        result = gp.party_dependencies(rows, inputs)
+        self.assertEqual(["B", "C", "A", "D"], result["linearised"])
+        self.assertEqual([{"item": "C", "shown_rank": 3, "state": None},
+                          {"item": "X", "shown_rank": None, "state": "completed"}],
+                         result["top"][0]["needs"])
+        self.assertEqual([], result["top"][1]["needs"])
+        self.assertEqual([], result["top"][2]["needs"])
+        self.assertEqual([{"item": "X", "state": "completed"},
+                          {"item": "Z", "state": None}], result["unshown_needs"])
+        self.assertEqual(rows, [{k: v for k, v in row.items() if k != "needs"}
+                                for row in result["top"]])
+
+    def test_cycle_and_self_cycle(self):
+        rows = [{"item": x, "rank": i + 1} for i, x in enumerate(["A", "B", "C"])]
+        edges = [{"from": "A", "to": "B"}, {"from": "B", "to": "C"},
+                 {"from": "C", "to": "B"}]
+        result = gp.party_dependencies(rows, {"items": [], "edges": edges})
+        self.assertIsNone(result["linearised"])
+        self.assertEqual(["B", "C"], result["cycle"])
+        result = gp.party_dependencies(rows[:1], {"items": [], "edges": [{"from": "A", "to": "A"}]})
+        self.assertEqual(["A"], result["cycle"])
+
+    def test_writer_and_empty_party(self):
+        party = fixture_party(PASS_ORDER, 3)["party"]
+        self.assertTrue(all(row["needs"] == [] for row in party["top"]))
+        self.assertEqual([row["item"] for row in party["top"]], party["linearised"])
+        self.assertEqual({"top": [], "linearised": [], "cycle": [], "unshown_needs": []},
+                         gp.party_dependencies([], {"items": [], "edges": []}))
+
+
+if __name__ == "__main__":
+    unittest.main()
