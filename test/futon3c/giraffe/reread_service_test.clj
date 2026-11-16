@@ -144,10 +144,17 @@
     (spit members (json/generate-string [{:id "M-fixture-a" :path "/invented/a" :sha256 "a"}
                                          {:id "M-fixture-b" :path "/invented/b" :sha256 "b"}]))
     (spit records (str (json/generate-string a) "\n" (json/generate-string b) "\n"))
-    (with-redefs [shell/sh (fn [cmd isolated check-path record-path]
+    ;; consume now checks its lines in ONE batch-driver process (43d3542d7);
+    ;; the stub answers per line and records which ids were sent.
+    (with-redefs [shell/sh (fn [cmd isolated driver check-path batch-path]
                             (is (= ["python3" "-I" (str checker)] [cmd isolated check-path]))
-                            (swap! calls conj (:id (json/parse-string (slurp record-path) true)))
-                            {:exit 0 :out "" :err ""})]
+                            (is (str/ends-with? driver "giraffe_check_batch.py"))
+                            (let [lines (remove str/blank? (str/split-lines (slurp batch-path)))]
+                              (swap! calls into (map #(:id (json/parse-string % true)) lines))
+                              {:exit 0 :err ""
+                               :out (str/join "\n" (map-indexed
+                                                    (fn [i _] (json/generate-string {:line (inc i) :exit 0 :out "" :err ""}))
+                                                    lines))}))]
       (let [c (:coverage (readings/consume options))]
         (is (= ["M-fixture-a"] @calls))
         (is (= [:read] (mapv :status (:members c))))
@@ -626,7 +633,10 @@
                                      :edges [] :unresolved []}) "\n"))
     (with-redefs [registry/default-code-root (str root)
                   missions/default-repos [(str repo)]
-                  shell/sh (fn [& _] (swap! calls inc) {:exit 0 :out "" :err ""})]
+                  ;; one batch-driver process answers one line per record
+                  shell/sh (fn [& _] (swap! calls inc)
+                             {:exit 0 :err ""
+                              :out (json/generate-string {:line 1 :exit 0 :out "" :err ""})})]
       (let [start (System/nanoTime)
             snapshot (cli/authority-snapshot {:pointer (str corpus) :edges (str edges)})
             result (queue/reconcile! store (:open-items snapshot) (:coverage snapshot) 100)
@@ -670,8 +680,9 @@
       {(ns-resolve 'futon3c.giraffe.reread-service 'full-round!) (fn [& _] nil)
        (ns-resolve 'futon3c.giraffe.reread-service 'schedule-backstop!)
        (fn [_] (swap! scheduled inc))
-       #'readings/check-record (fn [_ _ _ line]
-                                {:passed? true :record (json/parse-string line true)})
+       #'readings/check-records (fn [_ entries & _]
+                                 (mapv (fn [{:keys [line]}] {:passed? true :record (json/parse-string line true)})
+                                       entries))
        (ns-resolve 'futon3c.giraffe.reread-service 'mint-step!)
        (fn [_ landed idle?] (swap! mints conj [landed idle?]) {:status :deferred :pending-landings landed})
        (ns-resolve 'futon3c.giraffe.reread-service 'after-mint!) (fn [& _] nil)
@@ -783,7 +794,9 @@
     (with-redefs-fn
       {(ns-resolve 'futon3c.giraffe.reread-service 'full-round!) (fn [& _] nil)
        (ns-resolve 'futon3c.giraffe.reread-service 'schedule-backstop!) (fn [_] nil)
-       #'readings/check-record (fn [_ _ _ line] {:passed? true :record (json/parse-string line true)})
+       #'readings/check-records (fn [_ entries & _]
+                                 (mapv (fn [{:keys [line]}] {:passed? true :record (json/parse-string line true)})
+                                       entries))
        (ns-resolve 'futon3c.giraffe.reread-service 'mint-step!)
        (fn [_ landed idle?] (swap! mints conj [landed idle?]) {:status :deferred :pending-landings landed})
        (ns-resolve 'futon3c.giraffe.reread-service 'after-mint!) (fn [& _] nil)

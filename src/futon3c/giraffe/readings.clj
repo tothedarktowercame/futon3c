@@ -50,6 +50,17 @@
   [checker batch line-number line]
   (checked-record checker batch line-number line nil))
 
+;; The driver lives in this checkout's scripts/, found from where this
+;; namespace was loaded, not from the JVM's working directory.
+(def ^:private batch-driver
+  (delay
+    (let [src (some-> (io/resource "futon3c/giraffe/readings.clj") io/file)
+          repo (some-> src .getParentFile .getParentFile .getParentFile .getParentFile)
+          driver (when repo (io/file repo "scripts" "giraffe_check_batch.py"))]
+      (if (and driver (.isFile driver))
+        (.getAbsolutePath driver)
+        "scripts/giraffe_check_batch.py"))))
+
 (defn check-records
   "Check entries {:batch :line-number :line} in one Python process. The
   generation's own checker still runs main once per record; no evidence or
@@ -62,7 +73,7 @@
        (let [file (java.io.File/createTempFile "giraffe-reading-batch-" ".jsonl")]
          (try
            (spit file (str (str/join "\n" (map :line entries)) "\n"))
-           (let [args ["python3" "-I" "scripts/giraffe_check_batch.py" (str checker) (.getPath file)]
+           (let [args ["python3" "-I" @batch-driver (str checker) (.getPath file)]
                  result (apply shell/sh (cond-> args env
                                           (into [:env (merge (into {} (System/getenv)) env)])))
                  fail #(throw (ex-info "Batch checker failed"
