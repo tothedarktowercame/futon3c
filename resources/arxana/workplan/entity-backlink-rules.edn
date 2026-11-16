@@ -3,4 +3,12 @@
   {:entity/slug "giraffe" :forms [{:form/text "Giraffe" :enabled? true}]}
   {:entity/slug "kangaroo-pouch"
    :forms [{:form/text "kangaroo" :enabled? true}
-           {:form/text "Kangaroo" :enabled? true}]}]}
+           {:form/text "Kangaroo" :enabled? true}]}
+  ;; The REPL Circus animals, treated like Giraffe (Joe, 2026-11-16: "Why do I
+  ;; have to treat one animal differently from another?"), and Mojira.
+  {:entity/slug "猴" :forms [{:form/text "猴" :enabled? true}]}
+  {:entity/slug "馬" :forms [{:form/text "馬" :enabled? true}]}
+  {:entity/slug "象" :forms [{:form/text "象" :enabled? true}]}
+  {:entity/slug "驴" :forms [{:form/text "驴" :enabled? true}]}
+  {:entity/slug "狗" :forms [{:form/text "狗" :enabled? true}]}
+  {:entity/slug "mojira" :forms [{:form/text "Mojira" :enabled? true}]}]}

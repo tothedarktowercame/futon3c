@@ -144,9 +144,13 @@
                                          :review/status (case latest :accepted :accepted :rejected :rejected :proposed)
                                          :effective/accepted? (not= :rejected latest)}))
                             (reverse-ids read! [:workplan/referent 1] :entity (:id entity)))
-            ;; An introduced entity is on only while it has an accepted
-            ;; referent.  A seeded rule keeps each form's own switch from its
-            ;; latest attestation, so switching one form off takes effect.
+            ;; An introduced entity is on while it has an accepted referent,
+            ;; or while a seeded rule switches its form on: a seed is a
+            ;; deliberate definition too (Joe, 2026-11-16, on [[猴]] staying
+            ;; dim while Giraffe, seeded, was linked: "Why do I have to treat
+            ;; one animal differently from another?").  A seeded rule keeps
+            ;; each form's own switch from its latest attestation, so
+            ;; switching one form off takes effect.
             referent-ok? (boolean (some :effective/accepted? referents))
             ;; Newest first, as above: the current forms are the first attestation.
             stored-att (first rule-atts)
@@ -156,7 +160,7 @@
         (cond-> {:result/status (if truncated? :truncated :complete) :result/total total
                  :entity entity :rule rule :rule/attestation stored-att
                  :forms/effective (mapv #(assoc % :enabled? (if (seq introductions)
-                                                              referent-ok?
+                                                              (or referent-ok? (true? (:enabled? %)))
                                                               (true? (:enabled? %))))
                                         (get-in stored-att [:content :forms]))
                  :introductions introductions :referents referents

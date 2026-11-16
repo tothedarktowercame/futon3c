@@ -56,7 +56,7 @@
             (is (= :complete (:result/status view)))
             (doseq [id (:record/ids view)]
               (is (= id (get-in (call cfg (str "get:" id) :entity/get {:entity/id id}) [:ok :record :id]))))))
-        (is (= ["agency" "giraffe" "kangaroo-pouch"]
+        (is (= ["agency" "giraffe" "kangaroo-pouch" "mojira" "狗" "猴" "象" "馬" "驴"]
                (get-in (call cfg "list" :workplan/entity-backlinks {}) [:ok :entities])))))))
 
 (deftest joe-introductions-use-real-evidence-and-stored-rules
@@ -114,6 +114,15 @@
                                (get-in (call cfg "kangaroo-view" :workplan/entity-backlinks
                                              {:entity/slug "kangaroo-pouch"})
                                        [:ok :forms/effective]))))))
+        ;; An introduced entity whose seeded form is switched on is on without a
+        ;; referent: Joe's [[猴]] after the Circus animals were seeded.
+        (is (:ok (call cfg "intro-hou" :workplan/introduce
+                       {:evidence/id "emacs-toy-hou" :text "testing [[猴]] now" :actor "joe"
+                        :time "2026-11-16T18:20:00.000Z" :candidate/slugs []})))
+        (let [hv (:ok (call cfg "hou-view" :workplan/entity-backlinks {:entity/slug "猴"}))]
+          (is (seq (:introductions hv)))
+          (is (empty? (:referents hv)))
+          (is (true? (get-in hv [:forms/effective 0 :enabled?]))))
         ;; A different introduced entity whose only candidate Joe rejects stays off.
         (let [wv (:ok (call cfg "warrant-view" :workplan/entity-backlinks {:entity/slug "test-registry"}))
               wid (get-in wv [:referents 0 :record :id])]
