@@ -1659,7 +1659,13 @@
           {:outcome :no-job-id}
           (let [job (try ((cfg svc :job-status) job-id)
                          (catch Exception e {:unreachable (.getMessage e)}))
-                {:keys [outcome state reason]} (tr/job-outcome job)
+                {:keys [outcome state reason failure-kind failure-kind-source]}
+                (tr/job-outcome job)
+                persisted-outcome
+                (cond-> {:state state :reason reason}
+                  failure-kind
+                  (assoc :failure_kind (str/replace-first (str failure-kind) #"^:" "")
+                         :failure_kind_source (name failure-kind-source)))
                 ;; A reap on read (`turn-view`) carries no :agent, and the
                 ;; quota branch below needs one: without it a Kimi 403 was
                 ;; written as a plain failure and the pool never benched
@@ -1688,10 +1694,13 @@
                 ;; benched second, which with a pool picked another pool seat
                 ;; and then benched it along with the rest, so the failover the
                 ;; pool docstring promises (the alternate takes over) never ran.
-                (and agent (tr/quota-failure? reason)
+                (and agent (= :provider/quota failure-kind)
                      (let [_ (bench-seat! svc agent)
                            other (other-seat svc agent)]
                        (when (and other (not (benched? svc other)))
+                         (ts/update-record! store id
+                                            #(assoc-in % [:analysis_dispatch :outcome]
+                                                       persisted-outcome))
                          (retry! svc id)
                          (set-health! svc nil (str agent " out of usage; " other " took " id))
                          (dispatch! svc id {:agent other})
@@ -1699,12 +1708,15 @@
                 {:outcome :benched :agent agent :reason reason}
 
                 ;; Transient futon1b admission load: retry on the bounded schedule.
-                (and (tr/store-busy-failure? reason)
+                (and (= :clock/store-busy failure-kind)
                      (not= store-busy-delays :exhausted)
                      (seq (or store-busy-delays (cfg svc :store-busy-delays))))
                 (let [delays (or store-busy-delays (cfg svc :store-busy-delays))
                       delay (first delays)
                       remaining (or (seq (rest delays)) :exhausted)]
+                  (ts/update-record! store id
+                                     #(assoc-in % [:analysis_dispatch :outcome]
+                                                persisted-outcome))
                   (set-health! svc nil (str id ": futon1b busy; retrying in " delay "s"))
                   ((cfg svc :schedule!) delay
                    (fn [] (try (retry! svc id)
@@ -1716,7 +1728,7 @@
                 :else
                 (do (ts/update-record! store id
                                        #(-> % (assoc :analysis_status (name outcome))
-                                            (assoc-in [:analysis_dispatch :outcome] {:state state :reason reason})))
+                                            (assoc-in [:analysis_dispatch :outcome] persisted-outcome)))
                     (note-done! svc id)
                     (set-health! svc :failing (str id ": job refused or failed"))
                     {:outcome outcome :state state :reason reason})))))))))

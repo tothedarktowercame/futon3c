@@ -1248,6 +1248,18 @@
 
 (def terminal-bad #{"failed" "refused" "error" "cancelled" "timeout"})
 
+(defn- failure-kind-keyword [x]
+  (when-let [s (some-> x str str/trim not-empty)]
+    (keyword (str/replace-first s #"^:" ""))))
+
+(defn- legacy-failure-kind [reason]
+  (cond
+    (re-find #"(?i)usage limit|quota|HTTP 429|rate.limit" (str reason))
+    :provider/quota
+    (re-find #"futon1b busy|clock/store-busy|Turn not started: futon1b" (str reason))
+    :clock/store-busy
+    :else :invoke/failed))
+
 (defn job-reason
   "The last thing the job said, which is what a person actually needs."
   [job]
@@ -1285,23 +1297,18 @@
                       state)
                   state)
           executed (g (g job :execution) :executed)
-          reason (job-reason job)]
+          reason (job-reason job)
+          typed-kind (failure-kind-keyword (g job :failure-kind))]
       (cond
         (or (contains? terminal-bad state)
             (and (contains? #{"done" "finished"} state) (false? executed)))
-        {:outcome (if (contains? #{"failed" "error"} state) :failed :refused)
-         :state state :reason reason}
+        (merge {:outcome (if (contains? #{"failed" "error"} state) :failed :refused)
+                :state state :reason reason}
+               (if typed-kind
+                 {:failure-kind typed-kind :failure-kind-source :job}
+                 {:failure-kind (legacy-failure-kind reason)
+                  :failure-kind-source :legacy-inferred}))
         :else {:outcome :running :state state :reason reason}))))
-
-(defn quota-failure?
-  "session-mode--quota-failure-p over a reason string."
-  [reason]
-  (boolean (re-find #"(?i)usage limit|quota|HTTP 429|rate.limit" (str reason))))
-
-(defn store-busy-failure?
-  "session-mode--store-busy-failure-p: transient futon1b admission load."
-  [reason]
-  (boolean (re-find #"futon1b busy|clock/store-busy|Turn not started: futon1b" (str reason))))
 
 ;; ---------------------------------------------------------------------------
 ;; Withdraw fragments and their notices (session-turn-analysis.el)

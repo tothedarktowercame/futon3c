@@ -241,7 +241,7 @@ short interval and then at the long one, and a late landing runs the hook."
                            :buffer (plist-get plist :buffer)
                            :command
                            '("printf" "%s"
-                             "FAILED turn-ZKoe7v.json failed: Clock decision not recorded: the evidence store refused it (exception: futon1b busy (HTTP 504): the read was not served)"))))
+                             "FAILED turn-ZKoe7v.json failure-kind=clock/store-busy invented detail"))))
                    (while (process-live-p p) (accept-process-output p 0.05))
                    (funcall (plist-get plist :sentinel) p "finished\n")
                    p))))
@@ -251,6 +251,20 @@ short interval and then at the long one, and a late landing runs the hook."
       (should (equal redispatched
                      '("/tmp/turn-ZKoe7v.json" "象-1" (180 600))))
       (should-not done))))
+
+(ert-deftest session-turn-analysis-failure-predicates-read-only-kind-token ()
+  (should (session-mode--quota-failure-p
+           "FAILED turn-a.json failure-kind=provider/quota invented"))
+  (should (session-mode--quota-failure-p
+           "FAILED turn-a.json failure-kind=provider/quota;legacy invented"))
+  (should-not (session-mode--quota-failure-p
+               "FAILED turn-a.json usage limit quota HTTP 429"))
+  (should (session-mode--store-busy-failure-p
+           "REFUSED turn-b.json failure-kind=clock/store-busy invented"))
+  (should (session-mode--store-busy-failure-p
+           "REFUSED turn-b.json failure-kind=clock/store-busy;legacy invented"))
+  (should-not (session-mode--store-busy-failure-p
+               "FAILED turn-b.json futon1b busy clock/store-busy")))
 
 (ert-deftest session-turn-analysis-pool-picks-least-loaded-seat ()
   "Joe 2026-09-30: a pool of 象 seats; each turn to the least-loaded one."

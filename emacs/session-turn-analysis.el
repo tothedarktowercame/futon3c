@@ -860,8 +860,9 @@ Without: the analysis agent unless it is benched."
      (t primary))))
 
 (defun session-mode--quota-failure-p (out)
-  "Non-nil if reaper output OUT says the seat ran out of usage."
-  (string-match-p "usage limit\\|quota\\|HTTP 429\\|rate.limit" out))
+  "Non-nil if reaper output OUT carries the typed quota token."
+  (string-match-p
+   "failure-kind=provider/quota\\(?:;legacy\\)?\\(?:[[:space:]]\\|$\\)" out))
 
 (defcustom session-mode-analysis-reset-every 20
   "Clear the analysis seat's conversation after this many dispatches.
@@ -1329,11 +1330,9 @@ analysis health failing; it is not discarded."
 (add-hook 'session-mode-analysis-landed-functions #'session-mode--analysis-note-done)
 
 (defun session-mode--store-busy-failure-p (out)
-  "Non-nil when reaper output OUT reports transient futon1b admission load."
-  (and (string-match-p "REFUSED\\|FAILED" out)
-       (string-match-p
-        "futon1b busy\\|clock/store-busy\\|Turn not started: futon1b"
-        out)))
+  "Non-nil when reaper output OUT carries the typed store-busy token."
+  (string-match-p
+   "failure-kind=clock/store-busy\\(?:;legacy\\)?\\(?:[[:space:]]\\|$\\)" out))
 
 (defun session-mode--retry-analysis-after-store-busy (path agent delays)
   "Archive PATH's failed attempt and redispatch it to AGENT.
@@ -1370,7 +1369,6 @@ for good.  STORE-BUSY-DELAYS is the remaining bounded redispatch schedule."
                      (let ((out (string-trim (buffer-string))))
                        (cond
                         ((and agent
-                              (string-match-p "REFUSED\\|FAILED" out)
                               (session-mode--quota-failure-p out)
                               (let ((other (session-mode--analysis-other-seat agent)))
                                 (session-mode--bench-analysis-seat agent)

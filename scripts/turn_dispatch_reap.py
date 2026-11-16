@@ -23,6 +23,8 @@ import re
 RECORDS = os.path.expanduser("~/.emacs-graph/session-turn-analysis/turn-*.json")
 BASE = os.environ.get("AGENCY_BASE", "http://127.0.0.1:7070")
 TERMINAL_BAD = {"failed", "refused", "error", "cancelled", "timeout"}
+FAILURE_KINDS = {"provider/quota", "clock/store-busy",
+                 "evidence/read-rejected", "invoke/failed"}
 
 
 def job(job_id):
@@ -39,7 +41,28 @@ def reason_of(j):
         for k in ("text", "message", "error", "reason"):
             if ev.get(k):
                 return f"{ev.get('type', '?')}: {str(ev[k])[:400]}"
-    return j.get("state") or "no events recorded"
+    return j.get("terminal-message") or j.get("state") or "no events recorded"
+
+
+def failure_kind(j, reason):
+    """Typed terminal kind, with one marked projection for legacy jobs."""
+    typed = str(j.get("failure-kind") or "").lstrip(":")
+    if typed:
+        return (typed if typed in FAILURE_KINDS else "invoke/failed"), "job"
+    if re.search(r"usage limit|quota|HTTP 429|rate.limit", reason, re.I):
+        return "provider/quota", "legacy-inferred"
+    if re.search(r"futon1b busy|clock/store-busy|Turn not started: futon1b", reason):
+        return "clock/store-busy", "legacy-inferred"
+    return "invoke/failed", "legacy-inferred"
+
+
+def failure_kind_token(kind, source):
+    return f"failure-kind={kind}" + (";legacy" if source == "legacy-inferred" else "")
+
+
+def terminal_line(new, filename, reason, kind, source):
+    return (f"  {new.upper():8s} {filename}  "
+            f"{failure_kind_token(kind, source)} {reason[:110]}")
 
 
 def main():
@@ -101,11 +124,14 @@ def main():
         if state in TERMINAL_BAD or (state in ("done", "finished") and executed is False):
             new = "failed" if state in ("failed", "error") else "refused"
             counts[new] += 1
-            print(f"  {new.upper():8s} {os.path.basename(f)}  {reason_of(j)[:110]}")
+            reason = reason_of(j)
+            kind, kind_source = failure_kind(j, reason)
+            print(terminal_line(new, os.path.basename(f), reason, kind, kind_source))
             if a.apply:
                 d["analysis_status"] = new
                 d.setdefault("analysis_dispatch", {})["outcome"] = {
-                    "state": state, "reason": reason_of(j)}
+                    "state": state, "reason": reason,
+                    "failure_kind": kind, "failure_kind_source": kind_source}
                 json.dump(d, open(f, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         else:
             counts["running"] += 1

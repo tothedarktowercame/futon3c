@@ -339,7 +339,9 @@
            (run-next! h)))
     (let [rec (ts/read-record (get-in (:svc h) [:config :store]) id)]
       (is (= "refused" (:analysis_status rec)))
-      (is (= {:state "done" :reason "refusal: no requisition line"} (get-in rec [:analysis_dispatch :outcome]))))
+      (is (= {:state "done" :reason "refusal: no requisition line"
+              :failure_kind "invoke/failed" :failure_kind_source "legacy-inferred"}
+             (get-in rec [:analysis_dispatch :outcome]))))
     (is (= :failing (:state (svc/health (:svc h)))))
     (testing "a job the ledger no longer knows is unreachable, not refused"
       (let [{:keys [id]} (turn! h {:dispatch :now})]
@@ -368,10 +370,10 @@
         {:keys [id]} (turn! h {:dispatch :now})
         store (get-in (:svc h) [:config :store])]
     (swap! (:jobs h) assoc "job-1"
-           {:state "failed" :agent-id "象-1"
+           {:state "failed" :agent-id "象-1" :failure-kind "provider/quota"
             :events [{:type "prompt" :text "Requisition: interpret operator turn"}
                      {:type "failed" :code "invoke-error"
-                      :message "{\"message\":\"HTTP 403\",\"body\":{\"error\":{\"message\":\"You've reached your monthly usage limit for this billing cycle.\"}}}"}
+                      :message "invented provider refusal detail"}
                      {:type "delivery-recorded" :status "delivery-failed" :note "caller-not-a-registered-seat"}]})
     (svc/turn-view (:svc h) id)
     (is (every? #(svc/benched? (:svc h) %) ["象-1" "象-2" "象-3" "象-4"]) "the read benches the pool")
@@ -406,7 +408,12 @@
     (let [rec (ts/read-record (get-in (:svc h) [:config :store]) id)]
       (is (= "requested" (:analysis_status rec)))
       (is (= "job-2" (get-in rec [:analysis_dispatch :job_id])))
-      (is (= [{:job_id "job-1"}] (get-in rec [:analysis_dispatch :attempts])) "the old attempt is kept"))
+      (is (= "provider/quota"
+             (get-in rec [:analysis_dispatch :attempts 0 :outcome :failure_kind])))
+      (is (= "legacy-inferred"
+             (get-in rec [:analysis_dispatch :attempts 0 :outcome :failure_kind_source])))
+      (is (= "job-1" (get-in rec [:analysis_dispatch :attempts 0 :job_id]))
+          "the old attempt and its typed decision are kept"))
     (is (= "象-sonnet" (svc/analysis-seat (:svc h))))
     (swap! (:clock h) + (* 61 60000))
     (is (= "象-1" (svc/analysis-seat (:svc h))) "the bench expires")))
@@ -414,7 +421,9 @@
 (deftest a-busy-store-retries-on-the-bounded-schedule
   (let [h (harness)
         {:keys [id]} (turn! h {:dispatch :now})
-        busy! (fn [job] (swap! (:jobs h) assoc job {:state "failed" :events [{:type "error" :error "Turn not started: futon1b busy"}]}))]
+        busy! (fn [job] (swap! (:jobs h) assoc job
+                               {:state "failed" :failure-kind "clock/store-busy"
+                                :events [{:type "error" :error "invented busy detail"}]}))]
     (busy! "job-1")
     (is (= [180 {:outcome :store-busy :retry-in-s 60}] (run-next! h)))
     (is (= [60] (delays h)))
@@ -434,6 +443,22 @@
       (is (= "failed" (:analysis_status rec)))
       (is (= 3 (count (get-in rec [:analysis_dispatch :attempts]))))
       (is (= "job-4" (get-in rec [:analysis_dispatch :job_id]))))))
+
+(deftest typed-nonrouting-failures-never-bench-or-retry
+  (doseq [[kind reason] [["evidence/read-rejected" "invented read rejection"]
+                         ["invoke/failed" "quota usage limit HTTP 429"]]]
+    (let [h (harness)
+          {:keys [id]} (turn! h {:dispatch :now})]
+      (swap! (:jobs h) assoc "job-1"
+             {:state "failed" :agent-id "象-1" :failure-kind kind
+              :events [{:type "failed" :message reason}]})
+      (is (= :failed (:outcome (second (run-next! h)))))
+      (is (not (svc/benched? (:svc h) "象-1")))
+      (is (= 1 (count @(:bells h))) "no redispatch")
+      (let [outcome (get-in (ts/read-record (get-in (:svc h) [:config :store]) id)
+                            [:analysis_dispatch :outcome])]
+        (is (= kind (:failure_kind outcome)))
+        (is (= "job" (:failure_kind_source outcome)))))))
 
 (defn- analysis-for [record]
   (let [[s1 s2] (:sentences record)]
