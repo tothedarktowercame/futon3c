@@ -102,3 +102,22 @@
                 http/append-batch! (fn [& _] (throw (AssertionError. "dry run wrote")))]
     (is (= {:would-write 1}
            (:outcomes (sut/backfill! {:turn-store :stub} {:write? false}))))))
+
+(deftest a-later-render-with-items-replaces-a-not-ready-outcome
+  (let [dir (str (java.nio.file.Files/createTempDirectory
+                  "dog-gcc-marker-" (make-array java.nio.file.attribute.FileAttribute 0)))
+        st (turns/store dir) id "turn-dogMARK"
+        cfg {:graph-store :stub :memory-lookup memory-results}]
+    (turns/write-record-id! st id (assoc turn :dog_recall {:status "not-ready" :items []}))
+    (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref :text "operator"})
+                  http/append-batch! (fn [& _] {:ok {}})]
+      (sut/write-turn! cfg st id)
+      (is (= 0 (get-in (turns/read-record st id) [:dog_recall_gcc :written])))
+      (turns/update-record! st id #(assoc % :dog_recall recall))
+      (sut/write-turn! cfg st id)
+      (is (= 2 (get-in (turns/read-record st id) [:dog_recall_gcc :written])))
+      (turns/update-record! st id #(assoc % :dog_recall {:status "failed" :items []}))
+      (with-redefs [http/append-batch! (fn [& _] {:ok {}})]
+        (sut/write-turn! cfg st id))
+      (is (= 2 (get-in (turns/read-record st id) [:dog_recall_gcc :written]))
+          "a later empty render never replaces a real write"))))

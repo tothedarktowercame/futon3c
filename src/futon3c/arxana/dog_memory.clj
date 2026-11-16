@@ -116,7 +116,10 @@
                                         :detail (.getMessage e)}))]
     (turns/update-record!
      store turn-id
-     #(if (:written (:dog_recall_gcc %)) % (assoc % :dog_recall_gcc result)))
+     ;; Only a write of real items is final: a not-ready first render records
+     ;; {:written 0}, and a later render that showed items must replace it.
+     #(if (pos? (or (get-in % [:dog_recall_gcc :written]) 0)) %
+          (assoc % :dog_recall_gcc result)))
     result))
 
 (defn- latest-attestation [cfg claim]
