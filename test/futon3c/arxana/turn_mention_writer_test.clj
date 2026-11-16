@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [futon3c.arxana.store-http :as http]
             [futon3c.arxana.store :as store]
-            [futon3c.arxana.workplan :as workplan]
+            [futon3c.arxana.item-inventory :as items]
             [futon3c.arxana.records :as records]
             [futon3c.arxana.turn-mention-writer :as writer]))
 
@@ -47,10 +47,7 @@
 (deftest inventory-requires-store-membership
   (let [c (records/make-clusion {:type-revision [:workplan/item 1] :endpoints []
                                  :asserted-content {:item/id "M-toy"}})]
-    (with-redefs [workplan/read-slice (fn [] {:records [{:type-revision [:workplan/item 1]
-                                                       :identity {:item/id "M-toy"}}
-                                                      {:type-revision [:workplan/item 1]
-                                                       :identity {:item/id "M-absent"}}]})
+    (with-redefs [items/current-items (fn [_] [{:id "M-toy"} {:id "M-absent"}])
                   store/get-entity (fn [_ id] (if (= id (:id c)) {:ok c}
                                                   {:error {:error/category :missing}}))]
       (is (= ["M-toy"] (writer/inventory {:graph-store :stub} "M-toy M-absent"))))))

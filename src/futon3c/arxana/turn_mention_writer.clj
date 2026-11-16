@@ -1,6 +1,6 @@
 (ns futon3c.arxana.turn-mention-writer
   "Exact turn-field revisions, appended through the futon1b Arxana batch port.
-  The slice is a candidate inventory only: every candidate used must also
+  The current file census is a candidate inventory: every candidate used must also
   exist as its workplan/item clusion in that store. No item is created here."
   (:require [cheshire.core :as json]
             [futon3c.xiang.turn-record :as turn-record]
@@ -10,7 +10,7 @@
             [futon3c.arxana.store :as store]
             [futon3c.arxana.store-http :as http]
             [futon3c.arxana.turn-mentions :as mentions]
-            [futon3c.arxana.workplan :as workplan]
+            [futon3c.arxana.item-inventory :as items]
             [futon3c.xiang.turn-store :as turns])
   (:import [java.nio.charset StandardCharsets]
            [java.net URI URLEncoder]
@@ -21,32 +21,15 @@
   {:graph-store (http/http-store "http://localhost:7073" "arxana-service")
    :turn-store (turns/store) :pause-ms 200})
 
-(def ^:private !slice-ids (atom nil))
-
-(defn- slice-item-ids
-  "Candidate item ids from the workplan slice, re-read only when the file
-  changes: the hook runs per turn field, and the slice is ~2.7 MB of EDN."
-  []
-  (let [f (java.io.File. ^String workplan/default-slice)
-        stamp [(.lastModified f) (.length f)]
-        cached @!slice-ids]
-    (if (= stamp (:stamp cached))
-      (:ids cached)
-      (let [ids (vec (distinct (keep #(when (= [:workplan/item 1] (:type-revision %))
-                                        (get-in % [:identity :item/id]))
-                                     (:records (workplan/read-slice)))))]
-        (reset! !slice-ids {:stamp stamp :ids ids})
-        ids))))
-
 (defn inventory
-  "Read candidate IDs from the slice and verify their exact clusions. A text
-  limits queries to possible matches; nil verifies the whole slice for CLI.
+  "Read candidate IDs from the current file census and verify their exact clusions. A text
+  limits queries to possible matches; nil verifies the whole census for CLI.
   Missing records are excluded; unavailable reads refuse rather than silently
   shrinking the inventory. :item-ids injects an already verified inventory."
   [cfg text]
   (if (contains? cfg :item-ids)
     (filterv #(or (nil? text) (str/includes? text %)) (:item-ids cfg))
-    (let [ids (slice-item-ids)]
+    (let [ids (mapv :id (items/current-items cfg))]
       (into []
             (keep (fn [id]
                     (when (or (nil? text) (str/includes? text id))
@@ -60,6 +43,9 @@
                           :else (throw (ex-info "item inventory read refused"
                                                 {:item id :result result}))))))) ids))))
 
+(defonce ^:private evidence-client
+  (-> (HttpClient/newBuilder) (.connectTimeout (Duration/ofSeconds 2)) .build))
+
 (defn evidence-text
   "GET the Evidence Landscape's exact body/text, not the quote-elided turn.
   :read-evidence is an injectable read port taking the evidence id."
@@ -72,7 +58,7 @@
                         request (-> (HttpRequest/newBuilder (URI/create url))
                                     (.timeout (Duration/ofSeconds 5))
                                     (.header "Accept" "application/json") .GET .build)
-                        response (.send (HttpClient/newHttpClient) request
+                        response (.send ^HttpClient evidence-client request
                                         (HttpResponse$BodyHandlers/ofString StandardCharsets/UTF_8))]
                     (when-not (= 200 (.statusCode response))
                       (throw (ex-info "evidence unavailable" {:reason :invalidEvidence})))
