@@ -71,6 +71,23 @@
 
 (def seed-turn-limit 8)
 
+;; A turn's stored occurrences change only when 馬 re-reads it, and that
+;; changes its record (:pattern_verdicts :at, :pattern_occurrences). Without
+;; this, every operator turn re-read up to eight turns' claims and
+;; attestations over HTTP: 6-9 s live on 2026-11-16. Only written turns are
+;; cached; an unwritten one is cheap to read and may land at any moment.
+(defonce ^:private occurrence-reads (atom {}))
+
+(defn- read-occurrences [config {:keys [id record]}]
+  (if-let [written (:written (:pattern_occurrences record))]
+    (let [k [id written (get-in record [:pattern_verdicts :at])]]
+      (or (get @occurrence-reads k)
+          (let [r (occurrences/read-turn config (assoc record :id id))]
+            (when (seq (:rows r))
+              (swap! occurrence-reads #(assoc (if (< 4000 (count %)) {} %) k r)))
+            r)))
+    (occurrences/read-turn config (assoc record :id id))))
+
 (defn seed-patterns
   "Distinct occurrence/partial pattern ids from the GCC for the last eight
   earlier operator turns in this session, first-seen turn order. Metadata
@@ -85,9 +102,7 @@
                        (filter #(< (compare (str (get-in % [:record :created_at])) at) 0))
                        (sort-by #(str (get-in % [:record :created_at])))
                        (take-last seed-turn-limit))
-          reads (mapv (fn [{:keys [id record]}]
-                        (occurrences/read-turn occurrence-config (assoc record :id id)))
-                      earlier)
+          reads (mapv #(read-occurrences occurrence-config %) earlier)
           ids (->> reads (mapcat :rows)
                    (filter #(contains? #{"occurrence" "partial"} (:status %)))
                    (map #(str/replace-first (str (:pattern %)) #"^~" ""))

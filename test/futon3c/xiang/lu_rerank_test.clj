@@ -250,3 +250,23 @@
                 {:id "d/two" :rank 2 :quote "picks must not take two slots"}]
                (:ranked (lu/rerank {:ask ask} store "turn-dup")))
             "the second d/one is skipped and d/two takes the next slot")))))
+
+(deftest a-written-turn-is-read-once-until-its-record-changes
+  (let [reads (atom 0)
+        rec (atom {:session_id "sess-c" :origin "operator" :created_at "2026-10-24T00:00:00Z"
+                   :pattern_verdicts {:at "t1"} :pattern_occurrences {:written 1}})]
+    (with-redefs [ts/read-record
+                  (fn [_ _] {:session_id "sess-c" :created_at "2026-10-24T00:05:00Z"})
+                  ts/list-records (fn [& _] [{:id "turn-cache-a" :record @rec}])
+                  occurrences/read-turn
+                  (fn [_ _] (swap! reads inc) {:rows [{:pattern "p" :status "partial"}]})]
+      (lu/seed-patterns :stub "turn-now" :stub)
+      (lu/seed-patterns :stub "turn-now" :stub)
+      (is (= 1 @reads) "an unchanged written turn is not re-read")
+      (swap! rec assoc-in [:pattern_verdicts :at] "t2")
+      (lu/seed-patterns :stub "turn-now" :stub)
+      (is (= 2 @reads) "a re-read verdict is read again")
+      (swap! rec dissoc :pattern_occurrences)
+      (lu/seed-patterns :stub "turn-now" :stub)
+      (lu/seed-patterns :stub "turn-now" :stub)
+      (is (= 4 @reads) "an unwritten turn is always read"))))
