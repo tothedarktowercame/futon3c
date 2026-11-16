@@ -16,6 +16,7 @@
    The proxy invoke-fn POSTs to the origin Agency's /api/alpha/bell endpoint.
    The origin Agency has the real agent registered and queues normally."
   (:require [futon3c.agency.registry :as reg]
+            [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.string :as str]
             [cheshire.core :as json]
@@ -374,25 +375,68 @@
 
 (def ^:private terminal-job-states #{"done" "failed" "cancelled" "timed-out"})
 
-(defn- event-seq-num [e]
-  (let [v (:seq e)]
-    (cond (number? v) (long v)
-          (string? v) (try (Long/parseLong v) (catch Exception _ nil))
-          :else nil)))
-
 (defn- remote-event->sink-event
-  "Translate a remote job-ledger event into the stream-event shape a local
-   invoke-event sink takes (what a local claude seat emits), or nil."
+  "Translate a remote event into the shape a local invoke-event sink takes.
+   Direct-stream events retain their full text and tool payloads.  Compact
+   job-ledger events remain accepted for recovery/legacy callers."
   [e]
   (case (str (:type e))
     "tool_use" {:type "tool_use"
                 :tools (vec (:tools e))
-                ;; Previews are already one display line each; passing them as
-                ;; tool names keeps them intact through the local trimmer.
-                :tool_details (mapv (fn [p] {:name (str p)}) (:previews e))}
+                :tool_details (or (some-> (:tool_details e) vec)
+                                  ;; Ledger previews are already one display
+                                  ;; line each.  This branch is recovery only.
+                                  (mapv (fn [p] {:name (str p)}) (:previews e)))}
+    "tool_result" {:type "tool_result" :results (vec (:results e))}
+    "invoke.activity" (select-keys e [:type :activity :queue-position
+                                       :behind-job-id :behind-caller
+                                       :behind-started-at :agent-activity])
     "text" (when-not (str/blank? (str (:text e)))
              {:type "text" :text (str (:text e))})
     nil))
+
+(defn- body-reader [body]
+  (cond
+    (instance? java.io.InputStream body) (io/reader body)
+    (string? body) (java.io.StringReader. body)
+    :else (java.io.StringReader. (str (or body "")))))
+
+(defn- consume-remote-stream!
+  "Consume one origin /invoke-stream NDJSON body.  Full events are forwarded
+   immediately.  STREAMED-TEXT records exact text forwarded so a dropped
+   stream can reconcile against the durable final result."
+  [body sink streamed-text]
+  (with-open [reader (java.io.BufferedReader. (body-reader body))]
+    (reduce
+     (fn [done line]
+       (if (str/blank? line)
+         done
+         (let [event (json/parse-string line true)
+               etype (str (:type event))]
+           (cond
+             (= "done" etype) event
+             (= "text" etype)
+             (do (when-let [ev (remote-event->sink-event event)]
+                   (when sink (sink ev)))
+                 (swap! streamed-text str (str (:text event)))
+                 done)
+             :else
+             (do (when-let [ev (remote-event->sink-event event)]
+                   (when sink (sink ev)))
+                 done)))))
+     nil
+     (line-seq reader))))
+
+(defn- append-missing-result!
+  "After a broken stream, append only the unseen suffix when RESULT extends
+   the exact text already forwarded.  If it does not, emit the canonical
+   result as a separate event rather than silently losing it."
+  [sink streamed result]
+  (when (and sink (string? result) (not= streamed result))
+    (sink {:type "text"
+           :text (if (str/starts-with? result streamed)
+                   (subs result (count streamed))
+                   result)})))
 
 (defn- fetch-remote-job [origin-url job-id]
   (try
@@ -403,20 +447,6 @@
           (or (:job parsed) parsed))))
     (catch Exception _ nil)))
 
-(defn- relay-new-events!
-  "Send events of JOB newer than seq LAST to SINK; return the new last seq."
-  [sink job last]
-  (reduce (fn [hi e]
-            (let [n (event-seq-num e)]
-              (if (and n (> n hi))
-                (do (when sink
-                      (when-let [ev (remote-event->sink-event e)]
-                        (try (sink ev) (catch Throwable _ nil))))
-                    n)
-                hi)))
-          last
-          (:events job)))
-
 (defn make-proxy-invoke-fn
   "Create an invoke-fn that forwards a turn to a remote Agency.
    origin-url: the Agency where the real agent lives.
@@ -426,11 +456,9 @@
 
    Bells POST to the origin's bell endpoint and return its queued job identity:
    federation changes transport, not admission. Other turns POST to the
-   origin's invoke endpoint under a job id chosen here, and poll that job while
-   the POST is open, so the remote turn streams into this server's job ledger
-   like a local seat's turn does. If the POST fails (dropped connection, HTTP
-   timeout) while the remote job is still running, the result is read from the
-   remote job when it ends."
+   origin's invoke-stream endpoint under a turn/job id chosen here.  Full NDJSON
+   events flow directly to the local sink; the compact job ledger is used only
+   to recover the canonical final result after a dropped stream."
   ([origin-url agent-id] (make-proxy-invoke-fn origin-url agent-id nil))
   ([origin-url agent-id local-id]
    (letfn [(post! [endpoint body-map http-timeout]
@@ -471,55 +499,65 @@
                    wait-ms (or caller-timeout max-proxy-wait-ms)
                    deadline (+ (System/currentTimeMillis) wait-ms)
                    sink (fn [] (when local-id (reg/get-invoke-event-sink (str local-id))))
-                   resp-p (post! "/api/alpha/invoke"
-                                 (cond-> {"agent-id" agent-id "prompt" prompt
-                                          "caller" "federation-proxy"
-                                          "job-id" job-id}
-                                   caller-timeout (assoc "timeout-ms" caller-timeout))
-                                 ;; The HTTP wait covers the whole remote turn.
-                                 (+ wait-ms 60000))]
-               (loop [last 0 terminal-polls 0]
-                 (let [resp (deref resp-p proxy-poll-ms ::pending)
-                       job (fetch-remote-job origin-url job-id)
-                       last (if job (relay-new-events! (sink) job last) last)
-                       terminal? (boolean (and job (terminal-job-states (str (:state job)))))]
-                   (cond
-                     ;; The POST answered: its body is the turn's result.
-                     (and (not= ::pending resp) (:status resp))
-                     (let [parsed (parse-body resp)]
-                       (if (and (< (:status resp) 400) (= true (:ok parsed)))
-                         {:result (:result parsed)
-                          :session-id (or (:session-id parsed) session-id)
-                          :remote-job-id job-id}
-                         {:error (http-failure resp parsed) :exit-code -1
-                          :remote-job-id job-id}))
+                   streamed-text (atom "")
+                   body-map (cond-> {"agent-id" agent-id "prompt" prompt
+                                     "caller" "federation-proxy"
+                                     "surface" "federation"
+                                     "turn-id" job-id}
+                              caller-timeout (assoc "timeout-ms" caller-timeout))
+                   resp (try
+                          @(http/post (str origin-url "/api/alpha/invoke-stream")
+                                      {:headers {"Content-Type" "application/json"}
+                                       :body (json/generate-string body-map)
+                                       :timeout (+ wait-ms 60000)
+                                       :as :stream})
+                          (catch Throwable t {:error t}))
+                   terminal (when (and (:status resp) (< (:status resp) 400))
+                              (try
+                                (consume-remote-stream! (:body resp) (sink) streamed-text)
+                                (catch Throwable _ nil)))]
+               (if terminal
+                 (if (= true (:ok terminal))
+                   {:result (:result terminal)
+                    :session-id (or (:session-id terminal) session-id)
+                    :remote-job-id job-id}
+                   {:error (or (:message terminal) (:error terminal) "remote invoke failed")
+                    :exit-code -1 :remote-job-id job-id})
+                 ;; A connection can fail after the origin admitted the turn.
+                 ;; Poll only for recovery; never replay compact ledger text.
+                 (loop [absent-polls 0]
+                   (let [job (fetch-remote-job origin-url job-id)
+                         terminal? (boolean (and job
+                                                (terminal-job-states
+                                                 (str (:state job)))))]
+                     (cond
+                       terminal?
+                       (if (= "done" (str (:state job)))
+                         (let [result (or (:result job) (:result-summary job))]
+                           (append-missing-result! (sink) @streamed-text result)
+                           {:result result
+                            :session-id (or (:session-id job) session-id)
+                            :remote-job-id job-id})
+                         {:error (str "Remote job " job-id " " (:state job)
+                                      (when-let [m (:terminal-message job)]
+                                        (str ": " m)))
+                          :exit-code -1 :remote-job-id job-id})
 
-                     ;; The remote job ended but its POST did not answer
-                     ;; (dropped, or still in flight): read the job.
-                     (and terminal?
-                          (or (not= ::pending resp)
-                              ;; give an in-flight POST two more polls to land
-                              (>= terminal-polls 2)))
-                     (if (= "done" (str (:state job)))
-                       {:result (or (:result job) (:result-summary job))
-                        :session-id (or (:session-id job) session-id)
-                        :remote-job-id job-id}
-                       {:error (str "Remote job " job-id " " (:state job)
-                                    (when-let [m (:terminal-message job)] (str ": " m)))
-                        :exit-code -1 :remote-job-id job-id})
+                       (> (System/currentTimeMillis) deadline)
+                       {:error (if job
+                                 (str "Proxy invoke: remote job " job-id " still "
+                                      (:state job) " after " wait-ms " ms; follow it on "
+                                      origin-url)
+                                 (http-failure resp {}))
+                        :exit-code -1 :remote-job-id job-id}
 
-                     ;; POST failed and the remote job never appeared.
-                     (and (not= ::pending resp) (nil? job))
-                     {:error (http-failure resp {}) :exit-code -1
-                      :remote-job-id job-id}
+                       (and (nil? job) (>= absent-polls 2))
+                       {:error (http-failure resp {})
+                        :exit-code -1 :remote-job-id job-id}
 
-                     (> (System/currentTimeMillis) deadline)
-                     {:error (str "Proxy invoke: remote job " job-id " still "
-                                  (or (:state job) "unknown") " after " wait-ms
-                                  " ms; follow it on " origin-url)
-                      :exit-code -1 :remote-job-id job-id}
-
-                     :else (recur last (if terminal? (inc terminal-polls) 0)))))))
+                       :else
+                       (do (Thread/sleep proxy-poll-ms)
+                           (recur (if job 0 (inc absent-polls))))))))))
            (forward [prompt session-id invoke-options]
              (try
                (if (= :bell (:dispatch-kind invoke-options))
