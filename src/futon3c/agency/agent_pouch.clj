@@ -1265,6 +1265,15 @@
         ;; Claude consume this user event as a queued_command attachment to the
         ;; open turn. Waiting here does not block the demux reader (`wait`
         ;; releases the monitor), and the waiter remains visible to ownership.
+        ;; Say so in the activity line: otherwise it keeps the previous step's
+        ;; text ("recording its clock in futon1b"), and on 2026-11-16 that
+        ;; sent the diagnosis of claude-13's stuck turn to futon1b.
+        (when @(:open? demux)
+          (try
+            ((requiring-resolve 'futon3c.agency.registry/update-invoke-activity!)
+             (:agent-id pouch)
+             "waiting for an earlier autonomous turn in this pouch to finish")
+            (catch Throwable _ nil)))
         (await-demux-idle! demux timeout-ms)
         (.write ^BufferedWriter (:writer pouch) (str line "\n"))
         (.flush ^BufferedWriter (:writer pouch))

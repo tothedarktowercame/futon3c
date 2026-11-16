@@ -7,7 +7,8 @@
   claude-11: 23 self-initiated turns against 11 fed."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures]]
-            [futon3c.agency.agent-pouch :as pouch]))
+            [futon3c.agency.agent-pouch :as pouch]
+            [futon3c.agency.registry]))
 
 (use-fixtures
   :each
@@ -325,9 +326,12 @@
     (while (and (not @open?) (< (System/currentTimeMillis) deadline))
       (Thread/sleep 10))
     (is @open? "the autonomous protocol turn is open before Joe writes")
-    (let [result (pouch/feed-turn! "demux-open-autonomous" "joe-prompt"
-                                   {:claude-bin bin :timeout-ms 5000
-                                    :turn-id "joe-open-turn"})
+    (let [activity (atom [])
+          result (with-redefs [futon3c.agency.registry/update-invoke-activity!
+                               (fn [aid text] (swap! activity conj [aid text]))]
+                   (pouch/feed-turn! "demux-open-autonomous" "joe-prompt"
+                                     {:claude-bin bin :timeout-ms 5000
+                                      :turn-id "joe-open-turn"}))
           sink-deadline (+ (System/currentTimeMillis) 5000)]
       (while (and (empty? @sink-turns)
                   (< (System/currentTimeMillis) sink-deadline))
@@ -336,6 +340,10 @@
              (str/split-lines (slurp order-file)))
           "stdin is written only after the autonomous result")
       (is (= "reply:joe-prompt" (:result result)))
+      (is (some #{["demux-open-autonomous"
+                   "waiting for an earlier autonomous turn in this pouch to finish"]}
+                @activity)
+          "the activity line names the wait, not the previous step")
       (is (= "joe-open-turn" (:turn-id result))
           "the fresh init binds Joe's already-registered waiter")
       (is (= "AUTONOMOUS-OPEN" (:result (first @sink-turns)))
