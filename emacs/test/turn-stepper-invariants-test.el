@@ -135,7 +135,9 @@ default (codex-6's stepper came up as *象 stepper:claude-1*, 2026-11-11)."
           (when (buffer-live-p buf-b) (kill-buffer buf-b)))))))
 
 (ert-deftest turn-stepper-invariants-dead-source ()
-  "A stepper whose source REPL was killed is :stepper-detached source-dead."
+  "An orphaned stepper with a dead source is :stepper-detached source-dead.
+Normal source death retires the stepper; removing its cleanup hook here
+constructs the abnormal state this invariant remains responsible for finding."
   (let ((repl (get-buffer-create " *ts-inv-dead*")))
     (with-current-buffer repl
       (setq-local agent-chat--session-id "s-D")
@@ -143,6 +145,8 @@ default (codex-6's stepper came up as *象 stepper:claude-1*, 2026-11-11)."
     (let ((buf (turn-stepper--open "s-D" repl 0 t)))
       (unwind-protect
           (progn
+            (with-current-buffer repl
+              (remove-hook 'kill-buffer-hook #'turn-stepper--source-killed t))
             (kill-buffer repl)
             (cl-letf (((symbol-function 'turn-stepper--store-changed-since)
                        (lambda (_) nil)))

@@ -118,6 +118,22 @@ REPL buffers keep it in the buffer-local variable
            (not (equal agent-chat--session-id "pending"))
            agent-chat--session-id))))
 
+(defun turn-stepper--source-killed ()
+  "Retire steppers attached to the REPL buffer being killed.
+Run from that source buffer's local `kill-buffer-hook'.  A later
+`turn-stepper' from a replacement REPL creates and attaches a fresh stepper."
+  (let ((source (current-buffer)))
+    (dolist (stepper (turn-stepper--buffers))
+      (when (eq source
+                (buffer-local-value 'turn-stepper--source-buffer stepper))
+        (kill-buffer stepper)))))
+
+(defun turn-stepper--attach-source (source)
+  "Arrange for steppers attached to SOURCE to retire when SOURCE dies."
+  (when (buffer-live-p source)
+    (with-current-buffer source
+      (add-hook 'kill-buffer-hook #'turn-stepper--source-killed nil t))))
+
 ;;; ---------------------------------------------------------------- naming
 ;; M-repl-circus invariant 1 (Joe, 2026-11-11): a stepper is attached to
 ;; exactly one REPL, and when two REPLs are stepped at once each stepper's
@@ -712,6 +728,7 @@ If the turn text is not found in the REPL buffer, say so and do not move."
 (defun turn-stepper--loading-buffer (session-id source)
   "Display a stepper buffer showing a loading message for SESSION-ID."
   (let ((buf (turn-stepper--get-buffer-create session-id source)))
+    (turn-stepper--attach-source source)
     (with-current-buffer buf
       (turn-stepper-mode)
       (setq turn-stepper--session-id session-id
@@ -1096,6 +1113,7 @@ Failures are reported once and never escape the process sentinel."
 QUIET re-renders without touching windows (a reload of a visible stepper)."
   (let ((frames (gethash session-id turn-stepper--cache))
         (buf (turn-stepper--get-buffer-create session-id source)))
+    (turn-stepper--attach-source source)
     (with-current-buffer buf
       (turn-stepper-mode)
       (setq turn-stepper--session-id session-id

@@ -250,6 +250,38 @@ second window must end as ONE window, right of the REPL it reads."
       (delete-other-windows)
       (kill-buffer buf) (kill-buffer src))))
 
+(ert-deftest turn-stepper-source-death-retires-and-replacement-reconnects ()
+  "Killing a REPL retires its stepper; its replacement gets a fresh one."
+  (let ((old-source (get-buffer-create " *ts-old-repl*"))
+        (new-source (get-buffer-create " *ts-new-repl*"))
+        old-stepper new-stepper)
+    (unwind-protect
+        (progn
+          (dolist (source (list old-source new-source))
+            (with-current-buffer source
+              (setq-local agent-chat--session-id "s-reconnect")
+              (setq-local claude-repl-agent-id "claude-13")))
+          (puthash "s-reconnect" '(frame) turn-stepper--cache)
+          (cl-letf (((symbol-function 'turn-stepper--show-window)
+                     (lambda (&rest _) nil)))
+            (setq old-stepper
+                  (turn-stepper--open "s-reconnect" old-source 0 t))
+            (should (buffer-live-p old-stepper))
+            (kill-buffer old-source)
+            (should-not (buffer-live-p old-stepper))
+            (setq new-stepper
+                  (turn-stepper--open "s-reconnect" new-source 0 t))
+            (should (buffer-live-p new-stepper))
+            (should (eq new-source
+                        (buffer-local-value 'turn-stepper--source-buffer
+                                            new-stepper)))
+            (should (equal "s-reconnect"
+                           (buffer-local-value 'turn-stepper--session-id
+                                               new-stepper)))))
+      (remhash "s-reconnect" turn-stepper--cache)
+      (dolist (buffer (list old-source new-source old-stepper new-stepper))
+        (when (buffer-live-p buffer) (kill-buffer buffer))))))
+
 (ert-deftest turn-stepper-reload-keeps-an-older-frame ()
   (let ((buf (get-buffer-create turn-stepper-buffer-name)))
     (unwind-protect
