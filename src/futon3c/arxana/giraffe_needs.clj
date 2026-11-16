@@ -120,13 +120,20 @@
      :written (reduce + (map #(or (:written %) 0) results))
      :skipped (reduce + (map #(count (:skipped %)) results))}))
 
-(defn- latest-attestation [cfg claim]
+(defn- run-attestations
+  "CLAIM's attestations from RUN, the latest per reading member. Two readings
+  can assert the same edge: one clusion, one attestation each, and each
+  reading keeps it (its incident items depend on it)."
+  [cfg claim run]
   (let [q (:ok (store/bounded-query! (:graph-store cfg)
                                       {:query/type :attestations
                                        :subject-id (:id claim) :limit 50}))]
     (->> (:attestation-ids q)
          (keep #(-> (store/get-entity (:graph-store cfg) %) :ok))
-         (sort-by #(str (get-in % [:content :written-at]))) last)))
+         (filter #(= run (get-in % [:content :run])))
+         (group-by #(get-in % [:content :reading-member]))
+         vals
+         (map #(last (sort-by (fn [a] (str (get-in a [:content :written-at]))) %))))))
 
 (defn- query-needing [cfg item-id]
   (let [ref-id (:id (inventory/item-record item-id))
@@ -152,15 +159,14 @@
       (throw (ex-info "GCC needs unavailable" {:reason :needs-unavailable})))
     (let [item-by-ref (into {} (map (fn [id] [(:id (inventory/item-record id)) id])) items)
           claims (keep #(-> (store/get-entity (:graph-store cfg) %) :ok) ids)
-          rows (keep (fn [claim]
-                       (when-let [att (latest-attestation cfg claim)]
+          ;; Giraffe mints a new run every few minutes; only attestations
+          ;; from the party's run are edges of the readings it shows.
+          rows (mapcat (fn [claim]
                          (let [from (item-by-ref (get-in claim [:endpoints 0 :target :ref/id]))
                                to (item-by-ref (get-in claim [:endpoints 1 :target :ref/id]))]
-                           ;; Giraffe mints a new run every few minutes; a claim
-                           ;; whose latest attestation is from another run is
-                           ;; not an edge of the reading the party shows.
-                           (when (and from to (= run (get-in att [:content :run])))
-                             {:claim claim :att att :from from :to to})))) claims)
+                           (when (and from to)
+                             (for [att (run-attestations cfg claim run)]
+                               {:claim claim :att att :from from :to to})))) claims)
           _ (when (empty? rows)
               (throw (ex-info "GCC needs unavailable for the party's run"
                               {:reason :needs-unavailable :run run})))

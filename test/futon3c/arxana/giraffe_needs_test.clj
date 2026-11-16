@@ -157,3 +157,29 @@
              (set (mapcat :needs (:readings (sut/read-needs-gcc
                                               {:graph-store :stub-two
                                                :item-ids ["M-a" "M-b" "M-c"]})))))))))
+
+(deftest two-readings-asserting-one-edge-both-keep-it
+  ;; Same endpoints and class = one clusion, attested once per reading.
+  (let [{:keys [run]} (fixture)
+        p (with-redefs [sut/current-run (constantly run)]
+            (sut/plan {:item-ids ["M-a" "M-b"] :written-at "2026-11-16T20:00:00Z"}))
+        rows (get-in p [:readings 0 :rows])
+        claim (:record (first (filter #(= :clusion/assert (:operation %)) rows)))
+        att-a (:record (first (filter #(= :evidence/append (:operation %)) rows)))
+        att-b (-> att-a (assoc :id "att-b") (assoc-in [:content :reading-member] "reading-b")
+                  (assoc-in [:content :written-at] "2026-11-16T20:00:01Z"))
+        entities {(:id claim) claim (:id att-a) att-a "att-b" att-b}]
+    (with-redefs [sut/party-run (constantly "run-1")
+                  store/bounded-query!
+                  (fn [_ q]
+                    (case (:query/type q)
+                      :role-reverse {:ok {:status :ok :truncated? false
+                                          :edge-ids (if (= (:endpoint-id q)
+                                                           (:id (inventory/item-record "M-a")))
+                                                      [(:id claim)] [])}}
+                      :attestations {:ok {:attestation-ids ["att-b" (:id att-a)]}}))
+                  store/get-entity (fn [_ id] {:ok (get entities id)})]
+      (is (= #{"giraffe-reading/reading-a" "giraffe-reading/reading-b"}
+             (set (map (comp :id :record)
+                       (:readings (sut/read-needs-gcc {:graph-store :stub-shared
+                                                       :item-ids ["M-a" "M-b"]})))))))))
