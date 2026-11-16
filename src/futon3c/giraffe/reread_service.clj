@@ -2,7 +2,9 @@
   "Event-driven re-reading with a periodic authority-reconciliation backstop.
    Reconciliation, reader rounds and deadlines share one reload-safe executor. Loading this
    namespace does nothing; the operator explicitly calls start! after cutover."
-  (:require [clojure.java.io :as io]
+  (:require [cheshire.core :as json]
+            [futon3c.giraffe.corpus-generation :as generation]
+            [clojure.java.io :as io]
             [clojure.string :as str]
             [futon2.aif.mission-registry :as registry]
             [futon2.aif.task-requisition :as requisition]
@@ -92,6 +94,7 @@
                        :giraffe-root (or (get env "GIRAFFE_ROOT") cli/default-root)
                        :edges (or (get env "GIRAFFE_EDGES") cli/default-edges)
                        :mint-state-path mint-batch/default-state-path :debounce-ms 4000
+                       :retire-cap (or (number "FUTON3C_GIRAFFE_REREAD_RETIRE_CAP") 200)
                        :reconcile-interval-ms (or (number "FUTON3C_GIRAFFE_REREAD_RECONCILE_INTERVAL_MS")
                                                   600000)
                        :preview (merge preview/default-config (:preview opts))
@@ -101,7 +104,8 @@
                    (every? #(and (string? %) (not (str/blank? %))) (:reader-seats config))
                    (integer? (:new-item-cap config)) (<= 0 (:new-item-cap config))
                    (pos-int? (:mint-window-ms config)) (pos-int? (:debounce-ms config))
-                   (pos-int? (:reconcile-interval-ms config)))
+                   (pos-int? (:reconcile-interval-ms config))
+                   (pos-int? (:retire-cap config)))
       (throw (ex-info "Readers, nonnegative new-item cap and positive mint/debounce/reconcile windows required"
                       {:kind :giraffe-reread/invalid-config})))
     config))
@@ -278,6 +282,38 @@
                                     snapshot))))]
              (record-round! token result))))
 
+(defn- retire-missing! [token]
+  (when (active? token)
+    (let [at-ms (System/currentTimeMillis)]
+      (try
+        (let [{:keys [config identities]} @state
+              {:keys [path]} (generation/resolve-generation (:pointer config))
+              members (json/parse-string (slurp (io/file path "members.json")) true)
+              queued (into #{} (comp (filter #(#{:pending :claimed} (:state %)))
+                                    (map :target_id)) (queue/requests (:store config)))
+              targets (->> members
+                           (remove :retired)
+                           (remove #(contains? identities (:id %)))
+                           (remove #(contains? queued (:id %)))
+                           (filter #(and (string? (:path %))
+                                         (not (str/blank? (:path %)))
+                                         (not (.isFile (io/file (:path %))))))
+                           (map :id) distinct sort (take (:retire-cap config)) vec)]
+          (when (active? token)
+            (let [result (when (seq targets)
+                           (generation/retire-readings!
+                            {:pointer (:pointer config) :generations-dir (:generations-dir config)
+                             :targets targets :reason :source-missing :now-ms at-ms}))]
+              (when (active? token)
+                (swap! state assoc :last-retirement
+                       {:at-ms at-ms :retired (count (:retired result)) :refused nil})
+                (swap! state update :errors dissoc :retirement)))))
+        (catch Exception e
+          (when (active? token)
+            (swap! state assoc :last-retirement
+                   {:at-ms at-ms :retired 0 :refused (or (ex-data e) {:message (.getMessage e)})})
+            (failure! token :retirement e)))))))
+
 (declare schedule-backstop!)
 
 (defn- backstop-tick! [token _due-ns]
@@ -291,6 +327,7 @@
         (swap! state update :backstop-skipped (fnil inc 0))
         (do
           (full-round! token (:config @state))
+          (retire-missing! token)
           (when (active? token)
             (swap! state assoc :last-backstop-at-ms (System/currentTimeMillis))
             (swap! state update :errors dissoc :backstop))))
@@ -529,6 +566,7 @@
             :discussed (:discussed @state)
             :unknown-turn-item-count (:unknown-turn-item-count @state)
             :ambiguous-turn-item-count (:ambiguous-turn-item-count @state)
+            :last-retirement (:last-retirement @state)
             :last-backstop-at-ms (:last-backstop-at-ms @state)
             :backstop-skipped (:backstop-skipped @state)
             :last-turn-mint (:last-turn-mint @state)

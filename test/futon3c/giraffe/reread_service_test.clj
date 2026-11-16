@@ -6,6 +6,7 @@
             [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.giraffe.preview-refresh]
             [futon3c.giraffe.readings :as readings]
+            [futon3c.giraffe.corpus-generation :as generation]
             [futon3c.giraffe.missions :as missions]
             [futon2.aif.mission-registry :as registry]
             [futon3c.giraffe.excursions :as excursions]
@@ -37,8 +38,10 @@
       (try (f) (finally (service/stop!) (join!))))))
 
 (defn- fixture []
-  (let [root (temp-dir) store (queue/open-store (io/file root "queue.sqlite"))]
-    {:store store :env-file false :environment {} :reader-seats ["fixture-reader"]
+  (let [root (temp-dir) store (queue/open-store (io/file root "queue.sqlite"))
+        corpus (doto (io/file root "corpus") .mkdirs)]
+    (spit (io/file corpus "members.json") "[]")
+    {:pointer corpus :store store :env-file false :environment {} :reader-seats ["fixture-reader"]
      :new-item-cap 1 :mint-window-ms 100 :debounce-ms 30
      :mint-state-path (io/file root "mint.edn")
      :snapshot-fn (fn [_] {:open-items [] :coverage {:members []}})
@@ -629,3 +632,74 @@
         (is (= [:pending] (mapv :state (:requests result))))
         (println "BACKSTOP fixture snapshot+reconcile ms:" elapsed
                  "documents: 1; records: 1; checker process port stubbed")))))
+
+(deftest automatic-retirement-batches-caps-excludes-and-retries
+  (let [config (fixture)
+        base (:pointer config)
+        root (.getParentFile base)
+        pointer (io/file root "current")
+        generations (doto (io/file root "generations") .mkdirs)
+        ids ["M-a" "M-b" "M-c" "M-moved" "M-pending" "M-claimed"]
+        members (mapv (fn [id] {:id id :path (str (io/file root (str id ".md")))
+                                :sha256 "invented"}) ids)
+        executor (ScheduledThreadPoolExecutor. 1)
+        token (Object.)
+        scheduled (atom 0)
+        state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
+        tick-var (ns-resolve 'futon3c.giraffe.reread-service 'backstop-tick!)
+        tick (fn [] (.get (.submit executor ^Runnable #(tick-var token 0))))]
+    (spit (io/file base "members.json") (json/generate-string members))
+    (spit (io/file base "check_edges.py") "# invented checker port stubbed")
+    (spit (io/file base "batch-00.jsonl")
+          (str/join "\n" (map #(json/generate-string {:id (:id %) :source (dissoc % :id)}) members)))
+    (Files/createSymbolicLink (.toPath pointer) (.toPath base) (make-array FileAttribute 0))
+    (queue/reconcile! (:store config)
+                      (mapv #(hash-map :id (:id %) :source-pin (dissoc % :id)) (take-last 2 members))
+                      {:members []} 1)
+    (queue/claim! (:store config) 2 100000 1 "invented-seat")
+    (reset! state-atom {:running? true :status :running :token token :executor executor
+                        :config (assoc config :pointer pointer :generations-dir generations :retire-cap 2)
+                        :identities {"M-moved" "/invented/new-location"}
+                        :errors {} :pending {} :refresh-items #{}})
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.giraffe.reread-service 'full-round!) (fn [& _] nil)
+       (ns-resolve 'futon3c.giraffe.reread-service 'schedule-backstop!)
+       (fn [_] (swap! scheduled inc))
+       #'readings/check-record (fn [_ _ _ line]
+                                {:passed? true :record (json/parse-string line true)})}
+      (fn []
+        (tick)
+        (is (= 2 (get-in (service/health) [:last-retirement :retired])))
+        (let [current (:path (generation/resolve-generation pointer))
+              rows (json/parse-string (slurp (io/file current "members.json")) true)]
+          (is (= ["M-a" "M-b"] (mapv :id (filter :retired rows))))
+          (is (= 1 (count (filter #(re-matches #"[0-9a-f]{64}" (.getName %)) (.listFiles generations))))))
+        (tick)
+        (is (= 1 (get-in (service/health) [:last-retirement :retired])))
+        (let [rows (json/parse-string
+                    (slurp (io/file (:path (generation/resolve-generation pointer)) "members.json")) true)]
+          (is (= ["M-a" "M-b" "M-c"] (mapv :id (filter :retired rows)))))
+        (is (empty? (:refresh-items (service-state))))
+        ;; A new missing member becomes eligible; refusal stays visible and
+        ;; does not prevent scheduling the next tick, which retries it.
+        (swap! state-atom assoc :identities {})
+        (with-redefs [generation/retire-readings! (fn [_] (throw (ex-info "invented refusal" {:kind :fixture/refused})))]
+          (tick))
+        (is (= {:kind :fixture/refused} (get-in (service/health) [:last-retirement :refused])))
+        (is (contains? (:errors (service-state)) :retirement))
+        (is (= 3 @scheduled))
+        (tick)
+        (is (= 1 (get-in (service/health) [:last-retirement :retired])))
+        (is (not (contains? (:errors (service-state)) :retirement)))
+        (let [before (generation/resolve-generation pointer)]
+          (swap! state-atom assoc :running? false)
+          (tick)
+          (is (= 4 @scheduled))
+          (is (= before (generation/resolve-generation pointer))))))
+    (.shutdown executor)))
+
+(deftest retirement-cap-config
+  (is (= 200 (:retire-cap (service/load-config (fixture)))))
+  (is (= 2 (:retire-cap (service/load-config (assoc (fixture) :retire-cap 2)))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (service/load-config (assoc (fixture) :retire-cap 0)))))
