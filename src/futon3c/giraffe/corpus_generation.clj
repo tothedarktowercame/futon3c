@@ -311,6 +311,93 @@
               (recur (inc attempt)))
           (assoc result :attempts attempt))))))
 
+(defn- retirement-members!
+  "Check every requested identity and missing source against the staged inventory."
+  [staging targets]
+  (let [members (json/parse-string (slurp (io/file staging "members.json")) true)
+        by-id (group-by :id members)
+        bad (filterv (fn [id]
+                       (let [entries (get by-id id)
+                             path (:path (first entries))]
+                         (or (not= 1 (count entries))
+                             (not (string? path)) (str/blank? path)
+                             (.isFile (io/file path))))) targets)]
+    (when (seq bad)
+      (throw (ex-info "Retirement requires existing members with missing source files"
+                      {:kind :giraffe-generation/retirement-precondition :targets bad})))
+    members))
+
+(defn retire-readings!
+  "Retire missing-source readings, preserving member identities for incoming edges.
+   Rechecks all targets in staging and before switching under the publication lock.
+   Unlike replacement's affected-line validation, checks EVERY remaining line with
+   checked-line-failures (the generation's own check_edges.py), refusing failures
+   and duplicate ids. Throws ex-info on refusal; never partially publishes.
+   An already-retired target is unchanged. BEFORE-SWITCH-FN is a test race hook."
+  [{:keys [pointer generations-dir targets reason now-ms before-switch-fn]}]
+  (when-not (and (= :source-missing reason) (integer? now-ms)
+                 (vector? targets) (every? #(and (string? %) (not (str/blank? %))) targets))
+    (throw (ex-info "Invalid retirement request"
+                    {:kind :giraffe-generation/invalid-retirement})))
+  (let [{base-path :path base-digest :digest} (resolve-generation pointer)
+        generations-dir (or generations-dir (str (.getAbsolutePath (io/file pointer)) ".generations"))
+        stage-parent (doto (io/file generations-dir ".staging") .mkdirs)
+        staging (io/file stage-parent (str (UUID/randomUUID)))
+        lock-path (.toPath (io/file generations-dir ".publish.lock"))
+        targets (vec (distinct targets))]
+    (try
+      (copy-tree! base-path staging)
+      (let [members (retirement-members! staging targets)
+            retiring (filterv #(and (some #{(:id %)} targets) (nil? (:retired %))) members)
+            ids (set (map :id retiring))]
+        (when (seq ids)
+          (doseq [batch (batch-files staging)]
+            (let [text (reduce remove-target (slurp batch) (sort ids))]
+              (spit batch (if (str/blank? text) "" (str text "\n")))))
+          (spit (io/file staging "members.json")
+                (json/generate-string
+                 (mapv #(if (contains? ids (:id %))
+                          (assoc % :retired {:reason "source-missing" :at_ms now-ms
+                                            :last_sha256 (:sha256 %)}) %) members)
+                 {:pretty true}))
+          (doseq [member retiring]
+            (spit (io/file staging "retired.jsonl")
+                  (str (json/generate-string
+                        {:id (:id member) :reason "source-missing" :at_ms now-ms
+                         :source (select-keys member [:path :sha256])
+                         :base_digest base-digest}) "\n") :append true))
+          (let [lines (staged-lines staging)
+                ambiguous (->> lines (group-by #(get-in % [:record :id]))
+                               (keep (fn [[id rows]] (when (and id (> (count rows) 1)) id))))
+                [failed _] (checked-line-failures staging lines)]
+            (when (or (seq failed) (seq ambiguous))
+              (throw (ex-info "Retirement did not pass corpus validation"
+                              {:kind :giraffe-generation/checker-failed
+                               :failed-record-ids (vec (sort-by str failed))
+                               :ambiguous-members (vec ambiguous)})))))
+        (when before-switch-fn (before-switch-fn))
+        (with-open [channel (FileChannel/open lock-path
+                                             (into-array StandardOpenOption
+                                                         [StandardOpenOption/CREATE StandardOpenOption/WRITE]))
+                    _lock (.lock channel)]
+          (when-not (= base-path (pointer-target pointer))
+            (throw (ex-info "Corpus pointer moved during retirement"
+                            {:kind :giraffe-generation/base-mismatch
+                             :expected base-path :actual (pointer-target pointer)})))
+          (retirement-members! staging targets)
+          (if (empty? ids)
+            {:status :unchanged :base-digest base-digest :digest base-digest :path base-path}
+            (let [digest (generation-digest staging)
+                  generation (io/file generations-dir digest)]
+              (if (.exists generation)
+                (delete-tree! staging)
+                (Files/move (.toPath staging) (.toPath generation)
+                            (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE])))
+              (atomic-link! pointer generation)
+              {:status :published :base-digest base-digest :digest digest
+               :path (.getAbsolutePath generation) :retired (vec (sort ids))}))))
+      (finally (delete-tree! staging)))))
+
 (defn migrate!
   "Plan or perform one-shot conversion of legacy corpus directory POINTER.
   Dry-run is the default and performs no writes. Actual migration must run

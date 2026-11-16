@@ -386,3 +386,87 @@
                       :replacement {:id (:id target) :source (dissoc target :id)
                                     :status_as_read "open" :purpose "replacement"
                                     :edges [] :unresolved []}}))))))
+
+(defn- retire! [f targets & [extra]]
+  (generation/retire-readings!
+   (merge {:pointer (:pointer f) :generations-dir (:generations f)
+           :targets targets :reason :source-missing :now-ms 1234} extra)))
+
+(defn- refusal [f]
+  (try (f) nil (catch clojure.lang.ExceptionInfo e (ex-data e))))
+
+(deftest retirement-preserves-identities-lineage-incoming-edges-and-old-generation
+  (let [{:keys [base pointer sources] :as f} (multi-fixture 2 true)
+        before (generation/resolve-generation pointer)
+        ;; This generation's executable checker additionally resolves incoming
+        ;; targets against members, as check_edges.py does. Deleting the member
+        ;; rather than retaining it makes this real subprocess check fail.
+        checker (io/file base "check_edges.py")]
+    (spit checker (str/replace (slurp checker) "sys.exit(1 if bad else 0)"
+                              " bad = bad or any(e['to'] not in members for e in r.get('edges', []))\nsys.exit(1 if bad else 0)"))
+    (let [base-digest (generation/generation-digest base)]
+      (io/delete-file (:path (first sources)))
+      (let [result (retire! f ["M-one"])
+            current (:path (generation/resolve-generation pointer))
+            members (json/parse-string (slurp (io/file current "members.json")) true)
+            lines (map #(json/parse-string % true)
+                       (str/split-lines (slurp (io/file current "batch-00.jsonl"))))
+            lineage (json/parse-string (str/trim (slurp (io/file current "retired.jsonl"))) true)]
+        (is (= :published (:status result)))
+        (is (not= (:path before) current))
+        (is (= (:digest result) (.getName (io/file current))))
+        (is (= ["M-two"] (mapv :id lines)))
+        (is (= "M-one" (get-in (first lines) [:edges 0 :to])))
+        (is (= 2 (count members)))
+        (is (= {:reason "source-missing" :at_ms 1234
+                :last_sha256 (:sha256 (first sources))} (:retired (first members))))
+        (is (= {:id "M-one" :reason "source-missing" :at_ms 1234
+                :source (select-keys (first sources) [:path :sha256])
+                :base_digest base-digest} lineage))
+        (is (= base-digest (generation/generation-digest base)))
+        (let [again (retire! f ["M-one"] {:now-ms 9999})]
+          (is (= :unchanged (:status again)))
+          (is (= (:digest result) (:digest again)))
+          (is (= current (:path (generation/resolve-generation pointer)))))))))
+
+(deftest retirement-preconditions-refuse-whole-batch
+  (let [{:keys [pointer sources] :as f} (multi-fixture 2)
+        before (generation/resolve-generation pointer)]
+    (doseq [targets [["M-one"] ["M-absent"]]]
+      (let [error (refusal #(retire! f targets))]
+        (is (= :giraffe-generation/retirement-precondition (:kind error)))
+        (is (= targets (:targets error)))))
+    (io/delete-file (:path (first sources)))
+    (is (= ["M-two"] (:targets (refusal #(retire! f ["M-one" "M-two"])))))
+    (is (= before (generation/resolve-generation pointer)))))
+
+(deftest retirement-rechecks-source-and-pointer-before-switch
+  (let [{:keys [pointer sources] :as f} (multi-fixture 1)
+        source (:path (first sources))
+        before (generation/resolve-generation pointer)]
+    (io/delete-file source)
+    (is (= :giraffe-generation/retirement-precondition
+           (:kind (refusal #(retire! f ["M-one"] {:before-switch-fn (fn [] (spit source "returned"))})))))
+    (is (= before (generation/resolve-generation pointer)))
+    (io/delete-file source)
+    (let [winner (doto (io/file (:generations f) "winner") .mkdirs)]
+      (spit (io/file winner "marker") "invented concurrent generation")
+      (is (= :giraffe-generation/base-mismatch
+             (:kind (refusal #(retire! f ["M-one"]
+                                     {:before-switch-fn (fn [] (install-pointer! pointer winner))})))))
+      (is (= (.getCanonicalPath winner) (:path (generation/resolve-generation pointer)))))))
+
+(deftest retirement-checker-failures-and-duplicates-are-refused
+  (doseq [duplicate? [false true]]
+    (let [{:keys [base pointer sources] :as f} (multi-fixture 2)
+          batch (io/file base "batch-00.jsonl")
+          rows (mapv #(json/parse-string % true) (str/split-lines (slurp batch)))
+          other (second rows)]
+      (spit batch (str/join "\n" (map json/generate-string
+                                     (if duplicate? (conj rows other)
+                                         [(first rows) (assoc other :reject true)]))))
+      (io/delete-file (:path (first sources)))
+      (let [before (generation/resolve-generation pointer)]
+        (is (= :giraffe-generation/checker-failed
+               (:kind (refusal #(retire! f ["M-one"])))))
+        (is (= before (generation/resolve-generation pointer)))))))
