@@ -127,7 +127,13 @@
           (let [hou (first (filter #(= "猴" (:entity/slug %))
                                    (get-in (call cfg "hou-rules" :workplan/entity-rules {}) [:ok :entities])))]
             (is (false? (:introduced-without-referent? hou)))
-            (is (true? (get-in hou [:forms 0 :enabled?])))))
+            (is (true? (get-in hou [:forms 0 :enabled?]))))
+          ;; Introducing a seeded word again does not switch it off.
+          (is (:ok (call cfg "intro-mojira" :workplan/introduce
+                         {:evidence/id "emacs-toy-mojira" :text "and [[Mojira]] again" :actor "joe"
+                          :time "2026-11-16T18:30:00.000Z" :candidate/slugs []})))
+          (is (true? (get-in (call cfg "mojira-view" :workplan/entity-backlinks {:entity/slug "mojira"})
+                             [:ok :forms/effective 0 :enabled?]))))
         ;; A different introduced entity whose only candidate Joe rejects stays off.
         (let [wv (:ok (call cfg "warrant-view" :workplan/entity-backlinks {:entity/slug "test-registry"}))
               wid (get-in wv [:referents 0 :record :id])]

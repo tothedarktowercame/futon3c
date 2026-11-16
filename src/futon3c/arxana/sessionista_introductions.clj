@@ -65,6 +65,12 @@
         (mapv
          (fn [{:keys [as-written referents codepoint-range]}]
            (let [slug (resolve-slug as-written) e (entity slug) r (rule e)
+                 ;; Re-introducing a word that already has a rule (seeded, or
+                 ;; introduced before) must not switch it off: only a first
+                 ;; introduction, or one naming a referent, writes the forms
+                 ;; (claude-13, 2026-11-16: a second [[Mojira]] would have
+                 ;; turned the seeded Mojira off).
+                 rule-existed? (exists? read! r)
                  source {:ref/store :evidence :ref/id id}
                  intro (records/make-clusion
                         {:type-revision [:workplan/introduction 1]
@@ -97,7 +103,8 @@
                                       :rule/revision 1}})]
              (doseq [x [(catalog) e r (member r) intro]] (write! dispatch! run-id :clusion/assert x))
              (write! dispatch! run-id :evidence/append intro-att)
-             (write! dispatch! run-id :evidence/append rule-att)
+             (when (or (not rule-existed?) (seq resolved))
+               (write! dispatch! run-id :evidence/append rule-att))
              (doseq [[rr [role x _]] (map vector ref-records refs)]
                (write! dispatch! run-id :clusion/assert rr)
                (write! dispatch! run-id :evidence/append
