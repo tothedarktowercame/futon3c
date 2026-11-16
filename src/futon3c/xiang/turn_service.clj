@@ -579,6 +579,9 @@
           (println "[turn-mentions/hou] retrying" (:id turn) (:failed out)
                    "in" delay "seconds"))
         ((cfg svc :schedule!) delay #(write-hou-with-retry! svc turn (next delays)))))
+    (when (and (contains? hou-retryable-failures (:failed out)) (empty? delays))
+      (hou-store/write-attempt! (or (cfg svc :hou-config) (hou-store/default-config))
+                                current :readerFailedAfterRetries :failed))
     out))
 
 (defn write-mentions-async!
@@ -601,7 +604,11 @@
                               (hou-store/settled? current)
                               (hou-store/reply-landed? current))]
               (when (cfg svc :mentions-enabled?)
-                (doseq [f (if ready? [:source_text :reply_text] [field])]
+                (doseq [f (cond
+                            ready? [:source_text :reply_text]
+                            (and (not= "operator" (or (:origin current) "operator"))
+                                 (= field :source_text)) []
+                            :else [field])]
                   ((cfg svc :mentions-writer!) mention-cfg current f)))
               (when ready?
                 (write-hou-with-retry! svc current (cfg svc :hou-retry-delays))))

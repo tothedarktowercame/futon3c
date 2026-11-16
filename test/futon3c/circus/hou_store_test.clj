@@ -96,10 +96,24 @@
             (is (some #(= "turn-record/toy" (first %))
                       (get-in out [:written :asserted-content :hou/evidence-pin]))))))
       (spit (:doc w) "changed evidence")
-      (is (= :evidenceChanged (try (sut/read-needs (:cfg w)) (catch Exception e (:reason (ex-data e))))))
+      (let [n (sut/read-needs (:cfg w))
+            stale (first (filter :stale-source (:sources n)))]
+        (is (= (str (:doc w)) (:stale-source stale)))
+        (is (string? (:read-sha stale)))
+        (is (not= (:read-sha stale) (:current-sha stale)))
+        (with-redefs [store/get-entity (fn [_ id]
+                                         {:ok (some #(when (= id (:id %)) %)
+                                                    (map :record (mapcat :records
+                                                                       (mapcat :batches
+                                                                               (map #(mentions/plan-field (:cfg w) turn %)
+                                                                                    [:source_text :reply_text])))))})]
+          (let [header (:written (hou/hou-run (sut/snapshot (:cfg w) turn)))]
+            (is header)
+            (is (some #(= (str (:doc w)) (:stale-source %))
+                      (get-in header [:asserted-content :hou/sources]))))))
       (spit (:doc w) "toy evidence")
       (spit (:batch w) "{}\n")
-      (is (= :invalidEvidence (try (sut/read-needs (:cfg w)) (catch Exception e (:reason (ex-data e))))))
+      (is (= :evidenceChanged (try (sut/read-needs (:cfg w)) (catch Exception e (:reason (ex-data e))))))
       (finally (delete-world! w)))))
 
 (deftest readings-outside-the-current-item-inventory-do-not-poison-focus
@@ -191,6 +205,31 @@
         (is (= [:clusion/assert :evidence/append] (mapv :operation (first @calls))))
         (is (= {:failed :invalidEvidence}
                (hou/hou-run (assoc-in snap [:text-by-ref (:source-ref snap)] "Changed."))))))))
+
+(deftest refusal-with-no-named-item-has-an-evidence-subject-receipt
+  (let [calls (atom [])
+        ref (records/make-external-reference
+             {:ref/kind :evidence-text :store/id "toy" :store/endpoint "toy"
+              :record/id "toy/body/text" :schema/authority :toy
+              :valid-time "now" :revision/digest "sha"})]
+    (with-redefs [mentions/inventory (constantly [])
+                  mentions/field-evidence (fn [& _] {:reference ref :text "nothing named"})
+                  http/append-batch! (fn [_ _ rows] (swap! calls conj rows) {:ok {}})]
+      (is (= {:failed :turnNotSettled}
+             (sut/write-focus! cfg (assoc turn :source_text "nothing named" :analysis_status "requested"))))
+      (is (= [:external-reference/assert :attempt/append]
+             (mapv :operation (first @calls))))
+      (is (= (:id ref) (get-in @calls [0 1 :record :subject/id]))))))
+
+(deftest backfill-dry-run-never-calls-a-write-port
+  (with-redefs [turns/list-records (fn [& _] [{:id "toy" :record (assoc turn :origin "operator"
+                                                                        :created_at (str (.minusSeconds (java.time.Instant/now) 1)))}])
+                sut/headers-for-turn (constantly {:pending :header-absent})
+                sut/snapshot (fn [& _] (toy/fixture))
+                http/append-batch! (fn [& _] (throw (AssertionError. "write port called")))]
+    (is (= {:would-write 1}
+           (:outcomes (sut/backfill! (assoc cfg :read-needs (constantly {:readings [] :basis-records []}))
+                                     {:write? false :pause-ms 0}))))))
 
 (deftest quoted-mentions-are-pinned-not-focus
   (let [text ">>> M-a\n>>>\nM-b"

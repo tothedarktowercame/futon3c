@@ -57,7 +57,7 @@
                       pin (:record-pin member)
                       batch (io/file generation (.getName (io/file (:batch pin))))
                       line (nth (str/split (slurp batch) #"\n") (dec (:line pin)))
-                      _ (require! (= (:sha256 pin) (digest/sha256-hex (.getBytes line "UTF-8"))) :invalidEvidence)
+                      _ (require! (= (:sha256 pin) (digest/sha256-hex (.getBytes line "UTF-8"))) :evidenceChanged)
                       raw (json/parse-string line true)
                       _ (require! (and (= :read (:status member)) (= owner (:id raw))) :invalidEvidence)
                       pins (cons (:source raw) (keep :evidence (:edges raw)))
@@ -71,9 +71,16 @@
                                                           (:edges raw)))))]
                   (when (or (nil? item-set) (some item-set incident-items))
                     (doseq [p pins]
-                      (require! (and (string? (:path p)) (string? (:sha256 p))
-                                     (= (:sha256 p) (sha-file (:path p)))) :evidenceChanged)
-                      (swap! source-files conj {:kind :file :path (:path p) :sha256 (:sha256 p)}))
+                      (require! (and (string? (:path p)) (string? (:sha256 p))) :invalidEvidence)
+                      (let [current (sha-file (:path p))]
+                        ;; The reading record is immutable evidence of what Giraffe
+                        ;; read. Source drift belongs to its reread service, but is
+                        ;; retained visibly in Hou's source pin.
+                        (swap! source-files conj
+                               (cond-> {:kind :file :path (:path p) :sha256 (:sha256 p)}
+                                 (not= (:sha256 p) current)
+                                 (assoc :stale-source (:path p) :read-sha (:sha256 p)
+                                        :current-sha current)))))
                     (swap! source-files conj {:kind :file :path (str batch) :sha256 (sha-file batch)})
                     {:record {:id (str "giraffe-reading/" owner) :reading raw :line-sha256 (:sha256 pin)}
                      :needs (mapv #(vector (id-text (:from %)) (id-text (:to %))) es)
@@ -119,20 +126,24 @@
                                                      :sha256 (:revision/digest (first refs))}])
                                   (map (fn [r] {:kind :arxana :id (:id r) :sha256 (digest/canonical-digest r)}) arxana)))})))
 
-(defn- attempt! [cfg turn why]
-  ;; The port supports attempt/append, but requires an EXISTING clusion subject
-  ;; (futon1b_arxana.clj:719-721). Use a verified item when possible; if none
-  ;; exists, log the failure instead of inventing a focus header to attach it to.
-  (if-let [id (first (writer/inventory cfg (:source_text turn)))]
-    (let [a (records/make-attempt
-             {:subject/id (:id (hou/item-record id)) :dynamics {:id "hou/focus" :version 1}
-              :inputs {:turn (:id turn)} :outcome :refused :reason why
-              :actor "futon3c/hou" :time ((or (:now-ms cfg) #(System/currentTimeMillis)))})
-          result (http/append-batch! (:graph-store cfg) (str "hou/attempt/" (:id a))
-                                      [{:operation :attempt/append :record a}])]
-      (require! (:ok result) :readerFailedAfterRetries)
-      result)
-    (binding [*out* *err*] (println "[hou] failure without existing receipt subject" (:id turn) why))))
+(defn write-attempt!
+  "Persist a refusal/terminal receipt. Prefer an item subject, otherwise assert
+  and use the turn's evidence reference so turns naming no item are not lost."
+  ([cfg turn why] (write-attempt! cfg turn why :refused))
+  ([cfg turn why outcome]
+   (let [item (first (writer/inventory cfg (:source_text turn)))
+         ref (when-not item (:reference (writer/field-evidence cfg turn :source_text)))
+         subject (or (some-> item hou/item-record :id) (:id ref))]
+     (require! subject :invalidEvidence)
+     (let [a (records/make-attempt
+              {:subject/id subject :dynamics {:id "hou/focus" :version 1}
+               :inputs {:turn (:id turn)} :outcome outcome :reason why
+               :actor "futon3c/hou" :time ((or (:now-ms cfg) #(System/currentTimeMillis)))})
+           rows (cond-> [] ref (conj {:operation :external-reference/assert :record ref})
+                        true (conj {:operation :attempt/append :record a}))
+           result (http/append-batch! (:graph-store cfg) (str "hou/attempt/" (:id a)) rows)]
+       (require! (:ok result) :readerFailedAfterRetries)
+       result))))
 
 (defn write-focus!
   "One focus batch: header, links, attestation. :parser attests deterministic
@@ -161,7 +172,7 @@
             result (http/append-batch! (:graph-store cfg) (str "hou/focus/" (:id header)) rows)]
         (require! (:ok result) :readerFailedAfterRetries)
         out)
-      (do (attempt! cfg turn (:failed out)) out))))
+      (do (write-attempt! cfg turn (:failed out)) out))))
 
 (defn- reverse-records [cfg type role id]
   (let [r (:ok (store/bounded-query! (:graph-store cfg)
@@ -270,3 +281,69 @@
                            (get-in h [:asserted-content :hou/relations]))
           :evidence-pin (get-in h [:asserted-content :hou/evidence-pin])}))
      (catch Exception _ nil))))
+
+(defn- backfill-candidate [cfg turn]
+  (cond
+    (not= "operator" (or (:origin turn) "operator")) {:outcome :ignored}
+    (not (settled? turn)) {:outcome :pending :reason :turnNotSettled}
+    (not (reply-landed? turn)) {:outcome :pending :reason :replyNotLanded}
+    :else
+    (let [existing (headers-for-turn cfg turn)]
+      (cond
+        (seq (:headers existing)) {:outcome :already-headered}
+        (not= :header-absent (:pending existing))
+        {:outcome :refused-with-reason :reason (:pending existing)}
+        :else
+        (try
+          (let [out (hou/hou-run (snapshot cfg turn))]
+            (if (:written out) {:outcome :would-write}
+                {:outcome :refused-with-reason :reason (:failed out)}))
+          (catch Exception e
+            {:outcome :refused-with-reason
+             :reason (or (:reason (ex-data e)) :invalidEvidence)}))))))
+
+(defn backfill!
+  "Backfill eligible operator turns. Dry-run is the default and calls no write
+  port. Write mode reuses write-focus! and paces one atomic batch per turn."
+  [cfg {:keys [write? limit pause-ms window-hours]
+        :or {write? false limit Long/MAX_VALUE pause-ms 200 window-hours 6}}]
+  (let [until (System/currentTimeMillis)
+        after (- until (* window-hours 3600000))
+        rows (->> (turns/list-records (:turn-store cfg) :limit Long/MAX_VALUE)
+                  (filter #(let [at (some-> % :record :created_at str java.time.Instant/parse .toEpochMilli)]
+                             (and at (< after at (inc until)))))
+                  (take limit))
+        items (writer/inventory cfg nil)
+        cfg (assoc cfg :item-ids items)
+        need-data ((or (:read-needs cfg) read-needs) cfg)
+        cfg (assoc cfg :read-needs (constantly need-data))
+        results (mapv (fn [{:keys [id record]}]
+                        (let [turn (assoc record :id id)
+                              planned (backfill-candidate cfg turn)]
+                          (if (and write? (= :would-write (:outcome planned)))
+                            (let [out (write-focus! cfg turn)
+                                  result (if (:written out) {:outcome :written}
+                                             {:outcome :refused-with-reason :reason (:failed out)})]
+                              (when (pos? pause-ms) (Thread/sleep (long pause-ms)))
+                              result)
+                            planned))) rows)
+        by-outcome (frequencies (map :outcome results))
+        refused (frequencies (keep #(when (= :refused-with-reason (:outcome %)) (:reason %)) results))]
+    {:mode (if write? :write :dry-run) :turns-scanned (count rows)
+     :window-hours window-hours :outcomes by-outcome :refused-reasons refused}))
+
+(defn -main [& args]
+  (let [opts (loop [xs args out {:write? false :limit Long/MAX_VALUE :pause-ms 200 :window-hours 6}]
+               (if-let [x (first xs)]
+                 (case x
+                   "--dry-run" (recur (next xs) (assoc out :write? false))
+                   "--write" (recur (next xs) (assoc out :write? true))
+                   "--limit" (recur (nnext xs) (assoc out :limit (Long/parseLong (second xs))))
+                   "--pause-ms" (recur (nnext xs) (assoc out :pause-ms (Long/parseLong (second xs))))
+                   "--window-hours" (recur (nnext xs) (assoc out :window-hours (Long/parseLong (second xs))))
+                   (throw (ex-info "unknown argument" {:argument x})))
+                 out))]
+    (when (or (neg? (:limit opts)) (neg? (:pause-ms opts)) (neg? (:window-hours opts)))
+      (throw (ex-info "limit, pause and window must be nonnegative" {})))
+    (try (prn (backfill! (default-config) opts))
+         (finally (shutdown-agents)))))

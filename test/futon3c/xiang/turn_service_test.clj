@@ -9,6 +9,7 @@
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.registry :as registry]
             [futon3c.agency.session-end-test-fixture :as session-end-fixture]
+            [futon3c.circus.hou-store :as hou-store]
             [futon3c.xiang.turn-record :as tr]
             [futon3c.xiang.turn-store :as ts]
             [futon3c.xiang.turn-acts :as turn-acts]
@@ -1489,7 +1490,23 @@
                     :mentions-writer! (fn [_ _ field] (swap! calls conj field))})
         {:keys [id]} (turn! h {:dispatch :none :origin "agent"})]
     (svc/attach-happened! (:svc h) id {:reply "M-toy" :commits []})
-    (is (= [:reply_text :source_text] @calls))))
+    (is (= [:reply_text] @calls))))
+
+(deftest agent-source-hook-is-a-quiet-no-op
+  (let [calls (atom [])
+        h (harness {:mentions-enabled? true :hou-enabled? true
+                    :evidence-async! (fn [f] (f))
+                    :mentions-writer! (fn [& xs] (swap! calls conj xs))
+                    :hou-writer! (fn [& xs] (swap! calls conj xs))})
+        {:keys [id]} (turn! h {:dispatch :none :origin "agent"})
+        sw (java.io.StringWriter.)
+        _ (binding [*err* sw]
+            (svc/write-mentions-async! (:svc h)
+                                       {:id id :origin "agent" :source_text "bell prompt"}
+                                       :source_text))
+        err (str sw)]
+    (is (empty? @calls))
+    (is (str/blank? err))))
 
 (deftest hou-hook-waits-for-both-and-contains-failure
   (let [calls (atom []) tasks (atom [])
@@ -1582,3 +1599,17 @@
                :source_text "M-toy" :reply_text "done"} :reply_text)
     (is (= 1 @calls))
     (is (empty? @(:scheduled h)))))
+
+(deftest hou-exhaustion-writes-a-terminal-receipt
+  (let [receipts (atom [])
+        h (harness {:hou-enabled? true :mentions-enabled? false
+                    :hou-retry-delays []
+                    :hou-config {:graph-store :toy}
+                    :hou-writer! (fn [& _] {:failed :invalidEvidence})})]
+    (with-redefs [hou-store/write-attempt!
+                  (fn [_ turn reason outcome]
+                    (swap! receipts conj [(:id turn) reason outcome]))]
+      (svc/write-mentions-async!
+       (:svc h) {:id "turn-exhausted" :origin "operator" :analysis_status "analyzed"
+                 :source_text "M-toy" :reply_text "done"} :reply_text)
+      (is (= [["turn-exhausted" :readerFailedAfterRetries :failed]] @receipts)))))
