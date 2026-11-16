@@ -1044,6 +1044,12 @@ are what would have caught it.
   mentions in about 4,300 turn texts), and 猴 version 1 (focus = the items a
   turn names, associated = their `needs` neighbours; no model call).
 
+- 猴's focus and the War Machine (Joe, 2026-11-16): "猴 should replace the WM's
+  recent focus files for Giraffe, and in future the 猴 / Giraffe notion of a
+  focus should at least feed into the WM. The WM may however have its own
+  focus separate to mine." Giraffe's switch: packet 猴 3 (claude-13 notes).
+  Feeding the WM: later.
+
 - Suggesting likely entities as `[[...]]` links while Joe types (「猴」 TAB →
   `[[猴]]`): excursion [E-ne-autocomplete](../excursions/E-ne-autocomplete.md),
   for later, not on the path to closure (Joe, 2026-11-16).
