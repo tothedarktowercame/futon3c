@@ -312,10 +312,10 @@
                              :targets targets :reason :source-missing :now-ms at-ms}))]
               (when (and (active? token) (= :published (:status result)))
                 ;; The corpus changed, so the pinned run must follow: count the
-                ;; retirement as one landing in the batched mint, exactly as a
-                ;; landed reading does (claude-13 review: otherwise the run,
-                ;; party and conformance wait for an unrelated landing).
-                (let [mint (mint-step! config 1 false)]
+                ;; retirement as one landing, under the same rule as a landed
+                ;; reading: mint now if no reread is queued, otherwise the
+                ;; window spaces mints during a burst (claude-13 review).
+                (let [mint (mint-step! config 1 (empty? queued))]
                   (swap! state assoc :last-mint mint)
                   (after-mint! token mint)
                   (schedule-mint! token mint)))

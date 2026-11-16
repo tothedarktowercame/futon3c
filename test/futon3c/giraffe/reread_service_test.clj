@@ -673,13 +673,13 @@
        #'readings/check-record (fn [_ _ _ line]
                                 {:passed? true :record (json/parse-string line true)})
        (ns-resolve 'futon3c.giraffe.reread-service 'mint-step!)
-       (fn [_ landed _] (swap! mints conj landed) {:status :deferred :pending-landings landed})
+       (fn [_ landed idle?] (swap! mints conj [landed idle?]) {:status :deferred :pending-landings landed})
        (ns-resolve 'futon3c.giraffe.reread-service 'after-mint!) (fn [& _] nil)
        (ns-resolve 'futon3c.giraffe.reread-service 'schedule-mint!) (fn [& _] nil)}
       (fn []
         (tick)
         (is (= 2 (get-in (service/health) [:last-retirement :retired])))
-        (is (= [1] @mints) "a published retirement counts as one landing toward the next mint")
+        (is (= [[1 false]] @mints) "a retirement is one landing; requests are queued, so the window applies")
         (let [current (:path (generation/resolve-generation pointer))
               rows (json/parse-string (slurp (io/file current "members.json")) true)]
           (is (= ["M-a" "M-b"] (mapv :id (filter :retired rows))))
@@ -689,7 +689,7 @@
         (let [rows (json/parse-string
                     (slurp (io/file (:path (generation/resolve-generation pointer)) "members.json")) true)]
           (is (= ["M-a" "M-b" "M-c"] (mapv :id (filter :retired rows)))))
-        (is (= [1 1] @mints))
+        (is (= [[1 false] [1 false]] @mints))
         (is (empty? (:refresh-items (service-state))))
         ;; A new missing member becomes eligible; refusal stays visible and
         ;; does not prevent scheduling the next tick, which retries it.
@@ -758,3 +758,39 @@
   (is (= 500 (:failed-retry-after-ms
               (service/load-config (assoc (fixture) :environment
                                           {"FUTON3C_GIRAFFE_REREAD_FAILED_RETRY_AFTER_MS" "500"}))))))
+
+(deftest retirement-on-an-idle-queue-mints-at-once
+  ;; claude-13 2026-11-16 (Joe: event driven, no fixed cadence): with nothing
+  ;; queued, a retirement asks for the mint now, as a final landing does.
+  (let [config (fixture)
+        base (:pointer config)
+        root (.getParentFile base)
+        pointer (io/file root "current")
+        generations (doto (io/file root "generations") .mkdirs)
+        member {:id "M-gone" :path (str (io/file root "M-gone.md")) :sha256 "invented"}
+        executor (ScheduledThreadPoolExecutor. 1)
+        token (Object.)
+        mints (atom [])
+        state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
+        tick-var (ns-resolve 'futon3c.giraffe.reread-service 'backstop-tick!)]
+    (spit (io/file base "members.json") (json/generate-string [member]))
+    (spit (io/file base "check_edges.py") "# invented checker port stubbed")
+    (spit (io/file base "batch-00.jsonl") (json/generate-string {:id "M-gone" :source (dissoc member :id)}))
+    (Files/createSymbolicLink (.toPath pointer) (.toPath base) (make-array FileAttribute 0))
+    (reset! state-atom {:running? true :status :running :token token :executor executor
+                        :config (assoc config :pointer pointer :generations-dir generations :retire-cap 200)
+                        :identities {} :errors {} :pending {} :refresh-items #{}})
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.giraffe.reread-service 'full-round!) (fn [& _] nil)
+       (ns-resolve 'futon3c.giraffe.reread-service 'schedule-backstop!) (fn [_] nil)
+       #'readings/check-record (fn [_ _ _ line] {:passed? true :record (json/parse-string line true)})
+       (ns-resolve 'futon3c.giraffe.reread-service 'mint-step!)
+       (fn [_ landed idle?] (swap! mints conj [landed idle?]) {:status :deferred :pending-landings landed})
+       (ns-resolve 'futon3c.giraffe.reread-service 'after-mint!) (fn [& _] nil)
+       (ns-resolve 'futon3c.giraffe.reread-service 'schedule-mint!) (fn [& _] nil)}
+      (fn []
+        (.get (.submit executor ^Runnable #(tick-var token 0)))
+        (is (= 1 (get-in (service/health) [:last-retirement :retired])))
+        (is (= [[1 true]] @mints))))
+    (swap! state-atom assoc :running? false)
+    (.shutdown executor)))
