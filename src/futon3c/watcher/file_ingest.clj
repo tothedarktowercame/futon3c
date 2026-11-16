@@ -1553,6 +1553,21 @@
                                  (ex-message e))}))))))
     @stats))
 
+(defonce ^:private reread-warning-at (atom nil))
+
+(defn- notify-reread!
+  "Use the ingest log for stopped delivery, at most once per minute globally."
+  [path]
+  (let [result (reread-service/notify-doc-changed! path)]
+    (when (= :stopped (:status result))
+      (locking reread-warning-at
+        (let [now (System/currentTimeMillis)]
+          (when (or (nil? @reread-warning-at)
+                    (>= (- now @reread-warning-at) 60000))
+            (reset! reread-warning-at now)
+            (println "[file-ingest] giraffe-reread stopped; notification not scheduled:" path)))))
+    result))
+
 (defn dispatch!
   "Top-level entry point used by the watcher's per-cycle loop. Takes
    {:path :root :label} (no root-ctx — this function fetches it via
@@ -1578,7 +1593,7 @@
             dur (- (System/currentTimeMillis) t-start)]
         ;; keep the scope-surface current too (debounced + async — never blocks here)
         (scope-reingest/schedule! path)
-        (reread-service/notify-doc-changed! path)
+        (notify-reread! path)
         (assoc stats :status :mission-doc :duration-ms dur :path path))
 
       ticket-doc?
@@ -1586,7 +1601,7 @@
             stats (ingest-ticket-doc! {:path path :label label})
             dur (- (System/currentTimeMillis) t-start)]
         (when (:entity-ok? stats) (scope-reingest/schedule! path))
-        (reread-service/notify-doc-changed! path)
+        (notify-reread! path)
         (assoc stats :status :ticket-doc :duration-ms dur :path path))
 
       excursion-doc?
@@ -1594,7 +1609,7 @@
             stats (ingest-excursion-doc! {:path path :label label})
             dur (- (System/currentTimeMillis) t-start)]
         (scope-reingest/schedule! path)
-        (reread-service/notify-doc-changed! path)
+        (notify-reread! path)
         (assoc stats :status :excursion-doc :duration-ms dur :path path))
 
       ;; Campaigns: no doc-entity parser yet (Phase 2b), but the scope pipeline

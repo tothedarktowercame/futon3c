@@ -11,6 +11,7 @@
             [futon3c.agency.turn-queue :as turn-queue]
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
+            [futon3c.giraffe.reread-service :as reread-service]
             [futon3c.dev.config :as config]
             [futon3c.evidence.invariant :as evidence-invariant]
             [futon3c.inbox-zero.sweeper :as inbox-zero-sweeper]
@@ -42,6 +43,24 @@
 ;; exactly as it already did under FUTON1A_PORT=0. The XTDB2 node/HTTP is
 ;; served either by the futon1b-server systemd unit or, when FUTON1B_EMBED=1,
 ;; in-process by start-futon1b-embedded! below.
+(defn start-giraffe-reread!
+  "Managed startup; opt out with FUTON3C_GIRAFFE_REREAD_AUTOSTART=0.
+   A failed startup stays visible in CYDER and does not abort bootstrap."
+  []
+  (when (config/env-bool "FUTON3C_GIRAFFE_REREAD_AUTOSTART" true)
+    (let [failure (atom nil)]
+      (try
+        (reread-service/start!)
+        (println "[dev] giraffe-reread starting in-JVM")
+        (catch Throwable t
+          (reset! failure {:status :failed :error (.getMessage t)})
+          (println (str "[dev] giraffe-reread start threw: " (.getMessage t)
+                        " — boot continues."))))
+      (cyder/register!
+       {:id "giraffe-reread" :type :daemon
+        :stop-fn reread-service/stop!
+        :state-fn #(or @failure (reread-service/health))}))))
+
 (defn start-futon1a!
   "Retired: futon1a's embedded XTDB 1 node is gone. Always returns nil; the
    stack gets substrate/evidence over HTTP from futon1b (systemd :7073)."
@@ -543,6 +562,7 @@
               :state-fn #(let [s @!f1-sys]
                            {:port (:http/port s)
                             :direct-xtdb? direct-xtdb?})}))
+        _ (start-giraffe-reread!)
         ;; Multi-repo watcher (E-live-means-live Path B): in-JVM
         ;; replacement for the separate bb watcher process. Polls
         ;; the watched roots, dispatches per-file ingest into

@@ -298,3 +298,16 @@
     (let [f (java.io.File/createTempFile "T-invented" ".md")]
       (spit f (str "# T-invented\n\n" line "\n"))
       (is (= want (:ticket/status (sut/parse-ticket-md (.getPath f)))) line))))
+
+(deftest stopped-reread-notifications-are-visible-and-rate-limited
+  (with-redefs [sut/reread-warning-at (atom nil)
+                reread-service/notify-doc-changed! (constantly {:status :stopped})
+                sut/file-exists? (constantly true)
+                sut/mission-doc-path? (constantly true)
+                sut/ingest-mission-doc! (constantly {})
+                scope-reingest/schedule! (constantly nil)]
+    (let [event {:path "/invented/holes/missions/M-example.md" :label "fixture"}
+          output (with-out-str (sut/dispatch! event) (sut/dispatch! event))]
+      (is (.contains output "giraffe-reread stopped"))
+      (is (.contains output (:path event)))
+      (is (= 1 (count (re-seq #"notification not scheduled" output)))))))

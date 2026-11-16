@@ -3,7 +3,9 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
             [futon3c.dev.bootstrap :as bootstrap]
-            [futon3c.dev.config :as config]))
+            [futon3c.dev.config :as config]
+            [futon3c.cyder]
+            [futon3c.giraffe.reread-service]))
 
 (deftest artifact-live-copy-is-registered-but-not-run-at-startup
   (testing "boot preserves the explicit probe without paying for its repo scan"
@@ -131,3 +133,30 @@
       (is (str/includes? source
                          "-M:server -m futon1b-server --store-dir migration-store-21 --port 7073"))
       (is (str/includes? source "WantedBy=default.target")))))
+
+(deftest giraffe-managed-startup
+  (doseq [setting [nil "1" "0"]]
+    (let [calls (atom [])
+          registered (atom nil)]
+      (with-redefs [config/env (fn [_] setting)
+                    futon3c.giraffe.reread-service/start! #(swap! calls conj :start)
+                    futon3c.giraffe.reread-service/stop! #(swap! calls conj :stop)
+                    futon3c.giraffe.reread-service/health (constantly {:status :running})
+                    futon3c.cyder/register! #(reset! registered %)]
+        (bootstrap/start-giraffe-reread!)
+        (if (= "0" setting)
+          (do (is (empty? @calls)) (is (nil? @registered)))
+          (do (is (= [:start] @calls))
+              (is (= "giraffe-reread" (:id @registered)))
+              (is (= {:status :running} ((:state-fn @registered))))
+              ((:stop-fn @registered))
+              (is (= [:start :stop] @calls))))))))
+
+(deftest giraffe-startup-failure-is-visible
+  (let [registered (atom nil)]
+    (with-redefs [config/env (constantly nil)
+                  futon3c.giraffe.reread-service/start! #(throw (ex-info "fixture failure" {}))
+                  futon3c.cyder/register! #(reset! registered %)]
+      (is (str/includes? (with-out-str (bootstrap/start-giraffe-reread!)) "boot continues"))
+      (is (= {:status :failed :error "fixture failure"}
+             ((:state-fn @registered)))))))
