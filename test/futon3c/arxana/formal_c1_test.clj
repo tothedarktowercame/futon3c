@@ -65,7 +65,7 @@
 
 (deftest c1-declarations-are-resolved
   ;; C1's declarations plus the later formal-Arxana relation types.
-  (is (= 74 (count types/registry-v1)))
+  (is (= 78 (count types/registry-v1)))
   (is (every? #(contains? types/registry-v1 %)
               [[:code-definition 1] [:doc-entry 1] [:lean-declaration 1]
                [:scope-in-revision 1]
@@ -78,7 +78,12 @@
                [:geometry/fibre-of 1] [:geometry/member 1]
                [:geometry/value 1] [:geometry/placement 1]
                [:geometry/fibre-of 2] [:geometry/named 1]
-               [:geometry/selection 1]]))
+               [:geometry/selection 1]
+               [:memory/recall 1] [:memory/use 1]
+               [:memory/burial 1] [:memory/repetition 1]]))
+  (is (= [:arm] (:identity/content-fields (types/registry-v1 [:memory/recall 1]))))
+  (doseq [t [[:memory/use 1] [:memory/burial 1] [:memory/repetition 1]]]
+    (is (= [] (:identity/content-fields (types/registry-v1 t)))))
   (doseq [[_ declaration] types/registry-v1]
     (is (string? (:type/digest declaration)))
     (is (types/convergence-policies (:convergence/policy declaration)))

@@ -16,7 +16,9 @@
           :segment/basis {:evidence-ref "e-test" :scope {}}}
          extra))
 
-(use-fixtures :each (fn [f] (prompt-line/reset-registry!) (f)))
+(use-fixtures :each (fn [f]
+                      (prompt-line/reset-registry!)
+                      (binding [prompt-line/*dog-recall-gcc-writer* nil] (f))))
 
 (deftest analysis-seats-are-kept-out-of-the-prompt-line
   (is (prompt-line/analysis-seat? "象"))
@@ -78,6 +80,26 @@
                                      :render-at now})]
     (is (= result (prompt-line/last-render "claude-17" "s1")))
     (is (nil? (prompt-line/last-render "claude-17" "s2")))))
+
+(deftest rendered-dog-recall-field-lands-before-off-thread-gcc-write
+  (let [dir (str (java.nio.file.Files/createTempDirectory
+                  "prompt-dog-gcc-" (make-array java.nio.file.attribute.FileAttribute 0)))
+        store (turn-store/store dir) id "turn-dogORDER" result (promise)]
+    (turn-store/write-record-id! store id {:origin "operator" :source_text "x"})
+    (prompt-line/register-provider!
+     (registration :memory "dog"
+                   (fn [_] (segment :memory "dog"
+                                    {:segment/dog-recall
+                                     {:at now :arm "shown"
+                                      :items [{:memory "p/one"}]}}))))
+    (binding [prompt-line/*turn-record-store* store
+              prompt-line/*dog-recall-gcc-writer*
+              (fn [_cfg st rid]
+                (deliver result {:field-before-write
+                                 (:dog_recall (turn-store/read-record st rid))}))]
+      (prompt-line/render! {:agent-id "claude-17" :session-id "s1"
+                            :turn-record-id id})
+      (is (map? (:field-before-write (deref result 2000 nil)))))))
 
 ;; --- turn-record writes (E-象-repl-cycle packet 1b) --------------------------
 ;; render! appends each render's :pattern segment(s) and job id onto the turn

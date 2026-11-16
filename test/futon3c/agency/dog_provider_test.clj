@@ -41,7 +41,7 @@
   (fn [f]
     (prompt-line/reset-registry!)
     (dog/reset-cache!)
-    (f)
+    (binding [prompt-line/*dog-recall-gcc-writer* nil] (f))
     (prompt-line/reset-registry!)
     (dog/reset-cache!)))
 
@@ -518,10 +518,13 @@
     (write-operator-record! store record-id "OK please send pattern-index packet 3")
     (turn-store/update-record! store record-id
                                #(assoc % :dog_recall (:dog_recall fix)
+                                       :dog_recall_gcc {:written 3}
                                        :reply_text (:reply_text fix)))
     (with-redefs [dog/memory-body (fn ([handle] (get (bodies-map fix) handle))
                                     ([_dir handle] (get (bodies-map fix) handle)))]
-      (dog/handle-event {:store store} {:event :settled :id record-id})
+      (dog/handle-event {:store store
+                         :recall-reader (fn [_ _] (:dog_recall fix))}
+                        {:event :settled :id record-id})
       (is (loop [n 0]
             (cond (:dog_use (turn-store/read-record store record-id)) true
                   (< 100 n) false
@@ -530,13 +533,33 @@
       (let [dog-use (:dog_use (turn-store/read-record store record-id))]
         (is (= "ok" (:status dog-use)))
         (is (= 3 (count (:used-memory-ids dog-use))))))
-    ;; a record with no dog_recall is skipped entirely
+    ;; an in-flight GCC projection is typed pending, never read from the field
     (let [record-id2 "turn-useTEST2"]
       (write-operator-record! store record-id2 "an ordinary turn")
       (dog/handle-event {:store store} {:event :settled :id record-id2})
       (Thread/sleep 300)
-      (is (not (contains? (turn-store/read-record store record-id2) :dog_use))
-          "no dog_recall → no dog_use"))))
+      (is (= "pending" (get-in (turn-store/read-record store record-id2)
+                                [:dog_use :status]))))))
+
+(deftest use-check-reads-gcc-recall-with-no-turn-field-fallback
+  (let [forbidden (reify clojure.lang.ILookup
+                    (valAt [_ _] (throw (AssertionError. "dog_recall field read")))
+                    (valAt [_ _ _] (throw (AssertionError. "dog_recall field read"))))
+        record {:id "turn-gccUSE" :origin "operator" :source_text "x"
+                :reply_text "the reply names example-memory"
+                :dog_recall forbidden :dog_recall_gcc {:written 1}}
+        saved (promise)]
+    (with-redefs [turn-store/read-record (fn [& _] record)
+                  turn-store/update-record! (fn [_ _ f] (deliver saved (f record)))
+                  dog/memory-body (constantly nil)]
+      (#'futon3c.agency.dog-provider/prepare-use-check!
+       {:store :stub
+        :recall-config :stub
+        :recall-reader (fn [_ _]
+                         {:status "ok" :items [{:memory "p/example-memory"}]})}
+       "turn-gccUSE")
+      (is (= ["p/example-memory"]
+             (get-in (deref saved 2000 nil) [:dog_use :used-memory-ids]))))))
 
 ;; -------------------------------------------- post-hook part 2a: bury
 ;; selection (M-repl-circus, claude-13 11-11). Fixtures turn-*.bury.json

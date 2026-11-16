@@ -1,15 +1,32 @@
 (ns futon3c.agency.prompt-line
   "Bounded, inspectable composition of prompt-line segments."
   (:require [clojure.string :as str]
+            [futon3c.arxana.dog-memory :as dog-memory]
+            [futon3c.arxana.turn-mention-writer :as mentions]
             [futon3c.xiang.turn-store :as turn-store])
   (:import [java.time Instant]
-           [java.util.concurrent Callable Executors TimeUnit TimeoutException ExecutionException]))
+           [java.util.concurrent Callable ExecutorService Executors ThreadFactory
+            TimeUnit TimeoutException ExecutionException]))
 
 (def default-provider-budget-ms 100)
 (def whole-render-budget-ms 250)
 
 (defonce ^:private !providers (atom []))
 (defonce ^:private !last-renders (atom {}))
+
+(defonce ^:private ^ExecutorService dog-gcc-executor
+  (Executors/newSingleThreadExecutor
+   (reify ThreadFactory
+     (newThread [_ r] (doto (Thread. ^Runnable r "dog-recall-gcc") (.setDaemon true))))))
+
+(def ^:dynamic *dog-recall-gcc-writer* dog-memory/write-turn!)
+(def ^:dynamic *dog-recall-gcc-config* nil)
+
+(defn- schedule-dog-recall-gcc! [store id]
+  (when *dog-recall-gcc-writer*
+    (let [writer *dog-recall-gcc-writer*
+          cfg (or *dog-recall-gcc-config* (mentions/default-config))]
+      (.submit dog-gcc-executor ^Runnable #(writer cfg store id)))))
 
 (defn reset-registry!
   "Testing seam. Clears providers and remembered renders."
@@ -229,6 +246,9 @@
           (locking write-lock
             (if (turn-store/read-record store id)
               (do (turn-store/update-record! store id #(assoc % :dog_recall dog))
+                  ;; Only the rendered payload is projected. This runs after
+                  ;; the turn-field write and never on the provider's 25 ms path.
+                  (schedule-dog-recall-gcc! store id)
                   nil)
               (let [absence {:error/code :dog-recall-not-recorded
                              :reason "record-missing" :record-id id}]

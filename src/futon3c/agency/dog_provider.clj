@@ -50,6 +50,8 @@
             [clojure.set :as set]
             [clojure.string :as str]
             [futon3c.agency.prompt-line :as prompt-line]
+            [futon3c.arxana.dog-memory :as dog-memory]
+            [futon3c.arxana.turn-mention-writer :as mention-writer]
             [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as turn-store])
   (:import [java.net URI URLEncoder]
@@ -750,13 +752,28 @@
              (try
                (let [store (let [s (:store opts)] (if (fn? s) (s) s))
                      record (when store (turn-store/read-record store record-id))]
-                 (when (and (map? record) (contains? record :dog_recall))
-                   (let [items (get-in record [:dog_recall :items])
+                 (when (map? record)
+                   ;; The renderer's GCC projection is normally complete long
+                   ;; before :settled. One brief retry covers an in-flight write;
+                   ;; the turn field is never a fallback.
+                   (let [record (assoc record :id record-id)
+                         marker (:dog_recall_gcc record)
+                         _ (when-not marker (Thread/sleep 250))
+                         record (if marker record (turn-store/read-record store record-id))
+                         marker (:dog_recall_gcc record)
+                         recall (if marker
+                                  ((or (:recall-reader opts) dog-memory/read-recall)
+                                   (or (:recall-config opts) (mention-writer/default-config))
+                                   (assoc record :id record-id))
+                                  {:status "pending" :items []})
+                         items (:items recall)
                          bodies (into {} (keep (fn [{:keys [memory]}]
                                                  (when-let [b (memory-body memory)]
                                                    [(str memory) b])))
                                       items)
-                         result (try (use-check record bodies)
+                         result (try (if (= "pending" (:status recall))
+                                       {:at (str (Instant/now)) :status "pending" :items []}
+                                       (use-check (assoc record :dog_recall recall) bodies))
                                      (catch Throwable t
                                        {:at (str (Instant/now)) :status "failed"
                                         :reason (str "use-check-error: " (.getMessage t))

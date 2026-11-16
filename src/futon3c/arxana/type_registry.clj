@@ -176,6 +176,22 @@
                  [{:role :needing :endpoint/kinds #{:external-ref}}
                   {:role :supplier :endpoint/kinds #{:external-ref}}]
                  [:class])
+   (clusion-type :memory/recall 1
+                 [{:role :turn :endpoint/kinds #{:external-ref}}
+                  {:role :memory :endpoint/kinds #{:external-ref}}]
+                 [:arm])
+   (clusion-type :memory/use 1
+                 [{:role :turn :endpoint/kinds #{:external-ref}}
+                  {:role :memory :endpoint/kinds #{:external-ref}}]
+                 [])
+   (clusion-type :memory/burial 1
+                 [{:role :turn :endpoint/kinds #{:external-ref}}
+                  {:role :memory :endpoint/kinds #{:external-ref}}]
+                 [])
+   (clusion-type :memory/repetition 1
+                 [{:role :turn :endpoint/kinds #{:external-ref}}
+                  {:role :memory :endpoint/kinds #{:external-ref}}]
+                 [])
    (clusion-type :kernel-builds 1
                  [{:role :artifact :endpoint/kinds #{:artifact-revision}}]
                  [:language])
