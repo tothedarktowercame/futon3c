@@ -183,3 +183,14 @@
         (is (= :supersession-ambiguous
                (get-in (sut/resolve-tag {"M-a" {:successors successors}} "M-a")
                        [:notice :reason])))))))
+
+(deftest gcc-successors-follow-chains-from-turn-roots-only
+  (let [graph {"M-a" ["M-b"] "M-b" ["M-c"] "M-c" [] "M-x" ["M-y"]}
+        reads (atom [])
+        items (mapv (fn [id] {:id id}) ["M-a" "M-b" "M-c" "M-x" "M-y"])]
+    (with-redefs [sut/read-successors (fn [_ item] (swap! reads conj (:id item)) (graph (:id item)))]
+      (let [out (into {} (map (juxt :id :successors))
+                      (sut/with-gcc-successors {} items ["M-a" "M-a" "M-unknown"]))]
+        (is (= {"M-a" ["M-b"] "M-b" ["M-c"] "M-c" [] "M-x" [] "M-y" []} out))
+        (is (= {:item "M-c"} (sut/resolve-tag (into {} (map (fn [[k v]] [k {:successors v}])) out) "M-a")))
+        (is (= ["M-a" "M-b" "M-c"] @reads) "each reachable item is read once; unrelated items are not read")))))
