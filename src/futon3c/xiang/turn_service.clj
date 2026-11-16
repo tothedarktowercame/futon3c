@@ -49,6 +49,7 @@
             [clojure.string :as str]
             [futon3c.agency.registry :as registry]
             [futon3c.arxana.turn-mention-writer :as mention-writer]
+            [futon3c.circus.hou-store :as hou-store]
             [futon3c.evidence.invoke-preview :as invoke-preview]
             [futon3c.xiang.reply-target :as rt]
             [futon3c.xiang.relationship-review :as relationship-review]
@@ -97,6 +98,9 @@
    :mentions-enabled? (not= "0" (System/getenv "FUTON3C_TURN_MENTIONS"))
    :mentions-writer! mention-writer/write-turn-mentions!
    :mentions-config nil
+   :hou-enabled? (not= "0" (System/getenv "FUTON3C_HOU"))
+   :hou-writer! hou-store/write-focus!
+   :hou-config nil
    ;; Likewise for the 小象 draft of a turn not dispatched at once.
    :draft-async! nil})
 
@@ -551,17 +555,30 @@
     (not= (get old id) sig)))
 
 (defn write-mentions-async!
-  "Queue one immutable field snapshot; failure cannot fail the turn."
+  "Queue field mentions and, once settled AND replied, focus. Re-read the turn
+  on the worker: whichever field lands last triggers the ready snapshot. Ensure
+  both fields' mention batches have completed before focus reads their records;
+  replay uses the mention writer's deterministic, idempotent message IDs."
   [svc record field]
-  (when (cfg svc :mentions-enabled?)
+  (when (or (cfg svc :mentions-enabled?) (cfg svc :hou-enabled?))
     (let [failed (fn [e]
                    (binding [*out* *err*]
-                     (println "[turn-mentions] failed" (:id record) field (.getMessage e))))]
+                     (println "[turn-mentions/hou] failed" (:id record) field (.getMessage e))))]
       (try
         ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
-         #(try ((cfg svc :mentions-writer!)
-                (or (cfg svc :mentions-config) (mention-writer/default-config)) record field)
-               (catch Exception e (failed e))))
+         #(try
+            (let [mention-cfg (or (cfg svc :mentions-config) (mention-writer/default-config))
+                  current (assoc (or (ts/read-record (cfg svc :store) (:id record)) record) :id (:id record))
+                  ready? (and (cfg svc :hou-enabled?)
+                              (= "operator" (or (:origin current) "operator"))
+                              (hou-store/settled? current)
+                              (hou-store/reply-landed? current))]
+              (when (cfg svc :mentions-enabled?)
+                (doseq [f (if ready? [:source_text :reply_text] [field])]
+                  ((cfg svc :mentions-writer!) mention-cfg current f)))
+              (when ready?
+                ((cfg svc :hou-writer!) (or (cfg svc :hou-config) (hou-store/default-config)) current)))
+            (catch Exception e (failed e))))
         (catch Exception e (failed e))))))
 
 (defn- settle-evidence!

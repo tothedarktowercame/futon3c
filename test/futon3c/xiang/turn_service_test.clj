@@ -33,7 +33,7 @@
   [& [overrides]]
   (let [bells (atom []) scheduled (atom []) jobs (atom {}) posted (atom [])
         clock (atom 1000000)
-        s (svc/service (merge {:mentions-enabled? false :store (temp-store)
+        s (svc/service (merge {:hou-enabled? false :mentions-enabled? false :store (temp-store)
                                ;; Most tests predate Platform-primary routing and
                                ;; exercise the historical pool-primary behavior.
                                :seat "象" :alternate "象-sonnet"
@@ -1490,3 +1490,44 @@
         {:keys [id]} (turn! h {:dispatch :none :origin "agent"})]
     (svc/attach-happened! (:svc h) id {:reply "M-toy" :commits []})
     (is (= [:reply_text :source_text] @calls))))
+
+(deftest hou-hook-waits-for-both-and-contains-failure
+  (let [calls (atom []) tasks (atom [])
+        h (harness {:hou-enabled? true :hou-config {} :mentions-enabled? true :mentions-config {}
+                    :mentions-writer! (fn [_ _ field] (swap! calls conj field))
+                    :hou-writer! (fn [_ turn] (swap! calls conj [:hou (:reply_text turn)]))
+                    :evidence-async! #(swap! tasks conj %)})
+        {:keys [id record]} (turn! h)]
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (doseq [task @tasks] (task))
+    (is (= [:source_text] @calls))
+    (reset! tasks []) (reset! calls [])
+    (svc/attach-happened! (:svc h) id {:reply "M-toy" :commits []})
+    (is (empty? @calls))
+    (doseq [task @tasks] (task))
+    (is (= [:source_text :reply_text [:hou "M-toy"]] @calls))
+    (reset! tasks [])
+    (svc/write-mentions-async!
+     (assoc-in (:svc h) [:config :hou-writer!] (fn [& _] (throw (ex-info "toy hou failure" {}))))
+     {:id id} :reply_text)
+    (is (nil? ((first @tasks))))))
+
+(deftest hou-hook-reply-before-settlement
+  (let [calls (atom [])
+        h (harness {:hou-enabled? true :hou-config {} :mentions-enabled? false
+                    :hou-writer! (fn [_ turn] (swap! calls conj (:reply_text turn)))
+                    :evidence-async! (fn [f] (f))})
+        {:keys [id record]} (turn! h)]
+    (svc/attach-happened! (:svc h) id {:reply "M-toy" :commits []})
+    (is (empty? @calls))
+    (svc/publish-analysis! (:svc h) id (analysis-for record) {})
+    (is (= ["M-toy"] @calls))))
+
+(deftest hou-does-not-treat-agent-bells-as-operator-focus
+  (let [calls (atom [])
+        h (harness {:hou-enabled? true :hou-config {} :mentions-enabled? false
+                    :hou-writer! (fn [& _] (swap! calls conj :wrote))
+                    :evidence-async! (fn [f] (f))})
+        {:keys [id]} (turn! h {:dispatch :none :origin "agent"})]
+    (svc/attach-happened! (:svc h) id {:reply "M-toy" :commits []})
+    (is (empty? @calls))))

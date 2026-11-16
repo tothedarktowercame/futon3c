@@ -123,6 +123,14 @@
    (clusion-type :workplan/closure-claim 1
                  [{:role :item :endpoint/kinds #{:entity}}]
                  [:legacy/source-record-id])
+   (clusion-type :hou/focus 1
+                 [{:role :evidence :endpoint/kinds #{:external-ref}}]
+                 [:hou/turn :hou/at :hou/rule :hou/relations :hou/associated-radius
+                  :hou/hop-bound :hou/evidence-pin :hou/sources])
+   (clusion-type :hou/focus-relation 1
+                 [{:role :focus :endpoint/kinds #{:clusion}}
+                  {:role :item :endpoint/kinds #{:clusion}}]
+                 [:relation])
    (clusion-type :workplan/mention 1
                  [{:role :item :endpoint/kinds #{:clusion}}
                   {:role :evidence :endpoint/kinds #{:external-ref}}]
@@ -396,7 +404,8 @@
 (def dynamics-v1
   "Executable method revisions admitted by the C3b receipt boundary. New
   implementations add a version; they never reinterpret an old receipt."
-  #{["馬/occurrence" 1]
+  #{["hou/focus" 1]
+    ["馬/occurrence" 1]
     ["xiang/read" 1]
     ["embedding" "all-MiniLM-L6-v2"]
     ["formal-arxana/d6-compose" 1]
