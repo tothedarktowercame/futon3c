@@ -533,7 +533,7 @@
                                            :endpoint-role (:endpoint/role body)
                                            :endpoint-id (:endpoint/id body)
                                            :order (:time/order body)
-                                           :limit (:query/limit body)
+                                           :limit (or (:query/limit body) 50)
                                            :subject-id (:subject/id body)
                                            :interpreter-id (:interpreter/id body)})]
                          (or qerr

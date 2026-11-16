@@ -12,6 +12,7 @@
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
             [futon3c.giraffe.reread-service :as reread-service]
+            [futon3c.arxana.workplan-service :as workplan-service]
             [futon3c.dev.config :as config]
             [futon3c.evidence.invariant :as evidence-invariant]
             [futon3c.inbox-zero.sweeper :as inbox-zero-sweeper]
@@ -60,6 +61,22 @@
        {:id "giraffe-reread" :type :daemon
         :stop-fn reread-service/stop!
         :state-fn #(or @failure (reread-service/health))}))))
+
+(defn start-workplan-service!
+  "Managed in-JVM Arxana startup; FUTON3C_WORKPLAN_SERVICE_AUTOSTART=0 opts out."
+  []
+  (when (config/env-bool "FUTON3C_WORKPLAN_SERVICE_AUTOSTART" true)
+    (let [failure (atom nil)]
+      (try
+        (workplan-service/start!)
+        (println "[dev] workplan Arxana listening on 7094 (store: futon1b)")
+        (catch Throwable t
+          (reset! failure {:status :failed :error (.getMessage t)})
+          (println (str "[dev] workplan service start failed: " (.getMessage t)))))
+      (cyder/register!
+       {:id "workplan-arxana" :type :daemon
+        :stop-fn workplan-service/stop!
+        :state-fn #(or @failure (workplan-service/health))}))))
 
 (defn start-futon1a!
   "Retired: futon1a's embedded XTDB 1 node is gone. Always returns nil; the
@@ -651,6 +668,7 @@
         ;; agent-not-found (claude-13 review). Watcher events before this point
         ;; are logged as :stopped and caught by the startup reconciliation.
         _ (start-giraffe-reread!)
+        _ (start-workplan-service!)
         webarxana-sys (try
                         (start-webarxana!)
                         (catch Throwable t
