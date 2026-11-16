@@ -257,6 +257,23 @@
 
 (def quote-fence ">>>")
 
+(defn quote-spans
+  "Zero-based, end-exclusive codepoint spans of whole >>> blocks, including
+  fence lines. Uses elide-quotes' opening/closing rules; an unclosed block
+  extends to end of text. Newlines after closing fences are not in the span."
+  [text]
+  (let [text (str text)]
+    (loop [lines (seq (str/split text #"\n" -1)) offset 0 start nil spans []]
+      (if-let [line (first lines)]
+        (let [end (+ offset (.codePointCount ^String line 0 (count line)))
+              opening? (re-find #"^[ \t]*>>>" line)
+              closing? (re-find #"^[ \t]*>>>[ \t]*$" line)]
+          (cond
+            (and start closing?) (recur (next lines) (inc end) nil (conj spans [start end]))
+            (and (nil? start) opening?) (recur (next lines) (inc end) offset spans)
+            :else (recur (next lines) (inc end) start spans)))
+        (cond-> spans start (conj [start (.codePointCount ^String text 0 (count text))]))))))
+
 (defn elide-quotes
   "Replace >>> blocks in TEXT with the single word QUOTE.
    Returns {:text ELIDED :quotes [BLOCK ...]} in the order the blocks appeared.

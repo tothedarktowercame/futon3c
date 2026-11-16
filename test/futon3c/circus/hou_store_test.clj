@@ -12,9 +12,9 @@
             [futon3c.circus.hou-test :as toy]
             [futon3c.xiang.turn-store :as turns]))
 
-(def turn {:id "toy" :created_at "2026-01-01" :analysis_status "analyzed"
+(def turn {:id "toy" :evidence_id "toy-evidence" :created_at "2026-01-01" :analysis_status "analyzed"
            :source_text "M-a M-b" :reply_text ""})
-(def cfg {:graph-store :stub :turn-store {:dir "/invented"} :item-ids ["M-a" "M-b" "M-c" "M-d"]})
+(def cfg {:read-evidence (fn [_] {:evidence/body {:text "M-a M-b"}}) :graph-store :stub :turn-store {:dir "/invented"} :item-ids ["M-a" "M-b" "M-c" "M-d"]})
 
 (deftest atomic-focus-batch-and-typed-refusal
   (let [calls (atom [])]
@@ -133,3 +133,32 @@
       (is (= links (#'sut/complete-header-links cfg h)))
       (reset! total 202)
       (is (thrown? clojure.lang.ExceptionInfo (#'sut/complete-header-links cfg h))))))
+
+(deftest no-mention-evidence-is-valid-without-stored-reference
+  (let [c (assoc cfg :read-evidence (fn [_] {:evidence/body {:text "Nothing named."}})
+                 :read-needs (fn [_] {:readings [] :basis-records [] :sources []}))
+        calls (atom [])]
+    (with-redefs [store/get-entity (fn [& _] (throw (AssertionError. "no reference store read needed")))
+                  http/append-batch! (fn [_ _ rows] (swap! calls conj rows) {:ok {}})]
+      (let [snap (sut/snapshot c turn)
+            out (sut/write-focus! c turn)]
+        (is (:written out))
+        (is (= [] (get-in out [:written :asserted-content :hou/relations])))
+        (is (= 1 (count @calls)))
+        (is (= [:clusion/assert :evidence/append] (mapv :operation (first @calls))))
+        (is (= {:failed :invalidEvidence}
+               (hou/hou-run (assoc-in snap [:text-by-ref (:source-ref snap)] "Changed."))))))))
+
+(deftest quoted-mentions-are-pinned-not-focus
+  (let [text ">>> M-a\n>>>\nM-b"
+        c (assoc cfg :read-evidence (fn [_] {:evidence/body {:text text}})
+                 :read-needs (fn [_] {:readings [{:record {:id "toy-needs"} :needs [["M-b" "M-a"]]}]
+                                      :basis-records [] :sources []}))
+        plan (mentions/plan-field c turn :source_text)
+        stored (into {} (map (juxt :id identity)) (:mentions plan))]
+    (with-redefs [store/get-entity (fn [_ id] {:ok (get stored id)})]
+      (let [out (hou/hou-run (sut/snapshot c turn))]
+        (is (= [["M-b" :focus]] (get-in out [:written :asserted-content :hou/relations])))
+        (is (every? (set (map first (get-in out [:written :asserted-content :hou/evidence-pin]))) (keys stored)))
+        (is (= {:failed :invalidEvidence}
+               (hou/hou-run (update (sut/snapshot c turn) :stored dissoc (first (keys stored))))))))))

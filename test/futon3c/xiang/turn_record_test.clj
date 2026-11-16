@@ -388,3 +388,13 @@
     (is (str/includes? brief "social/keep-going (4.2) Keep going\n      context: a task is underway\n      conclusion: continue it"))
     (is (str/includes? brief "Q \"Looks good.\"\n    (no hits)"))
     (is (not (str/includes? (tr/analysis-brief "turn-c" "/p/turn-c.json" {}) "PRECOMPUTED")))))
+
+(deftest quote-spans-agree-with-elision
+  (doseq [text ["🈸 猴\n>>> M-toy\n>>>\nafter" "before\n >>> inline\nrest"
+               ">>>\nM-toy\n>>>\n>>> second\n>>>" "none" ">>>\n"]]
+    (let [spans (tr/quote-spans text)
+          replaced (reduce (fn [^String s [a b]]
+                             (str (subs s 0 (.offsetByCodePoints s 0 a)) "QUOTE"
+                                  (subs s (.offsetByCodePoints s 0 b)))) text (reverse spans))]
+      (is (= (:text (tr/elide-quotes text))
+             (if (seq spans) (str/trim replaced) replaced))))))

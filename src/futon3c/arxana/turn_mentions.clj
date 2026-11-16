@@ -4,8 +4,8 @@
   TEXT is one exact field revision, not a concatenation of operator/reply
   texts. EVIDENCE-REF is a complete external-reference record identifying
   that field revision, with SHA-256 of its UTF-8 text bytes. The settled
-  packet only holds witnesses (turn_service.clj:391-444); its canonical
-  turn-record :source_text or :reply_text is the text authority.
+  packet only holds witnesses. The writer selects Evidence Landscape body/text
+  for operator text and the stored turn-field revision for replies.
 
   ITEM-IDS is a collection of external item IDs. As workplan/item-view does,
   each resolves purely to the [:workplan/item 1] clusion keyed by :item/id.

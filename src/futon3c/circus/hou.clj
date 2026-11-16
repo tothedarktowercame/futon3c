@@ -70,10 +70,9 @@
 (defn hou-run
   "Input contains the exact audited snapshot and independently read :stored
   records. :readings contains {:record {:id ... ...} :needs [[a b] ...]}.
-  No record is silently dropped from the pin. A missing field reference (the
-  mention writer does not emit refs for fields with no mentions) is explicitly
-  invalidEvidence, not a made-up successful empty focus. Valid empty inputs
-  yield a written header with empty relations, as Monkey.monkeyRun allows."
+  No record is silently dropped from the pin. References are constructed from
+  the authoritative text read, including fields with no mentions. Valid empty
+  inputs yield a written header with empty relations (Monkey.monkeyRun)."
   [{:keys [settled? reply-landed? items references mention-records readings source-ref
            turn-id at rule associated-radius sources basis-records] :or {rule :named-items associated-radius 1}
     :as input}]
@@ -84,12 +83,20 @@
     :else
     (let [by-clusion (into {} (map (fn [id] [(:id (item-record id)) id]) items))
           item-of #(mentioned-item by-clusion %)
-          operator-items (map item-of (filter #(= source-ref (get-in % [:endpoints 1 :target :ref/id])) mention-records))
-          reply-items (map item-of (remove #(= source-ref (get-in % [:endpoints 1 :target :ref/id])) mention-records))
+          named (filter #(= :mentioned (get-in % [:asserted-content :mention/role])) mention-records)
+          operator-items (map item-of (filter #(= source-ref (get-in % [:endpoints 1 :target :ref/id])) named))
+          reply-items (map item-of (remove #(= source-ref (get-in % [:endpoints 1 :target :ref/id])) named))
           needs (mapcat :needs readings)
-          relations (focus-rule rule {:operator-items operator-items :reply-items reply-items
-                                     :mission-id (:mission-id input) :needs needs
-                                     :associated-radius associated-radius})
+          ;; Quoted-only items remain in the audited graph/pin but are not
+          ;; proposed as focus or associated. An independent unquoted mention
+          ;; of the same item still counts.
+          quoted-only (set/difference
+                       (set (map item-of (filter #(= :quoted (get-in % [:asserted-content :mention/role])) mention-records)))
+                       (set (map item-of named)))
+          relations (filterv #(not (contains? quoted-only (first %)))
+                             (focus-rule rule {:operator-items operator-items :reply-items reply-items
+                                               :mission-id (:mission-id input) :needs needs
+                                               :associated-radius associated-radius}))
           touched (set (map item-of mention-records))
           primary (set (map first (filter #(= :focus (second %)) relations)))
           measured (set/union touched primary)

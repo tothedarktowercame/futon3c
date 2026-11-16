@@ -86,22 +86,18 @@
   (let [items (writer/inventory cfg nil)
         cfg (assoc cfg :item-ids items)
         plans (mapv #(writer/plan-field cfg turn %) [:source_text :reply_text])
-        refs (mapv #(get-in % [:batches 0 :records 0 :record]) (filter #(seq (:batches %)) plans))
+        refs (vec (keep :reference plans))
         ms (vec (mapcat :mentions plans))
-        source-ref (get-in (first plans) [:batches 0 :records 0 :record :id])
+        source-ref (get-in (first plans) [:reference :id])
         need-data ((or (:read-needs cfg) read-needs) cfg)
         turn-basis {:id (str "turn-record/" (:id turn))
                     :fields (select-keys turn [:source_text :reply_text :mission_id :analysis_status :created_at :origin])}
         basis-records (vec (concat (:basis-records need-data) [turn-basis] (map hou/item-record items)))
-        local-records (concat basis-records (map :record (:readings need-data)))
-        arxana (concat refs ms)
+        local-records (concat refs basis-records (map :record (:readings need-data)))
+        arxana ms
         stored (into (into {} (map (juxt :id identity)) local-records)
                      (map (fn [r] [(:id r) (:ok (store/get-entity (:graph-store cfg) (:id r)))])) arxana)
-        text-by-ref (into {} (keep (fn [field]
-                                    (let [text (get turn field)]
-                                      (when (string? text)
-                                        (when-let [ref (first (filter #(= (str (:id turn) "/" (name field)) (:record/id %)) refs))]
-                                          [(:id ref) text])))) [:source_text :reply_text]))
+        text-by-ref (into {} (keep #(when (:reference %) [(get-in % [:reference :id]) (:text %)])) plans)
         turn-source {:kind :turn :dir (:dir (:turn-store cfg)) :id (:id turn)
                      :sha256 (digest/canonical-digest (select-keys turn [:source_text :reply_text :mission_id :analysis_status :created_at :origin]))}]
     (merge need-data
@@ -111,6 +107,8 @@
             :basis-records basis-records :items items :references refs :mention-records ms :source-ref source-ref
             :text-by-ref text-by-ref :stored stored
             :sources (vec (concat (:sources need-data) [turn-source]
+                                  (when source-ref [{:kind :evidence :id (:evidence_id turn)
+                                                     :sha256 (:revision/digest (first refs))}])
                                   (map (fn [r] {:kind :arxana :id (:id r) :sha256 (digest/canonical-digest r)}) arxana)))})))
 
 (defn- attempt! [cfg turn why]
@@ -183,19 +181,14 @@
   [cfg]
   (loop [ts (seq (turns/list-records (:turn-store cfg) :limit Long/MAX_VALUE))]
     (when-let [{:keys [id record]} (first ts)]
-      (let [text (:source_text record)
-            ref (when (string? text)
-                  (records/make-external-reference
-                   {:ref/kind :file-record :store/id "futon3c/turns"
-                    :store/endpoint (:dir (:turn-store cfg)) :record/id (str id "/source_text")
-                    :schema/authority :futon3c/turn-record :valid-time (or (:created_at record) "unknown")
-                    :revision/digest (digest/sha256-hex (.getBytes text "UTF-8"))}))
+      (let [ref (:reference (writer/field-evidence cfg (assoc record :id id) :source_text))
             headers (when ref (reverse-records cfg [:hou/focus 1] :evidence (:id ref)))]
         (if (seq headers) headers (recur (next ts)))))))
 
 (defn- source-fresh? [cfg {:keys [kind path id dir sha256]}]
   (= sha256
      (case kind
+       :evidence (digest/sha256-hex (.getBytes ^String (writer/evidence-text cfg id) "UTF-8"))
        :file (sha-file path)
        :arxana (some-> (:ok (store/get-entity (:graph-store cfg) id)) digest/canonical-digest)
        :turn (some-> (turns/read-record {:dir dir} id)
