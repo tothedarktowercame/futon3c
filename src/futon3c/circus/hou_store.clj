@@ -185,6 +185,46 @@
             (let [r (:ok (store/get-entity (:graph-store cfg) (:id e)))]
               (require! (= e r) :invalidEvidence) r)) expected)))
 
+(defn- source-reference-from-turn
+  "Reconstruct the immutable source reference identity from the turn record.
+  This deliberately does not read EL text: focus consumers read the already
+  published Hou header, rather than re-running mention extraction."
+  [cfg turn]
+  (when (and (string? (:source_text turn)) (seq (:evidence_id turn)))
+    (records/make-external-reference
+     {:ref/kind :evidence-text
+      :store/id "futon1b/evidence"
+      :store/endpoint (:evidence-url cfg "http://localhost:7073")
+      :record/id (str (:evidence_id turn) "/body/text")
+      :schema/authority :futon1b/evidence-text
+      :valid-time (or (:created_at turn) "unknown")
+      :revision/digest (digest/sha256-hex (.getBytes ^String (:source_text turn) "UTF-8"))})))
+
+(defn headers-for-turn
+  "Read and validate the complete stored Hou header(s) for one turn. Returns a
+  typed pending result when publication is absent or its fixed-arity links do
+  not agree; it never derives focus from turn text."
+  [cfg turn]
+  (try
+    (if-let [ref (source-reference-from-turn cfg turn)]
+      (let [headers (->> (reverse-records cfg [:hou/focus 1] :evidence (:id ref))
+                         (filter #(= (:id turn) (get-in % [:asserted-content :hou/turn])))
+                         (sort-by (juxt #(get-in % [:asserted-content :hou/at]) :id))
+                         vec)]
+        (if (empty? headers)
+          {:pending (cond (not (settled? turn)) :turn-not-settled
+                          (not (reply-landed? turn)) :reply-not-landed
+                          :else :header-absent)}
+          (let [checked (mapv (fn [h]
+                                (require! (hou/header-links-agree? h (complete-header-links cfg h))
+                                          :invalidEvidence)
+                                h) headers)]
+            {:headers checked})))
+      {:pending :source-reference-unavailable})
+    (catch Exception e
+      {:pending (if (= :invalidEvidence (:reason (ex-data e)))
+                  :incomplete-header-links :header-read-failed)})))
+
 (defn newest-headers
   "Discover via turn-field evidence, not item links: otherwise an empty newer
   focus would incorrectly resurrect an older focus. The bounded Arxana API has

@@ -541,6 +541,7 @@
       {:relations relations
        :evidence-pin {:producer :hou :window window
                       :evidence-pin (:evidence-pin input)
+                      :header-ids (:header-ids input)
                       :notices (get-in result [:report :notices])}})))
 
 (defn mint!

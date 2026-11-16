@@ -172,7 +172,8 @@
                     (swap! windows conj window)
                     {:report {:focus [{:item "fixture"}] :notices []}
                      :focus-input {:relations (assoc relations "M-outside" :focus)
-                                   :evidence-pin [["turn-fixture" "digest"]]}})]
+                                   :evidence-pin [["turn-fixture" "digest"]]
+                                   :header-ids ["hou-header-fixture"]}})]
       (let [input (gr/retained-focus-input pass-output)
             written (:written (pilot-run root {:run-id "hou-focus" :focus-relation-input input}))
             pin (get-in written [:manifest :focus-relation-input :evidence-pin])]
@@ -180,6 +181,7 @@
         (is (= (set (map :id (:order pass-output))) (set (keys (:relations input)))))
         (is (= :hou (:producer pin)))
         (is (= [["turn-fixture" "digest"]] (:evidence-pin pin)))
+        (is (= ["hou-header-fixture"] (:header-ids pin)))
         (is (= (first @windows) (:window pin)))
         (is (= 6 (get-in pin [:window :window-hours])))))
     (with-redefs [operator-focus/operator-focus (constantly {:report {:focus []} :focus-input {:relations {}}})]

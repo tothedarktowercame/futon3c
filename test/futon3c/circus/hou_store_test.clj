@@ -152,6 +152,17 @@
       (is (= [:hou/focus 1] (:edge-type (first @calls))))
       (is (= :evidence (:endpoint-role (first @calls)))))))
 
+(deftest per-turn-header-reader-refuses-incomplete-links-without-reading-text
+  (let [h (:written (hou/hou-run (toy/fixture)))]
+    (with-redefs [mentions/evidence-text (fn [& _] (throw (AssertionError. "text read")))
+                  store/bounded-query! (fn [_ q]
+                                         {:ok (if (= [:hou/focus 1] (:edge-type q))
+                                                {:status :ok :truncated? false :edge-ids [(:id h)]}
+                                                {:status :ok :truncated? false :total 0 :edge-ids []})})
+                  store/get-entity (fn [_ id] {:ok (when (= id (:id h)) h)})]
+      (is (= {:pending :incomplete-header-links}
+             (sut/headers-for-turn cfg turn))))))
+
 (deftest full-link-set-is-checked-beyond-the-index-page-limit
   (let [base (:written (hou/hou-run (toy/fixture)))
         h (records/make-clusion

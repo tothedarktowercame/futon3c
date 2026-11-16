@@ -3,6 +3,8 @@
             [clojure.java.shell :as shell]
             [clojure.test :refer [deftest is]]
             [futon3c.circus.operator-focus :as sut]
+            [futon3c.circus.hou-store :as hou-store]
+            [futon3c.arxana.turn-mention-writer :as writer]
             [futon3c.arxana.item-inventory :as inventory]
             [futon3c.xiang.turn-store :as turns]))
 
@@ -24,7 +26,7 @@
     (is (= ["E-c"] (mapv :item (get-in out [:report :just-closed]))))
     (is (= {"M-a" :focus "M-b" :associated} (get-in out [:focus-input :relations])))
     (is (= 4 (count (get-in out [:focus-input :evidence-pin]))))
-    (is (= #{:relations :evidence-pin} (set (keys (:focus-input out)))))))
+    (is (= #{:relations :evidence-pin :header-ids} (set (keys (:focus-input out)))))))
 
 (deftest window-boundaries-and-ranking
   (let [out (sut/focus-window (assoc base :turns [(turn "excluded" "02" "s" ["M-a"] nil)
@@ -41,21 +43,28 @@
   (is (not (sut/closing-change "Status: DONE old words" "Status: DONE new words")))
   (is (not (sut/closing-change "Status: OPEN" "Status: OPEN\nOrdinary prose says CLOSED"))))
 
-(deftest evidence-quotes-and-read-only-shell
+(deftest stored-headers-drive-window-and-pending-blocks-mission-fallback
   (with-redefs [inventory/current-items (fn [_] items)
                 sut/with-closures (fn [xs _ _] xs)
                 turns/list-records (fn [& _]
-                                     [{:id "toy" :record {:origin "operator" :created_at "2026-01-01T04:00:00Z"
-                                                          :agent_id "seat-a" :evidence_id "e-toy"
-                                                          :source_text "QUOTE" :mission_id "M-b" :reply_text "M-a"}}
-                                      {:id "agent" :record {:origin "agent" :created_at "2026-01-01T05:00:00Z"}}])]
+                                     [{:id "headered" :record {:origin "operator" :created_at "2026-01-01T03:00:00Z"}}
+                                      {:id "pending" :record {:origin "operator" :created_at "2026-01-01T04:00:00Z"}}
+                                      {:id "tagged-pending" :record {:origin "operator" :created_at "2026-01-01T05:00:00Z"
+                                                                     :mission_id "M-b"}}])
+                hou-store/headers-for-turn
+                (fn [_ turn]
+                  (if (= "headered" (:id turn))
+                    {:headers [{:id "hou-header-1" :asserted-content
+                                {:hou/turn "headered" :hou/relations [["M-a" :focus] ["M-b" :associated]]}}]}
+                    {:pending :header-absent}))
+                writer/evidence-text (fn [& _] (throw (AssertionError. "evidence text path called")))]
     (let [out (sut/operator-focus {:turn-store {:dir "/invented"}
-                                   :read-evidence (fn [_] {:evidence/body {:text ">>> M-a\n>>>"}})
                                    :read-needs (fn [_] {:readings [] :basis-records []})} base)]
-      (is (= ["M-b"] (mapv :item (get-in out [:report :focus]))))
-      (is (= ["M-a"] (get-in out [:report :associated])))
-      (is (= 1 (get-in out [:report :turns])))
-      (is (contains? (set (map first (get-in out [:focus-input :evidence-pin]))) "evidence/e-toy/body/text")))))
+      (is (= ["M-a"] (mapv :item (get-in out [:report :focus]))))
+      (is (= {:headered 1 :pending 2 :mission-tag 0 :no-mission 0}
+             (get-in out [:report :turn-kinds])))
+      (is (= ["hou-header-1"] (get-in out [:focus-input :header-ids])))
+      (is (= 2 (count (filter #(= :pending (:reason %)) (get-in out [:report :notices]))))))))
 
 (deftest closure-time-comes-from-git-not-file-mtime
   (let [root (.toFile (java.nio.file.Files/createTempDirectory "focus-git" (make-array java.nio.file.attribute.FileAttribute 0)))

@@ -4,7 +4,6 @@
             [clojure.string :as str]
             [futon3c.arxana.digest :as digest]
             [futon3c.arxana.item-inventory :as inventory]
-            [futon3c.arxana.turn-mention-writer :as writer]
             [futon3c.circus.hou :as hou]
             [futon3c.circus.hou-store :as hou-store]
             [futon3c.giraffe.missions :as missions]
@@ -53,7 +52,8 @@
   [{:keys [until window-hours items turns needs pins notices] :or {window-hours 6}}]
   (let [ts (filter #(in-window? until window-hours (:created-at %)) turns)
         by-id (into {} (map (juxt :id identity)) items)
-        resolved (into {} (for [t ts :when (and (empty? (:named t)) (seq (:mission-id t)))]
+        resolved (into {} (for [t ts :when (and (not (:pending-reason t))
+                                                (empty? (:named t)) (seq (:mission-id t)))]
                             [(:id t) (resolve-tag by-id (:mission-id t))]))
         assignments (for [t ts id (distinct (if (seq (:named t)) (:named t)
                                                (when-let [id (:item (get resolved (:id t)))] [id])))]
@@ -71,23 +71,31 @@
                                   (in-window? until window-hours (:closed-at %))))
                     (map #(merge (summarize (:id %)) (select-keys % [:closed-at :closing-commit])))
                     (sort-by :item) vec)
-        no-mission (->> ts (filter #(and (empty? (:named %)) (not (seq (:mission-id %)))))
+        no-mission (->> ts (filter #(and (not (:pending-reason %)) (empty? (:named %))
+                                         (not (seq (:mission-id %)))))
                         (group-by :seat)
                         (map (fn [[seat xs]] {:seat seat :turn-count (count xs)})) (sort-by :seat) vec)
         relations (hou/focus-rule :mission-and-named
                                   {:operator-items (map :item focus) :reply-items (mapcat :reply-named ts)
                                    :needs needs :associated-radius 1})
         pin (vec (sort-by first (distinct (concat pins (mapcat :pin ts)))))
+        header-ids (vec (distinct (mapcat :header-ids ts)))
         unknown (for [id (sort (remove by-id (keys grouped)))] {:item id :reason :unknown-item})
         inactive (for [id (sort (keys grouped))
                        :when (and (= :closed (:state (by-id id)))
                                   (not (some #(= id (:item %)) closed)))]
                    (merge (summarize id) {:reason :not-open :status-class (:status-class (by-id id))}))]
     {:report {:until (str until) :window-hours window-hours :turns (count ts)
+              :turn-kinds {:headered (count (filter #(and (:header-id %) (seq (:named %))) ts))
+                           :pending (count (filter :pending-reason ts))
+                           :mission-tag (count (filter #(and (not (:pending-reason %))
+                                                            (empty? (:named %)) (seq (:mission-id %))) ts))
+                           :no-mission (count (filter #(and (not (:pending-reason %))
+                                                           (empty? (:named %)) (not (seq (:mission-id %)))) ts))}
               :focus focus :just-closed closed :no-mission no-mission
               :associated (mapv first (filter #(= :associated (second %)) relations))
               :notices (vec (concat notices (keep :notice (vals resolved)) unknown inactive))}
-     :focus-input {:relations (into {} relations) :evidence-pin pin}}))
+     :focus-input {:relations (into {} relations) :evidence-pin pin :header-ids header-ids}}))
 
 (def status-line #"(?i)^\s*(?:[-*]\s*)?(?:#+\s*)?(?:\*\*)?Status:?(?:\*\*)?\s*:?\s*(.+)$")
 
@@ -143,22 +151,24 @@
                      [id hit]))) roots))]
     (mapv #(merge % (get closures (:id %))) items)))
 
-(defn- read-turn [cfg by-clusion {:keys [id record]}]
+(defn- read-turn [cfg {:keys [id record]}]
   (let [record (assoc record :id id)
-        source (writer/plan-field cfg record :source_text)
-        reply (writer/plan-field cfg record :reply_text)
-        item-ids (fn [p] (vec (distinct (keep #(when (= :mentioned (get-in % [:asserted-content :mention/role]))
-                                                               (by-clusion (get-in % [:endpoints 0 :target :clusion/id])))
-                                                             (:mentions p)))))]
-    (if-not (:reference source)
-      {:notice {:turn id :reason :evidence-unavailable}}
-      {:turn {:id id :seat (or (:agent_id record) "unknown-seat") :created-at (:created_at record)
-              :named (item-ids source) :reply-named (item-ids reply) :mission-id (:mission_id record)
-              :pin (vec (concat [[(str "turn/" id) (digest/canonical-digest record)]
-                                 [(str "evidence/" (:evidence_id record) "/body/text")
-                                  (get-in source [:reference :revision/digest])]]
-                                (when (:reference reply)
-                                  [[(str "turn/" id "/reply_text") (get-in reply [:reference :revision/digest])]])))}})))
+        result (hou-store/headers-for-turn cfg record)
+        header (last (:headers result))
+        base {:id id :seat (or (:agent_id record) "unknown-seat") :created-at (:created_at record)
+              :mission-id (:mission_id record)
+              :pin [[(str "turn/" id) (digest/canonical-digest record)]]}]
+    (if header
+      {:turn (assoc base
+                    :header-id (:id header)
+                    :header-ids (mapv :id (:headers result))
+                    :named (->> (get-in header [:asserted-content :hou/relations])
+                                (keep (fn [[item relation]] (when (= :focus relation) item))) distinct vec)
+                    :reply-named []
+                    :pin (into (:pin base) (map (fn [h] [(:id h) (digest/canonical-digest h)])
+                                                (:headers result))))}
+      {:turn (assoc base :named [] :reply-named [] :pending-reason (:pending result))
+       :notice {:turn id :reason :pending :detail (:pending result)}})))
 
 (defn operator-focus
   ([opts] (operator-focus (hou-store/default-config) opts))
@@ -167,11 +177,10 @@
          ;; This read-only report recognizes the current census, including IDs
          ;; not yet published as clusions. It writes no dangling references.
          cfg (assoc cfg :item-ids (mapv :id items))
-         by-clusion (into {} (map #(vector (:id (inventory/item-record (:id %))) (:id %))) items)
          records (filter #(and (= "operator" (get-in % [:record :origin]))
                                (in-window? until window-hours (get-in % [:record :created_at])))
                          (turns/list-records (:turn-store cfg) :limit Long/MAX_VALUE))
-         read (mapv #(read-turn cfg by-clusion %) records)
+         read (mapv #(read-turn cfg %) records)
          nd (try {:data ((or (:read-needs cfg) hou-store/read-needs) cfg)}
                  (catch Exception e {:notice {:reason :needs-unavailable :detail (:reason (ex-data e))}}))
          data (:data nd)
