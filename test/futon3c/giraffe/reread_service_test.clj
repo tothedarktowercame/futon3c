@@ -855,3 +855,55 @@
     (is (not (.isCancelled lease-task)))
     (swap! state-atom assoc :running? false)
     (.shutdownNow executor)))
+
+(deftest failed-document-event-retries-and-clears-error
+  (let [config (assoc (fixture) :event-retry-ms 50 :event-retry-limit 3)
+        calls (atom 0)]
+    (with-redefs [worker/run-once! (constantly {:status :idle})
+                  service/item-snapshot (fn [p c]
+                                          (if (= 1 (swap! calls inc))
+                                            (throw (ex-info "invented parse failure" {}))
+                                            (snapshot p c)))]
+      (service/start! config) (flush-events!)
+      (service/notify-doc-changed! path)
+      (is (true? (wait-for #(boolean (seq (queue/requests (:store config)))) 2000)))
+      (is (= 2 @calls))
+      (is (nil? (get-in (service/health) [:errors "M-event-fixture"])))
+      (is (empty? (:pending (service-state)))))))
+
+(deftest persistent-document-failure-exhausts-event-budget
+  (let [config (assoc (fixture) :event-retry-ms 20 :event-retry-limit 3)
+        calls (atom 0)]
+    (with-redefs [worker/run-once! (constantly {:status :idle})
+                  service/item-snapshot (fn [& _] (swap! calls inc)
+                                          (throw (ex-info "invented persistent parse failure" {})))]
+      (service/start! config) (flush-events!)
+      (service/notify-doc-changed! path)
+      (is (true? (wait-for #(and (= 3 @calls) (empty? (:pending (service-state)))) 2000)))
+      (Thread/sleep 80)
+      (is (= 3 @calls))
+      (is (some? (get-in (service/health) [:errors "M-event-fixture"])))
+      (is (empty? (queue/requests (:store config)))))))
+
+(deftest newer-notification-or-stop-cancels-event-retry
+  (doseq [action [:newer :stop]]
+    (let [config (assoc (fixture) :event-retry-ms 200 :event-retry-limit 3)
+          calls (atom 0)]
+      (with-redefs [worker/run-once! (constantly {:status :idle})
+                    service/item-snapshot (fn [p c]
+                                            (if (= 1 (swap! calls inc))
+                                              (throw (ex-info "invented transient failure" {}))
+                                              (snapshot p c)))]
+        (service/start! config) (flush-events!)
+        (service/notify-doc-changed! path)
+        (is (true? (wait-for #(= 2 (get-in (service-state) [:pending "M-event-fixture" :attempt])) 2000)))
+        (let [task (get-in (service-state) [:pending "M-event-fixture" :task])]
+          (if (= :stop action)
+            (do (service/stop!) (join!)
+                (is (= :stopped (:status (service/notify-doc-changed! path)))))
+            (do (service/notify-doc-changed! path)
+                (is (true? (wait-for #(boolean (seq (queue/requests (:store config)))) 2000)))))
+          (is (.isCancelled ^java.util.concurrent.ScheduledFuture task)))
+        (Thread/sleep 250)
+        (is (= (if (= :stop action) 1 2) @calls))
+        (service/stop!) (join!)))))

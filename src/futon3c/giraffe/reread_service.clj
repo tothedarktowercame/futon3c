@@ -94,6 +94,7 @@
                        :giraffe-root (or (get env "GIRAFFE_ROOT") cli/default-root)
                        :edges (or (get env "GIRAFFE_EDGES") cli/default-edges)
                        :mint-state-path mint-batch/default-state-path :debounce-ms 4000
+                       :event-retry-ms 60000 :event-retry-limit 3
                        :failed-retry-after-ms (or (number "FUTON3C_GIRAFFE_REREAD_FAILED_RETRY_AFTER_MS") 86400000)
                        :failed-retry-limit (or (number "FUTON3C_GIRAFFE_REREAD_FAILED_RETRY_LIMIT") 3)
                        :retire-cap (or (number "FUTON3C_GIRAFFE_REREAD_RETIRE_CAP") 200)
@@ -107,6 +108,7 @@
                    (integer? (:new-item-cap config)) (<= 0 (:new-item-cap config))
                    (pos-int? (:mint-window-ms config)) (pos-int? (:debounce-ms config))
                    (pos-int? (:reconcile-interval-ms config))
+                   (pos-int? (:event-retry-ms config)) (pos-int? (:event-retry-limit config))
                    (pos-int? (:retire-cap config))
                    (pos-int? (:failed-retry-after-ms config))
                    (nat-int? (:failed-retry-limit config)))
@@ -410,9 +412,55 @@
                           ^Runnable #(backstop-tick! token)
                           (long delay) TimeUnit/MILLISECONDS))))))
 
+(defn- schedule-doc-event!
+  ;; Caller holds lock. Keep the serial while executing so a newer notify can
+  ;; supersede an in-flight failure as well as a queued retry. Limit includes
+  ;; the initial attempt; fixed backoff never creates concurrent item work.
+  [token id path serial attempt delay]
+  (when (active? token)
+    (let [{:keys [executor config]} @state
+          task (.schedule ^ScheduledThreadPoolExecutor executor
+                 ^Runnable
+                 (fn []
+                   (when (locking lock
+                           (and (active? token)
+                                (= serial (get-in @state [:pending id :serial]))))
+                     (try
+                       (let [{:keys [source item coverage]} (item-snapshot path config)
+                             known (get-in @state [:identities id])]
+                         (when (and known (not= known (:path source)))
+                           (throw (ex-info "Document conflicts with census identity"
+                                           {:id id :census-path known :path path})))
+                         (swap! state assoc-in [:identities id] (:path source))
+                         (queue/reconcile-item! (:store config) id item coverage
+                                                (System/currentTimeMillis))
+                         (swap! state update :refresh-items (fnil conj #{}) id)
+                         (locking lock
+                           (when (and (active? token)
+                                      (= serial (get-in @state [:pending id :serial])))
+                             (swap! state update :pending dissoc id)
+                             (swap! state update :errors dissoc id)))
+                         (drain! token))
+                       (catch Exception e
+                         (locking lock
+                           (when (and (= token (:token @state))
+                                      (or (not (:running? @state))
+                                          (= serial (get-in @state [:pending id :serial]))))
+                             ;; Stop cancels retries, not the diagnostic of a
+                             ;; parse that was already running when stopped.
+                             (failure! token id e)
+                             (when (active? token)
+                               (if (< attempt (:event-retry-limit config))
+                                 (schedule-doc-event! token id path serial (inc attempt)
+                                                      (:event-retry-ms config))
+                                 (swap! state update :pending dissoc id)))))))))
+                 (long delay) TimeUnit/MILLISECONDS)]
+      (swap! state assoc-in [:pending id]
+             {:path path :serial serial :task task :attempt attempt}))))
+
 (defn notify-doc-changed!
-  "Coalesce rapid saves per item. Stopped services never start implicitly.
-   The watcher receives immediately; all validation and IO run on the worker."
+  "Coalesce saves per item. Failed events retry with bounded backoff; a new
+   notification supersedes that retry budget. Stopped services never retry."
   [path]
   (locking lock
     (if-not (:running? @state)
@@ -421,36 +469,13 @@
         {:status :ignored :reason :not-a-task-document}
         (let [path (.getAbsolutePath (io/file path))
               id (str/replace (.getName (io/file path)) #"\.md$" "")
-              {:keys [executor token config]} @state
-              prior (get-in @state [:pending id])
-              serial (Object.)]
+              {:keys [token config]} @state
+              prior (get-in @state [:pending id])]
           (when (and prior (not= path (:path prior)))
             (throw (ex-info "Conflicting paths for one task identity" {:id id :paths [path (:path prior)]})))
           (when-let [^ScheduledFuture task (:task prior)] (.cancel task false))
-          (let [task (.schedule ^ScheduledThreadPoolExecutor executor
-                                ^Runnable
-                                (fn []
-                                  (let [current? (locking lock
-                                                   (when (= serial (get-in @state [:pending id :serial]))
-                                                     (swap! state update :pending dissoc id)
-                                                     true))]
-                                    (when (and current? (active? token))
-                                      (try
-                                        (let [{:keys [source item coverage]} (item-snapshot path config)
-                                              known (get-in @state [:identities id])]
-                                          (when (and known (not= known (:path source)))
-                                            (throw (ex-info "Document conflicts with census identity"
-                                                            {:id id :census-path known :path path})))
-                                          (swap! state assoc-in [:identities id] (:path source))
-                                          (queue/reconcile-item! (:store config) id item coverage
-                                                                 (System/currentTimeMillis))
-                                          (swap! state update :refresh-items (fnil conj #{}) id)
-                                          (swap! state update :errors dissoc id)
-                                          (drain! token))
-                                        (catch Exception e (failure! token id e))))))
-                                (long (:debounce-ms config)) TimeUnit/MILLISECONDS)]
-            (swap! state assoc-in [:pending id] {:path path :serial serial :task task})
-            {:status :scheduled :item-id id}))))))
+          (schedule-doc-event! token id path (Object.) 1 (:debounce-ms config))
+          {:status :scheduled :item-id id})))))
 
 (defn- schedule-turn-mint! [token]
   (locking lock
