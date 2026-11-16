@@ -1044,6 +1044,10 @@ are what would have caught it.
   mentions in about 4,300 turn texts), and 猴 version 1 (focus = the items a
   turn names, associated = their `needs` neighbours; no model call).
 
+- Suggesting likely entities as `[[...]]` links while Joe types (「猴」 TAB →
+  `[[猴]]`): excursion [E-ne-autocomplete](../excursions/E-ne-autocomplete.md),
+  for later, not on the path to closure (Joe, 2026-11-16).
+
 - Making XTQL itself fast (Joe, 2026-11-12: run the zone maps through the
   pattern cascade): the follow-on mission futon1b `holes/M-xtdb-fast.md`.
 
