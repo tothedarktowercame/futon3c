@@ -359,6 +359,25 @@
           (swap! state update :errors dissoc :failed-retry)))
       (catch Exception e (failure! token :failed-retry e)))))
 
+(defn- refresh-if-behind!
+  "If party.json was built from an older run than the last successful mint,
+   refresh now. A stop!/start! drops a refresh queued on the old preview
+   executor (claude-13, 2026-11-16: the 00:46 mint's refresh was lost that
+   way and the pages stayed on the 00:35 run). Cheap: two small file reads."
+  [token]
+  (when (active? token)
+    (try
+      (let [{:keys [config]} @state
+            minted (get-in (mint-batch/read-state (:mint-state-path config))
+                           [:last-result :run-id])
+            party-file (io/file (get-in config [:preview :out-dir]) "party.json")
+            shown (when (.isFile party-file)
+                    (get-in (json/parse-string (slurp party-file) true)
+                            [:sources :giraffe_run]))]
+        (when (and minted (not= minted shown))
+          (schedule-preview-refresh! token minted)))
+      (catch Exception e (failure! token :refresh-catch-up e)))))
+
 (declare schedule-backstop!)
 
 (defn- backstop-tick! [token _due-ns]
@@ -374,6 +393,7 @@
           (full-round! token (:config @state))
           (retire-missing! token)
           (retry-failed! token)
+          (refresh-if-behind! token)
           (when (active? token)
             (swap! state assoc :last-backstop-at-ms (System/currentTimeMillis))
             (swap! state update :errors dissoc :backstop))))
@@ -552,6 +572,7 @@
                            (full-round! token config)
                            (when (active? token)
                              (swap! state assoc :status :running)
+                             (refresh-if-behind! token)
                              (schedule-backstop! token))
                            (catch Exception e
                              (failure! token :startup e)

@@ -794,3 +794,32 @@
         (is (= [[1 true]] @mints))))
     (swap! state-atom assoc :running? false)
     (.shutdown executor)))
+
+(deftest pages-behind-the-last-mint-are-refreshed
+  ;; claude-13 2026-11-16: a stop!/start! dropped the 00:46 mint's queued
+  ;; refresh; the next pass must notice party.json is on an older run.
+  (let [config (fixture)
+        out (temp-dir)
+        mint-state (io/file (temp-dir) "mint-batch.edn")
+        token (Object.)
+        refreshed (atom [])
+        state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
+        catch-up (ns-resolve 'futon3c.giraffe.reread-service 'refresh-if-behind!)]
+    (spit mint-state (pr-str {:pending-landings 0 :last-result {:status :minted :run-id "run-new"}}))
+    (reset! state-atom {:running? true :status :running :token token :errors {} :pending {}
+                        :config (assoc config :mint-state-path (str mint-state)
+                                       :preview {:out-dir (str out)})})
+    (with-redefs-fn
+      {(ns-resolve 'futon3c.giraffe.reread-service 'schedule-preview-refresh!)
+       (fn [_ run-id] (swap! refreshed conj run-id))}
+      (fn []
+        (spit (io/file out "party.json") (json/generate-string {:sources {:giraffe_run "run-old"}}))
+        (catch-up token)
+        (is (= ["run-new"] @refreshed) "behind -> refresh the minted run")
+        (spit (io/file out "party.json") (json/generate-string {:sources {:giraffe_run "run-new"}}))
+        (catch-up token)
+        (is (= ["run-new"] @refreshed) "up to date -> nothing")
+        (swap! state-atom assoc :running? false)
+        (spit (io/file out "party.json") (json/generate-string {:sources {:giraffe_run "run-old"}}))
+        (catch-up token)
+        (is (= ["run-new"] @refreshed) "stopped -> nothing")))))
