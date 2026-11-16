@@ -1460,6 +1460,34 @@
       (is (= 2 (count @appended)))
       (finally (svc/remove-turn-listener! ::test)))))
 
+;; 馬 alignment reads 象's acts from the GCC on :ported, so :ported must not
+;; be raised before the interpretation write has run.
+(deftest ported-waits-for-the-interpretation-write
+  (let [log (atom []) tasks (atom []) h* (promise)
+        h (harness {:interpretations-enabled? true :interpretation-config {}
+                    ;; Listener events go through :schedule!; drain it first, so
+                    ;; a :ported raised before the write is logged before it.
+                    :interpretation-writer! (fn [_ _]
+                                              (while (seq @(:scheduled @h*)) (run-next! @h*))
+                                              (swap! log conj :write) {:written 1})
+                    :evidence-async! #(swap! tasks conj %)})
+        _ (deliver h* h)
+        {:keys [id record]} (turn! h {:dispatch :none})
+        store (get-in (:svc h) [:config :store])]
+    (svc/add-turn-listener! ::ported-order #(when (= :ported (:event %)) (swap! log conj :ported)))
+    (try
+      (svc/attach-happened! (:svc h) id {:reply "did things" :commits []})
+      (ts/update-record! store id #(assoc % :analysis_status "requested"))
+      (spit (ts/analysis-path store id) (json/write-str (assoc (analysis-for record) :status "analyzed")))
+      (svc/reap! (:svc h) id {})
+      (while (seq @(:scheduled h)) (run-next! h))
+      (is (not-any? #{:ported} @log) ":ported is held until the write runs")
+      (while (seq @tasks) (let [t (first @tasks)] (swap! tasks subvec 1) (t)))
+      (while (seq @(:scheduled h)) (run-next! h))
+      (is (= [:write :ported] (filterv #{:write :ported} @log)))
+      (is (= 1 (get-in (ts/read-record store id) [:xiang_interpretations :written])))
+      (finally (svc/remove-turn-listener! ::ported-order)))))
+
 (deftest mention-hooks-use-fixed-fields-and-contain-failure
   (let [calls (atom []) tasks (atom [])
         h (harness {:mentions-enabled? true :mentions-config {}

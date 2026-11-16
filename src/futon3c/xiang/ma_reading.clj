@@ -254,9 +254,14 @@
   (try
     (let [record (and store (ts/read-record store id))
           read-result (when (and record (= "operator" (:origin record)))
-                        ((or (:interpretation-reader opts) interpretations/read-acts)
-                         (or (:interpretation-config opts) (mention-writer/default-config))
-                         (assoc record :id id)))
+                        (if (and (= 0 (get-in record [:xiang_interpretations :written]))
+                                 (not (:failed (:xiang_interpretations record))))
+                          ;; 象 published and found no operator acts: an empty
+                          ;; reading, not a pending one.
+                          {:acts []}
+                          ((or (:interpretation-reader opts) interpretations/read-acts)
+                           (or (:interpretation-config opts) (mention-writer/default-config))
+                           (assoc record :id id))))
           record (when record (assoc record :operator_interpretation_acts (:acts read-result)))]
       (when (and record
                  (= "operator" (:origin record))

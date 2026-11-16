@@ -8,8 +8,11 @@
             [futon3c.arxana.turn-mention-writer :as mentions]
             [futon3c.xiang.turn-store :as turns]))
 
-(defn operator-acts [turn]
-  (let [base (str (:id turn) "-f-")]
+(defn operator-acts
+  "TURN's operator acts. Act ids live under the agent turn id (:turn_id,
+  e.g. \"claude-3-turn-9-f-s1-0\"), not the turn record id."
+  [turn]
+  (let [base (str (:turn_id turn) "-f-")]
     (filterv #(and (= "operator" (:author %))
                    (string? (:id %)) (.startsWith ^String (:id %) base)) (:acts turn))))
 
@@ -104,6 +107,11 @@
                            (if write?
                              (let [r (write! cfg turn)]
                                (when (pos? pause-ms) (Thread/sleep pause-ms))
-                               (if (:written r) :written (:failed r)))
-                             (if (:rows (plan cfg turn)) :would-write :operator-evidence-unavailable)))) rows)]
+                               (cond (:failed r) (:failed r)
+                                     (pos? (:written r)) :written
+                                     :else :no-operator-acts))
+                             (let [{:keys [rows failed]} (plan cfg turn)]
+                               (cond failed failed
+                                     (seq rows) :would-write
+                                     :else :no-operator-acts))))) rows)]
     {:mode (if write? :write :dry-run) :turns (count rows) :outcomes (frequencies outcomes)}))

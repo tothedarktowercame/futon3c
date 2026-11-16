@@ -11,11 +11,11 @@
           {:ref/kind :evidence-text :store/id "futon1b/evidence" :store/endpoint "x"
            :record/id "ev/body/text" :schema/authority :futon1b/evidence-text
            :valid-time "now" :revision/digest "sha"}))
-(def turn {:id "turn-x" :turn_id "turn-x" :origin "operator" :evidence_id "ev"
+(def turn {:id "turn-x" :turn_id "claude-3-turn-9" :origin "operator" :evidence_id "ev"
            :source_text "report this reply" :interpretation_version 2 :vocabulary_version 3
-           :acts [{:id "turn-x-f-s1-0" :author "operator" :kind "report-problem"
+           :acts [{:id "claude-3-turn-9-f-s1-0" :author "operator" :kind "report-problem"
                    :start 0 :end 6 :text "report" :about "problem" :to "claude-13"}
-                  {:id "turn-x-r-0" :author "agent" :kind "report" :start 7 :end 11 :text "this"}]})
+                  {:id "claude-3-turn-9-r-0" :author "agent" :kind "report" :start 7 :end 11 :text "this"}]})
 
 (deftest writer-single-batch-has-scopes-intents-ranges-and-attestations
   (let [calls (atom [])]
@@ -29,7 +29,8 @@
         (is (= :report-problem (get-in claim [:endpoints 1 :target :intent/id])))
         (is (not= (:id turn-ref) (get-in claim [:endpoints 2 :target :ref/id])))
         (is (= "象" (:producer att)))
-        (is (= "turn-x-f-s1-0" (get-in att [:content :act/id])))
+        (is (= "claude-3-turn-9-f-s1-0" (get-in att [:content :act/id]))
+            "act ids live under the agent turn id, not the record id")
         (is (= 1 (:acts (sut/plan {:graph-store :stub} turn))) "agent/reply act excluded"))))
   (let [calls (atom [])]
     (with-redefs [mentions/field-evidence (constantly nil)
@@ -61,4 +62,11 @@
                 sut/read-acts (constantly {:pending :interpretations-pending})
                 sut/plan (constantly {:rows [{}]})
                 http/append-batch! (fn [& _] (throw (AssertionError. "dry run wrote")))]
-    (is (= {:would-write 1} (:outcomes (sut/backfill! {:turn-store :stub} {:write? false}))))))
+    (is (= {:would-write 1} (:outcomes (sut/backfill! {:turn-store :stub} {:write? false})))))
+  (with-redefs [turns/list-records (fn [& _] [{:id "turn-x" :record
+                                                (assoc turn :analysis_status "analyzed"
+                                                       :created_at (str (java.time.Instant/now)))}])
+                sut/read-acts (constantly {:pending :interpretations-pending})
+                sut/plan (constantly {:rows [] :acts 0})]
+    (is (= {:no-operator-acts 1} (:outcomes (sut/backfill! {:turn-store :stub} {:write? false})))
+        "an empty plan is not counted as a write")))

@@ -53,6 +53,13 @@
     (is (= ["claude-3-turn-9-f-s1-0" "claude-3-turn-9-f-s1-1"]
            (mapv :act (:acts (alignment store id)))))))
 
+(deftest no-operator-acts-published-is-an-empty-reading-not-pending
+  (let [[store id] (record! {:xiang_interpretations {:written 0}})
+        out (ma/align! {:store store :interpretation-reader
+                        (fn [& _] (throw (AssertionError. "reader not needed")))} id)]
+    (is (map? out))
+    (is (nil? (:alignment_pending (ts/read-record store id))))))
+
 (deftest pending-interpretations-never-overwrite-real-alignment
   (let [[store id] (record! {:alignment {:version 1 :acts [{:act "real"}]}})
         out (ma/align! {:store store :interpretation-reader
@@ -149,6 +156,9 @@
         clock (atom 1000000)
         scheduled (atom [])
         s (svc/service {:store store
+                        ;; hermetic: no 猴/mention/象-interpretation writes to a live store
+                        :hou-enabled? false :mentions-enabled? false
+                        :interpretations-enabled? false
                         :now-ms (fn [] @clock)
                         :schedule! (fn [delay thunk] (swap! scheduled conj [delay thunk]))
                         :evidence-async! (fn [thunk] (thunk))
