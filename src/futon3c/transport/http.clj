@@ -2154,7 +2154,7 @@
   Typed adapter signals win. Quota prose is retained only as an ingestion
   compatibility parser for adapters that flatten provider errors."
   [result terminal-state terminal-code terminal-message]
-  (when-not (= "done" (str terminal-state))
+  (when-not (#{"done" "deduped"} (str terminal-state))
     (let [error (:error result)
           error-map (when (map? error) error)
           code (some-> (or (:error/code result)
@@ -2171,7 +2171,12 @@
                            (when (string? error) error)
                            terminal-message ""))]
       (cond
-        (contains? #{"clock/store-busy" "store-busy"} code) :clock/store-busy
+        ;; futon1b answering slowly or not at all: the same codes
+        ;; clock_decision treats as busy (busy-read-codes, busy-write-codes).
+        (contains? #{"clock/store-busy" "store-busy"
+                     "futon1b-read-timeout" "futon1b-unreachable" "futon1b-read-unavailable"
+                     "store-unavailable" "store-timeout" "store-unreachable"} code)
+        :clock/store-busy
         (= "futon1b-read-rejected" code) :evidence/read-rejected
         (= 429 status) :provider/quota
         (re-find #"(?i)usage limit|quota|HTTP 429|rate.limit" message) :provider/quota

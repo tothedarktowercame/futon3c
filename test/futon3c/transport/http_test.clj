@@ -420,7 +420,14 @@
     (is (= :invoke/failed
            (classify {:error {:error/code :invented-failure}}
                      "failed" "invented-failure" "invented")))
-    (is (nil? (classify {:ok true :result "done"} "done" nil nil)))))
+    (is (nil? (classify {:ok true :result "done"} "done" nil nil)))
+    (is (nil? (classify {:ok true} "deduped" "duplicate-msg-id" nil))
+        "a deduped job is a replay, not a failure")
+    (doseq [code [:futon1b-read-unavailable :futon1b-read-timeout :futon1b-unreachable
+                  :store-unavailable :store-timeout :store-unreachable]]
+      (is (= :clock/store-busy
+             (classify {:error {:error/code code}} "failed" (name code) "invented"))
+          (str code " is futon1b busy, typed")))))
 
 (deftest finalize-persists-failure-kind-on-job-event-and-public-view
   (let [create! (fn [id]
