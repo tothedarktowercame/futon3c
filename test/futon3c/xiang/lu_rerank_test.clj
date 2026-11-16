@@ -6,6 +6,7 @@
   (:require [cheshire.core :as json]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
+            [futon3c.arxana.pattern-occurrences :as occurrences]
             [futon3c.xiang.lu-rerank :as lu]
             [futon3c.xiang.turn-service]
             [futon3c.xiang.turn-store :as ts]))
@@ -60,6 +61,13 @@
                                          :pattern_verdicts verdict})
     (record! store "turn-n" {:created_at "2026-10-24T00:02:00Z"})
     (with-redefs [lu/embedding-top (stub-search ["emb/one" "emb/two"])
+                  occurrences/read-turn
+                  (fn [_ t]
+                    (if (= "turn-early" (:id t))
+                      {:rows [{:pattern "occ/found-occurrence" :status "occurrence"}
+                              {:pattern "occ/not-seeded" :status "void"}
+                              {:pattern "occ/found-partial" :status "partial"}]}
+                      {:rows []}))
                   lu/load-graph (constantly graph)]
       (let [pool (lu/candidate-pool store "turn-n")]
         (is (= ["emb/one" "emb/two" "graph/why-nbr" "graph/cocited-nbr"] pool)
@@ -69,6 +77,29 @@
             "a later record's verdicts do not seed the graph leg")
         (is (not (some #{"graph/void-nbr"} pool))
             "a void pattern's neighbours are not seeded")))))
+
+(deftest seeds-come-from-gcc-in-turn-order-without-field-fallback
+  (let [forbidden (reify clojure.lang.ILookup
+                    (valAt [_ _] (throw (AssertionError. "pattern_verdicts field read")))
+                    (valAt [_ _ _] (throw (AssertionError. "pattern_verdicts field read"))))]
+    (with-redefs [ts/read-record
+                  (fn [_ _] {:session_id "sess-1" :created_at "2026-10-24T00:02:00Z"})
+                  ts/list-records
+                  (fn [& _] [{:id "turn-a" :record
+                              {:session_id "sess-1" :origin "operator"
+                               :created_at "2026-10-24T00:00:00Z" :pattern_verdicts forbidden}}
+                             {:id "turn-b" :record
+                              {:session_id "sess-1" :origin "operator"
+                               :created_at "2026-10-24T00:01:00Z" :pattern_verdicts forbidden}}])
+                  occurrences/read-turn
+                  (fn [_ t]
+                    {:rows (case (:id t)
+                             "turn-a" [{:pattern "~first" :status "partial"}]
+                             "turn-b" [{:pattern "second" :status "occurrence"}
+                                       {:pattern "first" :status "occurrence"}]
+                             [])})]
+      (is (= ["first" "second"] (lu/seed-patterns :stub "turn-now" :stub)))
+      (is (= 0 (:skipped-turns (meta (lu/seed-patterns :stub "turn-now" :stub))))))))
 
 (deftest a-pick-with-a-non-verbatim-quote-is-dropped-and-next-taken
   (let [store (temp-store)]

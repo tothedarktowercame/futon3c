@@ -116,6 +116,25 @@
                     (valAt [_ _ _] (throw (AssertionError. "legacy lu_ranked fallback"))))]
     (is (= [] (mo/patterns-of {:lu_ranked forbidden :lu_proposal_ids []})))))
 
+(deftest pattern-verdict-event-waits-for-gcc-write
+  (let [store (temp-store) queued (atom nil) order (atom [])
+        verdict {:version 1 :at "2026-11-16T20:00:00Z" :reader "馬-sonnet"
+                 :window ["turn-order"]
+                 :patterns [{:pattern pid :status "void" :sources []}]}]
+    (record! store "turn-order" {})
+    (with-redefs-fn {#'futon3c.xiang.ma-occurrence/verdict-map (fn [& _] verdict)}
+      #(do
+         (mo/verdict! {:store store
+                       :proposal-reader (fn [& _] {:ids [pid]})
+                       :occurrence-writer! (fn [& _] (swap! order conj :write) {:written 1})
+                       :occurrence-async! (fn [f] (reset! queued f))
+                       :notify! (fn [_] (swap! order conj :notify))}
+                      "turn-order")
+         (is (empty? @order) "the dependent event is not raised before the queued write")
+         (@queued)
+         (is (= [:write :notify] @order))
+         (is (= {:written 1} (:pattern_occurrences (ts/read-record store "turn-order"))))))))
+
 (deftest a-wrong-quote-is-voided-with-its-reason
   (let [store (base-records (temp-store))]
     (record! store "turn-new"

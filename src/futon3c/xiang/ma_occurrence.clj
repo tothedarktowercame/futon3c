@@ -25,6 +25,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon3c.arxana.pattern-occurrences :as occurrences]
             [futon3c.arxana.pattern-proposals :as proposals]
             [futon3c.arxana.turn-mention-writer :as mention-writer]
             [futon3c.xiang.turn-service :as turn-service]
@@ -367,6 +368,8 @@
   [v]
   (into #{} (map :pattern) (:patterns v)))
 
+(declare occurrence-writer-executor)
+
 (defn verdict!
   "Read one operator turn record's per-pattern occurrence verdict and store
   :pattern_verdicts on it (the field scripts/xiangma_port_export.py measures
@@ -409,7 +412,26 @@
             existing
             (let [verdicts (verdict-map opts store id)]
               (ts/update-record! store id #(assoc % :pattern_verdicts verdicts))
-              (when notify! (notify! {:event :pattern-verdicts :id id}))
+              (if-let [writer (:occurrence-writer! opts)]
+                ((or (:occurrence-async! opts)
+                     #(.submit occurrence-writer-executor ^Runnable %))
+                 (fn []
+                   (let [current (assoc (ts/read-record store id) :id id)
+                         result (try
+                                  (writer (or (:occurrence-config opts)
+                                              (mention-writer/default-config))
+                                          current verdicts)
+                                  (catch Throwable e
+                                    {:failed :occurrence-write-exception
+                                     :detail (.getMessage e)}))]
+                     (ts/update-record!
+                      store id
+                      #(if (:written (:pattern_occurrences %)) %
+                           (assoc % :pattern_occurrences result)))
+                     ;; GCC consumers see the event only after the write outcome
+                     ;; is durable. lu-memory remains a field consumer.
+                     (when notify! (notify! {:event :pattern-verdicts :id id})))))
+                (when notify! (notify! {:event :pattern-verdicts :id id})))
               verdicts))))))
     (catch Exception _ nil)))
 
@@ -422,6 +444,11 @@
   (Executors/newSingleThreadExecutor
    (reify ThreadFactory
      (newThread [_ r] (doto (Thread. ^Runnable r "ma-occurrence") (.setDaemon true))))))
+
+(defonce ^:private ^ExecutorService occurrence-writer-executor
+  (Executors/newSingleThreadExecutor
+   (reify ThreadFactory
+     (newThread [_ r] (doto (Thread. ^Runnable r "ma-occurrence-gcc") (.setDaemon true))))))
 
 (defn handle-event
   "One turn-service event for the occurrence reading under OPTS: run the
@@ -479,6 +506,7 @@
   at event time, so this survives reloads of either namespace."
   []
   (start! {:ask whistle-ask
+           :occurrence-writer! occurrences/write!
            :store (fn [] (some-> (live-service) :config :store))
            :notify! (fn [ev] (when-let [svc (live-service)]
                                (@#'turn-service/notify-turn! svc ev)))}))

@@ -17,6 +17,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.agency.pattern-search :as pattern-search]
+            [futon3c.arxana.pattern-occurrences :as occurrences]
             [futon3c.arxana.pattern-proposals :as proposals]
             [futon3c.arxana.turn-mention-writer :as mention-writer]
             [futon3c.xiang.ma-occurrence :as ma]
@@ -68,23 +69,30 @@
       {:edges (vec (:edges parsed))})
     (catch Throwable _ nil)))
 
+(def seed-turn-limit 8)
+
 (defn seed-patterns
-  "The distinct pattern ids with status occurrence or partial in the
-  :pattern_verdicts of EARLIER operator records of the record's session
-  (strictly earlier by created_at), ~-stripped, first-seen order."
-  [store record-id]
+  "Distinct occurrence/partial pattern ids from the GCC for the last eight
+  earlier operator turns in this session, first-seen turn order. Metadata
+  :skipped-turns counts turns whose occurrence index is not populated yet."
+  ([store record-id] (seed-patterns store record-id (mention-writer/default-config)))
+  ([store record-id occurrence-config]
   (when-let [record (ts/read-record store record-id)]
     (let [session (:session_id record)
-          at (str (:created_at record))]
-      (into [] (comp (filter #(= session (:session_id (:record %))))
-                     (filter #(= "operator" (:origin (:record %))))
-                     (filter #(< (compare (str (:created_at (:record %))) at) 0))
-                     (mapcat #(get-in (:record %) [:pattern_verdicts :patterns]))
-                     (filter #(contains? #{"occurrence" "partial"} (:status %)))
-                     (map #(str/replace-first (str (:pattern %)) #"^~" ""))
-                     (remove str/blank?)
-                     (distinct))
-            (ts/list-records store 500)))))
+          at (str (:created_at record))
+          earlier (->> (ts/list-records store :session-id session :limit 500)
+                       (filter #(= "operator" (get-in % [:record :origin])))
+                       (filter #(< (compare (str (get-in % [:record :created_at])) at) 0))
+                       (sort-by #(str (get-in % [:record :created_at])))
+                       (take-last seed-turn-limit))
+          reads (mapv (fn [{:keys [id record]}]
+                        (occurrences/read-turn occurrence-config (assoc record :id id)))
+                      earlier)
+          ids (->> reads (mapcat :rows)
+                   (filter #(contains? #{"occurrence" "partial"} (:status %)))
+                   (map #(str/replace-first (str (:pattern %)) #"^~" ""))
+                   (remove str/blank?) distinct vec)]
+      (with-meta ids {:skipped-turns (count (filter #(empty? (:rows %)) reads))})))))
 
 (defn graph-neighbours
   "The neighbours of SEEDS in GRAPH, at most CAP, ordered by best edge kind
@@ -132,11 +140,12 @@
   edge kind) of the session's earlier occurrence/partial patterns. Deduped,
   (a) first. GRAPH may be nil (pool (a) alone)."
   ([store record-id] (candidate-pool store record-id (load-graph (graph-path))))
-  ([store record-id graph]
+  ([store record-id graph] (candidate-pool store record-id graph (mention-writer/default-config)))
+  ([store record-id graph occurrence-config]
    (when-let [record (ts/read-record store record-id)]
      (let [a (or (embedding-top (str (or (:source_text record) "")))
                  [])
-           b (graph-neighbours graph (seed-patterns store record-id))]
+           b (graph-neighbours graph (seed-patterns store record-id occurrence-config))]
        (vec (distinct (concat a b)))))))
 
 ;; ---------------------------------------------------------------- the rerank
@@ -215,7 +224,9 @@
     (let [opts (merge defaults opts)
           record (and store (ts/read-record store record-id))
           source-text (str (or (:source_text record) ""))
-          pool (candidate-pool store record-id (:graph opts))
+          pool (candidate-pool store record-id (:graph opts)
+                               (or (:occurrence-config opts)
+                                   (mention-writer/default-config)))
           t0 (System/nanoTime)
           reply (when (and (:ask opts) (seq pool))
                   (try ((:ask opts) {:seat (:seat opts)
