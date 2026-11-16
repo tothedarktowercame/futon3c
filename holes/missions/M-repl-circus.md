@@ -1027,10 +1027,11 @@ are what would have caught it.
     glossary.
   - When practical and useful: (2) a worked record or a finding for port,
     want, dated benefit claim, institution statement and construction; (5) a
-    writer/reader row for each B3/B4 kind; (6) the route text in "Decided:
-    where derived output goes" (claude-8, 11-05: general hyperedge batch
-    route) against Joe's 11-09 ruling in E-gcc-schema B10 (the Arxana route on
-    futon1b). The mention records (below) follow B10.
+    writer/reader row for each B3/B4 kind. (6) the route text in "Decided:
+    where derived output goes" now follows Joe's 11-09 ruling (E-gcc-schema
+    B10: the Arxana route on futon1b; codex-7, futon3c `827deff03`); the
+    mention records (below) follow it. Closure recorded in futon4 `8b8427b`,
+    `4e85516`.
 
 - Mention records and 猴 (2026-11-16). Mentions are Arxana 'clusions
   `[:workplan/mention 2]` with exact codepoint standoff into the fixed turn
