@@ -7598,15 +7598,33 @@
         graph (bell-router/graph (recent-invoke-jobs limit))]
     (json-response 200 (assoc graph :ok true))))
 
+(defn list-view-events
+  "The job LIST omits tool_use :output (the tools' full output). Follow
+   buffers render only :previews/:tools, and the outputs were ~85% of each
+   poll: 29 Emacs pollers every 10 s parsed up to 850 KB each, ~2 MB/s of
+   strings, and Joe's 10 GB Emacs spent 13% of its time in 0.65 s GCs
+   (claude-13, 2026-11-16). GET /invoke/jobs/:id keeps the full events;
+   ?events=full restores them in the list."
+  [job]
+  (cond-> job
+    (seq (:events job))
+    (update :events (fn [es] (mapv #(if (= "tool_use" (some-> (:type %) name))
+                                      (dissoc % :output)
+                                      %)
+                                   es)))))
+
 (defn- handle-invoke-jobs
-  "GET /api/alpha/invoke/jobs?limit=N[&agent=ID] — list recent invoke jobs,
-   optionally only those addressed to agent ID (the window is then per agent)."
+  "GET /api/alpha/invoke/jobs?limit=N[&agent=ID][&events=full] — list recent
+   invoke jobs, optionally only those addressed to agent ID (the window is then
+   per agent). tool_use outputs are omitted unless events=full."
   [request]
   (let [params (parse-query-params request)
         limit (or (parse-int (get params "limit")) 20)
         agent-id (some-> (get params "agent") str str/trim not-empty)
+        full? (= "full" (get params "events"))
         jobs (->> (recent-invoke-jobs limit agent-id)
-                  (mapv invoke-job-public-view))]
+                  (mapv invoke-job-public-view)
+                  (mapv #(if full? % (list-view-events %))))]
     (json-response 200 (cond-> {:ok true
                                 :count (count jobs)
                                 :jobs jobs}
