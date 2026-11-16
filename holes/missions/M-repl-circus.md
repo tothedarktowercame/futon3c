@@ -303,7 +303,34 @@ elements, in the words used then:
 
 For the Circus this means the animals' writes are witnesses or open queries
 in the GCC, and the agents' interface to the graph is the CTRL set. A
-write-up (where it lives, which verbs, which receipts) is owed.
+write-up (where it lives, which verbs, which receipts) is owed; it follows.
+
+#### CTRL: the moves, their effects and receipts (claude-13, 2026-11-16)
+
+Each move is something an agent or Joe can always do. Each has a defined
+effect on shared state and a receipt that a later reader can look up by id.
+None of them parses prose to find out what happened.
+
+| Move | How it is made | Effect | Receipt (looked up by) |
+|---|---|---|---|
+| **name** | Joe writes `[[X]]` or `[[X \| A, B]]` in a turn | `[:workplan/introduction 1]` on entity X with the turn's evidence as source; forms switch on (seeded or referent); `[:workplan/referent 1]` to A, B if they exist | introduction id and rule id, returned by `:workplan/introduce` (futon3c `arxana/sessionista_introductions.clj`); Emacs echoes "introduced: …" |
+| **cite** | a turn names an item id, or quotes a turn | `[:workplan/mention 2]`: item endpoint, evidence pinned by digest, codepoint range; role `:mentioned` or `:quoted` | mention clusion id, by item (`reverse-ids`) or by turn reference (futon1b :7073) |
+| **ask** | bell (async) or whistle (sync) to a seat | an invoke job addressed to that seat | job id; the answer is the job's result and its auto-bellback (`GET /api/alpha/invoke/jobs/:id`) |
+| **wait** | park on job ids with a deadline | the caller resumes when the jobs finish or the deadline passes | park id; the resume turn names which happened (`GET /api/alpha/parked`) |
+| **hand back** | commit with agent trailers; test-registry warrant | work attributable to the job and session that dispatched it | commit sha (`Agent-Id`, `Agency-Job`, `Dispatched-By`); warrant id (`/api/alpha/test-registry/check`) |
+| **mark** | a reply paragraph opens with a proforma mark and a bracketed target | 象 reads it as a typed act on the turn record (`:proforma_marks`, `turn_record.clj:507`, `reply-marks` :722) | turn record id plus act index |
+| **focus** (machinery, not a choice) | a turn settles and its reply lands | `[:hou/focus 1]` header + `[:hou/focus-relation 1]` links (猴) | header id, by turn (`hou_store` readers); pinned by Giraffe's run |
+
+**Query becomes control.** An open link `[a ? c]` ("is a linked to c?") is a
+want, and the record that links them is its witness: a referent answers
+`[[X]] ? referent`, a mention answers "did this turn touch item c?", a job
+result answers an ask, and a wake answers a wait. "Eventually" is bounded by
+the park deadline for one job, and by T for a War Machine token. The queries
+that check a witness are point lookups and one-step reverse-index reads on
+futon1b's Arxana route (`record-by-id`, reverse ids by role), with
+`:workplan/entity-backlinks` and `:workplan/entity-rules` for named entities.
+That is the "simple control language" Joe asked XTQL to map to. Richer XTQL
+is not needed for these moves.
 
 ### Written-never-read is feedback that reaches no one (Joe, 2026-11-05)
 
@@ -752,7 +779,7 @@ checks; neither alone proves that the Circus talks through the graph.
 - Who reads the priorities: the War Machine's selection, Joe's view (Mojira),
   or both.
 - Cost: a pass per settled turn, or debounced like the pattern-index watcher.
-- The CTRL write-up.
+- The CTRL write-up: done 2026-11-16, §"CTRL: the moves, their effects and receipts".
 
 ## VERIFY: constructive critical review
 
