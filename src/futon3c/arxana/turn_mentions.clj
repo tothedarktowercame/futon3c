@@ -32,6 +32,10 @@
   (and (or (zero? start) (not (token-char? (.codePointBefore text start))))
        (or (= end (.length text)) (not (token-char? (.codePointAt text end))))))
 
+(defn- item-clusion-id [item-id]
+  (:id (records/make-clusion {:type-revision [:workplan/item 1] :endpoints []
+                              :asserted-content {:item/id item-id}})))
+
 (defn turn-mentions
   "Return occurrence-ordered v2 clusions. Offsets are zero-based codepoints,
   end-exclusive (reply_target/operator-marks convention), never UTF-16 units.
@@ -65,10 +69,13 @@
                                              :target {:ref/id (:id reference)
                                                       :revision/digest (:revision/digest reference)}}]
                                 :asserted-content
-                                {:mention/role :mentioned
-                                 :mention/range [(.codePointCount ^String text 0 start)
-                                                 (.codePointCount ^String text 0 end)]
-                                 :mention/quote (.substring ^String text start end)}}))
+                                (cond-> {:mention/role :mentioned
+                                         :mention/range [(.codePointCount ^String text 0 start)
+                                                         (.codePointCount ^String text 0 end)]}
+                                  ;; Default: the quoted text is the item id
+                                  ;; itself, so it is not stored again.
+                                  (not= item-id (.substring ^String text start end))
+                                  (assoc :mention/quote (.substring ^String text start end)))}))
                         found)))
                    found)))))
          (apply concat)
@@ -76,7 +83,9 @@
          vec)))
 
 (defn mention-valid?
-  "Validate v2 shape/identity, evidence text pin and exact codepoint quote.
+  "Validate v2 shape/identity, evidence text pin and the text at the range.
+  Default (no stored quote): the text at the range is the id of the item
+  endpoint. With a stored :mention/quote: the text at the range equals it.
   A false result includes malformed/out-of-bounds ranges; no I/O is needed."
   [text record]
   (try
@@ -90,7 +99,14 @@
             (= (text-digest text) (get-in evidence [:target :revision/digest]))
             (vector? span) (= 2 (count span)) (integer? start) (integer? end)
             (<= 0 start end (.codePointCount ^String text 0 (.length ^String text)))
-            (= (get-in record [:asserted-content :mention/quote])
-               (.substring ^String text (.offsetByCodePoints ^String text 0 (int start))
-                           (.offsetByCodePoints ^String text 0 (int end)))))))
+            (let [surface (.substring ^String text (.offsetByCodePoints ^String text 0 (int start))
+                                      (.offsetByCodePoints ^String text 0 (int end)))
+                  quote (get-in record [:asserted-content :mention/quote])]
+              (if (some? quote)
+                ;; a stored quote (a surface form other than the id) must
+                ;; equal the text at the range
+                (= quote surface)
+                ;; default: the text at the range is the item's id
+                (= (get-in (first (:endpoints record)) [:target :clusion/id])
+                   (item-clusion-id surface)))))))
     (catch Exception _ false)))

@@ -130,7 +130,10 @@
    (clusion-type :workplan/mention 2
                  [{:role :item :endpoint/kinds #{:clusion}}
                   {:role :evidence :endpoint/kinds #{:external-ref}}]
-                 [:mention/role :mention/range :mention/quote])
+                 ;; :mention/quote is not identity content: it is stored
+                 ;; only when the text at the range differs from the item id
+                 ;; (Joe 2026-11-16: no ("Arxana" "Arxana") per mention).
+                 [:mention/role :mention/range])
    (clusion-type :code-definition 1 []
                  [:artifact/revision-id :scope/kind :symbol/name :definition/form])
    (clusion-type :doc-entry 1 []
