@@ -1,0 +1,41 @@
+{:port
+ {:record {:type-revision [:lexicon/entity 1]
+           :endpoints []
+           :asserted-content {:entity/slug "example-http-read-port"}}
+  :attestation-content {:kind :port
+                        :port/name "entity/get"
+                        :port/direction :read
+                        :port/carrier {:kind :http-route
+                                       :value "/arxana/v1"}}}
+ :want
+ {:record {:type-revision [:lexicon/entity 1]
+           :endpoints []
+           :asserted-content {:entity/slug "example-open-want"}}
+  :attestation-content {:kind :want
+                        :want/query {:type-revision [:needs 1]
+                                     :unfilled-role :supplier}
+                        :want/horizon "2026-12-01T00:00:00Z"}}
+ :dated-benefit-claim
+ {:record {:type-revision [:benefit-line 1]
+           :endpoints []
+           :asserted-content {:benefit/line "A reader can inspect the evidence for a link."}}
+  :attestation-content {:kind :dated-benefit-claim
+                        :benefit/state :potential
+                        :benefit/aspect :auditability
+                        :valid-time "2026-11-16T00:00:00Z"}}
+ :institution-statement
+ {:record {:type-revision [:lexicon/entity 1]
+           :endpoints []
+           :asserted-content {:entity/slug "example-packet-review-institution"}}
+  :attestation-content {:kind :institution-statement
+                        :institution/rule "The implementer and reviewer are different agents."
+                        :institution/status :exists}}
+ :construction
+ {:record {:type-revision [:kernel-builds 1]
+           :endpoints [{:role :artifact
+                        :kind :artifact-revision
+                        :target {:artifact/revision-id "sha256:example-proof-revision"}}]
+           :asserted-content {:language :lean}}
+  :attestation-content {:kind :construction
+                        :construction/checker :lean-kernel
+                        :construction/result :accepted}}}

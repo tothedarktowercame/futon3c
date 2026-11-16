@@ -122,6 +122,27 @@
            nil
            (catch clojure.lang.ExceptionInfo e (:error (ex-data e)))))))
 
+(deftest gcc-closure-kinds-fit-the-built-record-model
+  (let [resource (io/file "test/resources/arxana/formal_arxana/c1/gcc-closure-worked-records.edn")
+        examples (edn/read-string (slurp resource))]
+    (is (= #{:port :want :dated-benefit-claim :institution-statement
+             :construction}
+           (set (keys examples))))
+    (doseq [[kind {:keys [record attestation-content]}] examples]
+      (let [clusion (records/make-clusion record)
+            attestation (records/make-attestation
+                         {:subject-clusion-id (:id clusion)
+                          :producer "E-gcc-schema/closure-fixture"
+                          :basis :exact
+                          :standing :unverified
+                          :coverage :complete
+                          :method {:id "worked-record" :version 1}
+                          :content attestation-content
+                          :source-refs ["futon4/holes/excursions/E-gcc-schema.md"]})]
+        (is (string? (:id clusion)) (name kind))
+        (is (= (:id clusion) (:subject-clusion-id attestation)) (name kind))
+        (is (= kind (get-in attestation [:content :kind])) (name kind))))))
+
 (deftest intent-vocabulary-generated-presentations-do-not-drift
   (let [{:keys [exit out err]}
         (shell/sh "bb" "scripts/generate_intent_vocabulary.clj" "--check"
