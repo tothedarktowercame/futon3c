@@ -1,5 +1,5 @@
 (ns futon3c.circus.operator-focus
-  "Read-only cross-seat attention window. No Giraffe wiring or publications."
+  "Read-only cross-seat attention window. No publications."
   (:require [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.arxana.digest :as digest]
@@ -17,14 +17,46 @@
 (defn in-window? [until hours at]
   (< (- (millis until) (* hours 3600000)) (millis at) (inc (millis until))))
 
+(defn with-successors
+  "Read explicit successor declarations from SUPERSEDED items only. Ambiguous
+  declarations refuse resolution instead of arbitrarily choosing a successor."
+  [items]
+  (mapv (fn [item]
+          (if (re-find #"(?i)^\s*SUPERSEDED\b" (or (:status-line item) ""))
+            (let [ids (distinct (map second (re-seq #"(?i)superseded by\s+`?([MET]-[A-Za-z0-9_-]+)"
+                                                   (slurp (:path item)))))]
+              (cond-> item
+                (= 1 (count ids)) (assoc :successor (first ids))
+                (> (count ids) 1) (assoc :successor-ambiguous? true)))
+            item)) items))
+
+(defn resolve-tag
+  "Follow at most eight explicit SUPERSEDED successors. Named
+  occurrences never call this resolver. Cycles/overlong chains keep the tag
+  and emit a notice rather than inventing a successor."
+  [by-id tag]
+  (loop [id tag path []]
+    (let [status (:status-line (by-id id))
+          successor (when (and status (re-find #"(?i)^\s*SUPERSEDED\b" status))
+                      (or (:successor (by-id id))
+                          (second (re-find #"(?i)superseded by\s+`?([MET]-[A-Za-z0-9_-]+)" status))))]
+      (cond
+        (some #{id} path) {:item tag :notice {:item tag :reason :supersession-cycle :path (conj path id)}}
+        (:successor-ambiguous? (by-id id)) {:item tag :notice {:item id :reason :supersession-ambiguous}}
+        (nil? successor) {:item id}
+        (>= (count path) 8) {:item tag :notice {:item tag :reason :supersession-limit :path (conj path id)}}
+        :else (recur successor (conj path id))))))
+
 (defn focus-window
   "Pure core. named/reply-named contain only unquoted occurrences. Unknown
   tags are reported, never invented as open items. Window is (start, until]."
   [{:keys [until window-hours items turns needs pins notices] :or {window-hours 6}}]
   (let [ts (filter #(in-window? until window-hours (:created-at %)) turns)
         by-id (into {} (map (juxt :id identity)) items)
+        resolved (into {} (for [t ts :when (and (empty? (:named t)) (seq (:mission-id t)))]
+                            [(:id t) (resolve-tag by-id (:mission-id t))]))
         assignments (for [t ts id (distinct (if (seq (:named t)) (:named t)
-                                               (when (seq (:mission-id t)) [(:mission-id t)])))]
+                                               (when-let [id (:item (get resolved (:id t)))] [id])))]
                       [id t])
         grouped (group-by first assignments)
         summarize (fn [id]
@@ -54,7 +86,7 @@
     {:report {:until (str until) :window-hours window-hours :turns (count ts)
               :focus focus :just-closed closed :no-mission no-mission
               :associated (mapv first (filter #(= :associated (second %)) relations))
-              :notices (vec (concat notices unknown inactive))}
+              :notices (vec (concat notices (keep :notice (vals resolved)) unknown inactive))}
      :focus-input {:relations (into {} relations) :evidence-pin pin}}))
 
 (def status-line #"(?i)^\s*(?:[-*]\s*)?(?:#+\s*)?(?:\*\*)?Status:?(?:\*\*)?\s*:?\s*(.+)$")
@@ -131,7 +163,7 @@
 (defn operator-focus
   ([opts] (operator-focus (hou-store/default-config) opts))
   ([cfg {:keys [until window-hours] :or {window-hours 6} :as opts}]
-   (let [items (with-closures (inventory/current-items cfg) until window-hours)
+   (let [items (with-closures (with-successors (inventory/current-items cfg)) until window-hours)
          ;; This read-only report recognizes the current census, including IDs
          ;; not yet published as clusions. It writes no dangling references.
          cfg (assoc cfg :item-ids (mapv :id items))

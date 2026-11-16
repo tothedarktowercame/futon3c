@@ -76,3 +76,35 @@
         (is (= (sut/millis "2026-01-01T04:00:00Z") (sut/millis (:closed-at (first xs)))))
         (is (= 40 (count (:closing-commit (first xs))))))
       (finally (doseq [f (reverse (file-seq root))] (io/delete-file f))))))
+
+(deftest superseded-tags-follow-successors-but-names-do-not
+  (let [old {:id "M-old" :state :closed :status-line "SUPERSEDED; superseded by `M-new`"}
+        opts (assoc base :items [old {:id "M-new" :state :open}]
+                    :turns [(turn "tagged" "03" "seat-a" [] "M-old")
+                            (turn "named" "04" "seat-b" ["M-old"] "M-new")])
+        out (sut/focus-window opts)]
+    (is (= [{:item "M-new" :turn-count 1 :seats ["seat-a"] :most-recent "2026-01-01T03:00:00Z"}]
+           (get-in out [:report :focus])))
+    (is (= 1 (:turn-count (first (get-in out [:report :notices])))))
+    (is (= "M-old" (:item (first (get-in out [:report :notices]))))))
+  (let [out (sut/focus-window
+             (assoc base :items [{:id "M-a" :state :closed :status-line "SUPERSEDED; superseded by `M-b`"}
+                                {:id "M-b" :state :closed :status-line "SUPERSEDED; superseded by `M-a`"}]
+                    :turns [(turn "cycle" "03" "seat-a" [] "M-a")]))]
+    (is (= :supersession-cycle (:reason (first (get-in out [:report :notices])))))
+    (is (empty? (get-in out [:report :focus]))))
+  (let [by-id (into {} (for [n (range 10)]
+                        [(str "M-" n) {:status-line (str "SUPERSEDED; superseded by `M-" (inc n) "`")}]))]
+    (is (= :supersession-limit (get-in (sut/resolve-tag by-id "M-0") [:notice :reason])))))
+
+(deftest successor-can-be-declared-below-status-line
+  (let [f (java.io.File/createTempFile "hou-successor" ".md")]
+    (try
+      (spit f "Status: SUPERSEDED\nThis item is superseded by `M-new`.\n")
+      (let [item (first (sut/with-successors [{:id "M-old" :status-line "SUPERSEDED" :path (str f)}]))]
+        (is (= "M-new" (:successor item)))
+        (is (= {:item "M-new"} (sut/resolve-tag {"M-old" item} "M-old"))))
+      (spit f "Status: SUPERSEDED\nsuperseded by `M-a`; superseded by `M-b`\n")
+      (let [item (first (sut/with-successors [{:id "M-old" :status-line "SUPERSEDED" :path (str f)}]))]
+        (is (= :supersession-ambiguous (get-in (sut/resolve-tag {"M-old" item} "M-old") [:notice :reason]))))
+      (finally (.delete f)))))

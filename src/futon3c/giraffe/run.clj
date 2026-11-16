@@ -23,6 +23,7 @@
             [clojure.pprint :as pp]
             [clojure.string :as str]
             [futon3c.giraffe.corpus-generation :as corpus-generation]
+            [futon3c.circus.operator-focus :as operator-focus]
             [futon3c.giraffe.missions :as gm]
             [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.pass :as gp]
@@ -525,16 +526,26 @@
         (partition 2 args)))
 
 (defn retained-focus-input
-  "Read only the newest retained WM focus relation for PASS-OUTPUT. This CLI
-  boundary resolves futon2 lazily; it never acquires or mints focus."
+  "Read Hou's six-hour operator window, restricted to this pass's targets.
+  The pin records both the window and every evidence digest Hou read. The
+  legacy function/CLI option name remains; WM manifests are no longer read."
   [pass-output]
-  ((requiring-resolve 'futon2.aif.area-focus/retained-relations)
-   (mapv :id (:order pass-output))
-   {:decision-as-of (str (java.time.Instant/now))}))
+  (let [window {:until (str (java.time.Instant/now)) :window-hours 6}
+        result (operator-focus/operator-focus window)
+        input (:focus-input result)
+        relations (into {} (keep (fn [{:keys [id]}]
+                                   (when-let [relation (get (:relations input)
+                                                            (if (keyword? id) (name id) (str id)))]
+                                     [id relation]))) (:order pass-output))]
+    (when (and (seq (get-in result [:report :focus])) (seq relations))
+      {:relations relations
+       :evidence-pin {:producer :hou :window window
+                      :evidence-pin (:evidence-pin input)
+                      :notices (get-in result [:report :notices])}})))
 
 (defn mint!
   "In-process equivalent of the supported missions/excursions CLI mint.
-   Reads retained focus only; never exits the JVM or acquires focus."
+   Reads Hou operator attention; never exits the JVM or publishes focus records."
   [{:keys [edges readings-root root repos]}]
   (let [invocation {:source "missions-excursions" :edges edges
                     :repos (or repos gm/default-repos) :readings-root readings-root

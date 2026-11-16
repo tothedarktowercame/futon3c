@@ -9,6 +9,7 @@
             [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.pass :as gp]
             [futon3c.giraffe.run :as gr]
+            [futon3c.circus.operator-focus :as operator-focus]
             [futon3c.giraffe.tickets :as gt]))
 
 (def tickets-dir "holes/tickets")
@@ -161,28 +162,31 @@
         "the optional projection does not alter pass.edn bytes")))
 
 (deftest retained-focus-mint-boundary-writes-priority
-  (let [root (temp-root "retained-focus-mint")
-        pass-output (:pass-output (pilot-run (temp-root "retained-focus-source")))
-        relations (into {} (map (fn [{:keys [id]}] [id :focus]) (:order pass-output)))
-        resolve-calls (atom [])]
-    (with-redefs [requiring-resolve
-                  (fn [sym]
-                    (swap! resolve-calls conj sym)
-                    (fn [targets _opts]
-                      {:relations (select-keys relations targets)
-                       :evidence-pin {:focus-manifest {:sha256 "fixture-focus"}}}))]
+  (let [root (temp-root "hou-focus-mint")
+        pass-output (:pass-output (pilot-run (temp-root "hou-focus-source")))
+        relations (into {} (map (fn [{:keys [id]}] [(name id) :focus]) (:order pass-output)))
+        windows (atom [])]
+    (with-redefs [requiring-resolve (fn [_] (throw (ex-info "WM must not be called" {})))
+                  operator-focus/operator-focus
+                  (fn [window]
+                    (swap! windows conj window)
+                    {:report {:focus [{:item "fixture"}] :notices []}
+                     :focus-input {:relations (assoc relations "M-outside" :focus)
+                                   :evidence-pin [["turn-fixture" "digest"]]}})]
       (let [input (gr/retained-focus-input pass-output)
-            written (:written (pilot-run root {:run-id "retained-focus"
-                                               :focus-relation-input input}))]
-        (is (.isFile (io/file (:dir written) "priority.edn")))
-        (is (= #{:focus}
-               (set (map :relation (read-string
-                                    (slurp (io/file (:dir written) "priority.edn")))))))
-        (is (= "fixture-focus"
-               (get-in (:manifest written)
-                       [:focus-relation-input :evidence-pin
-                        :focus-manifest :sha256])))))
-    (is (= ['futon2.aif.area-focus/retained-relations] @resolve-calls))))
+            written (:written (pilot-run root {:run-id "hou-focus" :focus-relation-input input}))
+            pin (get-in written [:manifest :focus-relation-input :evidence-pin])]
+        (is (= #{:focus} (set (map :relation (read-string (slurp (io/file (:dir written) "priority.edn")))))))
+        (is (= (set (map :id (:order pass-output))) (set (keys (:relations input)))))
+        (is (= :hou (:producer pin)))
+        (is (= [["turn-fixture" "digest"]] (:evidence-pin pin)))
+        (is (= (first @windows) (:window pin)))
+        (is (= 6 (get-in pin [:window :window-hours])))))
+    (with-redefs [operator-focus/operator-focus (constantly {:report {:focus []} :focus-input {:relations {}}})]
+      (let [input (gr/retained-focus-input pass-output)
+            written (:written (pilot-run (temp-root "empty-hou") {:focus-relation-input input}))]
+        (is (nil? input))
+        (is (= :focus-relation-input-absent (get-in written [:manifest :focus-relation-input :reason])))))))
 
 (deftest default-root-is-the-canonical-storage-root-never-tmp
   (is (= "/home/joe/code/storage/giraffe/" gr/default-root)))
