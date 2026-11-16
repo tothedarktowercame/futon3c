@@ -399,6 +399,24 @@
    (reify ThreadFactory
      (newThread [_ r] (doto (Thread. ^Runnable r "dog-recall") (.setDaemon true))))))
 
+(defonce ^:private ^ExecutorService gcc-executor
+  (Executors/newSingleThreadExecutor
+   (reify ThreadFactory
+     (newThread [_ r] (doto (Thread. ^Runnable r "dog-gcc") (.setDaemon true))))))
+
+(defn- schedule-gcc! [opts writer record-id]
+  (when writer
+    (.submit gcc-executor
+             ^Runnable
+             (bound-fn []
+               (try
+                 (let [st (let [s (:store opts)] (if (fn? s) (s) s))]
+                   (writer (or (:dog-memory-config opts)
+                               (mention-writer/default-config)) st record-id))
+                 (catch Throwable t
+                   (println (str "[dog] GCC projection failed for " record-id ": "
+                                 (.getMessage t)))))))))
+
 (defn- publish!
   "Cache RECALL for RECORD-ID. A typed absence is cached too, so the
    provider can record it; only a non-map is dropped."
@@ -497,7 +515,9 @@
 (defn start-live!
   "Wire the listener to the running service."
   []
-  (start! {:store (fn [] (some-> (live-service) :config :store))}))
+  (start! {:store (fn [] (some-> (live-service) :config :store))
+           :use-gcc-writer dog-memory/write-use-turn!
+           :buried-gcc-writer dog-memory/write-buried-turn!}))
 
 ;; ---------------------------------------------------------------- provider
 
@@ -779,7 +799,8 @@
                                         :reason (str "use-check-error: " (.getMessage t))
                                         :items []}))]
                      (turn-store/update-record! store record-id
-                                                #(assoc % :dog_use result)))))
+                                                #(assoc % :dog_use result))
+                     (schedule-gcc! opts (:use-gcc-writer opts) record-id))))
                (catch Throwable t
                  (println (str "[dog] use-check failed for " record-id ": "
                                (.getMessage t)))))
@@ -902,7 +923,9 @@
      :body (str "status: buried by 狗 " date " from " record-id ", not yet used\n\n"
                 "Joe " date ", " record-id " (" kind " act " (:id act) "), verbatim:\n\n\""
                 text "\"")
-     :basis {:record record-id :act-index i :act-id (str (:id act)) :kind kind}}))
+     :basis {:record record-id :act-index i :act-id (str (:id act)) :kind kind
+             :range (when (and (integer? (:start act)) (integer? (:end act)))
+                      [(:start act) (:end act)])}}))
 
 (defn- retraction-candidate
   "The reply's correction of itself after Joe said it was wrong: RECORD
@@ -952,6 +975,7 @@
   [record candidate matches]
   {:act (get-in candidate [:basis :act-id])
    :kind (get-in candidate [:basis :kind])
+   :range (get-in candidate [:basis :range])
    :text (candidate-check-text record candidate)
    :memory-ids (vec (distinct (map :memory matches)))
    :shared (vec (distinct (mapcat :shared matches)))})
@@ -1154,12 +1178,12 @@
    <memory-projects-dir>/狗/memory), :ingest-fn (fn [candidate text
    modified-ms] → HTTP statuses; default posts bury-store-docs to
    :7093). Returns {:slug :path :status \"buried\"|\"exists\"|\"failed\"}."
-  [opts {:keys [slug] :as candidate}]
+  [opts {:keys [slug basis] :as candidate}]
   (let [dir (io/file (str (or (:bury-dir opts)
                               (str memory-projects-dir "/" bury-project "/memory"))))
         path (io/file dir (str slug ".md"))]
     (if (.exists path)
-      {:slug slug :path (str path) :status "exists"}
+      {:slug slug :path (str path) :status "exists" :basis basis}
       (try
         (let [text (bury-file-text candidate)]
           (.mkdirs dir)
@@ -1171,9 +1195,9 @@
                                    [[ "/api/alpha/evidence" (first (bury-store-docs cand t ms))]
                                     ["/api/alpha/hyperedge" (second (bury-store-docs cand t ms))]])))]
             (ingest candidate text modified-ms))
-          {:slug slug :path (str path) :status "buried"})
+          {:slug slug :path (str path) :status "buried" :basis basis})
         (catch Throwable t
-          {:slug slug :path (str path) :status "failed"
+          {:slug slug :path (str path) :status "failed" :basis basis
            :reason (str "bury-error: " (.getMessage t))})))))
 
 (defn- prepare-bury!
@@ -1208,7 +1232,8 @@
                      :said-again suppressed}
                     {:at (str (Instant/now)) :status "none" :items []
                      :said-again suppressed})))]
-          (turn-store/update-record! store record-id #(assoc % :dog_buried result)))))
+          (turn-store/update-record! store record-id #(assoc % :dog_buried result))
+          (schedule-gcc! opts (:buried-gcc-writer opts) record-id))))
     (catch Throwable t
       (println (str "[dog] bury failed: " (.getMessage t)))))
   nil)

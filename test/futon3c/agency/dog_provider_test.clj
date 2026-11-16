@@ -584,8 +584,9 @@
           "the body opens with the status line")
       (is (re-find #"^joe-2026-11-11-" slug) "who + date slug")
       (is (>= 79 (count description)) "description fits a memory hook")
-      (is (= {:record "turn-UkLbCu" :act-index 0
-              :act-id "claude-13-turn-323-f-s1-0" :kind "approve"}
+        (is (= {:record "turn-UkLbCu" :act-index 0
+                :act-id "claude-13-turn-323-f-s1-0" :kind "approve"
+                :range [0 91]}
              basis)
           "basis cites the record id and the act index"))
     (is (not-any? #(re-find #"(?i)minted codex-7" (str (:body %))) candidates)
@@ -930,6 +931,8 @@
         record-id "turn-buryTEST3"
         dir (str (Files/createTempDirectory "dog-bury" (into-array FileAttribute [])))
         ingested (atom [])
+        use-gcc-saw-field (promise)
+        gcc-saw-field (promise)
         fix @fixture-UkLbCu-bury
         hit {:score -1.0
              :entry {:evidence/body {:source "claude-code" :project "proj"
@@ -948,6 +951,14 @@
       (dog/handle-event {:store store
                          :bury-dir dir
                          :ingest-fn (fn [_cand _text _ms] (swap! ingested conj true) [200 200])
+                         :use-gcc-writer
+                         (fn [_cfg st id]
+                           (deliver use-gcc-saw-field
+                                    (boolean (:dog_use (turn-store/read-record st id)))))
+                         :buried-gcc-writer
+                         (fn [_cfg st id]
+                           (deliver gcc-saw-field
+                                    (boolean (:dog_buried (turn-store/read-record st id)))))
                          :request-fn request-fn}
                         {:event :settled :id record-id})
       ;; the post-hook is async; wait inside the with-redefs scope
@@ -964,6 +975,10 @@
         (is (= ["proj/existing"] (:memory-ids entry)))
         (is (seq (:shared entry)))))
     (is (empty? @ingested) "no store write for a suppressed candidate")
+    (is (= true (deref use-gcc-saw-field 5000 :timeout))
+        "the GCC writer runs only after :dog_use is durable")
+    (is (= true (deref gcc-saw-field 5000 :timeout))
+        "the GCC writer runs only after :dog_buried is durable")
     (is (not (.exists (io/file dir "狗"))) "no memory file written")))
 
 (deftest said-again-empty-on-a-plain-turn

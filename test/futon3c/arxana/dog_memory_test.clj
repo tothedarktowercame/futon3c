@@ -1,5 +1,6 @@
 (ns futon3c.arxana.dog-memory-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.string :as str]
+            [clojure.test :refer [deftest is]]
             [futon3c.arxana.dog-memory :as sut]
             [futon3c.arxana.records :as records]
             [futon3c.arxana.store :as store]
@@ -121,3 +122,101 @@
         (sut/write-turn! cfg st id))
       (is (= 2 (get-in (turns/read-record st id) [:dog_recall_gcc :written]))
           "a later empty render never replaces a real write"))))
+
+(deftest use-writer-includes-used-and-unused-and-skips-typed-absences
+  (let [calls (atom [])
+        use {:status "ok" :at "2026-11-16T21:00:00Z"
+             :items [{:memory "p/one" :used true :kind "named" :evidence "label-a"}
+                     {:memory "p/two" :used false :kind "unused" :evidence "label-b"}]}]
+    (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref})
+                  http/append-batch! (fn [_ id rows] (swap! calls conj [id rows]) {:ok {}})]
+      (is (= 2 (:written (sut/write-use! {:graph-store :stub :memory-lookup memory-results}
+                                         turn use))))
+      (is (= 1 (count @calls)))
+      (let [atts (map :record (filter #(= :evidence/append (:operation %))
+                                      (second (first @calls))))]
+        (is (= #{[true "named"] [false "unused"]}
+               (set (map #(vector (get-in % [:content :used])
+                                  (get-in % [:content :kind])) atts)))))
+      (reset! calls [])
+      (is (zero? (:written (sut/write-use! {} turn {:status "pending"}))))
+      (is (zero? (:written (sut/write-use! {} turn {:status "no-recall"}))))
+      (is (empty? @calls)))))
+
+(deftest use-recheck-has-new-message-id
+  (let [ids (atom []) use {:status "ok" :at "2026-11-16T21:00:00Z"
+                           :items [{:memory "p/one" :used false :kind "unused"}]}]
+    (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref})
+                  http/append-batch! (fn [_ id _] (swap! ids conj id) {:ok {}})]
+      (sut/write-use! {:graph-store :stub :memory-lookup memory-results} turn use)
+      (sut/write-use! {:graph-store :stub :memory-lookup memory-results}
+                      turn (-> use (assoc :at "2026-11-16T21:01:00Z")
+                               (assoc-in [:items 0 :used] true)))
+      (is (= 2 (count (distinct @ids)))))))
+
+(deftest burial-and-two-repetitions-share-one-safe-batch
+  (let [calls (atom []) secret "PRIVATE OPERATOR SENTENCE"
+        buried {:status "ok" :at "2026-11-16T21:02:00Z"
+                :items [{:slug "new" :status "buried"
+                         :basis {:act-id "a1" :range [3 9]}}
+                        {:slug "failed" :status "failed"}
+                        {:slug "exists" :status "exists"}]
+                :said-again [{:act "a2" :range [10 20] :text secret
+                              :memory-ids ["p/one"] :shared [["private" "words"]]}
+                             {:act "a3" :range [21 30] :text secret
+                              :memory-ids ["p/one"] :shared [["other" "words"]]}]}]
+    (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref})
+                  http/append-batch! (fn [_ _ rows] (swap! calls conj rows) {:ok {}})]
+      (is (= {:written 3 :burials 1 :repetitions 2 :skipped []}
+             (sut/write-buried! {:graph-store :stub :memory-lookup memory-results
+                                 :memory-resolution-retry-ms 0} turn buried)))
+      (is (= 1 (count @calls)))
+      (is (= 1 (count (filter #(= [:memory/repetition 1]
+                                  (get-in % [:record :type-revision])) (first @calls))))
+          "two events share one repetition clusion")
+      (is (= 2 (count (filter #(and (= :evidence/append (:operation %))
+                                    (= "dog/repetition" (get-in % [:record :method :id])))
+                              (first @calls)))))
+      (is (not (str/includes? (pr-str (first @calls)) secret)))
+      (is (not (str/includes? (pr-str (first @calls)) "private words"))))))
+
+(deftest readers-ignore-index-order-and-repetitions-preserve-events
+  (let [claims {"cu" {:id "cu"} "cr" {:id "cr"}}
+        atts {"u0" {:content {:memory "p/one" :used false :kind "unused"
+                              :written-at "2026-11-16T21:00:00Z"}}
+              "u1" {:content {:memory "p/one" :used true :kind "named"
+                              :written-at "2026-11-16T21:01:00Z"}}
+              "r1" {:content {:memory "p/one" :event-index 0 :source-act-id "a1"
+                              :written-at "2026-11-16T21:02:00Z"}}
+              "r2" {:content {:memory "p/one" :event-index 1 :source-act-id "a2"
+                              :written-at "2026-11-16T21:02:00Z"}}}
+        run (fn [reverse? reader]
+              (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref})
+                            store/bounded-query!
+                            (fn [_ q]
+                              (if (= :role-reverse (:query/type q))
+                                {:ok {:edge-ids [(if (= [:memory/use 1] (:edge-type q)) "cu" "cr")]}}
+                                (let [ids (if (= "cu" (:subject-id q)) ["u0" "u1"] ["r1" "r2"])]
+                                  {:ok {:attestation-ids (if reverse? (vec (reverse ids)) ids)}})))
+                            store/get-entity (fn [_ id] {:ok (or (claims id) (atts id))})]
+                (reader {:graph-store :stub} turn)))]
+    (doseq [reverse? [false true]]
+      (is (true? (get-in (run reverse? sut/read-use) [:items 0 :used])))
+      (is (= ["a1" "a2"]
+             (mapv :source-act-id (:items (run reverse? sut/read-repetitions))))))))
+
+(deftest remaining-backfill-dry-run-never-writes
+  (with-redefs [turns/list-records
+                (fn [& _] [{:id "turn-new" :record
+                            (assoc turn :created_at "2026-11-16T21:00:00Z"
+                                   :dog_use {:status "ok" :items [{:memory "p/one"}]}
+                                   :dog_buried {:status "ok" :items [{:status "buried"}]
+                                                :said-again [{:memory-ids ["p/one"]}]})}])
+                sut/read-use (constantly {:items []})
+                sut/read-burials (constantly {:items []})
+                sut/read-repetitions (constantly {:items []})
+                http/append-batch! (fn [& _] (throw (AssertionError. "dry run wrote")))]
+    (let [r (sut/backfill-remaining! {:turn-store :stub} {:write? false})]
+      (is (= {:would-write 1} (get-in r [:use :outcomes])))
+      (is (= {:would-write 1} (get-in r [:burial :outcomes])))
+      (is (= {:would-write 1} (get-in r [:repetition :outcomes]))))))
