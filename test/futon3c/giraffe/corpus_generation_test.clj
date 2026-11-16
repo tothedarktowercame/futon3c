@@ -456,7 +456,7 @@
                                      {:before-switch-fn (fn [] (install-pointer! pointer winner))})))))
       (is (= (.getCanonicalPath winner) (:path (generation/resolve-generation pointer)))))))
 
-(deftest retirement-checker-failures-and-duplicates-are-refused
+(deftest retirement-refuses-duplicates-but-tolerates-base-failures
   (doseq [duplicate? [false true]]
     (let [{:keys [base pointer sources] :as f} (multi-fixture 2)
           batch (io/file base "batch-00.jsonl")
@@ -467,6 +467,10 @@
                                          [(first rows) (assoc other :reject true)]))))
       (io/delete-file (:path (first sources)))
       (let [before (generation/resolve-generation pointer)]
-        (is (= :giraffe-generation/checker-failed
-               (:kind (refusal #(retire! f ["M-one"])))))
-        (is (= before (generation/resolve-generation pointer)))))))
+        (if duplicate?
+          (do (is (= :giraffe-generation/checker-failed
+                     (:kind (refusal #(retire! f ["M-one"])))))
+              (is (= before (generation/resolve-generation pointer))))
+          ;; claude-13 review: a reading that ALREADY fails in the base (the
+          ;; live corpus has stale ones) must not block retiring another member.
+          (is (= :published (:status (retire! f ["M-one"])))))))))

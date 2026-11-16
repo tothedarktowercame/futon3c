@@ -332,7 +332,7 @@
    Rechecks all targets in staging and before switching under the publication lock.
    Unlike replacement's affected-line validation, checks EVERY remaining line with
    checked-line-failures (the generation's own check_edges.py), refusing failures
-   and duplicate ids. Throws ex-info on refusal; never partially publishes.
+   not already present in the base generation, and duplicate ids. Throws ex-info on refusal; never partially publishes.
    An already-retired target is unchanged. BEFORE-SWITCH-FN is a test race hook."
   [{:keys [pointer generations-dir targets reason now-ms before-switch-fn]}]
   (when-not (and (= :source-missing reason) (integer? now-ms)
@@ -369,7 +369,14 @@
           (let [lines (staged-lines staging)
                 ambiguous (->> lines (group-by #(get-in % [:record :id]))
                                (keep (fn [[id rows]] (when (and id (> (count rows) 1)) id))))
-                [failed _] (checked-line-failures staging lines)]
+                [staged-failing _] (checked-line-failures staging lines)
+                ;; Only NEW failures refuse: the live corpus carries stale
+                ;; readings that already fail the checker, and retiring other
+                ;; members must not depend on them (claude-13 review, as in
+                ;; validate-staging!).
+                base (io/file base-path)
+                [base-failing _] (checked-line-failures base (staged-lines base))
+                failed (new-failing-record-ids base-failing staged-failing)]
             (when (or (seq failed) (seq ambiguous))
               (throw (ex-info "Retirement did not pass corpus validation"
                               {:kind :giraffe-generation/checker-failed
