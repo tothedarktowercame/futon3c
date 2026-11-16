@@ -3,6 +3,7 @@
   (:require [clojure.java.shell :as shell]
             [clojure.string :as str]
             [futon3c.arxana.digest :as digest]
+            [futon3c.arxana.giraffe-needs :as giraffe-needs]
             [futon3c.arxana.item-inventory :as inventory]
             [futon3c.circus.hou :as hou]
             [futon3c.circus.hou-store :as hou-store]
@@ -181,7 +182,7 @@
                                (in-window? until window-hours (get-in % [:record :created_at])))
                          (turns/list-records (:turn-store cfg) :limit Long/MAX_VALUE))
          read (mapv #(read-turn cfg %) records)
-         nd (try {:data ((or (:read-needs cfg) hou-store/read-needs) cfg)}
+         nd (try {:data ((or (:read-needs cfg) giraffe-needs/read-needs-gcc) cfg)}
                  (catch Exception e {:notice {:reason :needs-unavailable :detail (:reason (ex-data e))}}))
          data (:data nd)
          pins (concat (map (fn [{:keys [id record]}] [(str "turn/" id) (digest/canonical-digest (assoc record :id id))]) records)

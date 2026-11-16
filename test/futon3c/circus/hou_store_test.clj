@@ -2,6 +2,7 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [futon3c.arxana.digest :as digest]
+            [futon3c.arxana.giraffe-needs :as giraffe-needs]
             [clojure.test :refer [deftest is]]
             [clojure.string :as str]
             [futon3c.arxana.records :as records]
@@ -16,6 +17,16 @@
 (def turn {:id "toy" :evidence_id "toy-evidence" :created_at "2026-01-01" :analysis_status "analyzed"
            :source_text "M-a M-b" :reply_text ""})
 (def cfg {:read-evidence (fn [_] {:evidence/body {:text "M-a M-b"}}) :graph-store :stub :turn-store {:dir "/invented"} :item-ids ["M-a" "M-b" "M-c" "M-d"]})
+
+(deftest snapshot-defaults-to-gcc-needs-without-opening-run-input
+  (let [called (atom 0)
+        need-data {:readings [] :basis-records [] :sources []}]
+    (with-redefs [giraffe-needs/read-needs-gcc (fn [_] (swap! called inc) need-data)
+                  sut/read-needs (fn [_] (throw (AssertionError. "legacy input.edn reader called")))
+                  mentions/inventory (fn [& _] [])
+                  mentions/plan-field (fn [& _] {:mentions [] :batches []})]
+      (is (= "toy" (:turn-id (sut/snapshot (dissoc cfg :read-needs) turn))))
+      (is (= 1 @called)))))
 
 (deftest atomic-focus-batch-and-typed-refusal
   (let [calls (atom [])]
@@ -85,7 +96,7 @@
 (deftest actual-snapshot-port-checks-pins-and-normalized-needs
   (let [w (temp-world)]
     (try
-      (let [c (:cfg w) n (sut/read-needs c)
+      (let [c (assoc (:cfg w) :read-needs sut/read-needs) n (sut/read-needs c)
             plans (map #(mentions/plan-field c turn %) [:source_text :reply_text])
             records (into {} (map (fn [r] [(:id r) r])) (map :record (mapcat :records (mapcat :batches plans))))]
         (is (= [["M-b" "M-c"]] (mapcat :needs (:readings n))))
@@ -107,7 +118,9 @@
                                                                        (mapcat :batches
                                                                                (map #(mentions/plan-field (:cfg w) turn %)
                                                                                     [:source_text :reply_text])))))})]
-          (let [header (:written (hou/hou-run (sut/snapshot (:cfg w) turn)))]
+          (let [header (:written (hou/hou-run
+                                  (sut/snapshot (assoc (:cfg w) :read-needs sut/read-needs)
+                                                turn)))]
             (is header)
             (is (some #(= (str (:doc w)) (:stale-source %))
                       (get-in header [:asserted-content :hou/sources]))))))

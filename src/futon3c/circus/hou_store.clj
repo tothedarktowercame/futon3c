@@ -10,6 +10,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.arxana.digest :as digest]
+            [futon3c.arxana.giraffe-needs :as giraffe-needs]
             [futon3c.arxana.records :as records]
             [futon3c.arxana.store :as store]
             [futon3c.arxana.store-http :as http]
@@ -21,7 +22,7 @@
   (merge (writer/default-config)
          {:party-path (str (System/getProperty "user.home") "/storage/gcc-preview/party.json")
           :runs-dir (str (System/getProperty "user.home") "/storage/giraffe")
-          :rule :named-items :associated-radius 1}))
+          :rule :named-items :associated-radius 1 :cache-needs? true}))
 
 (defn- sha-file [path]
   (digest/sha256-hex (java.nio.file.Files/readAllBytes (.toPath (io/file path)))))
@@ -104,7 +105,7 @@
         refs (vec (keep :reference plans))
         ms (vec (mapcat :mentions plans))
         source-ref (get-in (first plans) [:reference :id])
-        need-data ((or (:read-needs cfg) read-needs) cfg)
+        need-data ((or (:read-needs cfg) giraffe-needs/read-needs-gcc) cfg)
         turn-basis {:id (str "turn-record/" (:id turn))
                     :fields (select-keys turn [:source_text :reply_text :mission_id :analysis_status :created_at :origin])}
         basis-records (vec (concat (:basis-records need-data) [turn-basis] (map hou/item-record items)))
@@ -315,7 +316,7 @@
                   (take limit))
         items (writer/inventory cfg nil)
         cfg (assoc cfg :item-ids items)
-        need-data ((or (:read-needs cfg) read-needs) cfg)
+        need-data ((or (:read-needs cfg) giraffe-needs/read-needs-gcc) cfg)
         cfg (assoc cfg :read-needs (constantly need-data))
         results (mapv (fn [{:keys [id record]}]
                         (let [turn (assoc record :id id)
