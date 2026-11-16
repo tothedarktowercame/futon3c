@@ -366,3 +366,26 @@ with no reading record: the typed unread count the certificate must carry.
         pass (excursions/combined-pass input)]
     (is (= :population/missions-excursions-tickets (:scope (:coverage result))))
     (is (every? #(= :population/missions-excursions-tickets (get-in % [:graph-terms :scope])) (:order pass)))))
+
+(deftest retired-coverage-and-reopening
+  (let [{:keys [members-file batches options records members]} (build-world!)
+        id (:id (first records))
+        retirement {:reason "source-missing" :at_ms 1234 :last_sha256 "invented-pin"}
+        marked (mapv #(if (= id (:id %)) (assoc % :retired retirement) %) members)
+        batch (first batches)]
+    (spit members-file (json/generate-string marked))
+    ;; Contradictory retirement + record must never admit the record's links.
+    (let [result (readings/consume (assoc options :target-id id))]
+      (is (= :ambiguous (get-in result [:coverage :members 0 :status])))
+      (is (empty? (:edges result)))
+      (is (empty? (:links result))))
+    (spit batch (str/join "\n" (map json/generate-string (remove #(= id (:id %)) records))))
+    (let [result (readings/consume (assoc options :target-id id))
+          row (get-in result [:coverage :members 0])
+          drift (excursions/reading-drift [{:id (keyword id) :source-pin (:source row)}]
+                                         (:coverage result))]
+      (is (= :retired (:status row)))
+      (is (= retirement (:retired row)))
+      (is (empty? (:edges result)))
+      (is (= [(keyword id)] (:unread-new drift)))
+      (is (empty? (:read drift))))))

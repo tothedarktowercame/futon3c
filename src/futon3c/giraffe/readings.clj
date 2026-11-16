@@ -93,6 +93,13 @@
   "Each record invokes the exact checker. Duplicate members are ambiguous even
   when each individual record passes. Certificate hashes bind checker, member
   inventory and the exact JSONL line bytes (excluding LF delimiter).
+  Retired inventory entries without records are :retired; with any record they
+  are :ambiguous (contradictory current/retired evidence), never admitted.
+  Coverage consumers: excursions.clj:98 treats non-:read as :unread-new;
+  :122-158 excludes those open items and reports their status; :242 treats
+  them as unread. reread_queue.clj:133-154 queues unread-new and :188 only
+  uses an old sha for :read. consume itself admits only :read below and counts
+  retired members as incomplete, not silently read.
   Optional :target-id checks only that member, retaining duplicate detection;
   it is a per-item certificate, never a complete population certificate.
   Optional :checker-env is merged over the process environment for every
@@ -121,12 +128,15 @@
         rows (mapv (fn [member]
                      (let [rs (get groups (:id member)) r (first rs)]
                        {:id (:id member) :source (select-keys member [:path :sha256])
-                        :status (cond (> (count rs) 1) :ambiguous
+                        :retired (:retired member)
+                        :status (cond (and (:retired member) (seq rs)) :ambiguous
+                                      (:retired member) :retired
+                                      (> (count rs) 1) :ambiguous
                                       (:passed? r) :read :else :unread)
                         :record-pin (:record-pin r)
                         :record-pins (mapv :record-pin rs)
                         :checker-results (mapv :checker-result rs)
-                        :edge-count (when (:passed? r) (count (get-in r [:record :edges])))}))
+                        :edge-count (when (and (:passed? r) (not (:retired member))) (count (get-in r [:record :edges])))}))
                    (if target-id (filter #(= target-id (:id %)) members) members))
         readable (set (map :id (filter #(= :read (:status %)) rows)))
         admitted (filter #(contains? readable (get-in % [:record :id])) checked)

@@ -449,6 +449,24 @@ class ReadingFreshnessTests(unittest.TestCase):
         self.assertEqual(1, sum(l['type'] == '[:supersedes 1]' for l in item['links']))
         return item
 
+    def test_retired_reading_absence(self):
+        path = os.path.join(self.fx['corpus'], 'members.json')
+        with open(path) as stream:
+            members = json.load(stream)
+        retired = {'reason': 'source-missing', 'at_ms': 1234,
+                   'last_sha256': self.fx['sha_new']}
+        for member in members:
+            if member['id'] == ALPHA:
+                member['retired'] = retired
+        write(path, json.dumps(members))
+        write(os.path.join(self.fx['corpus'], 'batch-1.jsonl'), '')
+        item = self.project()
+        self.assertEqual([], self.reading_links(item))
+        self.assertEqual([{'what': 'current reading', 'reason': 'retired: source-missing',
+                           'at_ms': 1234, 'last_sha256': self.fx['sha_new']}],
+                         [a for a in item['absences'] if a['what'] == 'current reading'])
+        self.assertEqual('retired: source-missing', item['display']['reading']['absent'])
+
     def test_current_links_unchanged(self):
         item = self.project()
         links = self.reading_links(item)

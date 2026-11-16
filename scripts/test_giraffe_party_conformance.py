@@ -711,6 +711,7 @@ class ReadingSourceTests(unittest.TestCase):
         self.generation.mkdir()
         (self.run / 'manifest.edn').write_text(
             '{:readings-generation {:path ' + json.dumps(str(self.generation)) + '}}')
+        (self.generation / 'members.json').write_text('[]')
         self.scope()
         self.doc = self.root / 'invented.md'
         self.doc.write_bytes(b'invented source\r\n')
@@ -729,6 +730,39 @@ class ReadingSourceTests(unittest.TestCase):
                 superseded_reason TEXT, attempts INTEGER NOT NULL DEFAULT 0,
                 last_error TEXT, landed_digest TEXT, last_answer TEXT,
                 PRIMARY KEY(target_id, source_sha))""")
+
+    def test_retired_reported_without_changing_verdict(self):
+        (self.generation / 'members.json').write_text(json.dumps([
+            {'id': 'M-retired', 'retired': {'reason': 'source-missing', 'at_ms': 1,
+                                          'last_sha256': '0' * 64}}]))
+        (self.generation / 'retired.jsonl').write_text('{"id":"M-retired"}\n')
+        row = self.check()
+        self.assertEqual('PASS', row['status'])
+        self.assertEqual(1, row['detail']['retired'])
+        self.assertEqual(['M-retired'], row['detail']['retired_ids'])
+        self.assertEqual(1, row['detail']['current'])
+        self.assertEqual('PASS', c.one_current_reading(self.run)['status'])
+        digest = hashlib.sha256()
+        for path in sorted(self.generation.rglob('*')):
+            if path.is_file():
+                digest.update(str(path.relative_to(self.generation)).encode())
+                digest.update(b'\0')
+                digest.update(path.read_bytes())
+        (self.run / 'manifest.edn').write_text(
+            '{:readings-generation {:path ' + json.dumps(str(self.generation)) +
+            ' :digest "' + digest.hexdigest() + '"}}')
+        self.assertEqual('PASS', c.corpus_generation_digest(self.run)['status'])
+        self.change()
+        self.assertEqual('FAIL', self.check()['status'])
+        self.batch.write_text('')
+        row = self.check()
+        self.assertEqual('ABSENT', row['status'])
+        self.assertEqual(1, row['detail']['retired'])
+        self.batch.write_text('{"id":"M-retired"}\n')
+        row = self.check()
+        self.assertEqual('ABSENT', row['status'])
+        self.assertEqual(0, row['detail']['current'])
+        self.assertEqual(0, row['detail']['in_view'])
 
     def scope(self, inactive=()):
         (self.run / 'input.edn').write_text(

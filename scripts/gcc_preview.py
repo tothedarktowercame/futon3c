@@ -752,7 +752,13 @@ def build_item(item_id, ctx):
         for prev, nxt in zip(seen, seen[1:]):
             emit_link("[:supersedes 1]", reading_ids[nxt], reading_ids[prev],
                       {"from": reading_ids[nxt], "to": reading_ids[prev]})
-    if corpus_rec is None:
+    retirement = (member or {}).get("retired")
+    if retirement and corpus_rec is None:
+        absences.append({"what": "current reading",
+                         "reason": "retired: " + retirement["reason"],
+                         "at_ms": retirement.get("at_ms"),
+                         "last_sha256": retirement.get("last_sha256")})
+    elif corpus_rec is None:
         absences.append({"what": "current reading",
                          "reason": "no accepted reading of %s in corpus generation %s"
                                    % (item_id, os.path.basename(ctx["corpus_real"]))})
@@ -977,6 +983,10 @@ def build_item(item_id, ctx):
     if disp_reading is not None:
         disp_reading["earlier_count"] = len(disp_earlier)
         reading_disp = disp_reading
+    elif retirement and corpus_rec is None:
+        reading_disp = {"absent": "retired: " + retirement["reason"],
+                        "at_ms": retirement.get("at_ms"),
+                        "last_sha256": retirement.get("last_sha256")}
     elif queue_rows:
         reading_disp = {"absent": "queue has %d reading row(s) but none matches "
                                   "the current corpus reading" % len(queue_rows)}

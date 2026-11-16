@@ -602,6 +602,8 @@ def reading_source_current(run, queue_path=None):
     is checked separately by run_file_digests. Inactive readings are reported,
     never passed; gcc_preview.py withholds stale reading links. Document
     hashes below are taken NOW, independently of the recorded scope.
+    Retired members are reported from the pinned inventory, never PASS-counted;
+    retired.jsonl is lineage, not a current batch of reading records.
     reread_worker.clj:272-278 requires the exact claim path/hash. Paths are
     absolute from futon2/aif/mission_registry.clj:1164 (also census :623);
     do not resolve relative paths against this process or expand shell syntax.
@@ -619,7 +621,8 @@ def reading_source_current(run, queue_path=None):
         return dict(check='reading_source_current',
                     theorem=CHECKS['reading_source_current'], status=status, detail=detail)
     counts = dict(records=0, in_view=0, current=0, pending=0, source_changed_unqueued=0,
-                  source_missing=0, inactive_current=0, inactive_changed=0, inactive_missing=0)
+                  source_missing=0, inactive_current=0, inactive_changed=0, inactive_missing=0,
+                  retired=0, retired_ids=[])
     inactive_ids = {kind: [] for kind in ('current', 'changed', 'missing')}
     counts['inactive_ids'] = inactive_ids
     inactive_unknown = []
@@ -636,6 +639,14 @@ def reading_source_current(run, queue_path=None):
             inactive = set(inactive)
         except (OSError, ValueError, TypeError, KeyError, IndexError, RuntimeError):
             return result('ABSENT', dict(counts, missing='input.edn graph-coverage.drift.members-not-open'))
+        members = load(generation / 'members.json')
+        if members is None:
+            return result('ABSENT', dict(counts, missing='members.json'))
+        if not isinstance(members, list) or not all(isinstance(m, dict) for m in members):
+            return result('FAIL', dict(counts, rule='invalid-members'))
+        retired = {m['id'] for m in members if m.get('retired')}
+        counts['retired'] = len(retired)
+        counts['retired_ids'] = sorted(retired)[:20]
         for batch in sorted(generation.rglob('batch-*.jsonl')):
             if not batch.resolve().is_relative_to(generation):
                 return result('FAIL', {'rule': 'batch-outside-generation'})
@@ -652,6 +663,10 @@ def reading_source_current(run, queue_path=None):
                 pin = record.get('source') if isinstance(record, dict) else None
                 if not isinstance(item, str) or not item.strip():
                     errors.append({'item': None, 'rule': 'missing-item-id'})
+                    continue
+                # Coverage refuses retired+record contradictions as ambiguous.
+                # A retired identity cannot earn a source-freshness PASS here.
+                if item in retired:
                     continue
                 in_view = item not in inactive
                 counts['in_view'] += in_view
@@ -686,7 +701,7 @@ def reading_source_current(run, queue_path=None):
                     counts['source_missing'] += actual is None
                     stale.append((item, actual))
         if not counts['records']:
-            return result('ABSENT', {'missing': 'reading records'})
+            return result('ABSENT', dict(counts, missing='reading records'))
         queue_missing = False
         if stale:
             queue_path = Path(queue_path) if queue_path is not None else (
