@@ -191,11 +191,12 @@
                    forms (get-in (first rule-atts) [:content :forms])]
                {:entity/slug slug
                 :introduced-without-referent? (boolean (and (seq introductions)
-                                                            (not referent-ok?)))
+                                                            (not referent-ok?)
+                                                            (not-any? #(true? (:enabled? %)) forms)))
                 :forms (mapv (fn [form]
                                {:form/text (:form/text form)
                                 :enabled? (if (seq introductions)
-                                            referent-ok?
+                                            (or referent-ok? (true? (:enabled? form)))
                                             (true? (:enabled? form)))})
                              forms)}))
            rules)}))

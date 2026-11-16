@@ -122,7 +122,12 @@
         (let [hv (:ok (call cfg "hou-view" :workplan/entity-backlinks {:entity/slug "猴"}))]
           (is (seq (:introductions hv)))
           (is (empty? (:referents hv)))
-          (is (true? (get-in hv [:forms/effective 0 :enabled?]))))
+          (is (true? (get-in hv [:forms/effective 0 :enabled?])))
+          ;; The one-request catalogue Sessionista reads agrees.
+          (let [hou (first (filter #(= "猴" (:entity/slug %))
+                                   (get-in (call cfg "hou-rules" :workplan/entity-rules {}) [:ok :entities])))]
+            (is (false? (:introduced-without-referent? hou)))
+            (is (true? (get-in hou [:forms 0 :enabled?])))))
         ;; A different introduced entity whose only candidate Joe rejects stays off.
         (let [wv (:ok (call cfg "warrant-view" :workplan/entity-backlinks {:entity/slug "test-registry"}))
               wid (get-in wv [:referents 0 :record :id])]
