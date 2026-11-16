@@ -260,8 +260,7 @@
     (.execute ^ScheduledThreadPoolExecutor (:executor @state) ^Runnable #(drain! token))))
 
 (defn- round! [token f]
-  ;; Every round runs on the single worker. Retain its end time so an overdue
-  ;; backstop tick can skip a deadline crossed while this worker was occupied.
+  ;; Every round runs on the single worker; queued ticks run after it finishes.
   (when (active? token)
     (swap! state assoc :round-running? true)
     (try (f)
@@ -384,37 +383,31 @@
 
 (declare schedule-backstop!)
 
-(defn- backstop-tick! [token _due-ns]
+(defn- backstop-tick! [token]
   (when (active? token)
     (try
-      ;; A tick delayed by reader rounds still runs: during a catch-up the
-      ;; worker is busy back to back, and skipping then would starve the
-      ;; backstop exactly when edits are being missed (claude-13 review).
-      ;; One outstanding tick at a time, so no backlog burst either way.
-      (if (or (:round-running? @state) (:draining-previous? @state))
-        (swap! state update :backstop-skipped (fnil inc 0))
-        (do
-          (full-round! token (:config @state))
-          (retire-missing! token)
-          (retry-failed! token)
-          (refresh-if-behind! token)
-          (when (active? token)
-            (swap! state assoc :last-backstop-at-ms (System/currentTimeMillis))
-            (swap! state update :errors dissoc :backstop))))
+      ;; Ticks and rounds share one worker. A delayed tick runs once after
+      ;; the round finishes, then schedules its successor without a backlog.
+      (full-round! token (:config @state))
+      (retire-missing! token)
+      (retry-failed! token)
+      (refresh-if-behind! token)
+      (when (active? token)
+        (swap! state assoc :last-backstop-at-ms (System/currentTimeMillis))
+        (swap! state update :errors dissoc :backstop))
       (catch Exception e (failure! token :backstop e))
       (finally (schedule-backstop! token)))))
 
 (defn- schedule-backstop! [token]
   ;; One outstanding tick, scheduled after the last one completes; no backlog
-  ;; or catch-up burst. A deadline crossed by a reader round is skipped above.
+  ;; or catch-up burst, including when a reader round delays the tick.
   (locking lock
     (when (active? token)
       (let [{:keys [config executor]} @state
-            delay (:reconcile-interval-ms config)
-            due (+ (System/nanoTime) (* 1000000 delay))]
+            delay (:reconcile-interval-ms config)]
         (swap! state assoc :backstop-task
                (.schedule ^ScheduledThreadPoolExecutor executor
-                          ^Runnable #(backstop-tick! token due)
+                          ^Runnable #(backstop-tick! token)
                           (long delay) TimeUnit/MILLISECONDS))))))
 
 (defn notify-doc-changed!
@@ -641,6 +634,5 @@
             :failed-exhausted (:failed-exhausted @state)
             :last-retirement (:last-retirement @state)
             :last-backstop-at-ms (:last-backstop-at-ms @state)
-            :backstop-skipped (:backstop-skipped @state)
             :last-turn-mint (:last-turn-mint @state)
             :last-refresh (:last-refresh @state)})))

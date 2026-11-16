@@ -597,11 +597,11 @@
         (deliver release true)
         (is (true? (wait-for #(>= @snapshots 2) 2000))
             "a tick delayed by a reader round still runs one full round afterwards")
-        (is (zero? (or (:backstop-skipped (service-state)) 0)))
         (service/stop!) (join!)
+        (is (= 2 @snapshots) "only one delayed tick runs after the round")
         (let [n @snapshots {:keys [token backstop-task]} (service-state)]
           (is (.isCancelled ^java.util.concurrent.ScheduledFuture backstop-task))
-          ((ns-resolve 'futon3c.giraffe.reread-service 'backstop-tick!) token 0)
+          ((ns-resolve 'futon3c.giraffe.reread-service 'backstop-tick!) token)
           (is (= n @snapshots) "even a previously dispatched tick cannot run after stop"))
         (finally (deliver release true))))))
 
@@ -662,7 +662,7 @@
         mints (atom [])
         state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
         tick-var (ns-resolve 'futon3c.giraffe.reread-service 'backstop-tick!)
-        tick (fn [] (.get (.submit executor ^Runnable #(tick-var token 0))))]
+        tick (fn [] (.get (.submit executor ^Runnable #(tick-var token))))]
     (spit (io/file base "members.json") (json/generate-string members))
     (spit (io/file base "check_edges.py") "# invented checker port stubbed")
     (spit (io/file base "batch-00.jsonl")
@@ -802,7 +802,7 @@
        (ns-resolve 'futon3c.giraffe.reread-service 'after-mint!) (fn [& _] nil)
        (ns-resolve 'futon3c.giraffe.reread-service 'schedule-mint!) (fn [& _] nil)}
       (fn []
-        (.get (.submit executor ^Runnable #(tick-var token 0)))
+        (.get (.submit executor ^Runnable #(tick-var token)))
         (is (= 1 (get-in (service/health) [:last-retirement :retired])))
         (is (= [[1 true]] @mints))))
     (swap! state-atom assoc :running? false)
