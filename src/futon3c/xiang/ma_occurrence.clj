@@ -382,13 +382,13 @@
   [{:keys [store notify!] :as opts} id]
   (try
     (let [record (and store (ts/read-record store id))
-          lu (when record
+          lu (when (and record (= "operator" (:origin record)))
                ((or (:proposal-reader opts) proposals/read-ranked)
                 (or (:proposal-config opts) (mention-writer/default-config))
                 (assoc record :id id)))
           record (when record (assoc record :lu_proposal_ids (:ids lu)))
           proposed (some-> record patterns-of)]
-      (if (:pending lu)
+      (if (and (= "operator" (:origin record)) (:pending lu))
         (let [pending {:version 1 :at (str (java.time.Instant/now))
                        :reader "none" :state :lu-proposals-pending
                        :why "lu proposals pending" :patterns []}]
