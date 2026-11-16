@@ -78,6 +78,27 @@
     (.deleteOnExit f)
     (.getAbsolutePath f)))
 
+(defn- startup-init-before-input-bin
+  "Emit process init before reading stdin, then answer the first real turn."
+  []
+  (let [f (java.io.File/createTempFile "fake-claude-startup-init-" ".py")]
+    (spit f
+          (str "#!/usr/bin/env python3\n"
+               "import json, sys, time\n"
+               "def emit(o): print(json.dumps(o), flush=True)\n"
+               "emit({'type':'system','subtype':'init','session_id':'startup-init'})\n"
+               ;; Make the live race deterministic: the demux sees init before
+               ;; feed-turn! can register its waiter.
+               "time.sleep(0.2)\n"
+               "for line in sys.stdin:\n"
+               "    text = json.loads(line)['message']['content'][0]['text']\n"
+               "    emit({'type':'system','subtype':'init','session_id':'startup-init'})\n"
+               "    emit({'type':'assistant','message':{'content':[{'type':'text','text':'reply:' + text}]}})\n"
+               "    emit({'type':'result','session_id':'startup-init','is_error':False})\n"))
+    (.setExecutable f true)
+    (.deleteOnExit f)
+    (.getAbsolutePath f)))
+
 (defn- missing-result-bin
   "Emit a genuine text-only final assistant message but omit `result`, matching
    the live claude-10/14 CLI failure. Keep stdin open so EOF cannot rescue the
@@ -271,6 +292,23 @@
                                   (= "init" (:subtype %)))
                             @events)))
         "both init records stay attributed to the same solicited turn")))
+
+(deftest startup-init-before-waiter-does-not-open-a-phantom-turn
+  ;; Live claude-1, 2026-11-16: init won the startup race, opened a turn with
+  ;; no owner, and the real turn waited 20+ minutes for an impossible result.
+  (demux-on!)
+  (let [bin (startup-init-before-input-bin)
+        pouch* (#'pouch/ensure-pouch! "demux-startup-init" {:claude-bin bin})
+        _ (#'pouch/ensure-demux! pouch*)
+        open? (get-in pouch* [:demux :open?])]
+    (Thread/sleep 100)
+    (is (false? @open?) "unclaimed process init is not a protocol turn")
+    (let [result (pouch/feed-turn! "demux-startup-init" "first"
+                                   {:claude-bin bin :timeout-ms 2000
+                                    :turn-id "first-real-turn"})]
+      (is (= "reply:first" (:result result)))
+      (is (= "first-real-turn" (:turn-id result)))
+      (is (= "startup-init" (:session-id result))))))
 
 (deftest operator-write-waits-for-an-open-autonomous-turn
   ;; 2026-11-09 claude-6 incident: :in-flight? was false because the open turn

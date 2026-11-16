@@ -1127,11 +1127,21 @@
                     (case (:type event)
                     "system"
                     (condp = (str (:subtype event))
-                      ;; Claude may emit more than one init record while
-                      ;; starting a fresh --print process. A duplicate belongs
-                      ;; to the open turn; polling q again would orphan the
-                      ;; current owner and park its invoke forever.
-                      "init" (do (ensure-open!) (emit! event))
+                      ;; A fresh --print process can emit init before it has
+                      ;; read any user event. That is process metadata, not an
+                      ;; autonomous turn: opening a turn here makes the first
+                      ;; real waiter wait for a result Claude cannot produce
+                      ;; until that waiter's stdin is written. Once a waiter,
+                      ;; task notification, or open turn exists, init belongs
+                      ;; to that turn. A duplicate init stays with the existing
+                      ;; owner rather than polling q again.
+                      "init" (cond
+                               @open? (emit! event)
+                               (or (.peek q) @agent-initiated?)
+                               (do (ensure-open!) (emit! event))
+                               :else
+                               (when-let [session-id (:session_id event)]
+                                 (vreset! sid session-id)))
                       ;; Announced between turns: the next turn to open is the
                       ;; agent answering its own background work unless a user
                       ;; prompt is subsequently registered before that init.
