@@ -38,16 +38,26 @@
       (is (= :operator-evidence-unavailable (:failed (sut/write! {:graph-store :stub} turn))))
       (is (empty? @calls)))))
 
-(deftest elided-quote-offsets-write-nothing
+(deftest elided-quote-offsets-map-to-evidence-ranges
   (let [calls (atom [])
-        t (assoc turn :source_text "report this\n\nQUOTE"
+        evidence "report this\n>>> quoted words\n>>>\nafter"
+        t (assoc turn :source_text "report this\nQUOTE\nafter"
                  :acts [{:id "claude-3-turn-9-f-s1-0" :author "operator" :kind "collect"
-                         :start 13 :end 18 :text "QUOTE"}])]
+                         :start 12 :end 17 :text "QUOTE"}
+                        {:id "claude-3-turn-9-f-s2-0" :author "operator" :kind "report"
+                         :start 18 :end 23 :text "after"}])]
     (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref
-                                                     :text "report this\n\n>>> quoted words"})
+                                                     :text evidence})
                   http/append-batch! (fn [& _] (swap! calls conj :write) {:ok {}})]
-      (is (= :act-offsets-not-in-evidence-text (:failed (sut/write! {:graph-store :stub} t))))
-      (is (empty? @calls)))))
+      (let [p (sut/plan {:graph-store :stub} t)
+            claims (map :record (filter #(= :clusion/assert (:operation %)) (:rows p)))
+            ranges (mapv #(get-in % [:endpoints 0 :target :locator :codepoint-range]) claims)
+            [[qa qb] [aa ab]] ranges]
+        (is (= 2 (:acts p)))
+        (is (= ">>> quoted words\n>>>" (subs evidence qa qb))
+            "QUOTE covers the complete fenced block")
+        (is (= "after" (subs evidence aa ab))
+            "an act after the quote maps by the accumulated shift")))))
 
 (deftest reader-uses-live-route-keys-and-orders-by-start
   (let [c1 {:id "c1" :endpoints [{:target {:locator {:codepoint-range [7 11]}}}
@@ -81,3 +91,15 @@
                 sut/plan (constantly {:rows [] :acts 0})]
     (is (= {:no-operator-acts 1} (:outcomes (sut/backfill! {:turn-store :stub} {:write? false})))
         "an empty plan is not counted as a write")))
+
+(deftest backfill-write-records-zero-act-outcome
+  (let [saved (atom nil)
+        zero (assoc turn :acts [] :analysis_status "analyzed"
+                    :created_at (str (java.time.Instant/now)))]
+    (with-redefs [turns/list-records (fn [& _] [{:id "turn-x" :record zero}])
+                  sut/read-acts (constantly {:pending :interpretations-pending})
+                  mentions/field-evidence (fn [& _] {:reference turn-ref :text (:source_text zero)})
+                  turns/update-record! (fn [_ _ f] (reset! saved (f zero)))]
+      (is (= {:no-operator-acts 1}
+             (:outcomes (sut/backfill! {:turn-store :stub} {:write? true :pause-ms 0}))))
+      (is (= {:written 0} (:xiang_interpretations @saved))))))

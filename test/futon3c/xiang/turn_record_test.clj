@@ -398,3 +398,27 @@
                                   (subs s (.offsetByCodePoints s 0 b)))) text (reverse spans))]
       (is (= (:text (tr/elide-quotes text))
              (if (seq spans) (str/trim replaced) replaced))))))
+
+(deftest elided-ranges-map-to-original-text
+  (let [text "  before\n>>> quoted\nline\n>>>\nafter  "
+        {:keys [text segments]} (tr/elided-offset-map text)]
+    (is (= "before\nQUOTE\nafter" text))
+    (is (= {:range [2 8] :quote? false} (tr/map-elided-range
+                                         "  before\n>>> quoted\nline\n>>>\nafter  " [0 6])))
+    (is (= ">>> quoted\nline\n>>>"
+           (let [[a b] (:range (tr/map-elided-range
+                                "  before\n>>> quoted\nline\n>>>\nafter  " [7 12]))]
+             (subs "  before\n>>> quoted\nline\n>>>\nafter  " a b))))
+    (is (= "after"
+           (let [[a b] (:range (tr/map-elided-range
+                                "  before\n>>> quoted\nline\n>>>\nafter  " [13 18]))]
+             (subs "  before\n>>> quoted\nline\n>>>\nafter  " a b))))
+    (is (seq segments)))
+  (doseq [text [">>> one\n>>>\nmiddle\n>>> two\n>>>"
+                "before\n>>> unclosed\nto the end"]]
+    (let [{elided :text} (tr/elided-offset-map text)]
+      (is (= (:text (tr/elide-quotes text)) elided))
+      (doseq [[start _] (map vector
+                             (keep-indexed #(when (= \Q %2) %1) elided)
+                             (repeat nil))]
+        (is (:quote? (tr/map-elided-range text [start (+ start 5)])))))))

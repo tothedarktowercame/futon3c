@@ -6,6 +6,7 @@
             [futon3c.arxana.store :as store]
             [futon3c.arxana.store-http :as http]
             [futon3c.arxana.turn-mention-writer :as mentions]
+            [futon3c.xiang.turn-record :as turn-record]
             [futon3c.xiang.turn-store :as turns]))
 
 (defn operator-acts
@@ -33,25 +34,26 @@
   (try (subs s (.offsetByCodePoints s 0 (int start)) (.offsetByCodePoints s 0 (int end)))
        (catch Exception _ nil)))
 
-(defn- offset-space-differs?
-  "True when some act's range reads differently in 象's :source_text (where
-  >>> blocks are elided to QUOTE, turn_record.clj elide-quotes) and in the
-  Evidence Landscape text the interpretation's range is stated against."
-  [turn el-text acts]
-  (let [src (str (:source_text turn))]
-    (some #(not= (cp-subs src (:start %) (:end %)) (cp-subs (str el-text) (:start %) (:end %)))
-          acts)))
+(defn- mapped-act [turn el-text act]
+  (let [source-span (cp-subs (str (:source_text turn)) (:start act) (:end act))
+        mapped (turn-record/map-elided-range el-text [(:start act) (:end act)])
+        el-span (some->> (:range mapped) (apply cp-subs (str el-text)))]
+    (when (and mapped
+               ;; QUOTE denotes the fenced block rather than its literal text.
+               (or (and (:quote? mapped) (= "QUOTE" source-span))
+                   (= source-span el-span)))
+      (assoc act :evidence-range (:range mapped)))))
 
 (defn plan [cfg turn]
   (if-let [{:keys [reference text]} (mentions/field-evidence cfg turn :source_text)]
-    (if (offset-space-differs? turn text (operator-acts turn))
-      ;; Until 象's offsets are mapped onto the EL text, write nothing rather
-      ;; than ranges that point at the wrong span.
-      {:failed :act-offsets-not-in-evidence-text}
     (let [acts (operator-acts turn)
+          mapped (mapv #(mapped-act turn text %) acts)]
+      (if (some nil? mapped)
+      {:failed :act-offsets-not-in-evidence-text}
+    (let [acts mapped
           rows (mapcat
                 (fn [act]
-                  (let [span [(:start act) (:end act)]
+                  (let [span (:evidence-range act)
                         target-ref (target-reference cfg turn reference act)
                         claim (records/make-clusion
                                {:type-revision [:interpretation 1]
@@ -79,7 +81,7 @@
                       (conj {:operation :external-reference/assert :record target-ref})
                       true (conj {:operation :clusion/assert :record claim}
                                  {:operation :evidence/append :record att})))) acts)]
-      {:rows (vec rows) :acts (count acts) :reference reference :text text}))
+      {:rows (vec rows) :acts (count acts) :reference reference :text text})))
     {:failed :operator-evidence-unavailable}))
 
 (defn write! [cfg turn]
@@ -119,12 +121,16 @@
                   (keep (fn [{:keys [id record]}]
                           (let [at (some-> (:created_at record) str java.time.Instant/parse .toEpochMilli)]
                             (when (and at (< cutoff at) (= "operator" (:origin record))
-                                       (= "analyzed" (:analysis_status record)) (seq (:acts record)))
+                                       (= "analyzed" (:analysis_status record)))
                               (assoc record :id id))))))
         outcomes (mapv (fn [turn]
                          (if-not (:pending (read-acts cfg turn)) :already-written
                            (if write?
                              (let [r (write! cfg turn)]
+                               (turns/update-record!
+                                (:turn-store cfg) (:id turn)
+                                #(if (:written (:xiang_interpretations %)) %
+                                     (assoc % :xiang_interpretations r)))
                                (when (pos? pause-ms) (Thread/sleep pause-ms))
                                (cond (:failed r) (:failed r)
                                      (pos? (:written r)) :written

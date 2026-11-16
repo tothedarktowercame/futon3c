@@ -308,6 +308,69 @@
                      quoted)]
         {:text (str/trim (str/join "\n" out)) :quotes quoted}))))
 
+(defn elided-offset-map
+  "Describe how codepoint offsets in `(elide-quotes TEXT) :text` map back to
+  TEXT.  Ordinary segments are one-to-one; each QUOTE segment maps to the
+  complete fenced block.  The segment construction consumes `quote-spans`,
+  so the fence rules have a single offset authority."
+  [text]
+  (let [text (str text)
+        n (.codePointCount ^String text 0 (count text))
+        cp-sub (fn [start end]
+                 (subs text (.offsetByCodePoints ^String text 0 start)
+                       (.offsetByCodePoints ^String text 0 end)))
+        pieces (loop [at 0 spans (seq (quote-spans text)) out []]
+                 (if-let [[start end] (first spans)]
+                   (recur end (next spans)
+                          (cond-> out
+                            (< at start) (conj {:kind :text :original [at start]
+                                               :value (cp-sub at start)})
+                            true (conj {:kind :quote :original [start end]
+                                        :value "QUOTE"})))
+                   (cond-> out (< at n) (conj {:kind :text :original [at n]
+                                               :value (cp-sub at n)}))))
+        raw (apply str (map :value pieces))
+        ;; clojure.string/trim delegates to String.trim: chars <= U+0020.
+        leading (count (take-while #(<= (int %) 32) raw))
+        trailing (count (take-while #(<= (int %) 32) (reverse raw)))
+        raw-n (.codePointCount ^String raw 0 (count raw))
+        kept-start (min leading raw-n)
+        kept-end (max kept-start (- raw-n trailing))
+        segments (loop [ps pieces raw-at 0 out []]
+                   (if-let [{:keys [kind original value]} (first ps)]
+                     (let [len (.codePointCount ^String value 0 (count value))
+                           a raw-at b (+ raw-at len)
+                           ka (max a kept-start) kb (min b kept-end)]
+                       (recur (next ps) b
+                              (if (< ka kb)
+                                (let [[oa ob] original
+                                      mapped (if (= :quote kind)
+                                               [oa ob]
+                                               [(+ oa (- ka a)) (+ oa (- kb a))])]
+                                  (conj out {:kind kind
+                                             :elided [(- ka kept-start) (- kb kept-start)]
+                                             :original mapped}))
+                                out)))
+                     out))]
+    {:text (str/trim raw) :segments segments}))
+
+(defn map-elided-range
+  "Map [START END) in elided TEXT back to its original codepoint range.
+  Any overlap with a QUOTE token expands to that whole fenced block."
+  [text [start end]]
+  (let [{:keys [segments]} (elided-offset-map text)
+        covered (filterv (fn [{[a b] :elided}] (and (< a end) (< start b))) segments)
+        first-seg (first covered) last-seg (peek covered)
+        boundary (fn [seg offset side]
+                   (let [[ea eb] (:elided seg) [oa ob] (:original seg)]
+                     (if (= :quote (:kind seg))
+                       (if (= side :start) oa ob)
+                       (+ oa (- (min eb (max ea offset)) ea)))))]
+    (when (and (< start end) (seq covered))
+      {:range [(boundary first-seg start :start)
+               (boundary last-seg end :end)]
+       :quote? (boolean (some #(= :quote (:kind %)) covered))})))
+
 ;; ---------------------------------------------------------------------------
 ;; Sentence spans (session-mode--sentence-spans)
 
