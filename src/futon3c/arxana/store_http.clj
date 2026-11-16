@@ -39,6 +39,12 @@
         503 :unavailable
         :internal)))
 
+(defn- response-code [body]
+  (let [code (or (get-in body [:error :context :code])
+                 (get-in body [:error :reason]) :arxana.store/http-error)]
+    (if (qualified-keyword? code) code
+        (keyword "arxana.store" (name code)))))
+
 (defrecord HttpStore [base-url principal ^HttpClient client]
   store/ArxanaGraphStore
   (get-entity [_ entity-id]
@@ -91,9 +97,7 @@
           (if (<= 200 status 299)
             body
             {:error (env/error (category-for-status status body)
-                               (or (get-in body [:error :context :code])
-                                   (get-in body [:error :reason])
-                                   :arxana.store/http-error)
+                               (response-code body)
                                {:http/status status
                                 :futon1b/error (:error body)}
                                (get-in body [:error :context :recoverable :choices]))}))
@@ -126,3 +130,12 @@
    (http-store base-url principal (HttpClient/newHttpClient)))
   ([base-url principal client]
    (->HttpStore base-url principal client)))
+
+(defn append-batch!
+  "Append 1..500 {:operation append-op :record record} entries atomically.
+  Earlier clusions may be subjects of later attestations. MESSAGE-ID is the
+  retry identity; transport and refusal mapping are conditional-write!'s."
+  [graph-store message-id records]
+  (store/conditional-write! graph-store
+                            {:protocol/version "arxana.v1" :message/id message-id
+                             :operation :records/append :body {:records (vec records)}}))

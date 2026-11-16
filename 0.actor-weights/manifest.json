@@ -1,0 +1,92 @@
+[
+  {
+    "file": "0000.npy",
+    "shape": [
+      371361
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0001.npy",
+    "shape": [
+      32,
+      371361
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0002.npy",
+    "shape": [
+      32
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0003.npy",
+    "shape": [
+      32,
+      32
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0004.npy",
+    "shape": [
+      32
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0005.npy",
+    "shape": [
+      4096,
+      32
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0006.npy",
+    "shape": [
+      32
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0007.npy",
+    "shape": [
+      32,
+      32
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0008.npy",
+    "shape": [
+      32
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0009.npy",
+    "shape": [
+      32,
+      32
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0010.npy",
+    "shape": [
+      1
+    ],
+    "dtype": "float32"
+  },
+  {
+    "file": "0011.npy",
+    "shape": [
+      32,
+      1
+    ],
+    "dtype": "float32"
+  }
+]

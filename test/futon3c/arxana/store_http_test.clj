@@ -31,6 +31,19 @@
                          adapter (command "cross-1" :absent "changed-retry-body"))
               stale (store/conditional-write!
                      adapter (command "cross-2" :absent "revision-two"))]
+          (testing "batch append crosses the real HTTP route with typed refusal"
+            (let [c {:id "arxana:clusion:sha256:http-batch" :type-revision [:workplan/item 1]
+                     :endpoints [] :asserted-content {:item/id "M-toy"}}
+                  rows [{:operation :clusion/assert :record c}]
+                  result (store-http/append-batch! adapter "http-batch" rows)
+                  duplicate (store-http/append-batch! adapter "http-batch" rows)
+                  conflict (store-http/append-batch! adapter "http-conflict"
+                              [{:operation :clusion/assert :record (assoc c :asserted-content {:changed true})}])]
+              (is (true? (get-in result [:ok :records 0 :created?])))
+              (is (= c (f1-arxana/clusion-by-id node (:id c))))
+              (is (true? (:duplicate? duplicate)))
+              (is (= :conflict (get-in conflict [:error :error/category])))
+              (is (= 400 (get-in conflict [:error :error/detail :http/status])))))
           (testing "capabilities describe the narrow live seam"
             (is (true? (:entity-compare-and-set (store/capabilities adapter))))
             (is (false? (:entity-write (store/capabilities adapter)))))
