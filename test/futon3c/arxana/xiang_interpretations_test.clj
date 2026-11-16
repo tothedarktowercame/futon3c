@@ -38,6 +38,17 @@
       (is (= :operator-evidence-unavailable (:failed (sut/write! {:graph-store :stub} turn))))
       (is (empty? @calls)))))
 
+(deftest elided-quote-offsets-write-nothing
+  (let [calls (atom [])
+        t (assoc turn :source_text "report this\n\nQUOTE"
+                 :acts [{:id "claude-3-turn-9-f-s1-0" :author "operator" :kind "collect"
+                         :start 13 :end 18 :text "QUOTE"}])]
+    (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref
+                                                     :text "report this\n\n>>> quoted words"})
+                  http/append-batch! (fn [& _] (swap! calls conj :write) {:ok {}})]
+      (is (= :act-offsets-not-in-evidence-text (:failed (sut/write! {:graph-store :stub} t))))
+      (is (empty? @calls)))))
+
 (deftest reader-uses-live-route-keys-and-orders-by-start
   (let [c1 {:id "c1" :endpoints [{:target {:locator {:codepoint-range [7 11]}}}
                                    {:target {:intent/id :explain}}]}

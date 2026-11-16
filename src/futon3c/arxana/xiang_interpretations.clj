@@ -27,8 +27,27 @@
       :revision/digest (digest/sha256-hex (.getBytes (str value) "UTF-8"))})
     turn-ref))
 
+(defn- cp-subs
+  "Codepoint substring of S over [START END), or nil when out of range."
+  [^String s start end]
+  (try (subs s (.offsetByCodePoints s 0 (int start)) (.offsetByCodePoints s 0 (int end)))
+       (catch Exception _ nil)))
+
+(defn- offset-space-differs?
+  "True when some act's range reads differently in 象's :source_text (where
+  >>> blocks are elided to QUOTE, turn_record.clj elide-quotes) and in the
+  Evidence Landscape text the interpretation's range is stated against."
+  [turn el-text acts]
+  (let [src (str (:source_text turn))]
+    (some #(not= (cp-subs src (:start %) (:end %)) (cp-subs (str el-text) (:start %) (:end %)))
+          acts)))
+
 (defn plan [cfg turn]
   (if-let [{:keys [reference text]} (mentions/field-evidence cfg turn :source_text)]
+    (if (offset-space-differs? turn text (operator-acts turn))
+      ;; Until 象's offsets are mapped onto the EL text, write nothing rather
+      ;; than ranges that point at the wrong span.
+      {:failed :act-offsets-not-in-evidence-text}
     (let [acts (operator-acts turn)
           rows (mapcat
                 (fn [act]
@@ -60,7 +79,7 @@
                       (conj {:operation :external-reference/assert :record target-ref})
                       true (conj {:operation :clusion/assert :record claim}
                                  {:operation :evidence/append :record att})))) acts)]
-      {:rows (vec rows) :acts (count acts) :reference reference :text text})
+      {:rows (vec rows) :acts (count acts) :reference reference :text text}))
     {:failed :operator-evidence-unavailable}))
 
 (defn write! [cfg turn]
