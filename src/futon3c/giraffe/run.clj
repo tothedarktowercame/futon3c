@@ -265,6 +265,8 @@
     :or {root default-root}}]
   {:pre [(:input adapter-result) pass-output]}
   (let [input (:input adapter-result)
+        usable-focus? (and focus-relation-input
+                           (not= :refused (:status focus-relation-input)))
         input-bytes (.getBytes ^String (print-edn input) "UTF-8")
         run-id (or run-id (run-id-for input-bytes))
         dir (io/file root run-id)
@@ -280,7 +282,7 @@
         excluded-entry (when (contains? adapter-result :excluded)
                          (write! "excluded.edn" (print-edn (:excluded adapter-result))))
         pass-entry (write! "pass.edn" (print-edn pass-output))
-        priority-entry (when focus-relation-input
+        priority-entry (when usable-focus?
                          (write! "priority.edn"
                                  (print-edn
                                   (priority/priority-projection
@@ -307,10 +309,13 @@
                                    excluded-entry (conj excluded-entry)
                                    priority-entry (conj priority-entry))
                           :focus-relation-input
-                          (if focus-relation-input
+                          (if usable-focus?
                             {:status :present
                              :evidence-pin (:evidence-pin focus-relation-input)}
-                            {:status :absent :reason :focus-relation-input-absent})
+                            (if (= :refused (:status focus-relation-input))
+                              (select-keys focus-relation-input
+                                           [:status :reason :missing-count :missing-ids])
+                              {:status :absent :reason :focus-relation-input-absent}))
                           :focus/version
                           (focus-version (:evidence-pin focus-relation-input))
                           :priority-projection
@@ -332,7 +337,14 @@
                     ;; read what was not -- and drifted items stay visibly
                     ;; excluded (excluded.edn), never silently dropped.
                     (:reading-drift adapter-result)
-                    (assoc :reading-drift (:reading-drift adapter-result)))]
+                    (assoc :reading-drift (:reading-drift adapter-result))
+
+                    (:focus/retained-from focus-relation-input)
+                    (assoc :focus/retained-from (:focus/retained-from focus-relation-input)
+                           :focus/retention-reason (:focus/retention-reason focus-relation-input))
+
+                    (:focus/completeness focus-relation-input)
+                    (assoc :focus/completeness (:focus/completeness focus-relation-input)))]
     (write! "manifest.edn" (print-edn manifest))
     {:run-id run-id :dir (str dir) :manifest manifest}))
 
@@ -431,7 +443,10 @@
             :manifest focus-version-record
             :actual actual-focus-version}]
           [])
-        notes (if focus-version-record [] [{:reason :focus-version-absent}])
+        notes (cond-> (if focus-version-record [] [{:reason :focus-version-absent}])
+                (:focus/retained-from manifest)
+                (conj {:reason :focus-input-retained
+                       :from (:focus/retained-from manifest)}))
         mismatches (into (into unlisted focus-version-mismatches)
                          (for [{:keys [file] :as entry} (:files manifest)
                               :let [f (io/file dir file)
@@ -562,24 +577,99 @@
         (map (fn [[k v]] [(subs k 2) v]))
         (partition 2 args)))
 
+(defn- reading-census [input]
+  (->> (:edges input)
+       (remove #(contains? #{:alternative "alternative"} (:class %)))
+       (keep :reading-member)
+       (map #(if (keyword? %) (name %) (str %)))
+       set))
+
+(defn- observed-reading-census [focus-input]
+  (if (contains? focus-input :needs-members)
+    (set (map str (:needs-members focus-input)))
+    (->> (:evidence-pin focus-input)
+         (keep (fn [[id _]]
+                 (when (str/starts-with? (str id) "giraffe-reading/")
+                   (subs (str id) (count "giraffe-reading/")))))
+         set)))
+
+(defn- incomplete-focus [expected result]
+  (let [input (:focus-input result)
+        observed (observed-reading-census input)
+        missing (vec (sort (remove observed expected)))
+        notice (some #(when (contains? #{:needs-unavailable :stale-index :truncated}
+                                       (:reason %)) %)
+                     (get-in result [:report :notices]))]
+    (when (or notice (and (seq expected) (empty? observed)) (seq missing))
+      (cond-> {:status :refused
+               :reason (or (:reason notice)
+                           (if (empty? observed) :needs-unavailable :needs-incomplete))
+               :missing-count (count missing)
+               :missing-ids missing}
+        (:detail notice) (assoc :detail (:detail notice))))))
+
+(defn- read-run-edn [dir name]
+  (edn/read-string (slurp (io/file dir name))))
+
+(defn- prior-complete-focus [root]
+  (when (and root (.isDirectory (io/file root)))
+    (->> (.listFiles (io/file root))
+         (filter #(.isDirectory ^java.io.File %))
+         (sort-by #(.getName ^java.io.File %) #(compare %2 %1))
+         (some (fn [dir]
+                 (try
+                   (let [manifest (read-run-edn dir "manifest.edn")
+                         input (read-run-edn dir "input.edn")
+                         expected (reading-census input)
+                         pin (get-in manifest [:focus-relation-input :evidence-pin])
+                         observed (observed-reading-census pin)
+                         complete? (and (:ok? (verify-run dir))
+                                        (= :present (get-in manifest [:focus-relation-input :status]))
+                                        (seq expected) (every? observed expected))]
+                     (when complete?
+                       {:run-id (.getName ^java.io.File dir)
+                        :relations (into {}
+                                         (keep (fn [{:keys [target relation]}]
+                                                 (when relation [target relation])))
+                                         (read-run-edn dir "priority.edn"))
+                        :evidence-pin pin}))
+                   (catch Exception _ nil)))))))
+
 (defn retained-focus-input
   "Read Hou's six-hour operator window, restricted to this pass's targets.
   The pin records both the window and every evidence digest Hou read. The
   legacy function/CLI option name remains; WM manifests are no longer read."
-  [pass-output]
+  ([pass-output] (retained-focus-input pass-output {}))
+  ([pass-output {:keys [input root]}]
   (let [window {:until (str (java.time.Instant/now)) :window-hours 6}
         result (operator-focus/operator-focus window)
-        input (:focus-input result)
+        focus-input (:focus-input result)
+        expected (reading-census input)
+        refusal (when (seq expected) (incomplete-focus expected result))
         relations (into {} (keep (fn [{:keys [id]}]
-                                   (when-let [relation (get (:relations input)
+                                   (when-let [relation (get (:relations focus-input)
                                                             (if (keyword? id) (name id) (str id)))]
                                      [id relation]))) (:order pass-output))]
-    (when (and (seq (get-in result [:report :focus])) (seq relations))
-      {:relations relations
-       :evidence-pin {:producer :hou :window window
-                      :evidence-pin (:evidence-pin input)
-                      :header-ids (:header-ids input)
-                      :notices (get-in result [:report :notices])}})))
+    (if refusal
+      (if-let [prior (prior-complete-focus root)]
+        {:relations (:relations prior)
+         :evidence-pin (:evidence-pin prior)
+         :focus/retained-from (:run-id prior)
+         :focus/retention-reason (dissoc refusal :status)
+         :focus/completeness {:status :retained :expected (count expected)
+                              :observed (- (count expected) (:missing-count refusal))}}
+        (assoc refusal :focus/completeness
+               {:status :incomplete :expected (count expected)
+                :observed (- (count expected) (:missing-count refusal))}))
+      (when (and (seq (get-in result [:report :focus])) (seq relations))
+        {:relations relations
+         :evidence-pin {:producer :hou :window window
+                        :evidence-pin (:evidence-pin focus-input)
+                        :header-ids (:header-ids focus-input)
+                        :needs-members (vec (sort (observed-reading-census focus-input)))
+                        :notices (get-in result [:report :notices])}
+         :focus/completeness {:status :complete :expected (count expected)
+                              :observed (count expected)}})))))
 
 (defn mint!
   "In-process equivalent of the supported missions/excursions CLI mint.
@@ -591,7 +681,10 @@
         adapter (build-adapter-result invocation)
         output (excursions/combined-pass (:input adapter))
         result (write-run! {:root (or root default-root) :adapter-result adapter
-                           :pass-output output :focus-relation-input (retained-focus-input output)
+                           :pass-output output
+                           :focus-relation-input (retained-focus-input
+                                                  output {:input (:input adapter)
+                                                          :root (or root default-root)})
                            :invocation invocation :git-sha (git-head-sha) :edges-file edges})]
     {:status :minted :run-id (:run-id result)}))
 
@@ -635,7 +728,8 @@
         pass-output ((if combined? excursions/combined-pass gp/pass) (:input adapter-result))
         focus-relation-input
         (when with-retained-focus?
-          (retained-focus-input pass-output))
+          (retained-focus-input pass-output {:input (:input adapter-result)
+                                             :root (or root default-root)}))
         _ (when check-fresh?
             (check-freshness {:root (or root default-root)
                               :adapter-result adapter-result})

@@ -116,7 +116,8 @@
 (defn focus-window
   "Pure core. named/reply-named contain only unquoted occurrences. Unknown
   tags are reported, never invented as open items. Window is (start, until]."
-  [{:keys [until window-hours items turns needs pins notices] :or {window-hours 6}}]
+  [{:keys [until window-hours items turns needs pins notices needs-members]
+    :or {window-hours 6}}]
   (let [ts (filter #(in-window? until window-hours (:created-at %)) turns)
         by-id (into {} (map (juxt :id identity)) items)
         resolved (into {} (for [t ts :when (and (not (:pending-reason t))
@@ -162,7 +163,8 @@
               :focus focus :just-closed closed :no-mission no-mission
               :associated (mapv first (filter #(= :associated (second %)) relations))
               :notices (vec (concat notices (keep :notice (vals resolved)) unknown inactive))}
-     :focus-input {:relations (into {} relations) :evidence-pin pin :header-ids header-ids}}))
+     :focus-input {:relations (into {} relations) :evidence-pin pin :header-ids header-ids
+                   :needs-members (vec needs-members)}}))
 
 (def status-line #"(?i)^\s*(?:[-*]\s*)?(?:#+\s*)?(?:\*\*)?Status:?(?:\*\*)?\s*:?\s*(.+)$")
 
@@ -262,6 +264,9 @@
                            (concat (:basis-records data) (map :record (:readings data)))))]
      (focus-window (merge opts {:items items :turns (keep :turn read)
                                :needs (mapcat :needs (:readings data)) :pins pins
+                               :needs-members (mapv #(str/replace (get-in % [:record :id])
+                                                                  #"^giraffe-reading/" "")
+                                                    (:readings data))
                                :notices (concat (keep :notice read) (when (:notice nd) [(:notice nd)]))})))))
 
 (defn -main [& [until]]
