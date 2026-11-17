@@ -86,7 +86,18 @@
    :recursion/cycle-policy cycle})
 
 (def declarations-v1
-  [(clusion-type :workplan/item 1 [] [:item/id])
+  [(clusion-type :rule/content 1 []
+                 [:rule/system :rule/name :rule/pattern :rule/guards
+                  :rule/domain-guards :rule/rewrite :rule/priority])
+   (clusion-type :conflict/finding 1
+                 [{:role :rule-a :endpoint/kinds #{:clusion}}
+                  {:role :rule-b :endpoint/kinds #{:clusion}}]
+                 [:overlap :status :kinds :settled-by :evaluation :checker-sha
+                  :schema-digest :mode :max-states :host/locator])
+   (clusion-type :residual/accepted 1
+                 [{:role :finding :endpoint/kinds #{:clusion}}]
+                 [:scope :release :reason])
+   (clusion-type :workplan/item 1 [] [:item/id])
    ;; The rule's stable subject is the entity.  Correctable forms and switches
    ;; live in attestations, deliberately outside the clusion identity.
    (clusion-type :workplan/entity-match-rule 1
