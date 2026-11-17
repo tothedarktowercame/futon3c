@@ -38,12 +38,12 @@ theorem every_animal_present_or_typed_absent :
     animals.all validAnimal = true := by decide
 
 theorem focus_link_in_turn_gcc_and_pin :
-    focusLink.all (fun id => turnGccIds.contains id && pinnedIds.contains id) = true := by
+    (!focusLink.isEmpty && focusLink.all (fun id => turnGccIds.contains id && pinnedIds.contains id)) = true := by
   decide
 
 theorem turn_items_ranked_within_cutoff :
-    turnItems.all (fun item => priorities.any (fun p =>
-      p.item == item && p.status == "ranked" && p.cutoffStatus == "within-cutoff")) = true := by
+    (!turnItems.isEmpty && turnItems.all (fun item => priorities.any (fun p =>
+      p.item == item && p.status == "ranked" && p.cutoffStatus == "within-cutoff"))) = true := by
   decide
 
 theorem run_verified : runVerified && focusVersionPresent = true := by

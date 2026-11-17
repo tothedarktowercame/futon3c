@@ -23,7 +23,8 @@
   (let [file (io/file (System/getProperty "java.io.tmpdir")
                       (str "chain-certificate-" tag "-" (System/nanoTime) ".lean"))]
     (spit file (certificate/render record pins))
-    (:exit (certificate/lean-check file))))
+    (try (:exit (certificate/lean-check file))
+         (finally (io/delete-file file true)))))
 
 (deftest generated-chain-theorems-pass-and-negative-controls-fail-in-lean
   (let [good (fixture)]
@@ -33,8 +34,16 @@
       (is (not (zero? (check "unranked"
                              (assoc-in good [:priority :items 0 :status] :not-ranked)
                              ["gcc-0"])))))
+    (testing "a ranked item outside the cutoff fails the ranking theorem"
+      (is (not (zero? (check "outside-cutoff"
+                             (assoc-in good [:priority :items 0 :cutoff-status] :outside-cutoff)
+                             ["gcc-0"])))))
     (testing "focus id outside the supplied pins fails the fixed link theorem"
       (is (not (zero? (check "unpinned" good ["some-other-id"])))))
+    (testing "a turn that reached no focus pin cannot pass vacuously"
+      (is (not (zero? (check "no-focus" (assoc good :focus-link []) ["gcc-0"])))))
+    (testing "a turn with no items cannot pass vacuously"
+      (is (not (zero? (check "no-items" (assoc good :items []) ["gcc-0"])))))
     (testing "failed run verification fails the fixed run theorem"
       (is (not (zero? (check "unverified"
                              (assoc-in good [:run :verification :ok?] false)
