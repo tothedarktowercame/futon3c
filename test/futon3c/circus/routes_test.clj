@@ -122,3 +122,31 @@
       (is (true? (get sidecar "ok")))
       (is (= "record-sha" (get sidecar "record_sha256")))
       (is (string? (get sidecar "at"))))))
+
+(deftest qa-answer-is-cached-per-run-and-certificates-stay-fresh
+  (let [root (temp-dir "cache")
+        run (valid-run! root "20261117T020000.000Z-cache")
+        certs (temp-dir "certs")
+        calls (atom 0)
+        top-fn (fn [_] (swap! calls inc) (top-result))
+        cfg {:root (str root) :certificate-root (str certs) :qa-top-fn top-fn}
+        params {"run" (.getName run) "n" "10"}
+        first-response (routes/top-items-response cfg params)
+        cert (io/file certs (str "turn-one-" (.getName run) ".lean"))]
+    (spit cert "-- fixture")
+    (spit (io/file (str cert ".check.json")) (json/generate-string {:exit 0 :ok true}))
+    (let [second-response (routes/top-items-response cfg params)]
+      (is (= 1 @calls))
+      (is (nil? (get-in first-response [:body "items" 0 "focus-relations" 0 "certificate" "path"])))
+      (is (= true (get-in second-response [:body "items" 0 "focus-relations" 0 "certificate" "check" "ok"]))))
+    (routes/top-items-response cfg (assoc params "n" "5"))
+    (is (= 2 @calls))))
+
+(deftest refused-qa-answer-is-not-cached
+  (let [root (temp-dir "nocache")
+        run (valid-run! root "20261117T020000.000Z-nocache")
+        calls (atom 0)
+        cfg {:root (str root) :qa-top-fn (fn [_] (swap! calls inc) {:status :refused})}]
+    (routes/top-items-response cfg {"run" (.getName run)})
+    (routes/top-items-response cfg {"run" (.getName run)})
+    (is (= 2 @calls))))

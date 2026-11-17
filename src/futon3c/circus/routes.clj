@@ -75,6 +75,22 @@
       (:focus-relations result)
       (update :focus-relations #(mapv attach %)))))
 
+(def ^:private cache-limit 64)
+
+(defonce ^:private !qa-cache
+  ;; A verified run never changes, so its QA answer is cached by run id
+  ;; (top-items ~7 s live, 2026-11-17). Certificates are attached after the
+  ;; cache, so a newly checked certificate shows at once. run=latest still
+  ;; resolves on every call, so a new run is picked up.
+  (atom {}))
+
+(defn- cached-qa [k compute]
+  (or (get @!qa-cache k)
+      (let [v (compute)]
+        (when (= :ok (:status v))
+          (swap! !qa-cache #(assoc (if (>= (count %) cache-limit) {} %) k v)))
+        v)))
+
 (defn- error-response [status reason & [extra]]
   {:status status :body (json-ready (merge {:status :error :reason reason} extra))})
 
@@ -86,8 +102,9 @@
         (let [{:keys [run-id run-dir manifest]} resolved
               n (try (Long/parseLong (str (or (get params "n") 10)))
                      (catch Exception _ 10))
-              result ((or (:qa-top-fn cfg) qa/top-items)
-                      (merge (:qa-opts cfg) {:run-dir run-dir :n n}))]
+              top-fn (or (:qa-top-fn cfg) qa/top-items)
+              result (cached-qa [:top-items top-fn run-id n]
+                                #(top-fn (merge (:qa-opts cfg) {:run-dir run-dir :n n})))]
           {:status 200
            :body (json-ready
                   (assoc (attach-certificates cfg run-id result)
@@ -105,9 +122,11 @@
         (if-let [error (:error resolved)]
           (error-response (:status error) (:reason error) (dissoc error :status :reason))
           (let [{:keys [run-id run-dir manifest]} resolved
-                result ((or (:qa-why-fn cfg) qa/why-not)
-                        (merge (:qa-opts cfg)
-                               {:run-dir run-dir :item (get params "item")}))]
+                why-fn (or (:qa-why-fn cfg) qa/why-not)
+                item (get params "item")
+                result (cached-qa [:why-not why-fn run-id item]
+                                  #(why-fn (merge (:qa-opts cfg)
+                                                  {:run-dir run-dir :item item})))]
             {:status 200
              :body (json-ready
                     (assoc (attach-certificates cfg run-id result)
