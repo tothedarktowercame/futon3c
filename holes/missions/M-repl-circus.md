@@ -1,6 +1,6 @@
 # M-repl-circus: the Circus as hooks around the shared REPL
 
-**Status:** OPEN — MAP (ungated 2026-11-07, Joe + codex-7).
+**Status:** CLOSED (2026-11-17, Joe: "I'd much rather close the mission and see how the system works in practice than prove things like this about it"). See "Closure (2026-11-17)" at the end; open items carried to [E-circus-in-practice](../excursions/E-circus-in-practice.md).
 **Needs:** M-formal-arxana (artifact: record types); E-gcc-schema (artifact: the GCC definition, futon4 `holes/excursions/E-gcc-schema.md`). Recorded by claude-13, 2026-11-10, from Joe: "it also depends on M-formal-arxana working and a GCC being defined that they can write into"; futon4 `holes/labs/M-formal-arxana/DERIVE-repl-circus-needs.md`.
 
 The IDENTIFY → MAP gate, [E-evidence-cleanup](../excursions/E-evidence-cleanup.md),
@@ -849,6 +849,12 @@ priorities with traceable reasons.
    up to date, with small updates that rarely reorder much ("like PageRank:
    if a website goes offline or suddenly becomes popular, its rank should
    change, but the rankings of most other websites would not").
+4. *Operator ruling, 2026-11-17: the convergence proof below is dropped.*
+   "I don't think it's necessary to have it be 'the same' graph, given that
+   the production of the underlying data is itself stochastic; 'the same
+   graph over stochastic data' is like doing careful statistics when the
+   research design itself hasn't been validated." The source inventory
+   (CL-38, `resources/circus/source-inventory.edn`) stands.
 4. **Recoverable projection.** Declare and preserve the complete versioned
    source inventory. Demonstrate that duplicate delivery, late output,
    interruption and replay converge to the same semantic graph as a rebuild
@@ -1160,3 +1166,25 @@ are what would have caught it.
 - Prompt durability. The invoke ledger is in `/tmp`, so seat prompts are only
   kept because they are copied into evidence. Once those copies stop, prompts
   need a durable home outside evidence.
+
+## Closure (2026-11-17)
+
+Closed by Joe's ruling (quoted in the Status line). What was demonstrated:
+
+- **2:** a live operator turn (turn-Ug5qdo) traced to Giraffe's top items
+  and certified in Lean (CL-40/41; certificate under
+  `data/circus-certificates/`, `lake env lean` exit 0, no axioms); Joe reads
+  the result in Mojira (top-items, why-not, focus route; futon4 c5536df).
+- **3:** population and service levels set by Joe (ruling under 3);
+  Giraffe's band flips traced to incomplete needs reads (CL-46), fix CL-47
+  in progress at closure.
+- **6:** one connected graph, witnessed (252 rows over 33 turns).
+- Supporting: typed reply absence (CL-36), focus version pinned in runs
+  (CL-39), clocks follow a GCC successor mission (CL-45, M-autoclock-in).
+
+Not demonstrated, carried to
+[E-circus-in-practice](../excursions/E-circus-in-practice.md) to be watched
+in use rather than proved: 2.3 (a correction reaching the reader), the
+per-turn stage table and overdue report of 3, 4 (dropped as a proof; its
+recovery query and :7093/:7094 counts are carried as practical checks), 5
+(independent acceptance), and the 45 MB-per-run Giraffe storage.
