@@ -6,6 +6,9 @@
             [futon3c.agency.clock-store :as clock]
             [futon3c.agency.registry :as reg]
             [futon3c.agents.codex-cli :as codex-cli]
+            [futon3c.arxana.digest :as digest]
+            [futon3c.arxana.item-inventory :as inventory]
+            [futon3c.circus.operator-focus :as operator-focus]
             [futon3c.blackboard :as bb]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.futon1b-backend :as f1b]
@@ -261,6 +264,42 @@
         (testing "non-superseded target is unchanged"
           (let [d (run (fn [_ _] {:item "M-a" :path ["M-a"]}))]
             (is (= {:session-id "clock-session"} (:evidence d)))))))))
+
+(deftest supersession-cache-is-per-file-and-never-holds-a-failed-read
+  ;; The production path (no *successor-resolver*): inventory items, the GCC
+  ;; reader, and the per-mission cache keyed by file digest.
+  (with-docs
+    (fn [root _ _]
+      (let [file (fn [id] (io/file root "holes" "missions" (str id ".md")))
+            sha (fn [id] (digest/sha256-hex (Files/readAllBytes (.toPath (file id)))))
+            reads (atom 0)
+            fail? (atom true)
+            run (fn []
+                  (clock/reset-store!)
+                  (clock/set-dispatch-mission! "clock-worker" "clock-session" "M-a")
+                  (decision/decide (context "cache")))]
+        (doseq [id ["M-a" "M-b"]] (spit (file id) (str "# " id "\n")))
+        (with-redefs [inventory/current-items
+                      (fn [& _] (mapv (fn [id] {:id id :path (str (file id))
+                                                :source {:sha256 (sha id)}})
+                                      ["M-a" "M-b"]))
+                      operator-focus/with-gcc-successors
+                      (fn [_ items _]
+                        (swap! reads inc)
+                        (when @fail? (throw (ex-info "graph behind" {:reason :supersession-unread})))
+                        (mapv #(assoc % :successors (if (= "M-a" (:id %)) ["M-b"] [])) items))]
+          (is (= ["M-a" :supersession-unread]
+                 [(get-in (run) [:clock :mission-id])
+                  (get-in (run) [:evidence :supersession-reason])]))
+          (reset! fail? false)
+          (is (= "M-b" (get-in (run) [:clock :mission-id]))
+              "a failed read was not cached as no successor")
+          (let [n @reads]
+            (is (= "M-b" (get-in (run) [:clock :mission-id])))
+            (is (= n @reads) "unchanged files are answered from the cache")
+            (spit (file "M-a") "# M-a\nedited\n")
+            (run)
+            (is (= (inc n) @reads) "an edited mission file is read again")))))))
 
 (deftest bell-mentions-fill-an-empty-clock-but-do-not-switch
   ;; claude-8 (2026-09-24): bellbacks naming M-futon-seams in passing kept

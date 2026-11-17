@@ -18,22 +18,39 @@
 (defn in-window? [until hours at]
   (< (- (millis until) (* hours 3600000)) (millis at) (inc (millis until))))
 
+(defn- graph-query!
+  "bounded-query! that retries a lagging index briefly. Any answer that is not
+  a complete :ok answer throws :supersession-unread: an index that is behind
+  returns no edge ids, and reading that as \"no successor\" would be cached
+  by the clock decision until the mission file changed."
+  [graph-store query]
+  (loop [tries 0]
+    (let [answer (store/bounded-query! graph-store query)
+          status (get-in answer [:ok :status])]
+      (cond
+        (and (nil? (:error answer)) (= :ok status)
+             (not (get-in answer [:ok :truncated?])))
+        (:ok answer)
+
+        (and (= :stale-index status) (< tries 3))
+        (do (Thread/sleep 50) (recur (inc tries)))
+
+        :else
+        (throw (ex-info "Supersession graph unreadable"
+                        {:reason :supersession-unread :answer answer}))))))
+
 (defn read-successors
   "Current, exactly attested successor IDs for ITEM. A claim whose attested
   predecessor source SHA no longer matches the inventory is stale (including
   an un-superseded item) and is ignored."
   [cfg item]
   (let [predecessor (:id (inventory/item-record (:id item)))
-        answer (store/bounded-query! (:graph-store cfg)
-                                     {:query/type :role-reverse
-                                      :edge-type [:supersedes 1]
-                                      :endpoint-role :predecessor
-                                      :endpoint-id predecessor
-                                      :limit 200 :order :desc})
-        q (:ok answer)
-        _ (when (or (:error answer) (:truncated? q))
-            (throw (ex-info "Supersession graph unreadable"
-                            {:reason :supersession-unread :answer answer})))
+        q (graph-query! (:graph-store cfg)
+                        {:query/type :role-reverse
+                         :edge-type [:supersedes 1]
+                         :endpoint-role :predecessor
+                         :endpoint-id predecessor
+                         :limit 200 :order :desc})
         claims (mapv (fn [id]
                        (let [r (store/get-entity (:graph-store cfg) id)]
                          (or (:ok r)
@@ -42,14 +59,10 @@
                      (:edge-ids q))]
     (->> claims
          (keep (fn [claim]
-                 (let [answer (store/bounded-query! (:graph-store cfg)
-                                                    {:query/type :attestations
-                                                     :subject-id (:id claim)
-                                                     :limit 50})
-                       aq (:ok answer)
-                       _ (when (or (:error answer) (:truncated? aq))
-                           (throw (ex-info "Supersession attestations unreadable"
-                                           {:reason :supersession-unread :answer answer})))
+                 (let [aq (graph-query! (:graph-store cfg)
+                                        {:query/type :attestations
+                                         :subject-id (:id claim)
+                                         :limit 50})
                        current? (some (fn [aid]
                                         (let [r (store/get-entity (:graph-store cfg) aid)
                                               a (or (:ok r)

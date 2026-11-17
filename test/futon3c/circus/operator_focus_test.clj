@@ -141,15 +141,31 @@
                     (case (:query/type q)
                       :role-reverse (do (is (= #{:edge-type :endpoint-role :endpoint-id :limit :order :query/type}
                                                 (set (keys q))))
-                                        {:ok {:edge-ids [(:id claim)]}})
+                                        {:ok {:status :ok :edge-ids [(:id claim)]}})
                       :attestations (do (is (= #{:subject-id :limit :query/type} (set (keys q))))
-                                        {:ok {:attestation-ids [(:id att)]}})))
+                                        {:ok {:status :ok :attestation-ids [(:id att)]}})))
                   store/get-entity (fn [_ id] {:ok (entities id)})]
       (is (= ["M-new"] (sut/read-successors cfg old)))
       (is (= [] (sut/read-successors cfg (-> old
                                              (assoc :status-line "OPEN")
                                              (assoc-in [:source :sha256] "changed"))))
           "un-superseding changes the source SHA, so the immutable old claim is stale"))))
+
+(deftest lagging-graph-index-is-unread-not-no-successor
+  ;; A :stale-index answer carries no edge ids. Read as "no successor", the
+  ;; clock decision would cache it until the mission file changed.
+  (let [answers (atom nil)]
+    (with-redefs [store/bounded-query! (fn [_ _] (let [a (first @answers)]
+                                                   (swap! answers #(or (next %) %))
+                                                   a))
+                  store/get-entity (fn [_ _] {:ok nil})]
+      (reset! answers [{:ok {:status :stale-index}}])
+      (is (= :supersession-unread
+             (try (sut/read-successors {:graph-store :stub} {:id "M-a"}) nil
+                  (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))
+      (reset! answers [{:ok {:status :stale-index}} {:ok {:status :ok :edge-ids []}}])
+      (is (= [] (sut/read-successors {:graph-store :stub} {:id "M-a"}))
+          "a lag that clears within the retries reads normally"))))
 
 (deftest two-gcc-claims-for-one-predecessor-are-ambiguous
   (let [ids ["M-b" "M-c"]
@@ -174,8 +190,8 @@
     (with-redefs [store/bounded-query!
                   (fn [_ q]
                     (if (= :role-reverse (:query/type q))
-                      {:ok {:edge-ids (mapv :id claims)}}
-                      {:ok {:attestation-ids
+                      {:ok {:status :ok :edge-ids (mapv :id claims)}}
+                      {:ok {:status :ok :attestation-ids
                             [(:id (first (filter #(= (:subject-id q) (:subject-clusion-id %)) atts)))]}}))
                   store/get-entity (fn [_ id] {:ok (entities id)})]
       (let [successors (sut/read-successors cfg {:id "M-a" :source {:sha256 "same"}})]
