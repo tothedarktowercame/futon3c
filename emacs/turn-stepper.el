@@ -975,10 +975,12 @@ cycle refetches the first stale visible stepper; the next cycle (every
 
 (defun turn-stepper--index-after-reload (session-id count)
   "Frame to show after a reload giving COUNT frames for SESSION-ID.
-The newest frame, unless the stepper is on an older frame of the same
-session: someone reading back stays where they are."
+A turn asked for by `turn-stepper-open-turn' wins; otherwise the newest
+frame, unless the stepper is on an older frame of the same session:
+someone reading back stays where they are."
   (let ((buf (turn-stepper--find-buffer session-id)))
-    (or (and buf
+    (or (turn-stepper--take-pending-index session-id)
+        (and buf
              (with-current-buffer buf
                (and (equal turn-stepper--session-id session-id)
                     turn-stepper--frames
@@ -1182,6 +1184,90 @@ Frames are cached per session; use `g' in the stepper to refresh."
           (unless (get-process "turn-stepper-frames")
             (turn-stepper--start-fetch session-id source t)))
       (turn-stepper--start-fetch session-id source))))
+
+;;; ---------------------------------------------------------------- by turn id
+;; Open the stepper at one turn, given its record id (turn-XXXXXX), from
+;; anywhere: M-x, or from outside Emacs (Mojira, 2026-11-17) with
+;;   emacsclient -n --eval '(turn-stepper-open-turn "turn-Ug5qdo")'
+;; Joe asked for it on 2026-11-17.  It reads only the turn's local record file
+;; (for its session) and the frames turn_frames.py already produces; a fetch,
+;; when needed, is the usual asynchronous one, so Emacs never waits.
+
+(defcustom turn-stepper-turn-record-directory
+  (if (boundp 'session-mode-turn-analysis-directory)
+      session-mode-turn-analysis-directory
+    (expand-file-name "session-turn-analysis" user-emacs-directory))
+  "Directory of the per-turn records (turn-XXXXXX.json)."
+  :type 'directory :group 'turn-stepper)
+
+(defvar turn-stepper--pending-turn nil
+  "(SESSION-ID . TURN-ID) to show when SESSION-ID's frames next arrive.")
+
+(defun turn-stepper--frame-turn-id (frame)
+  "The turn record id FRAME belongs to, or nil."
+  (or (turn-stepper--aget 'id (turn-stepper--aget 'record frame))
+      (let ((path (turn-stepper--aget 'record_path frame)))
+        (and (stringp path) (file-name-base path)))))
+
+(defun turn-stepper--turn-index (frames turn-id)
+  "Index of TURN-ID's frame in FRAMES, or nil."
+  (cl-position turn-id frames :test #'equal :key #'turn-stepper--frame-turn-id))
+
+(defun turn-stepper--take-pending-index (session-id)
+  "Consume a pending open for SESSION-ID; return its frame index or nil."
+  (when (equal (car turn-stepper--pending-turn) session-id)
+    (let* ((turn-id (cdr turn-stepper--pending-turn))
+           (index (turn-stepper--turn-index
+                   (gethash session-id turn-stepper--cache) turn-id)))
+      (setq turn-stepper--pending-turn nil)
+      (unless index
+        (message "turn-stepper: %s has no frame yet (not analysed?); showing the newest"
+                 turn-id))
+      index)))
+
+(defun turn-stepper--turn-session (turn-id)
+  "Session id recorded for TURN-ID, read from its local record file."
+  (let ((file (expand-file-name (concat turn-id ".json")
+                                turn-stepper-turn-record-directory)))
+    (unless (file-readable-p file)
+      (user-error "turn-stepper: no record for %s in %s" turn-id
+                  turn-stepper-turn-record-directory))
+    (let* ((json-object-type 'alist)
+           (record (json-read-file file))
+           (session (cdr (assq 'session_id record))))
+      (unless (and (stringp session) (not (string-empty-p session)))
+        (user-error "turn-stepper: %s has no session id" turn-id))
+      session)))
+
+(defun turn-stepper--session-repl-buffer (session-id)
+  "A live REPL buffer whose session is SESSION-ID, or nil."
+  (seq-find (lambda (b) (equal (turn-stepper--session-id-in-buffer b) session-id))
+            (buffer-list)))
+
+(defun turn-stepper--turn-id-at-point ()
+  (let ((sym (thing-at-point 'symbol t)))
+    (and sym (string-match-p "\\`turn-[A-Za-z0-9]+\\'" sym) sym)))
+
+;;;###autoload
+(defun turn-stepper-open-turn (turn-id)
+  "Open the 象 stepper at TURN-ID (a turn record id such as turn-Ug5qdo).
+The stepper attaches to that session's REPL buffer when one is open."
+  (interactive
+   (let ((here (turn-stepper--turn-id-at-point)))
+     (list (read-string (if here (format "Turn id (default %s): " here) "Turn id: ")
+                        nil nil here))))
+  (setq turn-id (string-trim turn-id))
+  (unless (string-match-p "\\`turn-[A-Za-z0-9]+\\'" turn-id)
+    (user-error "turn-stepper: %S is not a turn id" turn-id))
+  (let* ((session-id (turn-stepper--turn-session turn-id))
+         (source (turn-stepper--session-repl-buffer session-id))
+         (index (turn-stepper--turn-index
+                 (gethash session-id turn-stepper--cache) turn-id)))
+    (if index
+        (turn-stepper--open session-id source index)
+      (setq turn-stepper--pending-turn (cons session-id turn-id))
+      (turn-stepper--start-fetch session-id source))
+    turn-id))
 
 ;;; ---------------------------------------------------------------- rewind
 ;; Rewinding a turn, first as a view.  Each repo's state at the start of a
