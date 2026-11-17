@@ -818,6 +818,16 @@ priorities with traceable reasons.
    scope remains the turn-to-War-Machine composition unless Joe explicitly
    accepts a narrower outcome; one demonstrated reader does not silently
    discharge obligations to another promised reader.
+   *Operator ruling, 2026-11-17:* the chain is accepted by a Lean check, the
+   way the War Machine's run-time certificates from Clojure are checked
+   (futon2 `data/wm-certificates/`, `lake env lean` under
+   `mathlib4/DarkTower/`). The decision served: Giraffe tells Joe and the War
+   Machine which META items rate highest and suggests they be worked on.
+   XTQL queries over futon1b are the interactive quality check of what can be
+   got back out. Plan: CL-40 collects one turn's recorded chain as EDN
+   (turn → GCC records per animal → Giraffe run pins → priority entries);
+   CL-41 renders it to a generated Lean certificate whose theorems hold by
+   `decide`/`rfl` and checks it.
 3. **Bounded completeness.** Define the population of REPLs and turns, and
    numerical deadlines for capture, animal processing, GCC projection and
    priority freshness. Check these stages separately: each required animal
