@@ -96,6 +96,12 @@
            (:dropped result)))
     (is (= ["p/kept"] (mapv :memory (:items result))))))
 
+(deftest dog-segment-carries-drop-counts-to-the-record
+  (let [seg (#'dog/dog-segment {:agent-id "a" :session-id "s"} "invented-record"
+                               {:items [] :status "none" :dropped {:malformed 2}})]
+    (is (= {:malformed 2} (get-in seg [:segment/dog-recall :dropped]))
+        "drop counts ride :segment/dog-recall onto the turn record")))
+
 (deftest recall-typed-absences
   (is (= "none" (:status (dog/recall "text" {:request-fn (stub-request [])})))
       "no fixture matches → empty response → none")
