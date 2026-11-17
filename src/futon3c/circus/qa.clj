@@ -11,10 +11,14 @@
   (keyword \"驴\"), (keyword \"馬\"), (keyword \"狗\"), and (keyword \"象\")."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
+            [clojure.string :as str]
+            [futon3c.arxana.item-inventory :as inventory]
             [futon3c.arxana.store :as store]
             [futon3c.arxana.turn-mention-writer :as mentions]
             [futon3c.circus.chain-record :as chain]
-            [futon3c.circus.hou :as hou]))
+            [futon3c.circus.hou :as hou]
+            [futon3c.circus.operator-focus :as operator-focus]
+            [futon3c.xiang.turn-store :as turns]))
 
 (def ^:private max-top-items 50)
 (def ^:private max-focus-pins 1000)
@@ -40,6 +44,11 @@
 (defn- pinned-ids [manifest]
   (->> (get-in manifest [:focus-relation-input :evidence-pin :evidence-pin])
        (keep #(when (sequential? %) (first %)))
+       distinct vec))
+
+(defn- pinned-turn-ids [manifest]
+  (->> (pinned-ids manifest)
+       (keep #(when (str/starts-with? % "turn/") (subs % 5)))
        distinct vec))
 
 (defn- focus-relations [cfg manifest item]
@@ -82,12 +91,59 @@
      :turn (when record (select-keys (:turn record) [:id :created_at]))
      :gcc-counts (when record (gcc-counts record))}))
 
-(defn- focus-evidence [cfg manifest run-dir item]
-  (let [{:keys [relations truncated? pin-count scanned]} (focus-relations cfg manifest item)]
-    {:focus-relations (mapv #(explain-relation cfg run-dir %) relations)
-     :focus-pin {:count pin-count :scanned scanned :truncated? truncated?}
-     :focus-status (if (seq relations) :present :absent)
-     :focus-reason (when-not (seq relations) :no-pinned-focus-relation)}))
+(defn- focus-tags [cfg manifest input item]
+  (let [turn-ids (pinned-turn-ids manifest)
+        scanned-ids (take max-focus-pins turn-ids)
+        read-record (or (:read-turn-fn cfg) turns/read-record)
+        read-focus (or (:read-turn-focus-fn cfg) operator-focus/read-turn-focus)
+        tagged-turns (->> scanned-ids
+                          (keep (fn [turn-id]
+                                  (when-let [record (read-record (:turn-store cfg) turn-id)]
+                                    (:turn (read-focus cfg {:id turn-id :record record})))))
+                          (filter #(and (not (:pending-reason %))
+                                        (empty? (:named %))
+                                        (seq (:mission-id %))))
+                          vec)
+        roots (mapv :mission-id tagged-turns)
+        items (mapv #(cond-> (update % :id item-name)
+                       (and (nil? (:source %)) (:source-pin %))
+                       (assoc :source (:source-pin %)))
+                    (or (:items cfg) (:items input)
+                        ((or (:items-fn cfg) inventory/current-items) cfg)))
+        with-successors (or (:with-successors-fn cfg) operator-focus/with-gcc-successors)
+        resolved-items (with-successors cfg items roots)
+        by-id (into {} (map (juxt :id identity)) resolved-items)
+        rows (->> tagged-turns
+                  (keep (fn [turn]
+                          (let [resolved (operator-focus/resolve-tag by-id (:mission-id turn))]
+                            (when (= item (:item resolved))
+                              {:turn-id (:id turn)
+                               :created_at (:created-at turn)
+                               :seat (:seat turn)
+                               :tag (:mission-id turn)
+                               :supersession-path (:path resolved)}))))
+                  (sort-by (juxt :created_at :turn-id)) vec)]
+    {:rows rows
+     :pin-count (count turn-ids)
+     :scanned (count scanned-ids)
+     :truncated? (> (count turn-ids) max-focus-pins)}))
+
+(defn- focus-evidence [cfg manifest input run-dir item]
+  (let [{:keys [relations truncated? pin-count scanned]} (focus-relations cfg manifest item)
+        tags (focus-tags cfg manifest input item)
+        relation-rows (mapv #(explain-relation cfg run-dir %) relations)
+        tag-rows (:rows tags)
+        route (cond
+                (and (seq relation-rows) (seq tag-rows)) "both"
+                (seq relation-rows) "relation"
+                (seq tag-rows) "mission-tag")]
+    (cond-> {:focus-relations relation-rows
+             :focus-tags tag-rows
+             :focus-pin {:count pin-count :scanned scanned
+                         :truncated? (or truncated? (:truncated? tags))}
+             :focus-status (if route :present :absent)
+             :focus-route route}
+      (nil? route) (assoc :focus-reason :no-pinned-focus-evidence))))
 
 (defn top-items
   "Explain at most N (default 10, maximum 50) leading priority rows. Every
@@ -99,6 +155,7 @@
         limit (min max-top-items requested)
         cfg (merge (mentions/default-config) opts)
         manifest (read-edn run-dir "manifest.edn" {})
+        input (read-edn run-dir "input.edn" {})
         priority (read-edn run-dir "priority.edn" [])
         rows (take limit priority)]
     {:status :ok
@@ -111,7 +168,7 @@
                (merge {:item item :rank rank :pass-rank (:pass-rank row)
                        :priority-band (:priority-band row)
                        :cutoff-status (:cutoff-status row)}
-                      (focus-evidence cfg manifest run-dir item))))
+                      (focus-evidence cfg manifest input run-dir item))))
            (range 1 (inc (count rows))) rows)}))
 
 (defn- find-item [rows item]
@@ -148,7 +205,7 @@
         priority-index (first (keep-indexed #(when (= item (item-name (:target %2))) %1)
                                             priority))
         priority-row* (when (some? priority-index) (nth priority priority-index))
-        focus (focus-evidence cfg manifest run-dir item)
+        focus (focus-evidence cfg manifest input run-dir item)
         outcome (cond
                   (nil? input-row) {:stage :input :reason :not-in-input :evidence {}}
                   excluded-row {:stage :excluded :reason (:reason excluded-row)

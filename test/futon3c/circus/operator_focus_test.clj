@@ -108,7 +108,7 @@
   (let [by-id (into {} (for [n (range 10)]
                         [(str "M-" n) {:successors [(str "M-" (inc n))]}]))]
     (is (= :supersession-limit (get-in (sut/resolve-tag by-id "M-0") [:notice :reason]))))
-  (is (= {:item "M-c"}
+  (is (= {:item "M-c" :path ["M-a" "M-b" "M-c"]}
          (sut/resolve-tag {"M-a" {:successors ["M-b"]}
                            "M-b" {:successors ["M-c"]}
                            "M-c" {:successors []}}
@@ -192,5 +192,6 @@
       (let [out (into {} (map (juxt :id :successors))
                       (sut/with-gcc-successors {} items ["M-a" "M-a" "M-unknown"]))]
         (is (= {"M-a" ["M-b"] "M-b" ["M-c"] "M-c" [] "M-x" [] "M-y" []} out))
-        (is (= {:item "M-c"} (sut/resolve-tag (into {} (map (fn [[k v]] [k {:successors v}])) out) "M-a")))
+        (is (= {:item "M-c" :path ["M-a" "M-b" "M-c"]}
+               (sut/resolve-tag (into {} (map (fn [[k v]] [k {:successors v}])) out) "M-a")))
         (is (= ["M-a" "M-b" "M-c"] @reads) "each reachable item is read once; unrelated items are not read")))))

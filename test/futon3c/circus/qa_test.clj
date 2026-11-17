@@ -78,7 +78,7 @@
   (let [result (qa/why-not (assoc (opts (run-dir)) :item "M-no-focus"))]
     (is (= :ranked (:stage result)))
     (is (= :absent (:focus-status result)))
-    (is (= :no-pinned-focus-relation (:focus-reason result)))))
+    (is (= :no-pinned-focus-evidence (:focus-reason result)))))
 
 (deftest relation-whose-focus-header-is-not-pinned-is-left-out
   ;; The run pins 猴 focus headers; rel-1's header focus-1 is pinned in
@@ -96,3 +96,59 @@
         o (assoc (opts dir) :query-fn (fn [_ _] {:ok {:status :ok :truncated? true :edge-ids ["rel-1"]}}))
         row (first (:items (qa/top-items (assoc o :n 1))))]
     (is (true? (get-in row [:focus-pin :truncated?])))))
+
+(defn- tag-opts [dir named pinned? relation?]
+  (spit (io/file dir "manifest.edn")
+        (pr-str {:run-id "fixture-run"
+                 :focus-relation-input
+                 {:evidence-pin {:evidence-pin
+                                 (cond-> [["focus-1" "sha"]]
+                                   pinned? (conj ["turn/turn-tag" "turn-sha"]))}}}))
+  (merge (opts dir)
+         {:items [{:id "M-old"} {:id "M-ranked"}]
+          :query-fn (fn [_ _]
+                      {:ok {:status :ok :truncated? false
+                            :edge-ids (if relation? ["rel-1"] [])}})
+          :read-turn-fn (fn [_ id]
+                          (when (= id "turn-tag")
+                            {:created_at "2026-11-17T01:00:00Z"
+                             :agent_id "seat-a" :mission_id "M-old"}))
+          :read-turn-focus-fn
+          (fn [_ {:keys [id record]}]
+            {:turn {:id id :created-at (:created_at record)
+                    :seat (:agent_id record) :mission-id (:mission_id record)
+                    :named named}})
+          :with-successors-fn
+          (fn [_ items _]
+            (mapv #(assoc % :successors (if (= "M-old" (:id %))
+                                         ["M-ranked"] [])) items))}))
+
+(deftest mission-tag-focus-follows-one-supersession-step
+  (let [row (first (:items (qa/top-items (assoc (tag-opts (run-dir) [] true false)
+                                                :n 1))))]
+    (is (= :present (:focus-status row)))
+    (is (= "mission-tag" (:focus-route row)))
+    (is (= [{:turn-id "turn-tag" :created_at "2026-11-17T01:00:00Z"
+             :seat "seat-a" :tag "M-old"
+             :supersession-path ["M-old" "M-ranked"]}]
+           (:focus-tags row)))))
+
+(deftest relation-and-mission-tag-report-both
+  (let [row (first (:items (qa/top-items (assoc (tag-opts (run-dir) [] true true)
+                                                :n 1))))]
+    (is (= "both" (:focus-route row)))
+    (is (seq (:focus-relations row)))
+    (is (seq (:focus-tags row)))))
+
+(deftest named-header-turn-is-not-mission-tag-focus
+  (let [row (first (:items (qa/top-items
+                            (assoc (tag-opts (run-dir) ["M-ranked"] true false)
+                                   :n 1))))]
+    (is (= :absent (:focus-status row)))
+    (is (empty? (:focus-tags row)))))
+
+(deftest mission-tag-turn-outside-pin-is-ignored
+  (let [row (first (:items (qa/top-items (assoc (tag-opts (run-dir) [] false false)
+                                                :n 1))))]
+    (is (= :absent (:focus-status row)))
+    (is (empty? (:focus-tags row)))))

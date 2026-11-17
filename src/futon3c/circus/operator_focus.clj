@@ -80,7 +80,7 @@
       (cond
         (some #{id} path) {:item tag :notice {:item tag :reason :supersession-cycle :path (conj path id)}}
         (> (count successors) 1) {:item tag :notice {:item id :reason :supersession-ambiguous}}
-        (nil? successor) {:item id}
+        (nil? successor) {:item id :path (conj path id)}
         (>= (count path) 8) {:item tag :notice {:item tag :reason :supersession-limit :path (conj path id)}}
         :else (recur successor (conj path id))))))
 
@@ -189,7 +189,10 @@
                      [id hit]))) roots))]
     (mapv #(merge % (get closures (:id %))) items)))
 
-(defn- read-turn [cfg {:keys [id record]}]
+(defn read-turn-focus
+  "Read the stored Hou focus projection used by mission-tag fallback. Public so
+  QA can explain the same decision without recreating header semantics."
+  [cfg {:keys [id record]}]
   (let [record (assoc record :id id)
         result (hou-store/headers-for-turn cfg record)
         header (last (:headers result))
@@ -220,7 +223,7 @@
          ;; This read-only report recognizes the current census, including IDs
          ;; not yet published as clusions. It writes no dangling references.
          cfg (assoc cfg :item-ids (mapv :id items))
-         read (mapv #(read-turn cfg %) records)
+         read (mapv #(read-turn-focus cfg %) records)
          nd (try {:data ((or (:read-needs cfg) giraffe-needs/read-needs-gcc) cfg)}
                  (catch Exception e {:notice {:reason :needs-unavailable :detail (:reason (ex-data e))}}))
          data (:data nd)
