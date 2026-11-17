@@ -31,13 +31,14 @@
             [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts])
   (:import [java.nio.file Files]
+           [java.net SocketTimeoutException]
            [java.util.concurrent ExecutorService Executors ThreadFactory]
            [java.security MessageDigest]))
 
 (def defaults
   "The occurrence reading's knobs, as ma-reading's. :seat names the seat to
   whistle; :ask is the bounded effect ((fn [{:keys [seat prompt timeout-ms]}]
-  -> reply text or nil)); nil :ask means no reader wired."
+  -> reply text or {:failure_kind ...})); nil :ask means no reader wired."
   {:seat "馬-sonnet"
    :ask nil
    :timeout-ms 120000
@@ -46,6 +47,20 @@
 (def pattern-library
   "Root of the .flexiarg pattern library (scripts/occurrence_square.py's LIB)."
   "/home/joe/code/futon3/library")
+
+(def model-failure-kinds
+  #{"model/quota" "model/timeout" "model/http" "model/parse"
+    "model/error" "model/no-reader" "model/unparsed-reply"})
+
+(def ^:dynamic *whistle-url* "http://127.0.0.1:7070/api/alpha/whistle")
+(def ^:dynamic *whistle-read-slack-ms* 15000)
+
+(defn- model-failure
+  ([kind]
+   {:failure_kind (if (contains? model-failure-kinds kind) kind "model/error")})
+  ([kind http-status error]
+   {:failure_kind (if (contains? model-failure-kinds kind) kind "model/error")
+    :http_status http-status :error error}))
 
 (def ^:private role-names ["I1" "I2" "G" "B"])
 (def ^:private min-quote-words
@@ -297,8 +312,8 @@
    "  \"chain\": {\"I1\": {..}, \"I2\": {..}, \"G\": {..}, \"B\": {..}}}]\n"
    "Do not summarise or judge the work in the turns. Only map the parts."))
 
-(defn- no-reader-pattern [sources shown p]
-  (let [void {:element nil :why "no reader"}]
+(defn- no-reader-pattern [sources shown p why]
+  (let [void {:element nil :why why}]
     {:pattern (:id p) :sha256 (:sha256 p)
      :sources (vec (or (get sources (:id p)) []))
      :shown (boolean (get shown (:id p)))
@@ -327,15 +342,28 @@
         shown (into {} (map (juxt :id :shown)) proposed)
         patterns (mapv #(read-pattern (or library pattern-library) (:id %))
                        proposed)
-        reply (when (and ask (seq patterns))
-                (try (ask {:seat seat
-                           :prompt (prompt-for window record-id patterns)
-                           :timeout-ms timeout-ms})
-                     (catch Exception _ nil)))
-        rows (if-not (string? reply)
+        reply (cond
+                (not ask) (model-failure "model/no-reader")
+                (seq patterns)
+                (try (let [result (ask {:seat seat
+                                        :prompt (prompt-for window record-id patterns)
+                                        :timeout-ms timeout-ms})]
+                       (cond
+                         (string? result) result
+                         (map? result) (model-failure (:failure_kind result)
+                                                      (:http_status result) (:error result))
+                         :else (model-failure "model/error" nil "ask returned nil")))
+                     (catch Exception e
+                       (model-failure "model/error" nil (.getMessage e))))
+                :else (model-failure "model/no-reader"))
+        failure (when (map? reply) reply)
+        rows (if failure
                ;; typed absence: no reader (not wired, off, or failed) is
                ;; recorded, not defaulted to success.
-               (mapv #(no-reader-pattern sources shown %) patterns)
+               (mapv #(no-reader-pattern sources shown %
+                                         (if (= "model/no-reader" (:failure_kind failure))
+                                           "no reader" (:failure_kind failure)))
+                     patterns)
                (let [parsed (extract-json-array reply)
                      by-pattern (into {}
                                       (comp (filter map?)
@@ -356,11 +384,18 @@
                             :turn_mapped (stored-count turn-m)
                             :chain_mapped chain-n
                             :status (status-of chain-n)}))
-                       patterns)))]
+                       patterns)))
+        usable-reply? (and (string? reply)
+                           (seq (filter :pattern (or (extract-json-array reply) []))))
+        model-outcome (cond
+                        failure failure
+                        usable-reply? {:failure_kind nil}
+                        :else {:failure_kind "model/unparsed-reply"})]
     {:version 1
      :at (str (java.time.Instant/now))
      :window (mapv :id window)
      :reader (if (string? reply) (str (or seat "unknown")) "none")
+     :model_outcome model-outcome
      :patterns (vec rows)}))
 
 (defn- verdict-pattern-ids
@@ -478,24 +513,59 @@
 
 (defn whistle-ask
   "The production :ask: a bounded whistle to SEAT through Agency's HTTP API
-  (synchronous, so the request and its answer cannot cross).  Returns the
-  seat's text, or nil on any failure or timeout."
+  (synchronous, so the request and its answer cannot cross). Returns the
+  seat's text or one typed model failure map."
   [{:keys [seat prompt timeout-ms]}]
   (try
     (let [conn (doto ^java.net.HttpURLConnection
-                (.openConnection (java.net.URL. "http://127.0.0.1:7070/api/alpha/whistle"))
+                (.openConnection (java.net.URL. *whistle-url*))
                  (.setRequestMethod "POST")
                  (.setDoOutput true)
                  (.setConnectTimeout 5000)
-                 (.setReadTimeout (int (+ (or timeout-ms 60000) 15000)))
+                 (.setReadTimeout (int (+ (or timeout-ms 60000) *whistle-read-slack-ms*)))
                  (.setRequestProperty "Content-Type" "application/json"))]
       (with-open [w (io/writer (.getOutputStream conn))]
         (.write w (json/generate-string {:agent-id seat :prompt prompt
                                          :timeout-ms (or timeout-ms 60000)
                                          :caller "ma-occurrence"})))
-      (let [body (json/parse-string (slurp (.getInputStream conn)) true)]
-        (when (:ok body) (some-> (:response body) str))))
-    (catch Throwable _ nil)))
+      (let [status (.getResponseCode conn)
+            stream (if (<= 200 status 299) (.getInputStream conn) (.getErrorStream conn))
+            raw (if stream (slurp stream) "")
+            body (try (json/parse-string raw true) (catch Throwable _ ::invalid-json))]
+        (cond
+          (= status 429)
+          (model-failure "model/quota" status
+                         (when-not (= ::invalid-json body)
+                           (some-> (or (:error body) (:message body)) str)))
+
+          (and (= ::invalid-json body) (not (<= 200 status 299)))
+          (model-failure "model/http" status "non-JSON HTTP failure")
+
+          (= ::invalid-json body)
+          (model-failure "model/parse" status "invalid JSON response")
+
+          (and (<= 200 status 299) (:ok body) (some? (:response body)))
+          (str (:response body))
+
+          :else
+          (let [typed (some-> (or (:failure-kind body) (:failure_kind body)) str
+                              (str/replace-first #"^:" ""))
+                error (some-> (or (:error body) (:message body)) str)
+                kind (cond
+                       (= status 429) "model/quota"
+                       (= typed "provider/quota") "model/quota"
+                       (contains? #{"timeout" "provider/timeout"} typed) "model/timeout"
+                       (= "timeout" error) "model/timeout"
+                       ;; The current whistle failure body exposes only :error,
+                       ;; not invoke-job :failure-kind (transport/http.clj
+                       ;; handle-whistle). Keep this one ingestion fallback.
+                       (re-find #"(?i)quota|rate[ ._-]?limit|HTTP 429" (or error "")) "model/quota"
+                       :else "model/http")]
+            (model-failure kind status error)))))
+    (catch SocketTimeoutException e
+      (model-failure "model/timeout" nil (.getMessage e)))
+    (catch Throwable e
+      (model-failure "model/error" nil (.getMessage e)))))
 
 (defn- live-service []
   (try (some-> (requiring-resolve 'futon3c.transport.http/xiang-bell-service) deref (apply []))

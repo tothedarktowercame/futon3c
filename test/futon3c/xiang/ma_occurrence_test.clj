@@ -9,7 +9,10 @@
             [clojure.test :refer [deftest is]]
             [futon3c.xiang.ma-occurrence :as mo]
             [futon3c.xiang.turn-service :as turn-service]
-            [futon3c.xiang.turn-store :as ts]))
+            [futon3c.xiang.turn-store :as ts])
+  (:import [com.sun.net.httpserver HttpServer HttpHandler]
+           [java.net InetSocketAddress]
+           [java.nio.charset StandardCharsets]))
 
 (defn- temp-store []
   (ts/store (str (java.nio.file.Files/createTempDirectory
@@ -91,6 +94,43 @@
 
 (defn- verdicts [store id]
   (:pattern_verdicts (ts/read-record store id)))
+
+(defn- with-http-response [status body delay-ms f]
+  (let [server (HttpServer/create (InetSocketAddress. 0) 0)]
+    (.createContext
+     server "/"
+     (reify HttpHandler
+       (handle [_ exchange]
+         (try
+           (when (pos? delay-ms) (Thread/sleep delay-ms))
+           (let [bytes (.getBytes (str body) StandardCharsets/UTF_8)]
+             (.sendResponseHeaders exchange status (count bytes))
+             (with-open [out (.getResponseBody exchange)] (.write out bytes)))
+           (catch Throwable _)
+           (finally (.close exchange))))))
+    (.start server)
+    (try (f (str "http://127.0.0.1:" (.getPort (.getAddress server)) "/"))
+         (finally (.stop server 0)))))
+
+(deftest whistle-ask-types-http-parse-timeout-and-success
+  (let [call (fn [status body]
+               (with-http-response
+                 status body 0
+                 (fn [url]
+                   (binding [mo/*whistle-url* url]
+                     (mo/whistle-ask {:seat "invented" :prompt "invented"
+                                      :timeout-ms 100})))))]
+    (is (= "model/quota" (:failure_kind (call 429 "{\"ok\":false,\"error\":\"busy\"}"))))
+    (is (= "model/http" (:failure_kind (call 500 "{\"ok\":false,\"error\":\"broken\"}"))))
+    (is (= "model/parse" (:failure_kind (call 200 "not-json"))))
+    (is (= "answer" (call 200 "{\"ok\":true,\"response\":\"answer\"}"))))
+  (let [out (with-http-response
+              200 "{\"ok\":true,\"response\":\"late\"}" 100
+              (fn [url]
+                (binding [mo/*whistle-url* url mo/*whistle-read-slack-ms* 0]
+                  (mo/whistle-ask {:seat "invented" :prompt "invented"
+                                   :timeout-ms 1}))))]
+    (is (= "model/timeout" (:failure_kind out)))))
 
 (deftest absent-gcc-proposals-record-a-retryable-pending-outcome
   (let [store (temp-store)]
@@ -224,24 +264,43 @@
               :source_text (q "turn-new" "operator")
               :reply_text (q "turn-new" "reply")
               :proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]})
-    ;; :ask nil (seat not wired) and :ask answering nil (failed whistle):
-    ;; both leave a typed record, never a success.
+    ;; :ask nil (seat not wired) leaves a typed record, never a success.
     (mo/verdict! {:store store :library (temp-library) :proposal-reader fixture-proposals} "turn-new")
     (let [v (verdicts store "turn-new")]
       (is (map? v) "the record is still written")
       (is (= "none" (:reader v)))
+      (is (= {:failure_kind "model/no-reader"} (:model_outcome v)))
       (is (= "no reader" (get-in v [:patterns 0 :chain :I1 :why])))
       (is (= 0 (get-in v [:patterns 0 :chain_mapped])))
       (is (= "void" (get-in v [:patterns 0 :status])))
       (is (= ["turn-old1" "turn-old2" "turn-old3" "turn-old4" "turn-new"] (:window v))
           "the stored window is the chain, oldest first"))
+    ))
+
+(deftest typed-model-failure-is-kept-on-verdict-and-voids
+  (let [store (base-records (temp-store))]
     (record! store "turn-new"
              {:proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]})
     (mo/verdict! {:store store :library (temp-library) :proposal-reader fixture-proposals
-                  :ask (fn [_] (throw (ex-info "whistle failed" {})))}
+                  :ask (constantly {:failure_kind "model/quota"
+                                    :http_status 429 :error "invented quota"})}
                  "turn-new")
     (let [v (verdicts store "turn-new")]
-      (is (= "none" (:reader v)) "a failed whistle is also a typed no-reader"))))
+      (is (= {:failure_kind "model/quota" :http_status 429 :error "invented quota"}
+             (:model_outcome v)))
+      (is (= "model/quota" (get-in v [:patterns 0 :chain :I1 :why])))
+      (is (= "void" (get-in v [:patterns 0 :status]))))))
+
+(deftest nil-and-unparsed-ask-results-are-distinct
+  (doseq [[id ask kind] [["turn-nil" (constantly nil) "model/error"]
+                         ["turn-unparsed" (constantly "not a JSON array")
+                          "model/unparsed-reply"]]]
+    (let [store (base-records (temp-store))]
+      (record! store id {:created_at "2026-10-24T00:05:00Z"
+                         :proposed_patterns [{:patterns [pid]}]})
+      (mo/verdict! {:store store :library (temp-library)
+                    :proposal-reader fixture-proposals :ask ask} id)
+      (is (= kind (get-in (verdicts store id) [:model_outcome :failure_kind]))))))
 
 (deftest a-record-without-proposals-or-not-operator-is-left-alone
   (let [store (temp-store)]
