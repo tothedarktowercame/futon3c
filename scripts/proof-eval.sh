@@ -133,6 +133,6 @@ fi
 
 printf '%s' "$CODE" | curl -s \
   -H "x-admin-token: $TOKEN" \
-  -H "Content-Type: text/plain" \
+  -H "Content-Type: text/plain; charset=utf-8" \
   --data-binary @- \
   "http://${HOST}:${PORT}/eval"
