@@ -407,6 +407,27 @@
 
 (declare occurrence-writer-executor)
 
+(def ^:private max-listener-attempts 3)
+
+(defn- record-listener-failure!
+  [store id e]
+  (try
+    (ts/update-record!
+     store id
+     (fn [record]
+       (if (map? (:pattern_verdicts record))
+         record
+         (assoc record :ma_listener_failure
+                {:at (str (java.time.Instant/now))
+                 :error (.getMessage e)
+                 :class (.getName (class e))
+                 :attempts (inc (long (or (get-in record [:ma_listener_failure :attempts])
+                                          0)))}))))
+    (catch Exception receipt-error
+      (binding [*out* *err*]
+        (println "[ma-occurrence] listener failure receipt write failed"
+                 id (.getMessage receipt-error))))))
+
 (defn verdict!
   "Read one operator turn record's per-pattern occurrence verdict and store
   :pattern_verdicts on it (the field scripts/xiangma_port_export.py measures
@@ -434,7 +455,9 @@
           (ts/update-record! store id
                              #(let [v (:pattern_verdicts %)]
                                 (if (or (nil? v) (= "lu-proposals-pending" (some-> v :state name)))
-                                  (assoc % :pattern_verdicts pending)
+                                  (-> %
+                                      (assoc :pattern_verdicts pending)
+                                      (dissoc :ma_listener_failure))
                                   %)))
           pending)
         (when (and record
@@ -454,7 +477,9 @@
                              (and (retryable-verdict? read-verdict)
                                   (>= attempt 3))
                              (assoc :model_retry_exhausted true))]
-              (ts/update-record! store id #(assoc % :pattern_verdicts verdicts))
+              (ts/update-record! store id #(-> %
+                                               (assoc :pattern_verdicts verdicts)
+                                               (dissoc :ma_listener_failure)))
               (if-let [writer (:occurrence-writer! opts)]
                 ((or (:occurrence-async! opts)
                      #(.submit occurrence-writer-executor ^Runnable %))
@@ -476,7 +501,9 @@
                      (when notify! (notify! {:event :pattern-verdicts :id id})))))
                 (when notify! (notify! {:event :pattern-verdicts :id id})))
               verdicts))))))
-    (catch Exception _ nil)))
+    (catch Exception e
+      (record-listener-failure! store id e)
+      nil)))
 
 ;; ------------------------------------------------------------ live wiring
 
@@ -499,16 +526,22 @@
 
 (defn- retry-candidates
   "Ids among the RETRY-WINDOW newest records, other than ID, whose verdict
-  is a retryable model failure under the attempt cap, or pending proposals."
+  is a retryable model failure, pending proposals, or whose listener failure
+  receipt remains under the attempt cap."
   [store id]
   (->> (try (ts/list-records store :limit retry-window) (catch Exception _ nil))
        (keep (fn [{rid :id record :record}]
-               (let [v (:pattern_verdicts record)]
+               (let [v (:pattern_verdicts record)
+                     listener-failure (:ma_listener_failure record)]
                  (when (and (not= rid id)
-                            (map? v)
-                            (or (= "lu-proposals-pending" (some-> v :state name))
-                                (and (retryable-verdict? v)
-                                     (not (:model_retry_exhausted v)))))
+                            (or (and (map? v)
+                                     (or (= "lu-proposals-pending" (some-> v :state name))
+                                         (and (retryable-verdict? v)
+                                              (not (:model_retry_exhausted v)))))
+                                (and (not (map? v))
+                                     (map? listener-failure)
+                                     (< (long (or (:attempts listener-failure) 0))
+                                        max-listener-attempts))))
                    rid))))
        vec))
 

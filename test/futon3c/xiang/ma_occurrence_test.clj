@@ -299,6 +299,69 @@
     (is (= {:failure_kind "model/error" :http_status nil :error "invented whistle failure"}
            (:model_outcome (verdicts store "turn-throw"))))))
 
+(deftest unexpected-listener-exception-stores-a-retry-receipt
+  (let [store (temp-store)]
+    (record! store "turn-listener-failure"
+             {:proposed_patterns [{:patterns [pid]}]})
+    (is (nil? (mo/verdict! {:store store
+                            :proposal-reader
+                            (fn [& _] (throw (ex-info "invented listener failure" {})))}
+                           "turn-listener-failure")))
+    (let [receipt (:ma_listener_failure
+                   (ts/read-record store "turn-listener-failure"))]
+      (is (= "invented listener failure" (:error receipt)))
+      (is (= "clojure.lang.ExceptionInfo" (:class receipt)))
+      (is (= 1 (:attempts receipt)))
+      (is (string? (:at receipt))))
+    (mo/verdict! {:store store
+                  :proposal-reader
+                  (fn [& _] (throw (ex-info "invented listener failure again" {})))}
+                 "turn-listener-failure")
+    (is (= 2 (get-in (ts/read-record store "turn-listener-failure")
+                     [:ma_listener_failure :attempts])))))
+
+(deftest another-aligned-turn-retries-listener-failure-and-clears-receipt
+  (let [store (temp-store)
+        success {:version 1 :reader "馬-test" :model_outcome {:failure_kind nil}
+                 :patterns [{:pattern pid :status "void"}]}
+        opts {:store store :proposal-reader (fn [& _] {:ids [pid]})}]
+    (doseq [id ["turn-listener-failure" "turn-later"]]
+      (record! store id {:proposed_patterns [{:patterns [pid]}]}))
+    (mo/verdict! {:store store
+                  :proposal-reader
+                  (fn [& _] (throw (ex-info "invented listener failure" {})))}
+                 "turn-listener-failure")
+    (with-redefs-fn {#'futon3c.xiang.ma-occurrence/verdict-map
+                     (fn [& _] success)}
+      #(mo/handle-event opts {:event :aligned :id "turn-later"}))
+    (let [record (ts/read-record store "turn-listener-failure")]
+      (is (= success (dissoc (:pattern_verdicts record) :model_attempts)))
+      (is (= 1 (get-in record [:pattern_verdicts :model_attempts])))
+      (is (nil? (:ma_listener_failure record))))))
+
+(deftest listener-failure-at-attempt-cap-is-not-retried
+  (let [store (temp-store)
+        called (atom [])]
+    (record! store "turn-capped"
+             {:ma_listener_failure {:at "2026-11-17T00:00:00Z"
+                                    :error "invented" :class "example.Error"
+                                    :attempts 3}})
+    (record! store "turn-later" {})
+    (with-redefs [mo/verdict! (fn [_ id] (swap! called conj id))]
+      (mo/handle-event {:store store} {:event :aligned :id "turn-later"}))
+    (is (= ["turn-later"] @called))))
+
+(deftest listener-receipt-write-failure-is-contained
+  (let [store (temp-store)]
+    (record! store "turn-receipt-refused"
+             {:proposed_patterns [{:patterns [pid]}]})
+    (with-redefs [ts/update-record!
+                  (fn [& _] (throw (ex-info "invented receipt refusal" {})))]
+      (is (nil? (mo/verdict! {:store store
+                              :proposal-reader
+                              (fn [& _] (throw (ex-info "invented listener failure" {})))}
+                             "turn-receipt-refused"))))))
+
 (deftest nil-and-unparsed-ask-results-are-distinct
   (doseq [[id ask kind] [["turn-nil" (constantly nil) "model/error"]
                          ["turn-unparsed" (constantly "not a JSON array")
