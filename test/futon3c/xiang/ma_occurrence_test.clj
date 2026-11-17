@@ -123,7 +123,11 @@
     (is (= "model/quota" (:failure_kind (call 429 "{\"ok\":false,\"error\":\"busy\"}"))))
     (is (= "model/http" (:failure_kind (call 500 "{\"ok\":false,\"error\":\"broken\"}"))))
     (is (= "model/parse" (:failure_kind (call 200 "not-json"))))
-    (is (= "answer" (call 200 "{\"ok\":true,\"response\":\"answer\"}"))))
+    (is (= "answer" (call 200 "{\"ok\":true,\"response\":\"answer\"}")))
+    ;; Agency's whistle reports its own timeout as 504 + error "timeout",
+    ;; and a provider quota only in the error text (transport/http.clj).
+    (is (= "model/timeout" (:failure_kind (call 504 "{\"ok\":false,\"error\":\"timeout\"}"))))
+    (is (= "model/quota" (:failure_kind (call 502 "{\"ok\":false,\"error\":\"invented rate limit hit\"}")))))
   (let [out (with-http-response
               200 "{\"ok\":true,\"response\":\"late\"}" 100
               (fn [url]
@@ -290,6 +294,16 @@
              (:model_outcome v)))
       (is (= "model/quota" (get-in v [:patterns 0 :chain :I1 :why])))
       (is (= "void" (get-in v [:patterns 0 :status]))))))
+
+(deftest thrown-ask-is-model-error
+  (let [store (base-records (temp-store))]
+    (record! store "turn-throw" {:created_at "2026-10-24T00:05:00Z"
+                                 :proposed_patterns [{:patterns [pid]}]})
+    (mo/verdict! {:store store :library (temp-library) :proposal-reader fixture-proposals
+                  :ask (fn [_] (throw (ex-info "invented whistle failure" {})))}
+                 "turn-throw")
+    (is (= {:failure_kind "model/error" :http_status nil :error "invented whistle failure"}
+           (:model_outcome (verdicts store "turn-throw"))))))
 
 (deftest nil-and-unparsed-ask-results-are-distinct
   (doseq [[id ask kind] [["turn-nil" (constantly nil) "model/error"]
