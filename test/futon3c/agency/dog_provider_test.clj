@@ -658,6 +658,27 @@
     (is (= {:status "ok" :items []}
            (:dog_use (turn-store/read-record store id))))))
 
+(deftest each-post-hook-schedules-its-gcc-writer-for-its-own-field
+  (let [store (tmp-store)
+        id "turn-dogFIELDS"
+        seen (atom [])
+        off (str (java.io.File/createTempFile "dog-bury-off" ".switch"))]
+    (write-operator-record! store id "invented source")
+    (turn-store/update-record! store id #(assoc % :dog_recall_gcc {:written 1}))
+    (with-redefs [futon3c.agency.dog-provider/schedule-gcc!
+                  (fn [_ _ _ field] (swap! seen conj field) nil)
+                  dog/memory-body (constantly nil)]
+      (.get ^java.util.concurrent.Future
+            (#'futon3c.agency.dog-provider/prepare-use-check!
+             {:store store :recall-config :stub :bury-off-switch off
+              :recall-reader (fn [_ _] {:status "ok" :items []})}
+             id)
+            5 TimeUnit/SECONDS)
+      (#'futon3c.agency.dog-provider/prepare-bury!
+       {:store store :bury-off-switch off} id
+       (turn-store/read-record store id)))
+    (is (= [:dog_use_gcc :dog_buried_gcc] (vec (distinct @seen))))))
+
 (deftest outer-bury-failure-is-durable
   (let [store (tmp-store)
         id "turn-dogBURYFAIL"]
