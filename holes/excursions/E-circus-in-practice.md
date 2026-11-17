@@ -27,3 +27,33 @@ Carried items, to take up when practice shows a need:
    if a reader beyond Joe needs it.
 7. Extension path: Zai/Kimi once they make 象 marks; interactive agents;
    intents across bells and whistles with "xiao" variants of the animals.
+8. **馬 runs along turns as one strand** (Joe, 2026-11-17, relayed by
+   claude-5 from the M-arxana-incubator work): "this becomes a requirement
+   for 馬 to "run" along turns sequentially, and keep them knitted together
+   as a unified strand. That was implicit before but the N-1 neighbourhood
+   reading makes it more concrete. Effectively this gives the circus a
+   "short term memory"." Background: claude-1,
+   `~/notes/claude-1/tetrahedron-and-metaca-2026-11-17.md` §5 (MetaCA
+   locality; exotype D21: a carried record stands in for longer reach).
+   Today (claude-13, checked on session 4c3508ce…, turns turn-SMYalA,
+   turn-tfegJB, turn-APtqbQ): `xiang/ma_occurrence.clj` `chain-window`
+   re-reads the record plus up to 7 earlier operator turns of the session
+   from the store on every turn, and `:pattern_verdicts :window` lists
+   those 8 ids, so consecutive windows overlap by 7 but no verdict refers to
+   the previous turn's 馬 record or carries anything from it.
+   `xiang/ma_reading.clj` (`:alignment`) reads one turn's reply against its
+   own 象 acts only. Missing: (a) a `:prev` link to the N-1 operator turn's
+   馬 record (id + digest), typed `:session-start` at a first turn; (b) a
+   carried state (patterns whose IF/HOWEVER/BECAUSE/THEN parts are mapped
+   so far, with turn ids) computed from N-1's carried state plus turn N
+   only, replacing the 8-turn raw re-read; (c) ordering: the `:aligned`
+   listener fires per turn, so turn N's verdict can be written before
+   N-1's model whistle returns, or after N-1 was interrupted; N must wait
+   for, or record a typed `:prev-pending`/`:prev-absent`, never silently
+   skip. Test: on one real session, every 馬 record after the first names
+   the preceding operator turn as `:prev`; the strand has no gaps or forks;
+   recomputing turn N's carried state from N-1's record plus turn N alone
+   equals what is stored. Bad case: a carried state that needs a turn
+   earlier than N-1 (which is what every verdict does today, via the
+   window).
+
