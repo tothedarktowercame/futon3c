@@ -29,6 +29,10 @@
         base {:origin "operator" :agent_id "claude-3" :session_id "sess-1"
               :turn_id "claude-3-turn-9" :created_at "2026-10-19T00:00:00Z"
               :reply_text "㊢ did the thing exactly as asked.\n\n🈝 the reasons are deferred to tomorrow."
+              :reply_paragraphs [{:id "claude-3-turn-9-r-0" :mark "㊢"
+                                  :text "did the thing exactly as asked."}
+                                 {:id "claude-3-turn-9-r-1" :mark "🈝"
+                                  :text "the reasons are deferred to tomorrow."}]
               :ports_status {:state "computed"}
               :acts [{:id "claude-3-turn-9-f-s1-0" :kind "delegate" :author "operator"
                       :text "do the thing"}
@@ -122,12 +126,43 @@
                 :operator_interpretation_acts
                 [{:id "claude-3-turn-9-f-s1-0" :kind "delegate"
                   :author "operator" :text "do it"}]
+                :reply_paragraphs [{:id "claude-3-turn-9-r-0" :mark nil :text "done"}]
                 :acts [{:id "claude-3-turn-9-r-0" :kind "report"
                         :author "claude-3" :target "claude-3-turn-9-f-s1-0"
                         :text "done"}]}
         out (ma/classical-pass record)]
     (is (nil? (get-in out [:entries 0 :mark])))
     (is (= 1 (:reply-marks-absent out)))))
+
+(deftest model-pass-can-cite-a-non-act-gist-paragraph
+  (let [[store id] (record! {:reply_text "㊥ the answer is carried here."
+                             :reply_paragraphs
+                             [{:id "claude-3-turn-9-r-0" :mark "㊥"
+                               :text "the answer is carried here."}]
+                             :acts [{:id "claude-3-turn-9-f-s1-0" :kind "delegate"
+                                     :author "operator" :text "give the answer"}]})
+        seen (atom nil)
+        answer (str "[{\"act\":\"claude-3-turn-9-f-s1-0\","
+                    "\"verdict\":\"answered\",\"by\":\"claude-3-turn-9-r-0\","
+                    "\"quote\":\"the answer is carried here\"}]")]
+    (with-redefs [turn-record/reply-marks
+                  (fn [& _] (throw (AssertionError. "reply prose was reparsed")))]
+      (ma/align! {:store store :ask (fn [payload] (reset! seen payload) answer)} id))
+    (is (str/includes? (:prompt @seen) "claude-3-turn-9-r-0"))
+    (is (= "answered" (:verdict (by-act store id "claude-3-turn-9-f-s1-0"))))
+    (is (= "claude-3-turn-9-r-0" (:by (by-act store id "claude-3-turn-9-f-s1-0"))))))
+
+(deftest absent-reply-paragraphs-falls-back-to-acts-and-is-typed
+  (let [record {:turn_id "claude-3-turn-9"
+                :operator_interpretation_acts
+                [{:id "claude-3-turn-9-f-s1-0" :kind "delegate"
+                  :author "operator" :text "do it"}]
+                :acts [{:id "claude-3-turn-9-r-0" :kind "report"
+                        :author "claude-3" :mark "㊢"
+                        :target "claude-3-turn-9-f-s1-0" :text "done"}]}
+        out (ma/classical-pass record)]
+    (is (= "㊢" (get-in out [:entries 0 :mark])))
+    (is (true? (:reply-paragraphs-absent out)))))
 
 (deftest an-open-act-is-answered-by-the-model-with-a-verbatim-quote
   (let [[store id] (record!)

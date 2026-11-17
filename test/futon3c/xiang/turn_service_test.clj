@@ -1148,8 +1148,12 @@
             :rules_version turn-acts/rules-version}
            (:ports_status (ts/read-record store oldest))))
     (svc/compute-ports! (:svc h) oldest {:session-cap 10})
-    (let [computed (:ports (ts/read-record store oldest))]
+    (let [stored (ts/read-record store oldest)
+          computed (:ports stored)]
       (is (some? computed))
+      (is (seq (:reply_paragraphs stored)))
+      (is (some #(= "㊥" (:mark %)) (:reply_paragraphs stored))
+          "the stored typed paragraphs include a gist that is not an act")
       (svc/compute-ports! (:svc h) oldest {:session-cap 1})
       (let [record (ts/read-record store oldest)]
         (is (= computed (:ports record)) "a later refusal preserves the computed value")

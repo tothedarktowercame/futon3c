@@ -136,17 +136,34 @@
                                    (:fragments sentence)))
                     (:sentences reading)))))
 
+(defn- marked-reply-paragraphs [record reply-text base]
+  (mapv (fn [idx paragraph]
+          (assoc paragraph :id (str (or base (:turn_id record)) "-r-" idx)))
+        (range)
+        (turn-record/reply-marks reply-text)))
+
+(defn reply-paragraphs
+  "Every marked paragraph of REPLY-TEXT, including annotator-only gist and
+   unresolved paragraphs that do not become kernel acts. IDs share reply-act
+   numbering and BASE, so skipped paragraphs leave their index occupied."
+  ([record reply-text]
+   (reply-paragraphs record reply-text (:turn_id record)))
+  ([record reply-text base]
+   (mapv (fn [{:keys [id mark text]}]
+           {:id id :mark (some-> mark name) :text (str text)})
+         (marked-reply-paragraphs record reply-text base))))
+
 (defn- reply-acts
   "One act per marked paragraph of the agent's reply, the mark declaring
    the kind. Marked paragraphs whose intent has no kernel kind (gist,
    unresolved) are skipped and counted."
-  [record reply-text base]
+  [record paragraphs]
   (let [turn-id (:turn_id record)
         at (or (:reply_at record) (:created_at record))]
-    (reduce (fn [acc [idx {:keys [intent mark text]}]]
+    (reduce (fn [acc {:keys [id intent mark text]}]
               (if-let [kind (mark-kind intent text)]
                 (update acc :acts conj
-                        (cond-> {:id (str base "-r-" idx)
+                        (cond-> {:id id
                                  :kind kind
                                  :mark (some-> mark name)
                                  :author (:agent_id record)
@@ -158,7 +175,7 @@
                           (= kind :offer) (assoc :option (vec (option-numbers text)))))
                 (update acc :skipped inc)))
             {:acts [] :skipped 0}
-            (map-indexed vector (turn-record/reply-marks reply-text)))))
+            paragraphs)))
 
 (defn- commit-acts
   "One :commit act per happened-note commit."
@@ -301,7 +318,8 @@
                                       [(conj acts act) accepted?]))
                                   [[] false])
                           first))
-         {reply-acts :acts reply-skipped :skipped} (reply-acts record reply-text base)
+         paragraphs (marked-reply-paragraphs record reply-text base)
+         {reply-acts :acts reply-skipped :skipped} (reply-acts record paragraphs)
          reply-acts (cond-> reply-acts
                       bell (answer-bell (:id bell))
                       (seq frag-acts) (link-quoted-brackets frag-acts))
@@ -315,14 +333,13 @@
 ;; ---------------------------------------------------------------------------
 ;; Session
 
-(defn- reply-paragraphs
+(defn- reply-act-pointers
   "[[mark excerpt] act-id] for each marked paragraph of a turn's reply that
    became an act, keyed as a stored pointer names it."
   [record reply acts base]
   (let [ids (set (map :id acts))
         base (or base (:turn_id record))]
-    (for [[idx {:keys [mark text]}] (map-indexed vector (turn-record/reply-marks reply))
-          :let [id (str base "-r-" idx)]
+    (for [{:keys [id mark text]} (marked-reply-paragraphs record reply base)
           :when (ids id)]
       [[mark (reply-target/excerpt text)] id])))
 
@@ -508,7 +525,7 @@
                  offer-here
                  accepted-here
                  (reduce (fn [m [k id]] (update m k (fnil conj []) id))
-                         seen (reply-paragraphs record reply turn-acts act-base))
+                         seen (reply-act-pointers record reply turn-acts act-base))
                  (conj seen-turn-ids turn-id)
                  (-> pointers
                      (update :linked + linked)

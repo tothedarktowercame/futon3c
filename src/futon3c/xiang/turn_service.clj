@@ -1094,6 +1094,14 @@
                                         (and (nil? (:record %))
                                              (= (:turn_id record) (:turn %)))))
                            (mapv stored-act))
+          duplicate-turn-id? (some #(and (not= id (:record-id %))
+                                         (= (:turn_id record) (get-in % [:record :turn_id])))
+                                   settled)
+          reply-base (if duplicate-turn-id?
+                       (str (:turn_id record) "@" id)
+                       (:turn_id record))
+          reply-paragraphs (turn-acts/reply-paragraphs
+                            record (or (:reply_text record) "") reply-base)
           entry (fn [act-id]
                   (let [a (by-id act-id)]
                     {:act act-id
@@ -1107,6 +1115,7 @@
                                   :computed_at (iso (now-ms svc))
                                   :rules_version turn-acts/rules-version}
                                  :acts record-acts
+                                 :reply_paragraphs reply-paragraphs
                                  :standings
                                  {:in_force (:in-force ports)
                                   :adopted_not_applied

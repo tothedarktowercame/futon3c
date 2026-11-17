@@ -76,6 +76,11 @@
          (filter #(and (string? (:id %))
                        (str/starts-with? (:id %) base))))))
 
+(defn- typed-paragraphs [record]
+  (if (contains? record :reply_paragraphs)
+    [(vec (:reply_paragraphs record)) false]
+    [(mapv #(select-keys % [:id :mark :text]) (reply-acts record)) true]))
+
 (defn classical-pass
   "Pass 1, no model: every operator act of RECORD, `answered` with method
   `quote` when a reply act of the same turn targets it, else open (nil
@@ -83,9 +88,10 @@
   {:act :kind :text :verdict :by :mark :quote :method}."
   [record]
   (let [replies (reply-acts record)
+        [paragraphs reply-paragraphs-absent] (typed-paragraphs record)
         targeters (into {} (keep (fn [a] (when-let [t (:target a)] [t a])) replies))
-        marks (into {} (map (juxt :id :mark) replies))
-        reply-marks-absent (count (remove :mark replies))]
+        marks (into {} (map (juxt :id :mark) paragraphs))
+        reply-marks-absent (count (remove :mark paragraphs))]
     (letfn [(entry [a]
               {:act (:id a)
                :kind (some-> (:kind a) name)
@@ -102,6 +108,7 @@
                           (operator-acts record))]
         {:entries entries
          :reply-marks-absent reply-marks-absent
+         :reply-paragraphs-absent reply-paragraphs-absent
          :open (filterv #(nil? (:verdict %)) entries)}))))
 
 (defn- extract-json-array
@@ -211,9 +218,10 @@
   "The version-1 alignment map for RECORD, running both passes.  Pure
   apart from the (bounded, injected) ask."
   [opts record]
-  (let [{:keys [entries open reply-marks-absent]} (classical-pass record)
+  (let [{:keys [entries open reply-marks-absent reply-paragraphs-absent]}
+        (classical-pass record)
         reply-text (str (or (:reply_text record) ""))
-        paragraphs (mapv #(select-keys % [:id :mark :text]) (reply-acts record))
+        [paragraphs _] (typed-paragraphs record)
         {:keys [seat] model-entries :entries}
         (model-pass opts open reply-text paragraphs)
         marks (into {} (map (juxt :id :mark) paragraphs))
@@ -232,6 +240,7 @@
      :seat seat
      :acts acts
      :reply-marks-absent reply-marks-absent
+     :reply-paragraphs-absent reply-paragraphs-absent
      :unread unread-n}))
 
 (defn align!

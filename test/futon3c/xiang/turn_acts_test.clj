@@ -86,7 +86,13 @@
         replies (filterv #(str/includes? (:id %) "-r-") acts)]
     (is (= ["agent-turn-1-r-0" "agent-turn-1-r-2"] (mapv :id replies)))
     (is (= ["㊢" "🈸"] (mapv :mark replies)))
-    (is (= 1 (:skipped (meta acts))))))
+    (is (= 1 (:skipped (meta acts))))
+    (is (= [{:id "agent-turn-1-r-0" :mark "㊢" :text "[first] First report."}
+            {:id "agent-turn-1-r-1" :mark "㊥" :text "[middle] Skipped gist."}
+            {:id "agent-turn-1-r-2" :mark "🈸" :text "[third] Shall I continue?"}]
+           (ta/reply-paragraphs record reply)))
+    (is (not-any? #(= "agent-turn-1-r-1" (:id %)) replies)
+        "the gist is a typed paragraph but not a kernel act")))
 
 (deftest reply-and-commit-acts-use-the-reply-time
   (let [{:keys [record reading reply commits]} (first (fixture-turns))
