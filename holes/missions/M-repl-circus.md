@@ -837,6 +837,18 @@ priorities with traceable reasons.
    renewing a request must not make stalled work appear healthy. Retain the
    attachment invariant: a stepper is attached to exactly one REPL, shows
    that REPL's newest record, and capture works without a stepper attached.
+   *Operator ruling, 2026-11-17:* population, version 1 = operator turns in
+   the Claude and Codex Emacs REPLs. Zai and Kimi are left out because they do
+   not yet make the 象 marks on their turns; they join once they do. The
+   extension path (agents used interactively; intents resolved across bells
+   and whistles, where 象 does not apply and other animals would need
+   classical "xiao" variants) goes in DOCUMENT. The numbers (saved 2 min,
+   animals 15 min, graph 30 min, priorities 6 h) are a service-level
+   agreement, not the computational specification: the specification is
+   that the system is event driven. Giraffe in particular should be always
+   up to date, with small updates that rarely reorder much ("like PageRank:
+   if a website goes offline or suddenly becomes popular, its rank should
+   change, but the rankings of most other websites would not").
 4. **Recoverable projection.** Declare and preserve the complete versioned
    source inventory. Demonstrate that duplicate delivery, late output,
    interruption and replay converge to the same semantic graph as a rebuild
@@ -996,6 +1008,10 @@ above identifies a missing witness.
    validation stage gives each a verdict.
    Alongside it, a bonus at the end (Joe, 2026-11-15): talk with zai-13
    about [[Nipper]] and explore adding it as a feature.
+   Also (Joe, 2026-11-17): the extension path for obligation 3 beyond
+   Claude/Codex operator turns: Zai/Kimi once they make 象 marks; then
+   agents used interactively; then intents resolved across bells and
+   whistles, with "xiao" variants of the animals that apply to agent texts.
 
 Progress on items 1–3 (2026-11-13): dedup done (mission/doc 1,276 → 416,
 excursion/doc 767; only M-coordination-rewrite and
