@@ -105,8 +105,14 @@
     (or (vector? x) (list? x) (set? x)) (every? edn-data? x)
     :else false))
 (defn- position? [p] (and (vector? p) (every? nat-int? p)))
+(defn- operator? [op]
+  ;; Imported Lean nodes use a vector operator such as [:const "Classical.choose"]
+  ;; (lean_import.clj); it is data, not a child term.
+  (or (keyword? op)
+      (and (vector? op) (keyword? (first op))
+           (every? #(or (string? %) (keyword? %) (number? %)) (rest op)))))
 (defn- term? [t]
-  (and (vector? t) (keyword? (first t))
+  (and (vector? t) (operator? (first t))
        (if (= :bvar (first t)) (and (= 2 (count t)) (nat-int? (second t)))
            (every? term? (rest t)))))
 (defn- ref? [x] (or (keyword? x) (symbol? x) (and (string? x) (seq x))))

@@ -1,10 +1,12 @@
 (ns futon3c.diagramprover.lean-import-test
   (:require [clojure.test :refer [deftest is]]
+            [clojure.edn :as edn]
             [clojure.walk :as walk]
             [futon3c.diagramprover.lean-import :as li]
             [futon3c.diagramprover.host-pairs :as hp]
             [futon3c.diagramprover.host-pairs-test :as q]
-            [futon3c.diagramprover.term-schema :as ts]))
+            [futon3c.diagramprover.term-schema :as ts]
+            [futon3c.diagramprover.findings :as f]))
 
 (def capture "test/futon3c/diagramprover/fixtures/a02J03-borel_pi.jsonl")
 (def zero-capture "test/futon3c/diagramprover/fixtures/m02J01-abs_integral.jsonl")
@@ -121,3 +123,15 @@
     (is (= [:let [[:sort]] [[:proj "Fixture.T" 1] [[:lit "nat" 3]]] [:lam [[:mvar "fixture-m"]]]] (:host loaded)))
     (is (= #{:mdata-stripped :let-body-under-lam} (set (:projection loaded))))
     (is (= "fixture" (:note (first (:stripped-mdata (meta (:host loaded)))))))))
+
+(deftest imported-findings-pass-shape-check-and-round-trip
+  ;; claude-1 (q84 design, 2026-11-17) predicted valid-finding? would reject
+  ;; [[:const ...]] operators; claude-5 widened term? to accept them.
+  (let [{:keys [report]} (first (filter #(seq (conflicts (:report %))) @imported))
+        pins {:checker-sha "fixture" :schema-digest (f/schema-digest [ts/beta li/lean-family])
+              :mode :unordered :max-states 12 :event-time "2026-11-17T00:00:00Z"}
+        fs (f/findings report pins)]
+    (is (seq fs))
+    (is (some #(some (fn [x] (and (vector? x) (vector? (first x)))) (tree-seq coll? seq (:finding/overlap %))) fs))
+    (is (every? f/valid-finding? fs))
+    (is (= fs (edn/read-string (f/findings->edn fs))))))
