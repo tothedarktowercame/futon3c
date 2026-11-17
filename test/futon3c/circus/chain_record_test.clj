@@ -8,8 +8,8 @@
                       "chain-record" (make-array java.nio.file.attribute.FileAttribute 0)))]
     (spit (io/file dir "input.edn") "{:fixture true}\n")
     (spit (io/file dir "priority.edn")
-          (pr-str [{:target :M-one :score 0.9 :cutoff-status :within-cutoff}
-                   {:target :M-two :score 0.7 :cutoff-status :outside-cutoff}]))
+          (pr-str [{:target :M-one :pass-rank 12 :priority-band :focus :cutoff-status :within-cutoff}
+                   {:target :M-two :pass-rank 30 :priority-band :associated :cutoff-status :outside-cutoff}]))
     (spit (io/file dir "manifest.edn")
           (pr-str {:run-id "run-fixture" :git-sha "git-fixture"
                    :readings-generation {:digest "generation"}
@@ -50,8 +50,8 @@
                 [:驴 :馬 :狗 :象 :mentions :猴]))
     (is (= ["M-one"] (:items record)))
     (is (= ["hou-1" "lu-1"] (:focus-link record)))
-    (is (= {:item-id "M-one" :rank 1 :score 0.9
-            :cutoff-status :within-cutoff}
+    (is (= {:item-id "M-one" :status :ranked :rank 1 :pass-rank 12
+            :priority-band :focus :cutoff-status :within-cutoff}
            (first (get-in record [:priority :items]))))
     (is (true? (get-in record [:turn :reply_text_present?])))
     (is (not-any? #(= "not exposed" %) (tree-seq coll? seq record)))))
@@ -72,3 +72,13 @@
   (let [a {:turn {:id "t" :origin "operator"} :items ["M-one"]}
         b (array-map :items ["M-one"] :turn (array-map :origin "operator" :id "t"))]
     (is (= (chain/canonical-edn a) (chain/canonical-edn b)))))
+
+(deftest turn-item-missing-from-priority-is-typed-not-dropped
+  (let [cfg (fixture-config (fixture-run []) nil)
+        cfg (update cfg :get-entity-fn
+                    (fn [f] (fn [g id] (if (= id "item-1")
+                                         {:ok {:id "item-1" :asserted-content {:item/id "M-unranked"}}}
+                                         (f g id)))))
+        record (chain/chain-record cfg)]
+    (is (= [{:item-id "M-unranked" :status :not-ranked}]
+           (get-in record [:priority :items])))))

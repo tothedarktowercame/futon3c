@@ -57,8 +57,10 @@
 
 (defn- priority-row [rank row]
   {:item-id (some-> (:target row) name)
+   :status :ranked
    :rank rank
-   :score (:score row)
+   :pass-rank (:pass-rank row)
+   :priority-band (:priority-band row)
    :cutoff-status (:cutoff-status row)})
 
 (defn- pinned-ids [manifest]
@@ -98,7 +100,6 @@
         priority-file (io/file run-dir "priority.edn")
         priority (if (.isFile priority-file) (edn/read-string (slurp priority-file)) [])
         ranked (map-indexed (fn [i row] (priority-row (inc i) row)) priority)
-        item-set (set items)
         all-ids (set (mapcat #(or (:clusion-ids %) []) (vals gcc)))
         focus-link (vec (sort (set/intersection all-ids (pinned-ids manifest))))
         body {:turn {:id turn-id :created_at (:created_at turn) :origin (:origin turn)
@@ -113,7 +114,8 @@
                     :focus/version (:focus/version manifest)
                     :verification ((or (:verify-run-fn cfg) giraffe/verify-run) run-dir)}
               :focus-link focus-link
-              :priority {:items (vec (filter #(item-set (:item-id %)) ranked))
+              :priority {:items (let [by-item (into {} (map (juxt :item-id identity)) ranked)]
+                                  (mapv #(get by-item % {:item-id % :status :not-ranked}) items))
                          :top-10 (vec (take 10 ranked))}}
         digest (giraffe/sha256 (canonical-edn body))]
     (assoc body :record/sha256 digest)))
