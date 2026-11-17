@@ -634,6 +634,67 @@
       (is (= ["p/example-memory"]
              (get-in (deref saved 2000 nil) [:dog_use :used-memory-ids]))))))
 
+(deftest outer-use-check-failure-is-durable-and-preserves-success
+  (let [store (tmp-store)
+        id "turn-dogUSEFAIL"]
+    (write-operator-record! store id "invented source")
+    (turn-store/update-record! store id
+                               #(assoc % :origin "agent"
+                                       :dog_recall_gcc {:written 1}))
+    (let [future (#'futon3c.agency.dog-provider/prepare-use-check!
+                  {:store store
+                   :recall-reader (fn [& _] (throw (ex-info "recall exploded" {})))}
+                  id)]
+      (.get future 5 TimeUnit/SECONDS))
+    (is (= {:status "failed" :failure_kind "dog/use-check-error"
+            :error "recall exploded"}
+           (dissoc (:dog_use (turn-store/read-record store id)) :at)))
+    (turn-store/update-record! store id #(assoc % :dog_use {:status "ok" :items []}))
+    (let [future (#'futon3c.agency.dog-provider/prepare-use-check!
+                  {:store store
+                   :recall-reader (fn [& _] (throw (ex-info "later failure" {})))}
+                  id)]
+      (.get future 5 TimeUnit/SECONDS))
+    (is (= {:status "ok" :items []}
+           (:dog_use (turn-store/read-record store id))))))
+
+(deftest outer-bury-failure-is-durable
+  (let [store (tmp-store)
+        id "turn-dogBURYFAIL"]
+    (write-operator-record! store id "invented source")
+    (let [record (turn-store/read-record store id)]
+      (with-redefs [dog/bury-split (fn [& _] (throw (ex-info "split exploded" {})))]
+        (#'futon3c.agency.dog-provider/prepare-bury!
+         {:store store :bury-off-switch "/does/not/exist"} id record)))
+    (is (= {:status "failed" :failure_kind "dog/bury-error"
+            :error "split exploded"}
+           (dissoc (:dog_buried (turn-store/read-record store id)) :at)))))
+
+(deftest gcc-failure-receipts-match-the-field-and-preserve-written-results
+  (let [store (tmp-store)
+        id "turn-dogGCCFAIL"]
+    (write-operator-record! store id "invented source")
+    (let [future (#'futon3c.agency.dog-provider/schedule-gcc!
+                  {:store store} (fn [& _] (throw (ex-info "gcc exploded" {})))
+                  id :dog_use_gcc)]
+      (.get future 5 TimeUnit/SECONDS))
+    (is (= {:status "failed" :failure_kind "dog/gcc-error"
+            :error "gcc exploded"}
+           (dissoc (:dog_use_gcc (turn-store/read-record store id)) :at)))
+    (turn-store/update-record! store id #(assoc % :dog_buried_gcc {:written 1}))
+    (let [future (#'futon3c.agency.dog-provider/schedule-gcc!
+                  {:store store} (fn [& _] (throw (ex-info "later gcc failure" {})))
+                  id :dog_buried_gcc)]
+      (.get future 5 TimeUnit/SECONDS))
+    (is (= {:written 1} (:dog_buried_gcc (turn-store/read-record store id))))))
+
+(deftest failure-receipt-storage-failure-never-escapes
+  (with-redefs [turn-store/update-record!
+                (fn [& _] (throw (ex-info "receipt store unavailable" {})))]
+    (is (nil? (#'futon3c.agency.dog-provider/failure-receipt!
+               :stub "turn-dogRECEIPT" :dog_use "dog/use-check-error"
+               (ex-info "original" {}))))))
+
 ;; -------------------------------------------- post-hook part 2a: bury
 ;; selection (M-repl-circus, claude-13 11-11). Fixtures turn-*.bury.json
 ;; are real operator records of session ed69fb38 captured 2026-11-11

@@ -440,7 +440,32 @@
    (reify ThreadFactory
      (newThread [_ r] (doto (Thread. ^Runnable r "dog-gcc") (.setDaemon true))))))
 
-(defn- schedule-gcc! [opts writer record-id]
+(def ^:private failure-kinds
+  #{"dog/use-check-error" "dog/bury-error" "dog/gcc-error"})
+
+(defn- failure-receipt!
+  [store record-id field kind throwable]
+  (try
+    (let [store (if (fn? store) (store) store)]
+      (when store
+        (turn-store/update-record!
+         store record-id
+         (fn [record]
+           (let [existing (get record field)]
+             (if (or (nil? existing)
+                     (and (map? existing) (= "failed" (:status existing))))
+               (assoc record field
+                      {:at (str (Instant/now))
+                       :status "failed"
+                       :failure_kind (if (contains? failure-kinds kind)
+                                       kind "dog/gcc-error")
+                       :error (.getMessage ^Throwable throwable)})
+               record))))))
+    (catch Throwable receipt-error
+      (println (str "[dog] failure receipt failed for " record-id " "
+                    (name field) ": " (.getMessage receipt-error))))))
+
+(defn- schedule-gcc! [opts writer record-id field]
   (when writer
     (.submit gcc-executor
              ^Runnable
@@ -451,7 +476,9 @@
                                (mention-writer/default-config)) st record-id))
                  (catch Throwable t
                    (println (str "[dog] GCC projection failed for " record-id ": "
-                                 (.getMessage t)))))))))
+                                 (.getMessage t)))
+                   (failure-receipt! (:store opts) record-id field
+                                     "dog/gcc-error" t)))))))
 
 (defn- publish!
   "Cache RECALL for RECORD-ID. A typed absence is cached too, so the
@@ -836,10 +863,13 @@
                                         :items []}))]
                      (turn-store/update-record! store record-id
                                                 #(assoc % :dog_use result))
-                     (schedule-gcc! opts (:use-gcc-writer opts) record-id))))
+                     (schedule-gcc! opts (:use-gcc-writer opts) record-id
+                                    :dog_use_gcc))))
                (catch Throwable t
                  (println (str "[dog] use-check failed for " record-id ": "
-                               (.getMessage t)))))
+                               (.getMessage t)))
+                 (failure-receipt! (:store opts) record-id :dog_use
+                                   "dog/use-check-error" t)))
            ;; Bury after dog_use: Joe's rulings on the settled turn
            ;; become memories at once (prepare-bury! skips non-operator
            ;; records and records its own typed absences as :dog_buried).
@@ -851,8 +881,9 @@
                  (prepare-bury! opts record-id record)))
              (catch Throwable t
                (println (str "[dog] bury failed for " record-id ": "
-                             (.getMessage t)))))))
-  nil)
+                             (.getMessage t)))
+               (failure-receipt! (:store opts) record-id :dog_buried
+                                 "dog/bury-error" t))))))
 
 ;; ------------------------------------------- post-hook part 2a: bury selection
 ;; Which memories a settled turn would bury, and (in the commit message /
@@ -1269,9 +1300,12 @@
                     {:at (str (Instant/now)) :status "none" :items []
                      :said-again suppressed})))]
           (turn-store/update-record! store record-id #(assoc % :dog_buried result))
-          (schedule-gcc! opts (:buried-gcc-writer opts) record-id))))
+          (schedule-gcc! opts (:buried-gcc-writer opts) record-id
+                         :dog_buried_gcc))))
     (catch Throwable t
-      (println (str "[dog] bury failed: " (.getMessage t)))))
+      (println (str "[dog] bury failed: " (.getMessage t)))
+      (failure-receipt! (:store opts) (str record-id) :dog_buried
+                        "dog/bury-error" t)))
   nil)
 
 (defn prompt-fact
