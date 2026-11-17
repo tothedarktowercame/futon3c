@@ -863,6 +863,11 @@ priorities with traceable reasons.
    驴: 7 rows, 4 turns, 62 ms. So the six animals' records meet in one
    connected graph. Open: few turns carry all of 驴/馬/狗 on the same
    pattern (3); CL-22 gap 4 (writer completeness) is the follow-up.
+   *Re-run, 2026-11-17 after CL-29 (馬 occurrence write cast fix, 12 turns
+   backfilled) and CL-30 (狗 late recall kept as an undelivered claim, 79
+   turns backfilled from the live cache):* the same three-pattern join, limit
+   500, gives 252 rows over 33 turns, not truncated, 83 ms. Late recalls
+   carry `:delivered false`; the use check reads only delivered ones.
 
 ### Concrete objections found in this review
 
