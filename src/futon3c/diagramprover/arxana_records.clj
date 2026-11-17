@@ -98,3 +98,39 @@
     :basis :human :standing :verified :coverage :complete
     :method (select-keys acceptance [:packet :merge-sha :repo])
     :content {} :source-refs []}))
+
+(defn rule-set-diff-record
+  "Convert opaque-rules/rule-set-diff data. Caller adds :checker-sha and
+  :rule-form to the diff; no clock/git lookup occurs here. :host/locator can be
+  explicit, otherwise both versions must agree on their module/declaration
+  locator. Version pins are retained. Rule and normal-form order is canonical."
+  [diff rule-ids supersession-id]
+  (when-not (and (string? supersession-id) (seq supersession-id))
+    (refuse :arxana.diff/supersession-required {}))
+  (when (and (:supersession-id diff) (not= supersession-id (:supersession-id diff)))
+    (refuse :arxana.diff/supersession-mismatch {}))
+  (required diff [:checker-sha :rule-form :comparison :observation-comparison])
+  (when-not (and (#{:schema :opaque} (:rule-form diff))
+                 (#{:equal :different :inconclusive} (:comparison diff))
+                 (#{:equal :different :inconclusive} (:observation-comparison diff)))
+    (refuse :arxana.diff/invalid-comparison-or-form {}))
+  (let [loc (or (:host/locator diff)
+                (when (= (get-in diff [:a :locator]) (get-in diff [:b :locator]))
+                  (get-in diff [:a :locator])))
+        _ (when-not loc (refuse :arxana.diff/host-locator-required {}))
+        version (fn [v]
+                  (required v [:rules :normal-forms :observations :pins])
+                  {:rules (vec (sort (map (fn [r]
+                                           (let [id (get rule-ids r)]
+                                             (when-not (and (string? id) (seq id))
+                                               (refuse :arxana.diff/rule-id-required {:rule r}))
+                                             id)) (:rules v))))
+                   :normal-forms (vec (sort (:normal-forms v)))
+                   :observations (data-only (:observations v)) :pins (data-only (:pins v))})]
+    (records/make-clusion
+     {:type-revision [:rule-set/diff 1]
+      :endpoints [(endpoint :supersession supersession-id)]
+      :asserted-content {:host/locator (data-only loc)
+                         :version-a (version (:a diff)) :version-b (version (:b diff))
+                         :comparison (:comparison diff) :observation-comparison (:observation-comparison diff)
+                         :checker-sha (:checker-sha diff) :rule-form (:rule-form diff)}})))

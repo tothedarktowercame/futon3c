@@ -94,6 +94,10 @@
                   {:role :rule-b :endpoint/kinds #{:clusion}}]
                  [:overlap :status :kinds :settled-by :evaluation :checker-sha
                   :schema-digest :mode :max-states :host/locator])
+   (clusion-type :rule-set/diff 1
+                 [{:role :supersession :endpoint/kinds #{:clusion}}]
+                 [:host/locator :version-a :version-b :comparison
+                  :observation-comparison :checker-sha :rule-form])
    (clusion-type :residual/accepted 1
                  [{:role :finding :endpoint/kinds #{:clusion}}]
                  [:scope :release :reason])
