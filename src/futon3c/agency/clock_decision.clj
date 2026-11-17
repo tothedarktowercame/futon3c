@@ -7,6 +7,10 @@
             [clojure.java.io :as io]
             [futon3c.agency.clock-store :as clock]
             [futon3c.agency.clock-lineage :as lineage]
+            [futon3c.arxana.digest :as digest]
+            [futon3c.arxana.item-inventory :as inventory]
+            [futon3c.arxana.turn-mention-writer :as mentions]
+            [futon3c.circus.operator-focus :as operator-focus]
             [futon3c.evidence.backend]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.futon1b-backend :as f1b]
@@ -20,6 +24,11 @@
 (def ^:dynamic *turn* nil)
 (defonce ^:private !catalog (atom nil))
 (defonce ^:private !active-turns (atom {}))
+(defonce ^:private !supersession-cache (atom {}))
+
+(def ^:dynamic *successor-resolver* nil)
+
+(defn reset-supersession-cache! [] (reset! !supersession-cache {}))
 
 (defn end!
   "Release an invocation's callback context without changing its clock."
@@ -294,6 +303,94 @@
                      distinct)]
     (when (= 1 (count targets)) (first targets))))
 
+(defn- target-sha [target]
+  (or (get-in target [:source :sha256])
+      (when-let [file (:file target)]
+        (digest/sha256-hex (java.nio.file.Files/readAllBytes (.toPath (io/file file)))))))
+
+(defn- clock-for-id [id]
+  (case (first (str id))
+    \M {:campaign-id nil :mission-id id :excursion-id nil}
+    \E {:campaign-id nil :mission-id nil :excursion-id id}
+    \T {:campaign-id nil :mission-id nil :excursion-id id}
+    nil))
+
+(defn- inventory-targets []
+  (->> (inventory/current-items)
+       (keep (fn [item]
+               (when-let [clock (clock-for-id (:id item))]
+                 {:id (:id item) :file (:path item) :source (:source item)
+                  :clock clock})))
+       vec))
+
+(defn- cache-current? [{:keys [shas]}]
+  (every? (fn [[path sha]]
+            (and (.isFile (io/file path))
+                 (= sha (digest/sha256-hex
+                         (java.nio.file.Files/readAllBytes (.toPath (io/file path)))))))
+          shas))
+
+(defn- read-supersession [target targets]
+  (let [by-id (into {} (map (juxt :id identity)) targets)
+        cached (get @!supersession-cache (:id target))]
+    (if (and cached (cache-current? cached))
+      cached
+      (let [items (mapv (fn [t] {:id (:id t) :source {:sha256 (target-sha t)}}) targets)
+            enriched (operator-focus/with-gcc-successors
+                      (mentions/default-config) items [(:id target)])
+            resolved (operator-focus/resolve-tag
+                      (into {} (map (juxt :id identity)) enriched) (:id target))
+            path (vec (or (:path resolved)
+                          (get-in resolved [:notice :path])
+                          [(:id target)]))
+            path-targets (keep by-id path)
+            entry {:shas (into {} (map (juxt :file target-sha)) path-targets)
+                   :clocks (into {} (map (juxt :id :clock)) path-targets)
+                   :result resolved}]
+        (swap! !supersession-cache assoc (:id target) entry)
+        entry))))
+
+(defn- repoint-superseded [decision]
+  (if-not (= :clocked (:status decision))
+    decision
+    (let [target-id (some val (:clock decision))]
+      (try
+        (let [cached (when-not *successor-resolver*
+                       (let [entry (get @!supersession-cache target-id)]
+                         (when (and entry (cache-current? entry)) entry)))
+              targets (when-not cached
+                        (if *successor-resolver* (catalog) (inventory-targets)))
+              target (when targets (some #(when (= target-id (:id %)) %) targets))]
+          (if (and (nil? cached) (nil? target))
+            decision
+            (let [entry (or cached
+                            (if *successor-resolver*
+                              {:result (*successor-resolver* target targets)
+                               :clocks (into {} (map (juxt :id :clock)) targets)}
+                              (read-supersession target targets)))
+                resolved (:result entry)
+                successor-id (:item resolved)
+                successor-clock (get-in entry [:clocks successor-id])
+                notice (:notice resolved)]
+              (cond
+                notice
+                (update decision :evidence merge
+                        (cond-> {:supersession-reason (:reason notice)}
+                          (:path notice) (assoc :supersession-path (:path notice))))
+
+                (and successor-clock (not= target-id successor-id))
+                (-> decision
+                    (assoc :clock successor-clock)
+                    (update :evidence merge
+                            {:superseded-from target-id
+                             :supersession-path (:path resolved)}))
+
+                :else decision))))
+        (catch Throwable t
+          (update decision :evidence merge
+                  {:supersession-reason :supersession-unread
+                   :supersession-error (.getMessage t)}))))))
+
 (defn decide
   "Precedence: operator target, dispatched requisition, explicit mission,
    current session, attributed activity, typed absence. Target ambiguity never
@@ -315,7 +412,8 @@
                   (seq mission-id) [mission-id]
                   clocked? nil
                   :else mentions)]
-    (cond
+    (repoint-superseded
+     (cond
       (seq ids)
       (let [targets (filterv #(some #{(:id %)} ids) (catalog))
             decided (if (some #(not-any? #{%} (map :id targets)) ids)
@@ -357,7 +455,7 @@
           (choose-target targets 3 {:path path})
           (unclocked :no-source {:path path})))
 
-      :else (unclocked :no-source {}))))
+      :else (unclocked :no-source {})))))
 
 (defn- decision-id [{:keys [agent-id session-id turn-id phase event-id]}]
   (str "clock-decision-"

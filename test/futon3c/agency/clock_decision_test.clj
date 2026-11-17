@@ -17,11 +17,14 @@
 (use-fixtures :each
   (fn [f]
     (clock/reset-store!)
+    (decision/reset-supersession-cache!)
     (reg/reset-registry!)
     (with-redefs [bb/project-agents! (constantly nil)
                   reg/ring-bell-file! (constantly nil)]
       (try (binding [decision/*store-busy-waits-ms* []] (f))
-           (finally (clock/reset-store!) (reg/reset-registry!))))))
+           (finally (clock/reset-store!)
+                    (decision/reset-supersession-cache!)
+                    (reg/reset-registry!))))))
 
 (defn- context [id]
   {:agent-id "clock-worker" :session-id "clock-session" :turn-id id
@@ -223,6 +226,41 @@
                [(:source valid) (get-in valid [:clock :mission-id])]))
         (is (= [:unclocked :ambiguous]
                ((juxt :status :reason) ambiguous)))))))
+
+(deftest session-clock-follows-typed-gcc-supersession-with-safe-refusals
+  (with-docs
+    (fn [root _ _]
+      (doseq [id ["M-a" "M-b"]]
+        (spit (io/file root "holes" "missions" (str id ".md")) (str "# " id "\n")))
+      (let [run (fn [resolver]
+                  (clock/reset-store!)
+                  (clock/set-dispatch-mission! "clock-worker" "clock-session" "M-a")
+                  (binding [decision/*successor-resolver* resolver]
+                    (decision/decide (context "successor"))))]
+        (testing "current session clock is repointed with typed evidence"
+          (let [d (run (fn [_ _] {:item "M-b" :path ["M-a" "M-b"]}))]
+            (is (= "M-b" (get-in d [:clock :mission-id])))
+            (is (= {:superseded-from "M-a" :supersession-path ["M-a" "M-b"]}
+                   (select-keys (:evidence d) [:superseded-from :supersession-path])))))
+        (testing "ambiguous successor keeps the original clock"
+          (let [d (run (fn [_ _] {:item "M-a"
+                                  :notice {:reason :supersession-ambiguous}}))]
+            (is (= "M-a" (get-in d [:clock :mission-id])))
+            (is (= :supersession-ambiguous
+                   (get-in d [:evidence :supersession-reason])))))
+        (testing "stale attestation is ignored without evidence noise"
+          (let [d (run (fn [_ _] {:item "M-a" :path ["M-a"]}))]
+            (is (= "M-a" (get-in d [:clock :mission-id])))
+            (is (not (contains? (:evidence d) :supersession-reason)))
+            (is (not (contains? (:evidence d) :superseded-from)))))
+        (testing "graph read failure keeps the turn clocked"
+          (let [d (run (fn [& _] (throw (ex-info "graph down" {}))))]
+            (is (= [:clocked "M-a" :supersession-unread]
+                   [(:status d) (get-in d [:clock :mission-id])
+                    (get-in d [:evidence :supersession-reason])]))))
+        (testing "non-superseded target is unchanged"
+          (let [d (run (fn [_ _] {:item "M-a" :path ["M-a"]}))]
+            (is (= {:session-id "clock-session"} (:evidence d)))))))))
 
 (deftest bell-mentions-fill-an-empty-clock-but-do-not-switch
   ;; claude-8 (2026-09-24): bellbacks naming M-futon-seams in passing kept

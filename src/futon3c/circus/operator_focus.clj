@@ -24,22 +24,38 @@
   an un-superseded item) and is ignored."
   [cfg item]
   (let [predecessor (:id (inventory/item-record (:id item)))
-        q (:ok (store/bounded-query! (:graph-store cfg)
+        answer (store/bounded-query! (:graph-store cfg)
                                      {:query/type :role-reverse
                                       :edge-type [:supersedes 1]
                                       :endpoint-role :predecessor
                                       :endpoint-id predecessor
-                                      :limit 200 :order :desc}))
-        claims (keep #(-> (store/get-entity (:graph-store cfg) %) :ok)
+                                      :limit 200 :order :desc})
+        q (:ok answer)
+        _ (when (or (:error answer) (:truncated? q))
+            (throw (ex-info "Supersession graph unreadable"
+                            {:reason :supersession-unread :answer answer})))
+        claims (mapv (fn [id]
+                       (let [r (store/get-entity (:graph-store cfg) id)]
+                         (or (:ok r)
+                             (throw (ex-info "Supersession claim unreadable"
+                                             {:reason :supersession-unread :answer r})))))
                      (:edge-ids q))]
     (->> claims
          (keep (fn [claim]
-                 (let [aq (:ok (store/bounded-query! (:graph-store cfg)
-                                                     {:query/type :attestations
-                                                      :subject-id (:id claim)
-                                                      :limit 50}))
+                 (let [answer (store/bounded-query! (:graph-store cfg)
+                                                    {:query/type :attestations
+                                                     :subject-id (:id claim)
+                                                     :limit 50})
+                       aq (:ok answer)
+                       _ (when (or (:error answer) (:truncated? aq))
+                           (throw (ex-info "Supersession attestations unreadable"
+                                           {:reason :supersession-unread :answer answer})))
                        current? (some (fn [aid]
-                                        (let [a (:ok (store/get-entity (:graph-store cfg) aid))]
+                                        (let [r (store/get-entity (:graph-store cfg) aid)
+                                              a (or (:ok r)
+                                                    (throw (ex-info "Supersession attestation unreadable"
+                                                                    {:reason :supersession-unread
+                                                                     :answer r})))]
                                           (and (= "futon3c/item-inventory" (:producer a))
                                                (= :supersession-census (get-in a [:method :name]))
                                                (= (get-in item [:source :sha256])

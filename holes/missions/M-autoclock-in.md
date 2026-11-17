@@ -1024,3 +1024,18 @@ exists; it reads false.**
   neither gates this mission. They belong with the seat work (futon3c
   `README-kimi.md`, `src/futon3c/agents/kimi_api.clj`); M-autoclock-in does not
   wait on them, and closing them does not close it.
+
+## INSTANTIATE-9 — follow a typed successor mission (2026-11-17)
+
+Joe: “If it moves, this should be as an upgrade to M-autoclock-in e.g. to
+recognise a successor mission (which would have to be tagged as such) and
+repoint the clock automatically.”
+
+Every positive admission decision now passes through the existing GCC
+`[:supersedes 1]` reader used by 猴. A current, exactly attested successor
+repoints the selected clock and records `:superseded-from` plus the complete
+`:supersession-path`. Ambiguity, cycles, an over-eight chain, or an unreadable
+graph keep the original clock and record a typed reason; stale attestations are
+ignored by the shared reader. Results are cached per starting item and
+invalidated when any mission file on the resolved path changes digest, making
+the normal per-turn check a bounded local digest comparison.
