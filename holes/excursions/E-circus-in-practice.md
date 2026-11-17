@@ -56,4 +56,17 @@ Carried items, to take up when practice shows a need:
    equals what is stored. Bad case: a carried state that needs a turn
    earlier than N-1 (which is what every verdict does today, via the
    window).
+   **Revised by Joe, 2026-11-17:** "Well, 8-turn reread should be OK, though
+   perhaps realistically we only need 4. This is still "locality" it's just a
+   bigger locality. I think an N-1 requirement is OK in MetaCA but we don't
+   *need* to be that strict for Circus. That said, being able to make an N &
+   N-1 connection where one exists (or "no connection" if one doesn't) seems a
+   requirement in any case." So: the window re-read stays (8 turns, 4 may do;
+   it is a bounded locality, not a defect), and (b) the carried state and the
+   N-1-only bad case are withdrawn. What remains required is (a) and (c): each
+   馬 record names the N-1 operator turn's 馬 record when one exists, and
+   records a typed "no connection" (`:session-start`, `:prev-absent`,
+   `:prev-pending`) when it does not; never silently nothing. Test: on one real
+   session, every 馬 record has exactly one of a `:prev` link or a typed
+   no-connection, and the `:prev` links form one chain without gaps or forks.
 
