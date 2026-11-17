@@ -840,6 +840,12 @@ priorities with traceable reasons.
    pass/focus versions and consumer receipts. The closure report names the
    scope and bounds checked, the outcomes and any remaining failures. The
    implementing agent's account alone is not the completion witness.
+6. **One connected graph to infer over** (operator, 2026-11-17). Every
+   animal's GCC records belong to one connected component: a turn, an item,
+   a pattern or a memory has one node identity whichever animal writes about
+   it. The witness is a query over futon1b (the XTQL layer) that joins at
+   least three animals' records for the same turns and returns rows, with
+   its text, row count and time recorded. Survey: CL-22.
 
 ### Concrete objections found in this review
 
