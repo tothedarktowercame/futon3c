@@ -20,7 +20,9 @@
 (deftest real-http-conditional-store-test
   (gates/seed-mission-contract!)
   (with-open [node (xtn/start-node)]
-    (let [server (f1-server/start-server! {:node node :port 0 :bind-host "127.0.0.1"})]
+    (let [index-file (java.io.File/createTempFile "b2-http-index" ".db")
+          server (f1-server/start-server! {:node node :port 0 :bind-host "127.0.0.1"
+                                           :arxana-index-path (str index-file)})]
       (try
         (let [base (str "http://127.0.0.1:" (.getPort (.getAddress server)))
               adapter (store-http/http-store base f1-arxana/service-principal)
@@ -44,6 +46,20 @@
               (is (true? (:duplicate? duplicate)))
               (is (= :conflict (get-in conflict [:error :error/category])))
               (is (= 400 (get-in conflict [:error :error/detail :http/status])))))
+          (testing "advertised as-of capability honours time through the real route"
+            (let [r {:id "arxana:clusion:sha256:dated-http" :type-revision [:workplan/item 1]
+                     :endpoints [] :asserted-content {:item/id "M-dated-toy"}
+                     :event-time "2026-08-27T12:00:00.000Z"}
+                  written (store-http/append-batch! adapter "dated-http" [{:operation :clusion/assert :record r}])]
+              (is (:ok written))
+              (is (true? (:entity-as-of (store/capabilities adapter))))
+              (is (false? (:hyperedge-valid-time (store/capabilities adapter))))
+              (is (= r (:ok (store-http/get-entity-as-of adapter (:id r) "2026-09-01T00:00:00.000Z"))))
+              (is (= :missing (get-in (store-http/get-entity-as-of adapter (:id r) "2026-08-01T00:00:00.000Z")
+                                      [:error :error/category])))
+              (is (= r (:ok (store/get-entity adapter (:id r)))))
+              (is (= :invalid (get-in (store-http/get-entity-as-of adapter (:id r) "not-a-time")
+                                      [:error :error/category])))))
           (testing "capabilities describe the narrow live seam"
             (is (true? (:entity-compare-and-set (store/capabilities adapter))))
             (is (false? (:entity-write (store/capabilities adapter)))))
@@ -60,7 +76,8 @@
             (is (= :arxana/stale-head (get-in stale [:error :error/code])))
             (is (= 409 (get-in stale [:error :error/detail :http/status])))))
         (finally
-          (f1-server/stop-server! server))))))
+          (f1-server/stop-server! server)
+          (.delete index-file))))))
 
 (deftest refusal-code-and-category-contract
   (testing "unqualified server reasons become valid D3 codes"

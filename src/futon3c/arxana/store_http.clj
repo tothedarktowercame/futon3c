@@ -13,9 +13,11 @@
             HttpResponse$BodyHandlers]))
 
 (def http-capabilities
+  "entity-as-of covers reserved record-by-id via get-entity-as-of/bounded-query!.
+  It does not promise temporal reverse-index or generic hyperedge reads."
   {:entity-read false
    :entity-write false
-   :entity-as-of false
+   :entity-as-of true
    :entity-compare-and-set true
    :hyperedge-read false
    :hyperedge-write false
@@ -139,3 +141,18 @@
   (store/conditional-write! graph-store
                             {:protocol/version "arxana.v1" :message/id message-id
                              :operation :records/append :body {:records (vec records)}}))
+
+
+(defn get-entity-as-of
+  "Read a reserved Arxana record at valid-time (fixed-width ISO milliseconds).
+  Uses the same record-by-id route as get-entity; missing remains typed."
+  [graph-store entity-id valid-time]
+  (let [{:keys [ok error]} (store/bounded-query! graph-store
+                                               {:query/type :record-by-id
+                                                :record-id entity-id :valid-time valid-time})]
+    (cond error {:error error}
+          (= :ok (:status ok)) {:ok (:record ok)}
+          (= :missing (:status ok))
+          {:error (env/error :missing :arxana.store/record-not-found
+                             {:entity/id entity-id :valid-time valid-time} nil)}
+          :else {:error (env/error :failed :arxana.store/query-invalid-response ok nil)})))
