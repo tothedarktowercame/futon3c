@@ -51,12 +51,23 @@
     {:run run :manifest manifest :input input :input-path input-path
      :input-sha input-sha :members members}))
 
+(declare run-attestations)
+
 (defn plan [cfg]
   (let [{:keys [run manifest input input-path input-sha members]} (current-run cfg)
         item-set (set (:item-ids cfg))
         generation (get-in manifest [:readings-generation :path])
         accepted (remove #(= :alternative (:class %)) (:edges input))
-        grouped (sort-by key (group-by (comp id-text :reading-member) accepted))]
+        grouped (sort-by key (group-by (comp id-text :reading-member) accepted))
+        seen (atom {})
+        existing? (fn [claim member pin]
+                    (let [k [(:id claim) member (:sha256 pin)]
+                          found (if (contains? @seen k)
+                                  (get @seen k)
+                                  (let [atts (run-attestations cfg claim {member pin})]
+                                    (swap! seen assoc k atts)
+                                    atts))]
+                      (seq found)))]
     {:run run :input-sha input-sha
      :readings
      (mapv
@@ -90,14 +101,17 @@
                                                    :input-sha256 input-sha :written-at written-at}
                                          :source-refs [{:path batch :line (:line pin)
                                                         :sha256 (:sha256 pin)}]})]
-                               {:edge edge
-                                :rows [{:operation :clusion/assert :record claim}
-                                       {:operation :evidence/append :record att}]})
+                               (if (and (:graph-store cfg) (existing? claim member pin))
+                                 {:unchanged [from to]}
+                                 {:edge edge
+                                  :rows [{:operation :clusion/assert :record claim}
+                                         {:operation :evidence/append :record att}]}))
                              {:skipped [from to]})))
                        edges)
               rows (vec (mapcat :rows planned))]
           {:member member :rows rows
            :written (count (filter :rows planned))
+           :unchanged (count (filter :unchanged planned))
            :skipped (mapv :skipped (filter :skipped planned))
            :message-id (when (seq rows)
                          (proposals/batch-message-id
@@ -107,24 +121,27 @@
 (defn write! [cfg]
   (let [p (plan cfg)
         results (mapv
-                 (fn [{:keys [rows message-id written skipped member]}]
+                 (fn [{:keys [rows message-id written unchanged skipped member]}]
                    (if (empty? rows)
-                     {:member member :written 0 :skipped skipped}
+                     {:member member :written 0 :unchanged unchanged :skipped skipped}
                      (let [r (http/append-batch! (:graph-store cfg) message-id rows)]
                        (when (pos? (or (:pause-ms cfg) 0))
                          (Thread/sleep (long (:pause-ms cfg))))
-                       (if (:ok r) {:member member :written written :skipped skipped}
-                           {:member member :failed :needs-write-refused :skipped skipped}))))
+                       (if (:ok r) {:member member :written written :unchanged unchanged
+                                    :skipped skipped}
+                           {:member member :failed :needs-write-refused
+                            :unchanged unchanged :skipped skipped}))))
                  (:readings p))]
     {:run (:run p) :readings results
      :written (reduce + (map #(or (:written %) 0) results))
+     :unchanged (reduce + (map #(or (:unchanged %) 0) results))
      :skipped (reduce + (map #(count (:skipped %)) results))}))
 
 (defn- run-attestations
-  "CLAIM's attestations from RUN, the latest per reading member. Two readings
+  "CLAIM's attestations matching MEMBER-PINS, latest per reading member. Two readings
   can assert the same edge: one clusion, one attestation each, and each
   reading keeps it (its incident items depend on it)."
-  [cfg claim run]
+  [cfg claim member-pins]
   (let [q (loop [tries 0]
             ;; A lagging index answers :stale-index with no ids. Read as "no
             ;; attestations" it silently dropped readings from the projection
@@ -147,7 +164,13 @@
                     (:ok r)))))]
     (->> (:attestation-ids q)
          (keep #(-> (store/get-entity (:graph-store cfg) %) :ok))
-         (filter #(= run (get-in % [:content :run])))
+         (filter (fn [att]
+                   (let [member (get-in att [:content :reading-member])
+                         expected (get member-pins member)]
+                     (or (nil? member-pins)
+                         (and expected
+                              (= (:sha256 expected)
+                                 (get-in att [:content :record-pin :sha256])))))))
          (group-by #(get-in % [:content :reading-member]))
          vals
          (map #(last (sort-by (fn [a] (str (get-in a [:content :written-at]))) %))))))
@@ -204,20 +227,26 @@
         (expected-members cfg run (remove unverified ids))))))
 
 (defn- read-needs-gcc* [cfg run]
-  (let [items (vec (:item-ids cfg))
+  (let [run-context (when (:runs-dir cfg) (current-run (assoc cfg :giraffe-run run)))
+        member-pins (or (:member-pins cfg)
+                        (when run-context
+                          (into {} (map (fn [[member row]] [member (:record-pin row)]))
+                                (:members run-context))))
+        items (vec (:item-ids cfg))
         tasks (mapv #(.submit read-executor ^Callable (fn [] (query-needing cfg %))) items)
         ids (->> tasks (mapcat #(.get %)) distinct vec)]
     (when (empty? ids)
       (throw (ex-info "GCC needs unavailable" {:reason :needs-unavailable})))
     (let [item-by-ref (into {} (map (fn [id] [(:id (inventory/item-record id)) id])) items)
           claims (keep #(-> (store/get-entity (:graph-store cfg) %) :ok) ids)
-          ;; Giraffe mints a new run every few minutes; only attestations
-          ;; from the party's run are edges of the readings it shows.
+          ;; A run selects the attestation matching each reading's current
+          ;; record pin. The attestation may have been written by an earlier
+          ;; run when the reading line is unchanged.
           rows (mapcat (fn [claim]
                          (let [from (item-by-ref (get-in claim [:endpoints 0 :target :ref/id]))
                                to (item-by-ref (get-in claim [:endpoints 1 :target :ref/id]))]
                            (when (and from to)
-                             (for [att (run-attestations cfg claim run)]
+                             (for [att (run-attestations cfg claim member-pins)]
                                {:claim claim :att att :from from :to to})))) claims)
           _ (when (empty? rows)
               (throw (ex-info "GCC needs unavailable for the party's run"
@@ -257,9 +286,8 @@
                 :incident-items incident}))
            by-member)
           first-att (:att (first rows))
-          run (get-in first-att [:content :run])
-          input-sha (get-in first-att [:content :input-sha256])
-          input-path (get-in first-att [:content :input-path])]
+          input-sha (or (:input-sha run-context) (get-in first-att [:content :input-sha256]))
+          input-path (or (:input-path run-context) (get-in first-att [:content :input-path]))]
       {:readings readings
        ;; nil without :runs-dir (unit fixtures); every production config
        ;; (default-config, hou-store) sets it.

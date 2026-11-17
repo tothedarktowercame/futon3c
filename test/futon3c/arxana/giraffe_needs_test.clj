@@ -39,6 +39,7 @@
   (let [{:keys [run]} (fixture) calls (atom [])
         cfg {:graph-store :stub :item-ids ["M-a" "M-b"] :written-at "2026-11-16T20:00:00Z"}]
     (with-redefs [sut/current-run (constantly run)
+                  store/bounded-query! (fn [_ _] {:ok {:status :ok :attestation-ids []}})
                   http/append-batch! (fn [_ id rows] (swap! calls conj [id rows]) {:ok {}})]
       (let [out (sut/write! cfg)
             rows (second (first @calls))
@@ -51,6 +52,79 @@
                (get-in claim [:endpoints 0 :target :ref/id])) "from is needing")
         (is (= (:id (inventory/item-record "M-b"))
                (get-in claim [:endpoints 1 :target :ref/id])) "to is supplier")))))
+
+(deftest unchanged-reading-is-not-reattested-and-a-changed-pin-is
+  (let [{:keys [run batch]} (fixture)
+        entities (atom {}) calls (atom [])
+        cfg {:graph-store :stub-dedup :item-ids ["M-a" "M-b"]
+             :written-at "2026-11-16T20:00:00Z" :pause-ms 0}
+        query (fn [_ q]
+                (case (:query/type q)
+                  :role-reverse
+                  {:ok {:status :ok :truncated? false
+                        :edge-ids (->> @entities vals
+                                       (filter #(= [:needs 1] (:type-revision %)))
+                                       (mapv :id))}}
+                  :attestations
+                  {:ok {:status :ok :attestation-ids
+                        (->> @entities vals
+                             (filter #(= (:subject-id q) (:subject-clusion-id %)))
+                             (mapv :id))}}))]
+    (with-redefs [sut/current-run (fn [_] run)
+                  store/bounded-query! query
+                  store/get-entity (fn [_ id] {:ok (get @entities id)})
+                  http/append-batch!
+                  (fn [_ _ rows]
+                    (swap! calls conj rows)
+                    (swap! entities into (map (comp (juxt :id identity) :record) rows))
+                    {:ok {}})]
+      (is (= 1 (:written (sut/write! cfg))))
+      (is (zero? (:written (sut/write! cfg))))
+      (is (= 1 (count @calls)) "the unchanged second pass appends nothing")
+      (let [line (json/generate-string (assoc (json/parse-string (first (str/split-lines (slurp batch))) true)
+                                               :revision 2))
+            pin {:batch (str batch) :line 1
+                 :sha256 (digest/sha256-hex (.getBytes line "UTF-8"))}
+            changed (assoc-in run [:members "reading-a" :record-pin] pin)]
+        (spit batch (str line "\n"))
+        (with-redefs [sut/current-run (constantly changed)]
+          (is (= 1 (:written (sut/write! (assoc cfg :written-at "2026-11-16T20:01:00Z"))))))
+        (is (= 2 (count @calls)) "a changed reading line gets one new attestation")
+        (with-redefs [sut/party-run (constantly "run-2")]
+          (is (= (:sha256 pin)
+                 (get-in (sut/read-needs-gcc
+                          (assoc cfg :member-pins {"reading-a" pin}))
+                         [:readings 0 :record :line-sha256]))
+              "the reader selects the changed pin, not the older attestation"))))))
+
+(deftest reader-finds-current-pin-behind-sixty-older-attestations
+  (let [{:keys [run]} (fixture)
+        p (with-redefs [sut/current-run (constantly run)]
+            (sut/plan {:item-ids ["M-a" "M-b"] :written-at "2026-11-16T20:00:00Z"}))
+        rows (get-in p [:readings 0 :rows])
+        claim (:record (first (filter #(= :clusion/assert (:operation %)) rows)))
+        current (:record (first (filter #(= :evidence/append (:operation %)) rows)))
+        old (mapv (fn [n]
+                    (-> current
+                        (assoc :id (str "att-old-" n))
+                        (assoc-in [:content :record-pin :sha256] (str "old-sha-" n))
+                        (assoc-in [:content :written-at] (format "2026-11-16T19:%02d:00Z" n))))
+                  (range 60))
+        entities (into {(:id claim) claim (:id current) current}
+                       (map (juxt :id identity) old))]
+    (with-redefs [sut/party-run (constantly "run-2")
+                  store/bounded-query!
+                  (fn [_ q]
+                    (case (:query/type q)
+                      :role-reverse {:ok {:status :ok :truncated? false :edge-ids [(:id claim)]}}
+                      :attestations {:ok {:status :ok
+                                          :attestation-ids (conj (mapv :id old) (:id current))}}))
+                  store/get-entity (fn [_ id] {:ok (get entities id)})]
+      (is (= [["M-a" "M-b"]]
+             (mapcat :needs
+                     (:readings (sut/read-needs-gcc
+                                 {:graph-store :stub-sixty :item-ids ["M-a" "M-b"]
+                                  :member-pins {"reading-a" (get-in current [:content :record-pin])}}))))))))
 
 (deftest changed-reading-has-a-new-message-id
   (let [{:keys [run]} (fixture)
@@ -100,9 +174,9 @@
       (is (= {:would-write 1 :empty 0}
              (:outcomes (sut/backfill! {:item-ids ["M-a" "M-b"]} {:write? false})))))))
 
-(deftest reader-keeps-only-the-party-runs-edges-and-rereads-on-a-new-run
-  ;; An edge whose latest attestation is from an older run is not an edge of
-  ;; the reading the party now shows; a new party run is not served from cache.
+(deftest party-run-switch-reuses-an-unchanged-pinned-reading
+  ;; Run identity is not the reading identity. A new party run with the same
+  ;; record pin reuses the existing attestation and is not served from cache.
   (let [{:keys [run]} (fixture)
         p (with-redefs [sut/current-run (constantly run)]
             (sut/plan {:item-ids ["M-a" "M-b"] :written-at "2026-11-16T20:00:00Z"}))
@@ -110,7 +184,9 @@
         claim (:record (first (filter #(= :clusion/assert (:operation %)) rows)))
         att (:record (first (filter #(= :evidence/append (:operation %)) rows)))
         party (atom "run-2") queries (atom 0)
-        cfg {:graph-store :stub-run-scope :item-ids ["M-a" "M-b"] :cache-needs? true}]
+        pin (get-in att [:content :record-pin])
+        cfg {:graph-store :stub-run-scope :item-ids ["M-a" "M-b"] :cache-needs? true
+             :member-pins {"reading-a" pin}}]
     (with-redefs [sut/party-run (fn [_] @party)
                   store/bounded-query!
                   (fn [_ q]
@@ -122,10 +198,8 @@
                                                           [(:id claim)] [])}})
                       :attestations {:ok {:status :ok :attestation-ids [(:id att)]}}))
                   store/get-entity (fn [_ id] {:ok (get {(:id claim) claim (:id att) att} id)})]
-      (is (= :needs-unavailable
-             (try (sut/read-needs-gcc cfg) nil
-                  (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))
-          "run-1's edge is not served for party run-2")
+      (is (= [["M-a" "M-b"]] (mapcat :needs (:readings (sut/read-needs-gcc cfg))))
+          "run-1's attestation serves run-2 because its reading pin is unchanged")
       (reset! party "run-1")
       (is (= [["M-a" "M-b"]] (mapcat :needs (:readings (sut/read-needs-gcc cfg)))))
       (let [n @queries]
@@ -223,13 +297,13 @@
                   store/get-entity (fn [_ _] {:ok nil})]
       (reset! answers [{:ok {:status :stale-index}}])
       (is (= :needs-unavailable
-             (try (run-attestations {:graph-store :stub} {:id "claim"} "run-1") nil
+             (try (run-attestations {:graph-store :stub} {:id "claim"} nil) nil
                   (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))
       (reset! answers [{:ok {:status :stale-index}} {:ok {:status :ok :attestation-ids []}}])
-      (is (= [] (vec (run-attestations {:graph-store :stub} {:id "claim"} "run-1"))))
+      (is (= [] (vec (run-attestations {:graph-store :stub} {:id "claim"} nil))))
       ;; The query caps silently; a full page may hide the party run's.
       (reset! answers [{:ok {:status :ok :attestation-ids (mapv str (range 200))}}])
       (is (= :needs-unavailable
-             (try (run-attestations {:graph-store :stub} {:id "claim"} "run-1") nil
+             (try (run-attestations {:graph-store :stub} {:id "claim"} nil) nil
                   (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))))))
 
