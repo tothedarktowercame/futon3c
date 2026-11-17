@@ -226,5 +226,10 @@
              (try (run-attestations {:graph-store :stub} {:id "claim"} "run-1") nil
                   (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))
       (reset! answers [{:ok {:status :stale-index}} {:ok {:status :ok :attestation-ids []}}])
-      (is (= [] (vec (run-attestations {:graph-store :stub} {:id "claim"} "run-1")))))))
+      (is (= [] (vec (run-attestations {:graph-store :stub} {:id "claim"} "run-1"))))
+      ;; The query caps silently; a full page may hide the party run's.
+      (reset! answers [{:ok {:status :ok :attestation-ids (mapv str (range 200))}}])
+      (is (= :needs-unavailable
+             (try (run-attestations {:graph-store :stub} {:id "claim"} "run-1") nil
+                  (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))))))
 

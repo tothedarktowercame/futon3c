@@ -129,14 +129,20 @@
             ;; A lagging index answers :stale-index with no ids. Read as "no
             ;; attestations" it silently dropped readings from the projection
             ;; (CL-46: 70 or 85 of 92), and priority bands flipped.
-            (let [r (store/bounded-query! (:graph-store cfg)
+            ;; The attestations query caps at 200 and does not flag
+            ;; truncation; every run appends one attestation per reading per
+            ;; claim, so a full page means the party run's may be cut off
+            ;; (seen live: 58 on one claim, limit 50 dropped a reading).
+            (let [limit 200
+                  r (store/bounded-query! (:graph-store cfg)
                                           {:query/type :attestations
-                                           :subject-id (:id claim) :limit 50})
+                                           :subject-id (:id claim) :limit limit})
                   status (get-in r [:ok :status])]
               (if (and (= :stale-index status) (< tries 3))
                 (do (Thread/sleep 50) (recur (inc tries)))
                 (do (require! (and (nil? (:error r)) (= :ok status)
-                                   (not (get-in r [:ok :truncated?])))
+                                   (not (get-in r [:ok :truncated?]))
+                                   (< (count (get-in r [:ok :attestation-ids])) limit))
                               :needs-unavailable)
                     (:ok r)))))]
     (->> (:attestation-ids q)
