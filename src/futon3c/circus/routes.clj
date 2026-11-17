@@ -45,7 +45,11 @@
       {:error {:status 404 :reason "run-not-found" :run requested}}
 
       :else
-      (let [verification (verify-run-fn dir)]
+      ;; newest-field-run returns only a run that verifies; re-check an
+      ;; explicitly named run only.
+      (let [verification (if (or (nil? requested) (= "latest" requested))
+                           {:ok? true}
+                           (verify-run-fn dir))]
         (if (:ok? verification)
           {:run-id run-id :run-dir (.getAbsolutePath dir)
            :manifest (edn/read-string (slurp (io/file dir "manifest.edn")))}
