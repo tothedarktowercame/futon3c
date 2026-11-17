@@ -77,6 +77,25 @@
         (is (<= (count (clojure.string/split why #"\s+")) 8) "why ≤ 8 words")
         (is (some? score))))))
 
+(deftest recall-counts-every-typed-sidecar-drop-without-parsing-strings
+  (let [response
+        {:results
+         [{:score -1 :entry {:evidence/body "{\"source\":\"claude-code\"}"}}
+          {:score -2 :entry {:evidence/body {:source "other" :project "p" :name "n"}}}
+          {:score -3 :entry {:evidence/body {:source "claude-code" :project "p" :name ""}}}
+          {:score -4 :entry {:evidence/body {:source "claude-code" :project "p"
+                                             :name "hold-until-2099-01-01"
+                                             :hook "hold until 2099-01-01"}}}
+          {:score -5 :entry {:evidence/body {:source "claude-code" :project "p"
+                                             :name "kept" :hook "invented hook"}}}]}
+        result (with-redefs [json/parse-string
+                             (fn [& _] (throw (AssertionError. "string body was parsed")))]
+                 (dog/recall "invented searchable terms"
+                             {:request-fn (constantly response)}))]
+    (is (= {:malformed 1 :not-memory 1 :incomplete 1 :dated-directive 1}
+           (:dropped result)))
+    (is (= ["p/kept"] (mapv :memory (:items result))))))
+
 (deftest recall-typed-absences
   (is (= "none" (:status (dog/recall "text" {:request-fn (stub-request [])})))
       "no fixture matches → empty response → none")
@@ -270,14 +289,14 @@
          (:response lu-fix)
          (:response kw-fix)))]))
 
-(deftest lu-seeded-query-runs-first-and-tags-sources
+(deftest lu-seeded-query-is-issued-and-tags-sources
   (let [[seen request-fn] (routing-request @fixture-vsC2tD-lu @fixture-vsC2tD-kw)
         result (dog/recall "OK please send pattern-index packet 3"
                            {:request-fn request-fn
                             :lu-terms (seq (#'dog/content-terms
                                             "bare-continue-signal Bare Continue Signal"))})]
-    (is (re-find #"bare-continue-signal" (first @seen))
-        "the first (and seeding) query is built from 驴's terms")
+    (is (some #(re-find #"bare-continue-signal" %) @seen)
+        "one concurrent query is built from 驴's terms")
     (is (nil? (:status result)))
     (is (seq (:items result)))
     (let [sources (mapv :source (:items result))]

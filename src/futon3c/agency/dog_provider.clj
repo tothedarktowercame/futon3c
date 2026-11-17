@@ -260,49 +260,59 @@
    context, which is exactly the observed failure (a lapsed order
    recalled as a standing fact on a dispatch turn). An agent that needs
    the history can still find it through m40."
+  ;; This is 狗's one recall-time relevance decision. A future typed expiry
+  ;; belongs to the memory authority; until then every such drop is counted.
   [s]
   (let [s (str s)]
     (boolean (and (re-find #"\d{4}-\d{2}-\d{2}" s)
                   (re-find #"(?i)\b(stop|hold|until|pause|freeze|resume|defer|cancel)\b" s)))))
+
+(defn- classify-memory-hit
+  [hit]
+  (let [body (get-in hit [:entry :evidence/body])]
+    (cond
+      (not (map? body)) {:drop :malformed}
+      (not= "claude-code" (:source body)) {:drop :not-memory}
+      :else
+      (let [project (some-> (:project body) str)
+            slug (some-> (:name body) str)
+            hook (str (or (:hook body) ""))]
+        (cond
+          (or (str/blank? project) (str/blank? slug)) {:drop :incomplete}
+          (dated-directive? (str slug " " hook)) {:drop :dated-directive}
+          :else
+          (let [words (->> (str/split (str/trim hook) #"\s+")
+                           (remove str/blank?)
+                           (take 8))]
+            {:item {:memory (str project "/" slug)
+                    :display (str (readable-project project) "/" slug)
+                    :score (:score hit)
+                    :why (if (seq words) (str/join " " words) "keyword match")}}))))))
 
 (defn- memory-item
   "One text-search hit whose body is a claude-code memory, as
    {:memory \"<project>/<slug>\" :display \"<readable>/<slug>\" :score :why}.
    The why is the memory's hook trimmed to 8 words. Nil for non-memory
    hits (turn records and lu situations share the index) and for dated
-   directives (see dated-directive?)."
+   directives (see dated-directive?). String bodies are malformed, never
+   parsed: the memory-sidecar contract supplies a typed map."
   [hit]
-  (let [body (get-in hit [:entry :evidence/body])
-        body (cond
-               (map? body) body
-               (string? body) (try (json/parse-string body true)
-                                   (catch Throwable _ nil))
-               :else nil)]
-    (when (and (map? body) (= "claude-code" (:source body)))
-      (let [project (some-> (:project body) str)
-            slug (some-> (:name body) str)
-            hook (str (or (:hook body) ""))
-            why (let [words (->> (str/split (str/trim hook) #"\s+")
-                                 (remove str/blank?)
-                                 (take 8))]
-                  (if (seq words) (str/join " " words) "keyword match"))]
-        (when-not (or (str/blank? project) (str/blank? slug)
-                      (dated-directive? (str slug " " hook)))
-          {:memory (str project "/" slug)
-           :display (str (readable-project project) "/" slug)
-           :score (:score hit)
-           :why why})))))
+  (:item (classify-memory-hit hit)))
+
+(defn- nonzero-counts [counts]
+  (into {} (filter (comp pos? val)) counts))
 
 (defn- recall-from-response
-  "Group one text-search response by memory, best score first."
+  "Group one typed sidecar response by memory and count every rejected hit."
   [response]
-  (->> (:results response)
-       (keep memory-item)
-       (group-by :memory)
-       (map (fn [[_ items]] (first (sort-by #(or (:score %) Double/NEGATIVE_INFINITY) > items))))
-       (sort-by #(or (:score %) Double/NEGATIVE_INFINITY) >)
-       (take max-items)
-       vec))
+  (let [classified (mapv classify-memory-hit (:results response))
+        items (->> classified (keep :item) (group-by :memory)
+                   (map (fn [[_ rows]]
+                          (first (sort-by #(or (:score %) Double/NEGATIVE_INFINITY) > rows))))
+                   (sort-by #(or (:score %) Double/NEGATIVE_INFINITY) >)
+                   (take max-items) vec)
+        dropped (nonzero-counts (frequencies (keep :drop classified)))]
+    {:items items :dropped dropped}))
 
 (defn- search-memories
   "One text-search for QUERY, memory-grouped items."
@@ -317,9 +327,9 @@
   (if (str/blank? (str query))
     {:source source :attempted? false :items []}
     (try
-      {:source source :attempted? true
-       :items (mapv #(assoc % :source (name source))
-                    (search-memories request-fn base query))}
+      (let [{:keys [items dropped]} (search-memories request-fn base query)]
+        {:source source :attempted? true :dropped dropped
+         :items (mapv #(assoc % :source (name source)) items)})
       (catch Throwable t
         {:source source :attempted? true :error (.getMessage t) :items []}))))
 
@@ -392,6 +402,8 @@
                attempted (filter :attempted? (vals branches))
                failures (filter :error attempted)
                successes (- (count attempted) (count failures))
+               dropped (nonzero-counts
+                        (apply merge-with + (map #(or (:dropped %) {}) attempted)))
                status (cond
                         (and (seq failures) (pos? successes)) "partial"
                         (and (seq failures) (zero? successes)) "failed"
@@ -405,7 +417,7 @@
                                           (and lu-query (not (str/blank? kw-query))) "mixed"
                                           lu-query "lu"
                                           :else "keywords"))
-                    :items items}
+                    :items items :dropped dropped}
              status (assoc :status status)
              (seq failures) (assoc :failures
                                    (mapv #(select-keys % [:source :error]) failures)))))
@@ -1317,7 +1329,8 @@
                                      :session-id (str session-id)
                                      :turn-record-id (str record-id)
                                      :basis-status (if (seq items) :dog-recall :dog-absence)}}
-             :segment/dog-recall (assoc (select-keys recall [:at :items :query-ms :query-source :status :reason])
+             :segment/dog-recall (assoc (select-keys recall [:at :items :query-ms :query-source
+                                                              :status :reason :dropped])
                                         :arm turn-arm)}
       (seq header) (assoc :segment/header header)
       (= "not-ready" status) (assoc :segment/not-ready true))))
