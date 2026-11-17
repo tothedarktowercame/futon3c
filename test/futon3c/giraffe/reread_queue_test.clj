@@ -20,6 +20,22 @@
   {:members [{:id "M-one" :status :read
               :source {:path "/code/futon/holes/M-one.md" :sha256 sha}}]})
 
+(deftest service-failures-are-durable-ordered-and-retained
+  (let [db (temp-db)
+        store (queue/open-store db)]
+    (doseq [i (range 1003)]
+      (queue/record-failure! store {:op :mint :target (str "t-" i)
+                                    :message (str "failure-" i) :at-ms i}))
+    (let [rows (queue/recent-failures store {:limit 1005})]
+      (is (= 1000 (count rows)))
+      (is (= [1002 1001 1000] (mapv :at_ms (take 3 rows))))
+      (is (= 3 (:at_ms (last rows)))))
+    (let [reopened (queue/open-store db)
+          newest (first (queue/recent-failures reopened {:limit 1}))]
+      (is (= "mint" (:op newest)))
+      (is (= "t-1002" (:target newest)))
+      (is (= "failure-1002" (:message newest))))))
+
 (deftest changed-reading-is-durable-idempotent-and-reconstructible
   (let [db (temp-db)
         store (queue/open-store db)]

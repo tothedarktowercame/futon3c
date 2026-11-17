@@ -157,9 +157,31 @@
 
 (declare drain! schedule-mint! schedule-lease! schedule-preview-refresh! refresh-preview!)
 
+(defn- failure-key [key]
+  (cond
+    (and (vector? key) (= :turn (first key)))
+    {:op :turn :target (second key)}
+
+    (and (keyword? key)
+         (contains? queue/service-failure-ops (name key)))
+    {:op key}
+
+    (keyword? key) {:op :other :target (name key)}
+    :else {:op :document :target (str key)}))
+
 (defn- failure! [token key exc]
   (when (= token (:token @state))
-    (swap! state assoc-in [:errors key] {:message (.getMessage exc) :at-ms (System/currentTimeMillis)})))
+    (let [at-ms (System/currentTimeMillis)
+          entry {:message (.getMessage exc) :at-ms at-ms}]
+      (swap! state assoc-in [:errors key] entry)
+      (try
+        (when-let [store (get-in @state [:config :store])]
+          (queue/record-failure! store
+                                 (assoc (failure-key key)
+                                        :message (:message entry) :at-ms at-ms)))
+        (catch Throwable durable-error
+          (println (str "[giraffe-reread] failure receipt write failed: "
+                        (.getMessage durable-error))))))))
 
 (defn- after-mint!
   "A completed mint (new pass/priorities run) refreshes Mojira's GCC pages.
@@ -700,7 +722,12 @@
                                                 :stopping :stopped)
                           :else status)
             :queue-status (:status queue-health) :pending-items (vec (keys pending))
-            :errors errors :last-round last-round :mint-batch last-mint
+            :errors errors
+            :recent-failures (if config
+                               (try (queue/recent-failures (:store config) {:limit 5})
+                                    (catch Throwable _ []))
+                               [])
+            :last-round last-round :mint-batch last-mint
             :discussed (:discussed @state)
             :unknown-turn-item-count (:unknown-turn-item-count @state)
             :ambiguous-turn-item-count (:ambiguous-turn-item-count @state)

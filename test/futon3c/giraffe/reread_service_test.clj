@@ -61,6 +61,24 @@
    :coverage {:members [{:id "M-event-fixture" :status :read
                          :source {:path path :sha256 "old"}}]}})
 
+(deftest failure-receipts-map-keys-and-survive-durable-write-failure
+  (let [config (fixture)
+        token (Object.)
+        state-atom (var-get (ns-resolve 'futon3c.giraffe.reread-service 'state))
+        failure! (var-get (ns-resolve 'futon3c.giraffe.reread-service 'failure!))]
+    (swap! state-atom assoc :token token :config config :errors {})
+    (failure! token [:turn "t-x"] (ex-info "turn failed" {}))
+    (failure! token :mint (ex-info "mint failed" {}))
+    (failure! token "M-document" (ex-info "document failed" {}))
+    (is (= #{["turn" "t-x"] ["mint" nil] ["document" "M-document"]}
+           (set (map (juxt :op :target)
+                     (queue/recent-failures (:store config) {:limit 10})))))
+    (is (= "turn failed" (get-in (service/health) [:errors [:turn "t-x"] :message])))
+    (is (= 3 (count (:recent-failures (service/health)))))
+    (with-redefs [queue/record-failure! (fn [& _] (throw (ex-info "sqlite down" {})))]
+      (is (nil? (failure! token :drain (ex-info "drain failed" {})))))
+    (is (= "drain failed" (get-in (service/health) [:errors :drain :message])))))
+
 (deftest event-reconciles-one-item-and-debounces-on-real-executor
   (let [config (fixture) calls (atom 0) reconciles (atom 0) boot (promise) event (promise)]
     (with-redefs [service/item-snapshot (fn [p c] (swap! reconciles inc) (snapshot p c))

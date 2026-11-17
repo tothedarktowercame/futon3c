@@ -15,6 +15,11 @@
 
 (def ^:private query-opts {:builder-fn rs/as-unqualified-lower-maps})
 
+(def service-failure-ops
+  #{"mint" "drain" "retirement" "failed-retry" "refresh-catch-up"
+    "item-inventory" "backstop" "turn-mint" "turn" "document"
+    "startup" "other"})
+
 (defn- datasource [path]
   (let [file (io/file path)]
     (some-> file .getParentFile .mkdirs)
@@ -44,6 +49,11 @@
             "lease_until_ms INTEGER, claimed_by TEXT, superseded_by_sha TEXT, superseded_reason TEXT, "
             "attempts INTEGER NOT NULL DEFAULT 0, last_error TEXT, landed_digest TEXT, "
             "PRIMARY KEY(target_id, source_sha))")])
+     (jdbc/execute!
+      (:datasource store)
+      [(str "CREATE TABLE IF NOT EXISTS service_failures ("
+            "id INTEGER PRIMARY KEY, op TEXT NOT NULL, target TEXT, "
+            "message TEXT, at_ms INTEGER NOT NULL)")])
      ;; REREAD-1 databases predate worker outcomes. Keep the durable queue
      ;; forward-compatible rather than requiring deletion/reconciliation.
      (ensure-column! store "attempts" "attempts INTEGER NOT NULL DEFAULT 0")
@@ -59,6 +69,26 @@
      (jdbc/execute! (:datasource store)
                     ["CREATE INDEX IF NOT EXISTS reread_requests_state_idx ON reread_requests(state, requested_at_ms)"])
      store)))
+
+(defn record-failure!
+  [store {:keys [op target message at-ms]}]
+  (let [op (name (or op :other))
+        op (if (contains? service-failure-ops op) op "other")]
+    (jdbc/with-transaction [tx (:datasource store)]
+      (jdbc/execute! tx
+                     ["INSERT INTO service_failures(op,target,message,at_ms) VALUES(?,?,?,?)"
+                      op (some-> target str) (some-> message str) (long at-ms)])
+      (jdbc/execute! tx
+                     [(str "DELETE FROM service_failures WHERE id NOT IN "
+                           "(SELECT id FROM service_failures ORDER BY id DESC LIMIT 1000)")]))
+    nil))
+
+(defn recent-failures
+  [store {:keys [limit] :or {limit 5}}]
+  (vec (jdbc/execute! (:datasource store)
+                      ["SELECT id,op,target,message,at_ms FROM service_failures ORDER BY id DESC LIMIT ?"
+                       (long limit)]
+                      query-opts)))
 
 (defn- kw-state [row]
   (cond-> row
