@@ -248,7 +248,7 @@
         (is (nil? (:lu_ranked record)))
         (is (= {:failure_kind "lu/listener-error"
                 :stage "rerank"
-                :error "synthetic rerank failure"}
+                :error "synthetic rerank failure" :attempts 1}
                (dissoc (:lu_ranked_failure record) :at))))))
   (testing "ranked-record storage failure"
     (let [store (temp-store)
@@ -284,6 +284,51 @@
     (let [record (ts/read-record store "turn-recover")]
       (is (map? (:lu_ranked record)))
       (is (not (contains? record :lu_ranked_failure))))))
+
+(deftest a-later-turn-retries-a-failed-listener-run-up-to-the-cap
+  ;; :recorded fires once per turn: the retry comes from the next turn.
+  (let [store (temp-store)
+        fail? (atom true)
+        ranked (atom [])
+        opts {:store store :off-switch "/does/not/exist"}]
+    (record! store "turn-a" {:created_at "2026-10-24T00:01:00Z"})
+    (with-redefs [lu/rerank (fn [_ _ id]
+                              (swap! ranked conj id)
+                              (if (and @fail? (= id "turn-a"))
+                                (throw (ex-info "invented store busy" {}))
+                                {:ranked [] :source "驴" :ms 1}))
+                  proposals/write! (fn [& _] {:written 0})]
+      (lu/handle-event opts {:event :recorded :id "turn-a"})
+      (is (= 1 (get-in (ts/read-record store "turn-a") [:lu_ranked_failure :attempts])))
+      (record! store "turn-b" {:created_at "2026-10-24T00:02:00Z"})
+      (lu/handle-event opts {:event :recorded :id "turn-b"})
+      (is (= 2 (get-in (ts/read-record store "turn-a") [:lu_ranked_failure :attempts]))
+          "turn-b's event retried turn-a")
+      (record! store "turn-c" {:created_at "2026-10-24T00:03:00Z"})
+      (lu/handle-event opts {:event :recorded :id "turn-c"})
+      (is (= 3 (get-in (ts/read-record store "turn-a") [:lu_ranked_failure :attempts])))
+      (let [n (count (filter #{"turn-a"} @ranked))]
+        (record! store "turn-d" {:created_at "2026-10-24T00:04:00Z"})
+        (lu/handle-event opts {:event :recorded :id "turn-d"})
+        (is (= n (count (filter #{"turn-a"} @ranked))) "capped at 3 attempts")))))
+
+(deftest a-later-turn-recovers-a-failed-listener-run
+  (let [store (temp-store)
+        fail? (atom true)
+        opts {:store store :off-switch "/does/not/exist"}]
+    (record! store "turn-a" {:created_at "2026-10-24T00:01:00Z"})
+    (with-redefs [lu/rerank (fn [_ _ id]
+                              (if (and @fail? (= id "turn-a"))
+                                (throw (ex-info "invented store busy" {}))
+                                {:ranked [] :source "驴" :ms 1}))
+                  proposals/write! (fn [& _] {:written 0})]
+      (lu/handle-event opts {:event :recorded :id "turn-a"})
+      (reset! fail? false)
+      (record! store "turn-b" {:created_at "2026-10-24T00:02:00Z"})
+      (lu/handle-event opts {:event :recorded :id "turn-b"}))
+    (let [r (ts/read-record store "turn-a")]
+      (is (map? (:lu_ranked r)))
+      (is (not (contains? r :lu_ranked_failure))))))
 
 (deftest policy-skips-do-not-write-listener-failure-receipts
   (let [store (temp-store)

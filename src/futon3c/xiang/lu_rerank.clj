@@ -333,12 +333,30 @@
              {:at (str (java.time.Instant/now))
               :failure_kind "lu/listener-error"
               :stage (name stage)
+              :attempts (inc (long (or (get-in % [:lu_ranked_failure :attempts]) 0)))
               :error (or (.getMessage ^Throwable error)
                          (str error))}))
     (catch Throwable receipt-error
       (binding [*out* *err*]
         (println "[lu-rerank] could not store listener failure receipt"
                  id (.getMessage ^Throwable receipt-error))))))
+
+(def ^:private max-listener-attempts 3)
+(def ^:private retry-window 20)
+
+(defn- retry-candidates
+  "Ids among the RETRY-WINDOW newest records, other than ID, that have no
+  :lu_ranked and a listener failure receipt under the attempt cap."
+  [store id]
+  (->> (try (ts/list-records store :limit retry-window) (catch Exception _ nil))
+       (keep (fn [{rid :id record :record}]
+               (let [f (:lu_ranked_failure record)]
+                 (when (and (not= rid id) (map? f) (not (:lu_ranked record))
+                            (< (long (or (:attempts f) 1)) max-listener-attempts))
+                   rid))))
+       vec))
+
+(declare rank-one!)
 
 (defn handle-event
   "One turn-service event for the record-time 驴 rerank under OPTS: run it
@@ -351,31 +369,39 @@
   (when (and (= :recorded event) id (not (trigger-off? opts)))
     (let [store (if (fn? store) (store) store)]
       (when store
-        (let [stage (atom :read-record)]
-          (try
-            (when-let [record (and (ts/record-id? (str id)) (ts/read-record store (str id)))]
-              (when (and (= "operator" (or (:origin record) "operator"))
-                         (not (str/blank? (str (or (:source_text record) ""))))
-                         (not (:lu_ranked record)))
-                (reset! stage :rerank)
-                (let [{:keys [ranked source ms reason]} (rerank opts store (str id))
-                      lu {:version 1
-                          :at (str (java.time.Instant/now))
-                          :ms (long (or ms 0)) :source (str source) :reason reason
-                          :ranked (mapv (fn [r] (select-keys r [:id :rank :quote]))
-                                        (or ranked []))}]
-                  (reset! stage :store-ranked)
-                  (ts/update-record! store (str id)
-                                     #(-> %
-                                          (assoc :lu_ranked lu)
-                                          (dissoc :lu_ranked_failure)))
-                  (reset! stage :write-proposals)
-                  (let [result (proposals/write! (or (:proposal-config opts)
-                                                     (mention-writer/default-config))
-                                                 (assoc record :id (str id)) lu)]
-                    (ts/update-record! store (str id) #(assoc % :lu_proposals result))))))
-            (catch Throwable e
-              (listener-failure! store (str id) @stage e))))))))
+        (rank-one! opts store id)
+        ;; :recorded fires once per turn, so a failed run is retried by the
+        ;; NEXT turn's event: the recent unranked records carrying a
+        ;; failure receipt, each at most max-listener-attempts times.
+        (doseq [other (retry-candidates store (str id))]
+          (rank-one! opts store other))))))
+
+(defn- rank-one! [opts store id]
+  (let [stage (atom :read-record)]
+    (try
+      (when-let [record (and (ts/record-id? (str id)) (ts/read-record store (str id)))]
+        (when (and (= "operator" (or (:origin record) "operator"))
+                   (not (str/blank? (str (or (:source_text record) ""))))
+                   (not (:lu_ranked record)))
+          (reset! stage :rerank)
+          (let [{:keys [ranked source ms reason]} (rerank opts store (str id))
+                lu {:version 1
+                    :at (str (java.time.Instant/now))
+                    :ms (long (or ms 0)) :source (str source) :reason reason
+                    :ranked (mapv (fn [r] (select-keys r [:id :rank :quote]))
+                                  (or ranked []))}]
+            (reset! stage :store-ranked)
+            (ts/update-record! store (str id)
+                               #(-> %
+                                    (assoc :lu_ranked lu)
+                                    (dissoc :lu_ranked_failure)))
+            (reset! stage :write-proposals)
+            (let [result (proposals/write! (or (:proposal-config opts)
+                                               (mention-writer/default-config))
+                                           (assoc record :id (str id)) lu)]
+              (ts/update-record! store (str id) #(assoc % :lu_proposals result))))))
+      (catch Throwable e
+        (listener-failure! store (str id) @stage e)))))
 
 (defn start!
   "Register the record-time 驴 listener on turn-service events. OPTS as per
