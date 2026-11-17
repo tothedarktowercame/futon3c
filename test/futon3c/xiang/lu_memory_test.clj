@@ -142,6 +142,50 @@
       (is (= {:rows 0 :written 0 :unchanged 0 :failed [] :written-rows []}
              (lum/write-record! {:store store :request request} "turn-none"))
           "a record without verdicts writes nothing"))))
+
+(deftest listener-persists-a-public-safe-write-and-append-tally
+  (let [store (temp-store)
+        request (fn [{:keys [method path body]}]
+                  (cond
+                    (= "GET" method) {:status 404}
+                    (= "/api/alpha/evidence" path) {:status 201}
+                    (= "/api/alpha/hyperedge" path)
+                    (if (= "f/void" (second (:hx/endpoints body)))
+                      {:status 500 :body {:error "synthetic failure"
+                                          :private-body "must not persist"}}
+                      {:status 200})
+                    :else {:status 400}))]
+    (record! store "turn-tally" {:pattern_verdicts verdict})
+    (with-redefs [lum/append-situation! (fn [& _] nil)]
+      (lum/handle-event {:store store :request request :off-switch "/does/not/exist"}
+                        {:event :pattern-verdicts :id "turn-tally"}))
+    (let [receipt (:lu_memory (ts/read-record store "turn-tally"))]
+      (is (= 1 (:written receipt)))
+      (is (= 1 (:failed_n receipt)))
+      (is (= [{:evidence 201 :hyperedge 500}] (:failed receipt)))
+      (is (= 0 (:appended receipt)))
+      (is (= [(lum/situation-id "turn-tally" "f/one" "2026-10-25T00:00:00Z")]
+             (:append_failed receipt)))
+      (is (not (re-find #"private|synthetic" (pr-str receipt)))))))
+
+(deftest listener-persists-a-zero-row-tally
+  (let [store (temp-store)]
+    (record! store "turn-zero" {})
+    (lum/handle-event {:store store :request (fn [_] (throw (AssertionError. "no request")))
+                       :off-switch "/does/not/exist"}
+                      {:event :pattern-verdicts :id "turn-zero"})
+    (is (= {:rows 0 :written 0 :unchanged 0 :failed [] :failed_n 0
+            :appended 0 :append_failed []}
+           (dissoc (:lu_memory (ts/read-record store "turn-zero")) :version :at)))))
+
+(deftest tally-storage-failure-never-escapes-the-listener
+  (let [store (temp-store)]
+    (record! store "turn-tally-store-fail" {})
+    (with-redefs [ts/update-record! (fn [& _] (throw (ex-info "store unavailable" {})))]
+      (is (nil? (lum/handle-event {:store store :off-switch "/does/not/exist"}
+                                  {:event :pattern-verdicts
+                                   :id "turn-tally-store-fail"}))))))
+
 (deftest situations-of-reads-back-by-endpoint
   (let [calls (atom [])
         request (fn [{:keys [method path]}]

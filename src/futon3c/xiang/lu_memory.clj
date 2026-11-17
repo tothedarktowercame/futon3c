@@ -257,6 +257,31 @@
   (try (.isFile (io/file (str (or (:off-switch opts) off-switch-path))))
        (catch Throwable _ false)))
 
+(defn- public-failure
+  "Keep transport outcome fields, never the response body."
+  [failure]
+  (select-keys failure [:evidence :hyperedge :status :error]))
+
+(defn- store-tally!
+  [store id tally append-results]
+  (let [failed (vec (or (:failed tally) []))
+        append-failed (vec (keep (fn [[sid result]] (when (nil? result) sid))
+                                 append-results))
+        receipt {:version 1
+                 :at (str (java.time.Instant/now))
+                 :rows (long (or (:rows tally) 0))
+                 :written (long (or (:written tally) 0))
+                 :unchanged (long (or (:unchanged tally) 0))
+                 :failed (mapv public-failure (take 5 failed))
+                 :failed_n (count failed)
+                 :appended (count (filter (comp true? second) append-results))
+                 :append_failed append-failed}]
+    (try
+      (ts/update-record! store id #(assoc % :lu_memory receipt))
+      (catch Throwable t
+        (println (str "[lu-memory] could not store tally for " id ": "
+                      (.getMessage t)))))))
+
 (defn handle-event
   "One turn-service event: on :pattern-verdicts with a record id, write the
   verdict's hyperedges. Does nothing when the off-switch file exists.
@@ -265,12 +290,15 @@
   (when (and (= :pattern-verdicts event) id (not (off? opts)))
     (let [store (if (fn? store) (store) store)]
       (when store
-        (let [tally (write-record! (assoc opts :store store) (str id))]
+        (let [tally (write-record! (assoc opts :store store) (str id))
+              append-results
+              (mapv (fn [{sid :id text :text props :props}]
+                      [sid (append-situation! sid text props)])
+                    (:written-rows tally))]
           ;; keep the sidecar current: append each newly written situation's
           ;; vector. A failure is logged inside append-situation!, never
           ;; thrown, and never blocks the write half.
-          (doseq [{sid :id text :text props :props} (:written-rows tally)]
-            (append-situation! sid text props)))))))
+          (store-tally! store (str id) tally append-results))))))
 
 (defonce ^:private ^ExecutorService executor
   (Executors/newSingleThreadExecutor
