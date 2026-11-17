@@ -52,6 +52,9 @@
   #{"model/quota" "model/timeout" "model/http" "model/parse"
     "model/error" "model/no-reader" "model/unparsed-reply"})
 
+(def retryable-model-failure-kinds
+  #{"model/quota" "model/timeout"})
+
 (def ^:dynamic *whistle-url* "http://127.0.0.1:7070/api/alpha/whistle")
 (def ^:dynamic *whistle-read-slack-ms* 15000)
 
@@ -403,6 +406,10 @@
   [v]
   (into #{} (map :pattern) (:patterns v)))
 
+(defn- retryable-verdict? [verdict]
+  (contains? retryable-model-failure-kinds
+             (get-in verdict [:model_outcome :failure_kind])))
+
 (declare occurrence-writer-executor)
 
 (defn verdict!
@@ -411,12 +418,9 @@
   for the patternVerdict port).  Nil (nothing stored) when the record is
   absent, is not an operator turn, or proposed no patterns.  Never throws.
 
-  Idempotent over the pattern set: a record that already carries a verdict
-  for exactly the same patterns is left alone (the existing verdict is
-  returned and nothing is written), so a repeated :aligned event — the
-  alignment reading can raise it more than once per record, because it runs
-  per :ported and :ported is dispatched from more than one path — cannot
-  double-write.  A changed pattern set is re-read."
+  Idempotent over the pattern set except for a retryable model failure. A
+  later :aligned event may replace quota/timeout up to three attempts; success
+  and every non-retryable result remain final. A changed pattern set is read."
   [{:keys [store notify!] :as opts} id]
   (try
     (let [record (and store (ts/read-record store id))
@@ -443,9 +447,18 @@
                  (seq proposed))
         (let [existing (:pattern_verdicts record)]
           (if (and (map? existing)
-                   (= (set (map :id proposed)) (verdict-pattern-ids existing)))
+                   (= (set (map :id proposed)) (verdict-pattern-ids existing))
+                   (or (not (retryable-verdict? existing))
+                       (>= (long (or (:model_attempts existing) 1)) 3)))
             existing
-            (let [verdicts (verdict-map opts store id)]
+            (let [attempt (if (and (map? existing) (retryable-verdict? existing))
+                            (inc (long (or (:model_attempts existing) 1)))
+                            1)
+                  read-verdict (verdict-map opts store id)
+                  verdicts (cond-> (assoc read-verdict :model_attempts attempt)
+                             (and (retryable-verdict? read-verdict)
+                                  (>= attempt 3))
+                             (assoc :model_retry_exhausted true))]
               (ts/update-record! store id #(assoc % :pattern_verdicts verdicts))
               (if-let [writer (:occurrence-writer! opts)]
                 ((or (:occurrence-async! opts)

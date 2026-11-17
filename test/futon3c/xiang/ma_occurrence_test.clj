@@ -316,6 +316,59 @@
                     :proposal-reader fixture-proposals :ask ask} id)
       (is (= kind (get-in (verdicts store id) [:model_outcome :failure_kind]))))))
 
+(deftest retryable-quota-is-replaced-by-success-on-the-next-aligned-event
+  (let [store (base-records (temp-store))
+        calls (atom 0)
+        ask (fn [_]
+              (if (= 1 (swap! calls inc))
+                {:failure_kind "model/quota" :http_status 429 :error "invented"}
+                (ask-reply [{:pattern pid :turn {} :chain {}}])))
+        opts {:store store :library (temp-library)
+              :proposal-reader fixture-proposals :ask ask}]
+    (record! store "turn-new" {:proposed_patterns [{:patterns [pid]}]})
+    (mo/handle-event opts {:event :aligned :id "turn-new"})
+    (is (= "model/quota" (get-in (verdicts store "turn-new")
+                                  [:model_outcome :failure_kind])))
+    (mo/handle-event opts {:event :aligned :id "turn-new"})
+    (let [v (verdicts store "turn-new")]
+      (is (= 2 @calls) "the next aligned event retries the typed failure")
+      (is (nil? (get-in v [:model_outcome :failure_kind])))
+      (is (= 2 (:model_attempts v)))
+      (is (not (:model_retry_exhausted v))))))
+
+(deftest nonretryable-failure-and-success-remain-final
+  (doseq [[id first-result kind]
+          [["turn-http" {:failure_kind "model/http" :http_status 500 :error "invented"}
+            "model/http"]
+           ["turn-success" (ask-reply [{:pattern pid :turn {} :chain {}}]) nil]]]
+    (let [store (base-records (temp-store))
+          calls (atom 0)
+          ask (fn [_] (swap! calls inc) first-result)
+          opts {:store store :library (temp-library)
+                :proposal-reader fixture-proposals :ask ask}]
+      (record! store id {:created_at "2026-10-24T00:05:00Z"
+                         :proposed_patterns [{:patterns [pid]}]})
+      (mo/verdict! opts id)
+      (mo/verdict! opts id)
+      (is (= 1 @calls) (str id " is final after its first read"))
+      (is (= kind (get-in (verdicts store id) [:model_outcome :failure_kind])))
+      (is (= 1 (:model_attempts (verdicts store id)))))))
+
+(deftest third-retryable-failure-is-exhausted-and-fourth-call-is-idempotent
+  (let [store (base-records (temp-store))
+        calls (atom 0)
+        ask (fn [_] (swap! calls inc)
+              {:failure_kind "model/quota" :http_status 429 :error "invented"})
+        opts {:store store :library (temp-library)
+              :proposal-reader fixture-proposals :ask ask}]
+    (record! store "turn-new" {:proposed_patterns [{:patterns [pid]}]})
+    (dotimes [_ 4] (mo/verdict! opts "turn-new"))
+    (let [v (verdicts store "turn-new")]
+      (is (= 3 @calls))
+      (is (= 3 (:model_attempts v)))
+      (is (true? (:model_retry_exhausted v)))
+      (is (= "model/quota" (get-in v [:model_outcome :failure_kind]))))))
+
 (deftest a-record-without-proposals-or-not-operator-is-left-alone
   (let [store (temp-store)]
     (record! store "turn-plain" {})
