@@ -2,7 +2,8 @@
   "Unordered, position-specific schema exploration on ordered term trees.
   Tree equality is canonical boundary-preserving graph isomorphism for this
   encoding (ordered children, no sharing, and bvar indices in edge labels)."
-  (:require [futon3c.diagramprover.term-schema :as ts]))
+  (:require [futon3c.diagramprover.term-schema :as ts]
+            [futon3c.diagramprover.strategy :as strategy]))
 
 (defn- subterm [term position] (get-in term (mapv inc position)))
 
@@ -83,8 +84,9 @@
   branches cannot establish non-joining. At zero, inspect seed pairs only and
   report inconclusive (no successor exploration). :created means the inner
   instance's schema/subterm signature was absent initially, irrespective of its
-  old position; path records the first BFS witness. No priority or report merging."
-  [schemas host {:keys [max-states observe] :or {max-states 100}}]
+  old position; path records the first BFS witness. With :settled-by? true, non-joining pairs
+  also carry strategy sensitivity evidence. No report merging."
+  [schemas host {:keys [max-states observe settled-by?] :or {max-states 100} :as opts}]
   (when-not (and (integer? max-states) (<= 0 max-states))
     (throw (ex-info "max-states must be a nonnegative integer" {:max-states max-states})))
   (let [normalise (memoize #(explore schemas % max-states observe))
@@ -100,4 +102,7 @@
                            :let [a (nth is i) b (nth is j)]
                            :when (or (prefix? (:position a) (:position b))
                                      (prefix? (:position b) (:position a)))]
-                       (pair-report term path a b signatures normalise observe)))) states)))))
+                       (let [report (pair-report term path a b signatures normalise observe)]
+                         (cond-> report
+                           (and settled-by? (= :non-joining (:status report)))
+                           (assoc :settled-by (strategy/settled-by schemas host report opts))))))) states)))))
