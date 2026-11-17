@@ -86,7 +86,8 @@
 
     :else
     (if-let [turn-ref (:reference (mentions/field-evidence cfg turn :source_text))]
-      (let [planned (mapv (fn [rank item]
+      (let [delivered? (not= false (:delivered recall))
+            planned (mapv (fn [rank item]
                             (if-let [memory-ref (memory-reference cfg (:memory item))]
                               {:rank (inc rank) :item item :memory-ref memory-ref}
                               {:skipped (:memory item)}))
@@ -101,7 +102,8 @@
                                                  :target {:ref/id (:id turn-ref)}}
                                                 {:role :memory :kind :external-ref
                                                  :target {:ref/id (:id memory-ref)}}]
-                                    :asserted-content {:arm (:arm recall)}})
+                                    :asserted-content {:arm (:arm recall)
+                                                       :delivered delivered?}})
                             att (records/make-attestation
                                  {:subject-clusion-id (:id claim) :producer "狗" :basis :model
                                   :standing :unverified :coverage :complete
@@ -110,7 +112,8 @@
                                             :query-source (:query-source recall)
                                             :query-ms (:query-ms recall)
                                             :memory (:memory item)
-                                            :written-at written-at}
+                                            :written-at written-at
+                                            :delivered delivered?}
                                   :source-refs [{:evidence/id (:evidence_id turn)}]})]
                         [{:operation :external-reference/assert :record turn-ref}
                          {:operation :external-reference/assert :record memory-ref}
@@ -143,6 +146,17 @@
      ;; {:written 0}, and a later render that showed items must replace it.
      #(if (pos? (or (get-in % [:dog_recall_gcc :written]) 0)) %
           (assoc % :dog_recall_gcc result)))
+    result))
+
+(defn write-late-turn! [cfg store turn-id]
+  (let [turn (assoc (turns/read-record store turn-id) :id turn-id)
+        result (try (write! cfg turn (:dog_recall_late turn))
+                    (catch Throwable e {:failed :recall-write-exception
+                                        :detail (.getMessage e)}))]
+    (turns/update-record!
+     store turn-id
+     #(if (pos? (or (get-in % [:dog_recall_late_gcc :written]) 0)) %
+          (assoc % :dog_recall_late_gcc result)))
     result))
 
 (defn use-plan [cfg turn use]
@@ -290,9 +304,10 @@
                                         :limit 200 :order :asc}))
           rows (keep (fn [id]
                        (when-let [claim (:ok (store/get-entity (:graph-store cfg) id))]
-                         (when-let [att (latest-attestation cfg claim)]
-                           {:claim claim :att att
-                            :written-at (get-in att [:content :written-at])})))
+                         (when-not (= false (get-in claim [:asserted-content :delivered]))
+                           (when-let [att (latest-attestation cfg claim)]
+                             {:claim claim :att att
+                              :written-at (get-in att [:content :written-at])}))))
                      (:edge-ids q))]
       (if (empty? rows) {:status "no-recall" :items []}
         ;; A re-render supersedes the earlier exposure set. Keep only claims

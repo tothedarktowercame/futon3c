@@ -81,7 +81,8 @@
                [:geometry/selection 1]
                [:memory/recall 1] [:memory/use 1]
                [:memory/burial 1] [:memory/repetition 1]]))
-  (is (= [:arm] (:identity/content-fields (types/registry-v1 [:memory/recall 1]))))
+  (is (= [:arm :delivered]
+         (:identity/content-fields (types/registry-v1 [:memory/recall 1]))))
   (doseq [t [[:memory/use 1] [:memory/burial 1] [:memory/repetition 1]]]
     (is (= [] (:identity/content-fields (types/registry-v1 t)))))
   (doseq [[_ declaration] types/registry-v1]

@@ -658,6 +658,57 @@
     (is (= {:status "ok" :items []}
            (:dog_use (turn-store/read-record store id))))))
 
+(deftest settled-not-ready-recall-persists-and-projects-an-undelivered-late-result
+  (let [store (tmp-store)
+        id "turn-dogLATE1"
+        projected (promise)
+        cached {:status "ok" :at "2026-11-17T00:00:00Z" :arm "shown"
+                :items [{:memory "p/late" :score 0.8}]}]
+    (write-operator-record! store id "invented source")
+    (turn-store/update-record! store id
+                               #(assoc % :origin "agent"
+                                       :dog_recall {:status "not-ready" :items []}
+                                       :dog_recall_gcc {:written 0}))
+    (#'dog/publish! id cached)
+    (let [future (#'futon3c.agency.dog-provider/prepare-use-check!
+                  {:store store
+                   :recall-reader (fn [& _] {:status "no-recall" :items []})
+                   :late-gcc-writer
+                   (fn [_cfg st rid]
+                     (deliver projected (:dog_recall_late
+                                         (turn-store/read-record st rid))))}
+                  id)]
+      (.get future 5 TimeUnit/SECONDS))
+    (let [record (turn-store/read-record store id)
+          late (deref projected 5000 :timeout)]
+      (is (= {:status "not-ready" :items []} (:dog_recall record)))
+      (is (= false (:delivered (:dog_recall_late record))))
+      (is (= (:items cached) (get-in record [:dog_recall_late :items])))
+      (is (= (:dog_recall_late record) late)))))
+
+(deftest late-recall-never-replaces-an-existing-result-and-skips-empty-cache
+  (let [store (tmp-store)
+        existing-id "turn-dogLATE2"
+        empty-id "turn-dogLATE3"
+        existing {:status "ok" :delivered false :items [{:memory "p/original"}]}]
+    (doseq [id [existing-id empty-id]]
+      (write-operator-record! store id "invented source")
+      (turn-store/update-record! store id
+                                 #(assoc % :origin "agent"
+                                         :dog_recall {:status "not-ready" :items []}
+                                         :dog_recall_gcc {:written 0})))
+    (turn-store/update-record! store existing-id #(assoc % :dog_recall_late existing))
+    (#'dog/publish! existing-id {:status "ok" :items [{:memory "p/new"}]})
+    (#'dog/publish! empty-id {:status "none" :items []})
+    (doseq [id [existing-id empty-id]]
+      (let [future (#'futon3c.agency.dog-provider/prepare-use-check!
+                    {:store store
+                     :recall-reader (fn [& _] {:status "no-recall" :items []})}
+                    id)]
+        (.get future 5 TimeUnit/SECONDS)))
+    (is (= existing (:dog_recall_late (turn-store/read-record store existing-id))))
+    (is (nil? (:dog_recall_late (turn-store/read-record store empty-id))))))
+
 (deftest each-post-hook-schedules-its-gcc-writer-for-its-own-field
   (let [store (tmp-store)
         id "turn-dogFIELDS"

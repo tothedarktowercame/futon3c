@@ -179,7 +179,7 @@
    (clusion-type :memory/recall 1
                  [{:role :turn :endpoint/kinds #{:external-ref}}
                   {:role :memory :endpoint/kinds #{:external-ref}}]
-                 [:arm])
+                 [:arm :delivered])
    (clusion-type :memory/use 1
                  [{:role :turn :endpoint/kinds #{:external-ref}}
                   {:role :memory :endpoint/kinds #{:external-ref}}]

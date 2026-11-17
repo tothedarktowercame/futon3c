@@ -63,6 +63,20 @@
                   turn (assoc recall :at "2026-11-16T20:00:02Z" :query-ms 43))
       (is (= 2 (count (distinct @ids)))))))
 
+(deftest late-recall-plan-is-a-distinct-undelivered-claim
+  (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref :text "operator"})]
+    (let [delivered (sut/plan {:memory-lookup memory-results} turn recall)
+          late (sut/plan {:memory-lookup memory-results} turn
+                         (assoc recall :delivered false))
+          claim (fn [plan] (->> (:rows plan)
+                                (filter #(= :clusion/assert (:operation %)))
+                                first :record))
+          att (->> (:rows late) (filter #(= :evidence/append (:operation %)))
+                   first :record)]
+      (is (not= (:id (claim delivered)) (:id (claim late))))
+      (is (= false (get-in (claim late) [:asserted-content :delivered])))
+      (is (= false (get-in att [:content :delivered]))))))
+
 (deftest reader-latest-render-and-attestation-win-in-both-index-orders
   (let [mk-claim (fn [id memory arm]
                    {:id id :asserted-content {:arm arm}
@@ -70,21 +84,26 @@
                                 {:target {:ref/id memory}}]})
         claims {"c-old" (mk-claim "c-old" "m-old" "shown")
                 "c-one" (mk-claim "c-one" "m-one" "shown")
-                "c-two" (mk-claim "c-two" "m-two" "shown")}
+                "c-two" (mk-claim "c-two" "m-two" "shown")
+                "c-late" (assoc (mk-claim "c-late" "m-late" "shown")
+                                :asserted-content {:arm "shown" :delivered false})}
         atts {"a-old" {:content {:memory "p/old" :rank 1 :written-at "2026-11-16T20:00:00Z"}}
               "a-one-old" {:content {:memory "p/one" :rank 2 :written-at "2026-11-16T20:00:00Z"}}
               "a-one-new" {:content {:memory "p/one" :rank 1 :written-at "2026-11-16T20:00:01Z"}}
-              "a-two" {:content {:memory "p/two" :rank 2 :written-at "2026-11-16T20:00:01Z"}}}
+              "a-two" {:content {:memory "p/two" :rank 2 :written-at "2026-11-16T20:00:01Z"}}
+              "a-late" {:content {:memory "p/late" :rank 1 :delivered false
+                                   :written-at "2026-11-16T20:00:02Z"}}}
         run (fn [reverse?]
               (with-redefs [mentions/field-evidence (fn [& _] {:reference turn-ref :text "operator"})
                             store/bounded-query!
                             (fn [_ q]
                               (if (= :role-reverse (:query/type q))
-                                {:ok {:edge-ids ["c-old" "c-one" "c-two"]}}
+                                {:ok {:edge-ids ["c-old" "c-one" "c-two" "c-late"]}}
                                 (let [ids (case (:subject-id q)
                                             "c-old" ["a-old"]
                                             "c-one" ["a-one-old" "a-one-new"]
-                                            "c-two" ["a-two"])]
+                                            "c-two" ["a-two"]
+                                            "c-late" ["a-late"])]
                                   (is (contains? q :limit))
                                   {:ok {:attestation-ids (if reverse? (vec (reverse ids)) ids)}})))
                             store/get-entity

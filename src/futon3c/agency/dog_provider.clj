@@ -579,6 +579,7 @@
   "Wire the listener to the running service."
   []
   (start! {:store (fn [] (some-> (live-service) :config :store))
+           :late-gcc-writer dog-memory/write-late-turn!
            :use-gcc-writer dog-memory/write-use-turn!
            :buried-gcc-writer dog-memory/write-buried-turn!}))
 
@@ -836,6 +837,20 @@
                (let [store (let [s (:store opts)] (if (fn? s) (s) s))
                      record (when store (turn-store/read-record store record-id))]
                  (when (map? record)
+                   ;; Preserve what arrived after a not-ready render as a
+                   ;; separate, explicitly undelivered fact.
+                   (let [cached (cached-recall record-id)]
+                     (when (and (= "not-ready"
+                                   (try (get-in record [:dog_recall :status])
+                                        (catch Throwable _ nil)))
+                                (seq (:items cached))
+                                (nil? (:dog_recall_late record)))
+                       (turn-store/update-record!
+                        store record-id
+                        #(if (:dog_recall_late %) %
+                           (assoc % :dog_recall_late (assoc cached :delivered false))))
+                       (schedule-gcc! opts (:late-gcc-writer opts) record-id
+                                      :dog_recall_late_gcc)))
                    ;; The renderer's GCC projection is normally complete long
                    ;; before :settled. One brief retry covers an in-flight write;
                    ;; the turn field is never a fallback.
