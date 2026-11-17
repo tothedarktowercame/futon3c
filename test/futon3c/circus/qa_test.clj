@@ -9,7 +9,7 @@
                       "circus-qa" (make-array java.nio.file.attribute.FileAttribute 0)))]
     (spit (io/file dir "manifest.edn")
           (pr-str {:run-id "fixture-run"
-                   :focus-relation-input {:evidence-pin {:evidence-pin [["rel-1" "sha"]]}}}))
+                   :focus-relation-input {:evidence-pin {:evidence-pin [["focus-1" "sha"]]}}}))
     (spit (io/file dir "input.edn")
           (pr-str {:items [{:id :M-ranked} {:id :M-excluded} {:id :M-no-focus}]}))
     (spit (io/file dir "excluded.edn")
@@ -79,3 +79,20 @@
     (is (= :ranked (:stage result)))
     (is (= :absent (:focus-status result)))
     (is (= :no-pinned-focus-relation (:focus-reason result)))))
+
+(deftest relation-whose-focus-header-is-not-pinned-is-left-out
+  ;; The run pins 猴 focus headers; rel-1's header focus-1 is pinned in
+  ;; run-dir. Re-pin a different header and the same relation must drop out.
+  (let [dir (run-dir)]
+    (spit (io/file dir "manifest.edn")
+          (pr-str {:run-id "fixture-run"
+                   :focus-relation-input {:evidence-pin {:evidence-pin [["focus-other" "sha"]]}}}))
+    (let [row (first (:items (qa/top-items (assoc (opts dir) :n 1))))]
+      (is (= :absent (:focus-status row)))
+      (is (empty? (:focus-relations row))))))
+
+(deftest truncated-focus-relation-query-is-reported
+  (let [dir (run-dir)
+        o (assoc (opts dir) :query-fn (fn [_ _] {:ok {:status :ok :truncated? true :edge-ids ["rel-1"]}}))
+        row (first (:items (qa/top-items (assoc o :n 1))))]
+    (is (true? (get-in row [:focus-pin :truncated?])))))

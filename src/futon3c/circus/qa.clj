@@ -3,8 +3,8 @@
 
   From scripts/proof-eval.sh:
     (require '[futon3c.circus.qa :as qa])
-    (qa/top-items {:run-dir \"/home/joe/code/storage/giraffe/RUN\" :n 5})
-    (qa/why-not {:run-dir \"/home/joe/code/storage/giraffe/RUN\"
+    (qa/top-items {:run-dir \"/home/joe/storage/giraffe/RUN\" :n 5})
+    (qa/why-not {:run-dir \"/home/joe/storage/giraffe/RUN\"
                  :item \"M-example\"})
 
   Animal keys in returned maps may be constructed in ASCII-only callers with
@@ -55,9 +55,11 @@
         _ (when-not (= :ok (:status value))
             (throw (ex-info "Focus relation query refused"
                             {:item item :answer answer})))
+        ;; The run pins 猴 focus HEADERS ([:hou/focus 1]); a relation counts
+        ;; when its :focus endpoint is a pinned header.
         matches (->> (:edge-ids value)
-                     (filter scanned)
                      (keep #(get-entity cfg %))
+                     (filter #(scanned (endpoint-id % :focus)))
                      (sort-by :id) vec)]
     {:relations matches
      :pin-count (count pins)
