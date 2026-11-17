@@ -588,6 +588,31 @@
                                 current :readerFailedAfterRetries :failed))
     out))
 
+(defn- mention-fields-label [fields]
+  (if (= 1 (count fields)) (first fields) (vec fields)))
+
+(defn- record-mentions-failure! [store turn-id fields exception]
+  (try
+    (ts/update-record!
+     store turn-id
+     #(assoc % :mentions_failure
+             {:at (str (java.time.Instant/now))
+              :field (mention-fields-label fields)
+              :error (.getMessage exception)
+              :class (.getName (class exception))}))
+    (catch Exception receipt-error
+      (binding [*out* *err*]
+        (println "[turn-mentions] failure receipt failed" turn-id
+                 (.getMessage receipt-error))))))
+
+(defn- record-hou-hook-failure! [hou-config turn _exception]
+  (try
+    (hou-store/write-attempt! hou-config turn :hookException :failed)
+    (catch Exception receipt-error
+      (binding [*out* *err*]
+        (println "[turn-mentions/hou] attempt receipt failed" (:id turn)
+                 (.getMessage receipt-error))))))
+
 (defn write-mentions-async!
   "Queue field mentions and, once settled AND replied, focus. Re-read the turn
   on the worker: whichever field lands last triggers the ready snapshot. Ensure
@@ -600,23 +625,39 @@
                      (println "[turn-mentions/hou] failed" (:id record) field (.getMessage e))))]
       (try
         ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
-         #(try
-            (let [mention-cfg (or (cfg svc :mentions-config) (mention-writer/default-config))
-                  current (assoc (or (ts/read-record (cfg svc :store) (:id record)) record) :id (:id record))
-                  ready? (and (cfg svc :hou-enabled?)
-                              (= "operator" (or (:origin current) "operator"))
-                              (hou-store/settled? current)
-                              (hou-store/reply-landed? current))]
-              (when (cfg svc :mentions-enabled?)
-                (doseq [f (cond
-                            ready? [:source_text :reply_text]
-                            (and (not= "operator" (or (:origin current) "operator"))
-                                 (= field :source_text)) []
-                            :else [field])]
-                  ((cfg svc :mentions-writer!) mention-cfg current f)))
-              (when ready?
-                (write-hou-with-retry! svc current (cfg svc :hou-retry-delays))))
-            (catch Exception e (failed e))))
+         #(let [mention-cfg (or (cfg svc :mentions-config) (mention-writer/default-config))
+                hou-cfg (or (cfg svc :hou-config) (hou-store/default-config))
+                store (cfg svc :store)
+                current (assoc (or (ts/read-record store (:id record)) record) :id (:id record))
+                ready? (and (cfg svc :hou-enabled?)
+                            (= "operator" (or (:origin current) "operator"))
+                            (hou-store/settled? current)
+                            (hou-store/reply-landed? current))
+                fields (cond
+                         ready? [:source_text :reply_text]
+                         (and (not= "operator" (or (:origin current) "operator"))
+                              (= field :source_text)) []
+                         :else [field])
+                mentions-ok?
+                (if-not (cfg svc :mentions-enabled?)
+                  true
+                  (try
+                    (doseq [f fields]
+                      ((cfg svc :mentions-writer!) mention-cfg current f))
+                    (when (seq fields)
+                      (ts/update-record! store (:id current)
+                                         (fn [r] (dissoc r :mentions_failure))))
+                    true
+                    (catch Exception e
+                      (failed e)
+                      (record-mentions-failure! store (:id current) fields e)
+                      false)))]
+            (when (and mentions-ok? ready?)
+              (try
+                (write-hou-with-retry! svc current (cfg svc :hou-retry-delays))
+                (catch Exception e
+                  (failed e)
+                  (record-hou-hook-failure! hou-cfg current e))))))
         (catch Exception e (failed e))))))
 
 (defn- settle-evidence!

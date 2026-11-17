@@ -1594,6 +1594,53 @@
   (let [h (harness {:mentions-enabled? false :evidence-async! (fn [_] (throw (AssertionError. "scheduled")))})]
     (is (nil? (svc/write-mentions-async! (:svc h) {:id "turn-toy"} :reply_text)))))
 
+(deftest mention-stage-failure-is-durable-blocks-hou-and-clears-on-success
+  (let [hou-calls (atom 0)
+        attempts (atom 0)
+        h (harness {:mentions-enabled? true :hou-enabled? true
+                    :mentions-config {} :hou-config {}
+                    :evidence-async! (fn [f] (f))
+                    :mentions-writer! (fn [& _] (throw (ex-info "mention exploded" {})))
+                    :hou-writer! (fn [& _] (swap! hou-calls inc))})
+        store (get-in (:svc h) [:config :store])
+        id "turn-mention-stage"
+        turn {:id id :origin "operator" :analysis_status "analyzed"
+              :source_text "M-toy" :reply_text "done"}]
+    (ts/write-record-id! store id turn)
+    (with-redefs [hou-store/write-attempt! (fn [& _] (swap! attempts inc))]
+      (svc/write-mentions-async! (:svc h) turn :reply_text))
+    (let [failure (:mentions_failure (ts/read-record store id))]
+      (is (= ["source_text" "reply_text"] (:field failure)))
+      (is (= "mention exploded" (:error failure)))
+      (is (= "clojure.lang.ExceptionInfo" (:class failure))))
+    (is (zero? @hou-calls))
+    (is (zero? @attempts))
+    (let [successful (assoc-in (:svc h) [:config :mentions-writer!] (fn [& _] {:written 1}))]
+      (svc/write-mentions-async! successful turn :reply_text))
+    (is (nil? (:mentions_failure (ts/read-record store id))))))
+
+(deftest hou-stage-exception-writes-terminal-hook-attempt
+  (let [attempts (atom [])
+        h (harness {:mentions-enabled? true :hou-enabled? true
+                    :mentions-config {} :hou-config {:graph-store :toy}
+                    :evidence-async! (fn [f] (f))
+                    :mentions-writer! (fn [& _] {:written 1})
+                    :hou-writer! (fn [& _] (throw (ex-info "hou exploded" {:reason :other})))})
+        store (get-in (:svc h) [:config :store])
+        id "turn-hou-stage"
+        turn {:id id :origin "operator" :analysis_status "analyzed"
+              :source_text "M-toy" :reply_text "done"}]
+    (ts/write-record-id! store id turn)
+    (with-redefs [hou-store/write-attempt!
+                  (fn [cfg actual reason outcome]
+                    (swap! attempts conj [cfg (:id actual) reason outcome]))]
+      (svc/write-mentions-async! (:svc h) turn :reply_text))
+    (is (= [[{:graph-store :toy} id :hookException :failed]] @attempts))
+    (is (nil? (:mentions_failure (ts/read-record store id))))
+    (with-redefs [hou-store/write-attempt!
+                  (fn [& _] (throw (ex-info "attempt store down" {})))]
+      (is (nil? (svc/write-mentions-async! (:svc h) turn :reply_text))))))
+
 (deftest declared-agent-turn-mentions-settle-with-reply
   (let [calls (atom [])
         h (harness {:mentions-enabled? true :mentions-config {}
