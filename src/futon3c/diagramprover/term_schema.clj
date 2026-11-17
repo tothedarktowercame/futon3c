@@ -19,26 +19,33 @@
     (paper/term-graph (encode term))))
 
 (defn- shift [term amount cutoff]
-  (if (bvar? term)
-    (let [k (second term)] [:bvar (if (>= k cutoff) (+ k amount) k)])
-    (into [(first term)]
-          (map #(shift % amount (if (= :lam (first term)) (inc cutoff) cutoff))
-               (rest term)))))
+  (with-meta
+    (if (bvar? term)
+      (let [k (second term)] [:bvar (if (>= k cutoff) (+ k amount) k)])
+      (into [(first term)]
+            (map #(shift % amount (if (= :lam (first term)) (inc cutoff) cutoff))
+                 (rest term))))
+    (meta term)))
 
 (defn subst
   "Eliminate the outer binder of body, substituting argument for index zero.
   Beneath d lambdas, index d denotes that binder; smaller indices remain bound,
-  larger indices lower by one, and the argument's free indices shift up by d."
+  larger indices lower by one, and the argument's free indices shift up by d.
+  Rebuilt nodes retain their metadata; substituted copies carry the argument's
+  metadata, never that of the replaced bvar. Metadata domains are evidence and
+  are preserved verbatim, not traversed as operational term children."
   [body argument]
   (letfn [(walk [term depth]
             (if (bvar? term)
               (let [k (second term)]
                 (cond (= k depth) (shift argument depth 0)
-                      (> k depth) [:bvar (dec k)]
+                      (> k depth) (with-meta [:bvar (dec k)] (meta term))
                       :else term))
-              (into [(first term)]
-                    (map #(walk % (if (= :lam (first term)) (inc depth) depth))
-                         (rest term)))))]
+              (with-meta
+                (into [(first term)]
+                      (map #(walk % (if (= :lam (first term)) (inc depth) depth))
+                           (rest term)))
+                (meta term))))]
     (walk body 0)))
 
 (defn- variable? [p]

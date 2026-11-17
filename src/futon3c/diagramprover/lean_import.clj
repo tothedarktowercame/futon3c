@@ -1,6 +1,6 @@
 (ns futon3c.diagramprover.lean-import
   "Neutral beta-probe DAGs to term-schema hosts. Metadata is import evidence,
-  not a semantic guard: existing subst/shift may discard it. No flag-dependent
+  retained by subst/shift; schema-created nodes may have no flags. No flag-dependent
   rule is used here. Capture pins are retained, not independently authenticated."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]))
