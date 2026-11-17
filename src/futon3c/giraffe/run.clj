@@ -577,13 +577,6 @@
         (map (fn [[k v]] [(subs k 2) v]))
         (partition 2 args)))
 
-(defn- reading-census [input]
-  (->> (:edges input)
-       (remove #(contains? #{:alternative "alternative"} (:class %)))
-       (keep :reading-member)
-       (map #(if (keyword? %) (name %) (str %)))
-       set))
-
 (defn- observed-reading-census [focus-input]
   (if (contains? focus-input :needs-members)
     (set (map str (:needs-members focus-input)))
@@ -593,17 +586,25 @@
                    (subs (str id) (count "giraffe-reading/")))))
          set)))
 
-(defn- incomplete-focus [expected result]
+(defn- incomplete-focus
+  "Typed refusal when Hou's needs read is not complete. The census is the
+  needs read's own :needs-expected (giraffe-needs/expected-members: the
+  members the writer publishes for the party's run), not this pass's input:
+  the needs read is of the party's run, and the writer skips edges whose
+  endpoints are not inventory items (CL-47 review: 93 vs 92 on every run)."
+  [result]
   (let [input (:focus-input result)
         observed (observed-reading-census input)
+        expected (set (map str (:needs-expected input)))
         missing (vec (sort (remove observed expected)))
         notice (some #(when (contains? #{:needs-unavailable :stale-index :truncated}
                                        (:reason %)) %)
                      (get-in result [:report :notices]))]
-    (when (or notice (and (seq expected) (empty? observed)) (seq missing))
+    (when (or notice (empty? expected) (seq missing))
       (cond-> {:status :refused
                :reason (or (:reason notice)
-                           (if (empty? observed) :needs-unavailable :needs-incomplete))
+                           (if (empty? expected) :needs-unavailable :needs-incomplete))
+               :expected (count expected)
                :missing-count (count missing)
                :missing-ids missing}
         (:detail notice) (assoc :detail (:detail notice))))))
@@ -611,65 +612,71 @@
 (defn- read-run-edn [dir name]
   (edn/read-string (slurp (io/file dir name))))
 
+(def ^:private prior-scan-limit
+  "Runs are minted every few minutes; a complete one is normally among the
+  newest few. Bounded so a long outage cannot make each mint verify every
+  run directory (265 of them at 45 MB each on 2026-11-17)."
+  30)
+
 (defn- prior-complete-focus [root]
   (when (and root (.isDirectory (io/file root)))
     (->> (.listFiles (io/file root))
          (filter #(.isDirectory ^java.io.File %))
          (sort-by #(.getName ^java.io.File %) #(compare %2 %1))
+         (take prior-scan-limit)
          (some (fn [dir]
                  (try
-                   (let [manifest (read-run-edn dir "manifest.edn")
-                         input (read-run-edn dir "input.edn")
-                         expected (reading-census input)
-                         pin (get-in manifest [:focus-relation-input :evidence-pin])
-                         observed (observed-reading-census pin)
-                         complete? (and (:ok? (verify-run dir))
-                                        (= :present (get-in manifest [:focus-relation-input :status]))
-                                        (seq expected) (every? observed expected))]
-                     (when complete?
+                   (let [manifest (read-run-edn dir "manifest.edn")]
+                     (when (and (= :complete (get-in manifest [:focus/completeness :status]))
+                                (= :present (get-in manifest [:focus-relation-input :status]))
+                                (:ok? (verify-run dir)))
                        {:run-id (.getName ^java.io.File dir)
                         :relations (into {}
                                          (keep (fn [{:keys [target relation]}]
                                                  (when relation [target relation])))
                                          (read-run-edn dir "priority.edn"))
-                        :evidence-pin pin}))
+                        :evidence-pin (get-in manifest [:focus-relation-input :evidence-pin])}))
                    (catch Exception _ nil)))))))
 
 (defn retained-focus-input
   "Read Hou's six-hour operator window, restricted to this pass's targets.
   The pin records both the window and every evidence digest Hou read. The
-  legacy function/CLI option name remains; WM manifests are no longer read."
+  legacy function/CLI option name remains; WM manifests are no longer read.
+  An incomplete needs read (CL-46: 0, 70 or 85 of 92 readings made bands
+  flip) reuses the newest complete run's focus input, marked
+  :focus/retained-from. With no complete run to reuse, the current input is
+  used and marked :focus/completeness :incomplete."
   ([pass-output] (retained-focus-input pass-output {}))
-  ([pass-output {:keys [input root]}]
-  (let [window {:until (str (java.time.Instant/now)) :window-hours 6}
-        result (operator-focus/operator-focus window)
-        focus-input (:focus-input result)
-        expected (reading-census input)
-        refusal (when (seq expected) (incomplete-focus expected result))
-        relations (into {} (keep (fn [{:keys [id]}]
-                                   (when-let [relation (get (:relations focus-input)
-                                                            (if (keyword? id) (name id) (str id)))]
-                                     [id relation]))) (:order pass-output))]
-    (if refusal
-      (if-let [prior (prior-complete-focus root)]
-        {:relations (:relations prior)
-         :evidence-pin (:evidence-pin prior)
-         :focus/retained-from (:run-id prior)
-         :focus/retention-reason (dissoc refusal :status)
-         :focus/completeness {:status :retained :expected (count expected)
-                              :observed (- (count expected) (:missing-count refusal))}}
-        (assoc refusal :focus/completeness
-               {:status :incomplete :expected (count expected)
-                :observed (- (count expected) (:missing-count refusal))}))
-      (when (and (seq (get-in result [:report :focus])) (seq relations))
-        {:relations relations
-         :evidence-pin {:producer :hou :window window
-                        :evidence-pin (:evidence-pin focus-input)
-                        :header-ids (:header-ids focus-input)
-                        :needs-members (vec (sort (observed-reading-census focus-input)))
-                        :notices (get-in result [:report :notices])}
-         :focus/completeness {:status :complete :expected (count expected)
-                              :observed (count expected)}})))))
+  ([pass-output {:keys [root]}]
+   (let [window {:until (str (java.time.Instant/now)) :window-hours 6}
+         result (operator-focus/operator-focus window)
+         focus-input (:focus-input result)
+         refusal (incomplete-focus result)
+         expected (count (:needs-expected focus-input))
+         observed (count (observed-reading-census focus-input))
+         relations (into {} (keep (fn [{:keys [id]}]
+                                    (when-let [relation (get (:relations focus-input)
+                                                             (if (keyword? id) (name id) (str id)))]
+                                      [id relation]))) (:order pass-output))
+         prior (when refusal (prior-complete-focus root))]
+     (if prior
+       {:relations (:relations prior)
+        :evidence-pin (:evidence-pin prior)
+        :focus/retained-from (:run-id prior)
+        :focus/retention-reason (dissoc refusal :status)
+        :focus/completeness {:status :retained :expected expected :observed observed}}
+       (when (and (seq (get-in result [:report :focus])) (seq relations))
+         {:relations relations
+          :evidence-pin {:producer :hou :window window
+                         :evidence-pin (:evidence-pin focus-input)
+                         :header-ids (:header-ids focus-input)
+                         :needs-members (vec (sort (observed-reading-census focus-input)))
+                         :notices (get-in result [:report :notices])}
+          :focus/completeness (if refusal
+                                (merge {:status :incomplete :observed observed}
+                                       (dissoc refusal :status))
+                                {:status :complete :expected expected
+                                 :observed observed})})))))
 
 (defn mint!
   "In-process equivalent of the supported missions/excursions CLI mint.

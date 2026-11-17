@@ -233,76 +233,71 @@
         (is (nil? input))
         (is (= :focus-relation-input-absent (get-in written [:manifest :focus-relation-input :reason])))))))
 
-(defn- focus-fixture [members]
-  {:report {:focus [{:item "M-a"}] :notices []}
-   :focus-input {:relations {"M-a" :focus}
-                 :evidence-pin (mapv (fn [m] [(str "giraffe-reading/" m) (str "sha-" m)]) members)
-                 :header-ids ["hou-header-fixture"]
-                 :needs-members members}})
+(defn- focus-fixture
+  ([members] (focus-fixture members ["r1" "r2"]))
+  ([members expected]
+   {:report {:focus [{:item "M-a"}] :notices []}
+    :focus-input {:relations {"M-a" (if (seq members) :focus :associated)}
+                  :evidence-pin (mapv (fn [m] [(str "giraffe-reading/" m) (str "sha-" m)]) members)
+                  :header-ids ["hou-header-fixture"]
+                  :needs-members members
+                  :needs-expected expected}}))
 
 (defn- reading-input [members]
   {:items [{:id :M-a :state-group :open :source-order 0}]
    :edges (mapv (fn [m] {:from :M-a :to :M-a :class :needs :reading-member m}) members)})
 
+(def ^:private one-pass
+  {:order [{:id :M-a :rank 1 :status :ready :reason :ready}]
+   :readiness {:M-a {:status :ready :reason :ready}}
+   :counts {:open 1 :ready 1 :ready-ignoring-externals 1}})
+
+(defn- mint-fixture [root run-id input fixture]
+  (with-redefs [operator-focus/operator-focus (constantly fixture)]
+    (let [focus (gr/retained-focus-input one-pass {:root root})]
+      {:focus focus
+       :written (gr/write-run! {:root root :run-id run-id
+                                :adapter-result {:input input :rejected []}
+                                :pass-output one-pass :focus-relation-input focus
+                                :git-sha "e90fe14bb3c181964f8d8b239e5bff16225dff37"})})))
+
 (deftest incomplete-needs-retains-last-complete-focus
   (let [root (temp-root "focus-retention")
-        pass-output {:order [{:id :M-a :rank 1 :status :ready :reason :ready}]
-                     :readiness {:M-a {:status :ready :reason :ready}}
-                     :counts {:open 1 :ready 1 :ready-ignoring-externals 1}}
-        input (reading-input ["r1" "r2"])
-        complete (focus-fixture ["r1" "r2"])]
-    (with-redefs [operator-focus/operator-focus (constantly complete)]
-      (let [focus (gr/retained-focus-input pass-output {:input input :root root})]
-        (gr/write-run! {:root root :run-id "complete-run"
-                        :adapter-result {:input input :rejected []}
-                        :pass-output pass-output :focus-relation-input focus
-                        :git-sha "e90fe14bb3c181964f8d8b239e5bff16225dff37"})))
+        ;; The pass input carries a third member the needs writer skips (an
+        ;; edge to a non-inventory item). Completeness follows the needs
+        ;; read's own census, so r3 must not make every run incomplete.
+        input (reading-input ["r1" "r2" "r3"])]
+    (let [{:keys [focus written]} (mint-fixture root "complete-run" input (focus-fixture ["r1" "r2"]))]
+      (is (= :complete (get-in focus [:focus/completeness :status])))
+      (is (nil? (:focus/retained-from focus)))
+      (is (= :complete (get-in written [:manifest :focus/completeness :status]))))
     (testing "a partial non-empty projection is incomplete (planted guard)"
-      (with-redefs [operator-focus/operator-focus (constantly (focus-fixture ["r1"]))]
-        (let [focus (gr/retained-focus-input pass-output {:input input :root root})
-              written (gr/write-run! {:root root :run-id "partial-run"
-                                      :adapter-result {:input input :rejected []}
-                                      :pass-output pass-output :focus-relation-input focus
-                                      :git-sha "e90fe14bb3c181964f8d8b239e5bff16225dff37"})]
-          (is (= "complete-run" (:focus/retained-from focus)))
-          (is (= ["r2"] (get-in focus [:focus/retention-reason :missing-ids])))
-          (is (= :focus (get (:relations focus) :M-a)))
-          (is (= "complete-run" (get-in written [:manifest :focus/retained-from])))
-          (is (= (slurp (io/file root "complete-run" "priority.edn"))
-                 (slurp (io/file (:dir written) "priority.edn"))))
-          (is (some #(= :focus-input-retained (:reason %))
-                    (:notes (gr/verify-run (:dir written))))))))
-    (testing "a typed unavailable/zero result retains the same complete input"
-      (with-redefs [operator-focus/operator-focus
-                    (constantly (assoc-in (focus-fixture []) [:report :notices]
-                                          [{:reason :needs-unavailable}]))]
-        (is (= "partial-run"
-               (:focus/retained-from
-                (gr/retained-focus-input pass-output {:input input :root root}))))))
-    (testing "a complete projection is ordinary and has no retention marker"
-      (with-redefs [operator-focus/operator-focus (constantly complete)]
-        (let [focus (gr/retained-focus-input pass-output {:input input :root root})]
-          (is (= :complete (get-in focus [:focus/completeness :status])))
-          (is (nil? (:focus/retained-from focus))))))))
+      (let [{:keys [focus written]} (mint-fixture root "partial-run" input (focus-fixture ["r1"]))]
+        (is (= "complete-run" (:focus/retained-from focus)))
+        (is (= ["r2"] (get-in focus [:focus/retention-reason :missing-ids])))
+        (is (= {:M-a :focus} (:relations focus)))
+        (is (= "complete-run" (get-in written [:manifest :focus/retained-from])))
+        (is (= (slurp (io/file root "complete-run" "priority.edn"))
+               (slurp (io/file (:dir written) "priority.edn"))))
+        (is (some #(= :focus-input-retained (:reason %))
+                  (:notes (gr/verify-run (:dir written)))))))
+    (testing "a typed unavailable/zero result retains the newest complete input"
+      (let [{:keys [focus]} (mint-fixture root "zero-run" input
+                                          (assoc-in (focus-fixture [] []) [:report :notices]
+                                                    [{:reason :needs-unavailable}]))]
+        (is (= "complete-run" (:focus/retained-from focus))
+            "a retained run is not itself a complete source")))))
 
-(deftest incomplete-needs-without-prior-is-a-manifest-refusal
-  (let [root (temp-root "focus-refusal")
-        input (reading-input ["r1"])
-        pass-output {:order [{:id :M-a :rank 1 :status :ready :reason :ready}]
-                     :readiness {:M-a {:status :ready :reason :ready}}
-                     :counts {:open 1 :ready 1 :ready-ignoring-externals 1}}]
-    (with-redefs [operator-focus/operator-focus
-                  (constantly (assoc-in (focus-fixture []) [:report :notices]
-                                        [{:reason :needs-unavailable}]))]
-      (let [focus (gr/retained-focus-input pass-output {:input input :root root})
-            written (gr/write-run! {:root root :run-id "refused-run"
-                                    :adapter-result {:input input :rejected []}
-                                    :pass-output pass-output :focus-relation-input focus
-                                    :git-sha "e90fe14bb3c181964f8d8b239e5bff16225dff37"})]
-        (is (= :refused (get-in written [:manifest :focus-relation-input :status])))
-        (is (= :needs-unavailable (get-in written [:manifest :focus-relation-input :reason])))
-        (is (= :absent (get-in written [:manifest :priority-projection :status])))
-        (is (not (.exists (io/file (:dir written) "priority.edn"))))))))
+(deftest incomplete-needs-without-prior-is-marked-not-hidden
+  (let [root (temp-root "focus-incomplete")
+        {:keys [focus written]} (mint-fixture root "first-run" (reading-input ["r1" "r2"])
+                                              (focus-fixture ["r1"]))]
+    (is (nil? (:focus/retained-from focus)))
+    (is (= {:status :incomplete :reason :needs-incomplete :observed 1 :expected 2
+            :missing-count 1 :missing-ids ["r2"]}
+           (get-in written [:manifest :focus/completeness])))
+    (is (.exists (io/file (:dir written) "priority.edn"))
+        "bands still come out, marked incomplete in the manifest")))
 
 (deftest default-root-is-the-canonical-storage-root-never-tmp
   (is (= "/home/joe/code/storage/giraffe/" gr/default-root)))

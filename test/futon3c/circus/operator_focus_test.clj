@@ -28,7 +28,7 @@
     (is (= ["E-c"] (mapv :item (get-in out [:report :just-closed]))))
     (is (= {"M-a" :focus "M-b" :associated} (get-in out [:focus-input :relations])))
     (is (= 4 (count (get-in out [:focus-input :evidence-pin]))))
-    (is (= #{:relations :evidence-pin :header-ids :needs-members}
+    (is (= #{:relations :evidence-pin :header-ids :needs-members :needs-expected}
            (set (keys (:focus-input out)))))))
 
 (deftest window-boundaries-and-ranking

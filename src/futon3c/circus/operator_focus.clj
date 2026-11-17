@@ -116,7 +116,8 @@
 (defn focus-window
   "Pure core. named/reply-named contain only unquoted occurrences. Unknown
   tags are reported, never invented as open items. Window is (start, until]."
-  [{:keys [until window-hours items turns needs pins notices needs-members]
+  [{:keys [until window-hours items turns needs pins notices needs-members
+           needs-expected]
     :or {window-hours 6}}]
   (let [ts (filter #(in-window? until window-hours (:created-at %)) turns)
         by-id (into {} (map (juxt :id identity)) items)
@@ -164,7 +165,8 @@
               :associated (mapv first (filter #(= :associated (second %)) relations))
               :notices (vec (concat notices (keep :notice (vals resolved)) unknown inactive))}
      :focus-input {:relations (into {} relations) :evidence-pin pin :header-ids header-ids
-                   :needs-members (vec needs-members)}}))
+                   :needs-members (vec needs-members)
+                   :needs-expected (vec needs-expected)}}))
 
 (def status-line #"(?i)^\s*(?:[-*]\s*)?(?:#+\s*)?(?:\*\*)?Status:?(?:\*\*)?\s*:?\s*(.+)$")
 
@@ -267,6 +269,7 @@
                                :needs-members (mapv #(str/replace (get-in % [:record :id])
                                                                   #"^giraffe-reading/" "")
                                                     (:readings data))
+                               :needs-expected (:expected-members data)
                                :notices (concat (keep :notice read) (when (:notice nd) [(:notice nd)]))})))))
 
 (defn -main [& [until]]

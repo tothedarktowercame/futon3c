@@ -1,12 +1,14 @@
 (ns futon3c.arxana.giraffe-needs-test
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is]]
             [futon3c.arxana.digest :as digest]
             [futon3c.arxana.giraffe-needs :as sut]
             [futon3c.arxana.item-inventory :as inventory]
             [futon3c.arxana.store :as store]
-            [futon3c.arxana.store-http :as http]))
+            [futon3c.arxana.store-http :as http]
+            [futon3c.arxana.turn-mention-writer :as mentions]))
 
 (defn- fixture []
   (let [dir (.toFile (java.nio.file.Files/createTempDirectory
@@ -82,7 +84,7 @@
                                                                  (:id (inventory/item-record "M-a")))
                                                             [(:id claim)] [])}}
                             :attestations (do (is (= (:id claim) (:subject-id q)))
-                                              {:ok {:attestation-ids att-ids}})))
+                                              {:ok {:status :ok :attestation-ids att-ids}})))
                         store/get-entity (fn [_ id] {:ok (get entities id)})]
             (sut/read-needs-gcc {:graph-store :stub :item-ids ["M-a" "M-b"]})))]
     (doseq [order [[(:id old) (:id new)] [(:id new) (:id old)]]]
@@ -118,7 +120,7 @@
                                               :edge-ids (if (= (:endpoint-id q)
                                                                (:id (inventory/item-record "M-a")))
                                                           [(:id claim)] [])}})
-                      :attestations {:ok {:attestation-ids [(:id att)]}}))
+                      :attestations {:ok {:status :ok :attestation-ids [(:id att)]}}))
                   store/get-entity (fn [_ id] {:ok (get {(:id claim) claim (:id att) att} id)})]
       (is (= :needs-unavailable
              (try (sut/read-needs-gcc cfg) nil
@@ -151,7 +153,7 @@
                                           :edge-ids (if (= (:endpoint-id q)
                                                            (:id (inventory/item-record "M-a")))
                                                       (mapv :id claims) [])}}
-                      :attestations {:ok {:attestation-ids [(:id (att-of (:subject-id q)))]}}))
+                      :attestations {:ok {:status :ok :attestation-ids [(:id (att-of (:subject-id q)))]}}))
                   store/get-entity (fn [_ id] {:ok (get entities id)})]
       (is (= #{["M-a" "M-b"] ["M-a" "M-c"]}
              (set (mapcat :needs (:readings (sut/read-needs-gcc
@@ -177,9 +179,52 @@
                                           :edge-ids (if (= (:endpoint-id q)
                                                            (:id (inventory/item-record "M-a")))
                                                       [(:id claim)] [])}}
-                      :attestations {:ok {:attestation-ids ["att-b" (:id att-a)]}}))
+                      :attestations {:ok {:status :ok :attestation-ids ["att-b" (:id att-a)]}}))
                   store/get-entity (fn [_ id] {:ok (get entities id)})]
       (is (= #{"giraffe-reading/reading-a" "giraffe-reading/reading-b"}
              (set (map (comp :id :record)
                        (:readings (sut/read-needs-gcc {:graph-store :stub-shared
                                                        :item-ids ["M-a" "M-b"]})))))))))
+
+(deftest census-skips-what-the-writer-skips-and-verifies-only-missing-endpoints
+  ;; CL-47 review: the pass input had 93 members, the writer published 92
+  ;; (one edge's endpoint was not an inventory item), so a census over the
+  ;; input made every run incomplete.
+  (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                      "giraffe-census-" (make-array java.nio.file.attribute.FileAttribute 0)))
+        census #'sut/census
+        verified (atom [])]
+    (.mkdirs (io/file dir "run-1"))
+    (spit (io/file dir "run-1" "input.edn")
+          (pr-str {:edges [{:from "M-a" :to "M-b" :class :closure :reading-member "r-ab"}
+                           {:from "M-a" :to "M-gone" :class :closure :reading-member "r-gone"}
+                           {:from "M-a" :to "M-b" :class :alternative :reading-member "r-alt"}
+                           {:from "M-a" :to "M-new" :class :closure :reading-member "r-new"}]}))
+    (with-redefs [inventory/current-items (fn [& _] [{:id "M-a"} {:id "M-b"} {:id "M-new"}])
+                  mentions/inventory
+                  (fn [_ text] (swap! verified conj text)
+                    ;; M-new is in the file census but has no graph record yet.
+                    (filterv #(str/includes? text %) ["M-a" "M-b"]))]
+      (is (= ["r-ab" "r-new"] (sut/expected-members {:runs-dir (str dir)} "run-1"
+                                                     ["M-a" "M-b" "M-new"])))
+      (is (= ["r-ab" "r-new"] (census {:runs-dir (str dir)} "run-1" ["r-ab" "r-new"])))
+      (is (empty? @verified) "nothing missing: no graph lookups")
+      (is (= ["r-ab"] (census {:runs-dir (str dir)} "run-1" ["r-ab"]))
+          "an endpoint without a graph record is skipped by the writer, so not expected")
+      (is (= 1 (count @verified))))))
+
+(deftest lagging-attestation-index-is-unavailable-not-a-dropped-reading
+  ;; CL-46: attestation reads that answered :stale-index came back empty and
+  ;; silently dropped readings (70 or 85 of 92).
+  (let [run-attestations #'sut/run-attestations
+        answers (atom nil)]
+    (with-redefs [store/bounded-query! (fn [_ _] (let [a (first @answers)]
+                                                   (swap! answers #(or (next %) %)) a))
+                  store/get-entity (fn [_ _] {:ok nil})]
+      (reset! answers [{:ok {:status :stale-index}}])
+      (is (= :needs-unavailable
+             (try (run-attestations {:graph-store :stub} {:id "claim"} "run-1") nil
+                  (catch clojure.lang.ExceptionInfo e (:reason (ex-data e))))))
+      (reset! answers [{:ok {:status :stale-index}} {:ok {:status :ok :attestation-ids []}}])
+      (is (= [] (vec (run-attestations {:graph-store :stub} {:id "claim"} "run-1")))))))
+

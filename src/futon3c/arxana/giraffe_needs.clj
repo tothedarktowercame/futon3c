@@ -125,9 +125,20 @@
   can assert the same edge: one clusion, one attestation each, and each
   reading keeps it (its incident items depend on it)."
   [cfg claim run]
-  (let [q (:ok (store/bounded-query! (:graph-store cfg)
-                                      {:query/type :attestations
-                                       :subject-id (:id claim) :limit 50}))]
+  (let [q (loop [tries 0]
+            ;; A lagging index answers :stale-index with no ids. Read as "no
+            ;; attestations" it silently dropped readings from the projection
+            ;; (CL-46: 70 or 85 of 92), and priority bands flipped.
+            (let [r (store/bounded-query! (:graph-store cfg)
+                                          {:query/type :attestations
+                                           :subject-id (:id claim) :limit 50})
+                  status (get-in r [:ok :status])]
+              (if (and (= :stale-index status) (< tries 3))
+                (do (Thread/sleep 50) (recur (inc tries)))
+                (do (require! (and (nil? (:error r)) (= :ok status)
+                                   (not (get-in r [:ok :truncated?])))
+                              :needs-unavailable)
+                    (:ok r)))))]
     (->> (:attestation-ids q)
          (keep #(-> (store/get-entity (:graph-store cfg) %) :ok))
          (filter #(= run (get-in % [:content :run])))
@@ -150,6 +161,41 @@
    (reify ThreadFactory
      (newThread [_ r] (doto (Thread. ^Runnable r "giraffe-needs-read")
                         (.setDaemon true))))))
+
+(defn expected-members
+  "Reading members RUN's needs writer publishes: accepted edges whose two
+  endpoints are in the writer's item set (plan skips the rest). This is the
+  completeness census for a needs read of RUN; a member the writer skips
+  (e.g. an edge to an item no longer in the inventory) is not expected."
+  [cfg run item-ids]
+  (let [input (edn/read-string (slurp (io/file (:runs-dir cfg) run "input.edn")))
+        item-set (set item-ids)]
+    (->> (:edges input)
+         (remove #(= :alternative (:class %)))
+         (filter #(and (item-set (id-text (:from %))) (item-set (id-text (:to %)))))
+         (map (comp id-text :reading-member))
+         distinct sort vec)))
+
+(defn- census
+  "Expected members of RUN for a read that observed OBSERVED. The writer's
+  item set is the verified inventory (mentions/inventory: 30 s for the whole
+  census), so start from the file census (35 ms) and verify graph records
+  only for the endpoints of members that look missing."
+  [cfg run observed]
+  (let [ids (or (:writer-item-ids cfg) (mapv :id (inventory/current-items cfg)))
+        candidate (expected-members cfg run ids)
+        missing (remove (set observed) candidate)]
+    (if (or (empty? missing) (:writer-item-ids cfg))
+      candidate
+      (let [input (edn/read-string (slurp (io/file (:runs-dir cfg) run "input.edn")))
+            missing-set (set missing)
+            endpoints (->> (:edges input)
+                           (filter #(missing-set (id-text (:reading-member %))))
+                           (mapcat (juxt (comp id-text :from) (comp id-text :to)))
+                           distinct)
+            verified (set (mentions/inventory (dissoc cfg :item-ids) (str/join " " endpoints)))
+            unverified (set (remove verified endpoints))]
+        (expected-members cfg run (remove unverified ids))))))
 
 (defn- read-needs-gcc* [cfg run]
   (let [items (vec (:item-ids cfg))
@@ -209,6 +255,9 @@
           input-sha (get-in first-att [:content :input-sha256])
           input-path (get-in first-att [:content :input-path])]
       {:readings readings
+       ;; nil without :runs-dir (unit fixtures); every production config
+       ;; (default-config, hou-store) sets it.
+       :expected-members (when (:runs-dir cfg) (census cfg run (map key by-member)))
        :basis-records [{:id (str "giraffe-input/" run) :sha256 input-sha}]
        :sources (vec (distinct (conj @sources {:kind :file :path input-path
                                                :sha256 input-sha})))})))
