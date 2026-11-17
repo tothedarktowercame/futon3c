@@ -498,6 +498,25 @@
    (reify ThreadFactory
      (newThread [_ r] (doto (Thread. ^Runnable r "ma-occurrence-gcc") (.setDaemon true))))))
 
+(def ^:private retry-window
+  "How many of the most recent turn records an aligned event re-checks."
+  20)
+
+(defn- retry-candidates
+  "Ids among the RETRY-WINDOW newest records, other than ID, whose verdict
+  is a retryable model failure under the attempt cap, or pending proposals."
+  [store id]
+  (->> (try (ts/list-records store :limit retry-window) (catch Exception _ nil))
+       (keep (fn [{rid :id record :record}]
+               (let [v (:pattern_verdicts record)]
+                 (when (and (not= rid id)
+                            (map? v)
+                            (or (= "lu-proposals-pending" (some-> v :state name))
+                                (and (retryable-verdict? v)
+                                     (not (:model_retry_exhausted v)))))
+                   rid))))
+       vec))
+
 (defn handle-event
   "One turn-service event for the occurrence reading under OPTS: run the
   verdict only for an :aligned event with a record id (the alignment
@@ -508,7 +527,15 @@
   (when (and (= :aligned event) id)
     (let [store (if (fn? store) (store) store)]
       (when store
-        (verdict! (assoc opts :store store :notify! notify!) id)))))
+        (let [opts (assoc opts :store store :notify! notify!)
+              result (verdict! opts id)]
+          ;; A turn raises :aligned about once, so waiting for the SAME id's
+          ;; next event never retries it. Each aligned turn is the retry
+          ;; trigger for the recent turns still waiting: a retryable model
+          ;; failure (bounded by its own attempt cap) or pending proposals.
+          (doseq [other (retry-candidates store id)]
+            (verdict! opts other))
+          result)))))
 
 (defn start!
   "Register the occurrence listener on turn-service events.  OPTS as per

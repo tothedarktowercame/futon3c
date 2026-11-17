@@ -336,6 +336,35 @@
       (is (= 2 (:model_attempts v)))
       (is (not (:model_retry_exhausted v))))))
 
+(deftest another-turns-aligned-event-retries-a-waiting-failure
+  ;; A turn raises :aligned about once, so the retry must come from a
+  ;; LATER turn's event, not the failed turn's own.
+  (let [store (base-records (temp-store))
+        quota? (atom true)
+        asked (atom [])
+        ask (fn [{:keys [prompt]}]
+              (swap! asked conj prompt)
+              (if @quota?
+                {:failure_kind "model/quota" :http_status 429 :error "invented"}
+                (ask-reply [{:pattern pid :turn {} :chain {}}])))
+        opts {:store store :library (temp-library)
+              :proposal-reader fixture-proposals :ask ask}]
+    (record! store "turn-new" {:created_at "2026-10-24T00:05:00Z"
+                               :proposed_patterns [{:patterns [pid]}]})
+    (mo/handle-event opts {:event :aligned :id "turn-new"})
+    (is (= "model/quota" (get-in (verdicts store "turn-new") [:model_outcome :failure_kind])))
+    (reset! quota? false)
+    (record! store "turn-later" {:created_at "2026-10-24T00:06:00Z"
+                                 :proposed_patterns [{:patterns [pid]}]})
+    (mo/handle-event opts {:event :aligned :id "turn-later"})
+    (let [v (verdicts store "turn-new")]
+      (is (nil? (get-in v [:model_outcome :failure_kind]))
+          "the later turn's event re-read the earlier quota failure")
+      (is (= 2 (:model_attempts v))))
+    (let [n (count @asked)]
+      (mo/handle-event opts {:event :aligned :id "turn-later"})
+      (is (= n (count @asked)) "nothing left waiting: no further asks"))))
+
 (deftest nonretryable-failure-and-success-remain-final
   (doseq [[id first-result kind]
           [["turn-http" {:failure_kind "model/http" :http_status 500 :error "invented"}
