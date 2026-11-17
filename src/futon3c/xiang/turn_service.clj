@@ -1094,9 +1094,10 @@
                                         (and (nil? (:record %))
                                              (= (:turn_id record) (:turn %)))))
                            (mapv stored-act))
-          duplicate-turn-id? (some #(and (not= id (:record-id %))
-                                         (= (:turn_id record) (get-in % [:record :turn_id])))
-                                   settled)
+          ;; Same rule as turn-acts/session-acts: only a record whose turn id
+          ;; already appeared EARLIER in the settled order gets "@<record-id>".
+          duplicate-turn-id? (some #(= (:turn_id record) (get-in % [:record :turn_id]))
+                                   (take-while #(not= id (:record-id %)) settled))
           reply-base (if duplicate-turn-id?
                        (str (:turn_id record) "@" id)
                        (:turn_id record))

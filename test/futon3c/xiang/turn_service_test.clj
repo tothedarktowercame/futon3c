@@ -1336,7 +1336,21 @@
       (is (seq acts))
       (is (every? #(= second-id (:record %)) acts))
       (is (every? #(str/includes? (:id %) (str "@" second-id)) acts))
-      (is (not-any? #(= first-id (:record %)) acts)))))
+      (is (not-any? #(= first-id (:record %)) acts))
+      (is (= (set (filter #(str/includes? % "-r-") (map :id acts)))
+             (set (filter (set (map :id acts))
+                          (map :id (:reply_paragraphs (ts/read-record store second-id))))))
+          "the later occurrence: paragraph ids share its acts' @-base"))
+    (svc/compute-ports! (:svc h) first-id {:session-cap 10})
+    (let [rec (ts/read-record store first-id)
+          act-ids (set (map :id (:acts rec)))]
+      (is (seq (:reply_paragraphs rec)))
+      (is (every? #(not (str/includes? (:id %) "@")) (:reply_paragraphs rec))
+          "the first occurrence keeps the plain base, as its acts do")
+      (is (seq (filter #(str/includes? % "-r-") act-ids)))
+      (is (every? (set (map :id (:reply_paragraphs rec)))
+                  (filter #(str/includes? % "-r-") act-ids))
+          "every reply act id of the first occurrence is a stored paragraph id"))))
 
 (deftest ports-land-in-either-arrival-order
   (testing "reading first, happened second"
