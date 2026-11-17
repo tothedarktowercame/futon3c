@@ -315,7 +315,14 @@
     (is (re-find #"http 404" (:reason dispatch)))
     (is (= :failing (:state (svc/health (:svc h)))))
     (is (= "requested" (:analysis_status (ts/read-record (get-in (:svc h) [:config :store]) id))))
-    (is (nil? (get-in (ts/read-record (get-in (:svc h) [:config :store]) id) [:analysis_dispatch :job_id])))
+    (let [record (ts/read-record (get-in (:svc h) [:config :store]) id)]
+      (is (nil? (get-in record [:analysis_dispatch :job_id])))
+      (is (= [{:at "1970-01-01T00:16:40Z" :agent "象-1"
+               :failure_kind "dispatch/failed" :http_status 404
+               :error "agent not registered"}]
+             (get-in record [:analysis_dispatch :dispatch_failures]))))
+    (is (not (contains? (:outstanding @(:state (:svc h))) id))
+        "a pre-job failure does not charge the seat allocator")
     (is (empty? (delays h)))))
 
 (deftest reaping-a-running-job-follows-the-emacs-cadence
@@ -329,6 +336,38 @@
     (is (= [600 {:outcome :running :state "running" :tries-left 0}] (run-next! h)))
     (is (empty? (delays h)) "the schedule is bounded")
     (is (= "requested" (:analysis_status (ts/read-record (get-in (:svc h) [:config :store]) id))))))
+
+(deftest dispatch-failure-history-is-bounded-and-survives-success
+  (let [calls (atom 0)
+        h (harness {:bell! (fn [_]
+                             (let [n (swap! calls inc)]
+                               (if (<= n 6)
+                                 {:ok false :status 503 :error (str "failure-" n)}
+                                 {:ok true :job-id "job-after-failures"})))})
+        {:keys [id]} (turn! h {:dispatch :now})
+        store (get-in (:svc h) [:config :store])]
+    (dotimes [_ 5] (svc/dispatch! (:svc h) id {}))
+    (let [failures (get-in (ts/read-record store id)
+                           [:analysis_dispatch :dispatch_failures])]
+      (is (= 5 (count failures)))
+      (is (= ["failure-2" "failure-3" "failure-4" "failure-5" "failure-6"]
+             (mapv :error failures))
+          "the newest five failures are retained in chronological order"))
+    (is (:dispatched (svc/dispatch! (:svc h) id {})))
+    (let [record (ts/read-record store id)]
+      (is (= "job-after-failures" (get-in record [:analysis_dispatch :job_id])))
+      (is (= 5 (count (get-in record [:analysis_dispatch :dispatch_failures])))
+          "success keeps pre-job failure history"))))
+
+(deftest thrown-bell-failure-is-durable
+  (let [h (harness {:bell! (fn [_] (throw (ex-info "invented bell exception" {})))})
+        {:keys [id]} (turn! h {:dispatch :now})
+        record (ts/read-record (get-in (:svc h) [:config :store]) id)
+        failure (first (get-in record [:analysis_dispatch :dispatch_failures]))]
+    (is (= "requested" (:analysis_status record)))
+    (is (= "dispatch/failed" (:failure_kind failure)))
+    (is (nil? (:http_status failure)))
+    (is (= "invented bell exception" (:error failure)))))
 
 (deftest a-refusal-is-written-with-its-reason
   (let [h (harness)

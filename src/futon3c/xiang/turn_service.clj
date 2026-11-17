@@ -1483,6 +1483,23 @@
           (let [reason (str "dispatch to " agent " failed"
                             (when-let [s (:status response)] (str " (http " s ")"))
                             (when-let [e (:error response)] (str ": " e)))]
+            (try
+              (let [failure {:at (iso (now-ms svc))
+                             :agent agent
+                             :failure_kind "dispatch/failed"
+                             :http_status (when (integer? (:status response))
+                                            (:status response))
+                             :error (some-> (:error response) str)}]
+                (ts/update-record!
+                 store id
+                 #(update-in % [:analysis_dispatch :dispatch_failures]
+                             (fn [history]
+                               (->> (conj (vec (or history [])) failure)
+                                    (take-last 5) vec)))))
+              (catch Exception _ nil))
+            ;; No job exists to finish this dispatch. Keeping it outstanding
+            ;; would charge the seat-load allocator for an hour for no work.
+            (note-done! svc id)
             (set-health! svc :failing reason)
             {:dispatched false :agent agent :reason reason :response response}))))
 
