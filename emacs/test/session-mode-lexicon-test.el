@@ -72,6 +72,23 @@
                        (overlay-get (car overlays) 'session-mode-lexicon-url)))
         (should (keymapp (overlay-get (car overlays) 'keymap)))))))
 
+(ert-deftest session-mode-lexicon-skips-tool-use-lines ()
+  ;; Joe 2026-11-17: terms inside tool calls (paths, commands) are not marked.
+  (session-mode-lexicon-test--with-vocab
+    (with-temp-buffer
+      (insert "[Bash] sed -n 1,20p holes/M-象-2000.md pattern\n"
+              ">>> [Read] /x/象/pattern.md\n"
+              "The 象 reader found a pattern; see [Bash] above.\n")
+      (session-mode--mark-lexicon-region (point-min) (point-max))
+      (should (equal '("象" "pattern")
+                     (mapcar (lambda (overlay)
+                               (buffer-substring-no-properties
+                                (overlay-start overlay) (overlay-end overlay)))
+                             (session-mode-lexicon-test--overlays))))
+      (should (= (line-number-at-pos
+                  (overlay-start (car (session-mode-lexicon-test--overlays))))
+                 3)))))
+
 (ert-deftest session-mode-lexicon-skips-operator-input-code-and-links ()
   (session-mode-lexicon-test--with-vocab
     (with-temp-buffer

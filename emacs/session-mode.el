@@ -418,9 +418,23 @@ instead is robust both ways.)"
       (and (not (session-mode--lexicon-word-char-p (char-before beg)))
            (not (session-mode--lexicon-word-char-p (char-after end))))))
 
+(defconst session-mode--tool-line-re
+  "^\\(?:[^ \n]+: \\)?\\(?:>>> \\|⇐[^:\n]*: \\)?\\[[A-Za-z_][A-Za-z_]*\\]\\(?: \\|$\\)"
+  "A tool-use line: \"[Bash] ...\", optionally after a speaker or >>> prefix.
+Joe 2026-11-17: lexicon terms inside tool calls (paths, commands) are not
+marked.")
+
+(defun session-mode--tool-line-p (pos)
+  "Return non-nil when POS is on a tool-use line."
+  (save-excursion
+    (goto-char pos)
+    (beginning-of-line)
+    (looking-at-p session-mode--tool-line-re)))
+
 (defun session-mode--lexicon-blocked-p (beg end)
-  "Return non-nil when BEG..END is code or a rendered link."
+  "Return non-nil when BEG..END is code, a rendered link, or a tool-use line."
   (or (text-property-not-all beg end 'agent-chat-in-fence nil)
+      (session-mode--tool-line-p beg)
       (text-property-not-all beg end 'agent-chat-link-target nil)
       (seq-some (lambda (overlay)
                   (or (overlay-get overlay 'agent-chat-code)
