@@ -38,7 +38,15 @@
     (is (every? #(= :created (:kind %)) found))
     (is (some #(= :different (:observation-comparison %)) found))
     (is (empty? (discovered seed-only)))
-    (is (empty? (discovered root-only)))))
+    (is (empty? (discovered root-only)))
+    ;; Review note (claude-5): the conflict is already visible in the host, before
+    ;; any step, as the family applied to the outer binder ([:bvar 0]). "After a
+    ;; step" above holds only for the family applied at [:i]; the seed pair is the
+    ;; same R1/R2 conflict, and it is still found by an R1 with no choose in it.
+    (is (some #(and (= :non-joining (:status %)) (empty? (:path %))
+                    (= #{:beta :family} (set (:schemas %)))
+                    (= [:bvar 0] (last (:overlap %))))
+              (:pairs result)))))
 
 (deftest three-stages-and-mutations
   (let [a (run-host [r1]) b (run-host [guarded]) c (run-host [guarded r2])
