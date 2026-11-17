@@ -39,7 +39,7 @@
    :pin/method :clusion-id
    :retention :durable
    :rebuild/role #{:derived}
-   :check "curl -sS --max-time 5 -H 'content-type: application/edn' --data '{:query/type :role-reverse :endpoint-id \"inventory-check-none\" :limit 1}' http://localhost:7073/api/alpha/arxana/query"}
+   :check "scripts/proof-eval.sh \"(let [gs (:graph-store ((requiring-resolve 'futon3c.arxana.turn-mention-writer/default-config)))] (-> ((requiring-resolve 'futon3c.arxana.store/bounded-query!) gs {:query/type :edge-join :limit 50 :patterns [{:edge-type [:pattern/proposal 1] :bind {:turn \\\"t\\\" :pattern \\\"p\\\"}} {:edge-type [:pattern/occurrence 1] :bind {:turn \\\"t\\\" :pattern \\\"p\\\"}} {:edge-type [:memory/recall 1] :bind {:turn \\\"t\\\" :memory \\\"m\\\"}}]}) :ok (select-keys [:row-count :truncated?])))\" # direct :7073 arxana/query is refused without the Arxana principal"}
 
   {:source/id :migrated-memories-7093
    :store "http://localhost:7073/api/alpha/evidence (migrated from retired :7093)"
@@ -47,7 +47,8 @@
    :pin/method :memory-id-and-revision
    :retention :durable
    :rebuild/role #{:input :non-recomputable}
-   :check "curl -sS --max-time 5 'http://localhost:7073/api/alpha/evidence?type=memory&limit=1'"}
+   :check/gap true
+   :check "partial: curl -sS --max-time 5 'http://localhost:7073/api/alpha/evidence?type=memory&limit=1' returns :memory evidence of every writer (xiang-turn asserts included) and the tag filter is ignored, so it does not count the migrated memories. Gap recorded at the CL-38 review."}
 
   {:source/id :migrated-workplan-judgements-7094
    :store "http://localhost:7073/api/alpha/arxana/query (migrated from retired :7094)"
@@ -55,15 +56,16 @@
    :pin/method :record-id
    :retention :durable
    :rebuild/role #{:input :non-recomputable}
-   :check "curl -sS --max-time 5 -H 'content-type: application/edn' --data '{:query/type :role-reverse :endpoint-id \"inventory-check-none\" :limit 1}' http://localhost:7073/api/alpha/arxana/query"}
+   :check/gap true
+   :check "none yet: no bounded count query for the migrated workplan records works today (direct :7073 is refused without the Arxana principal; role-reverse on the rule catalog throws). Gap recorded at the CL-38 review."}
 
   {:source/id :giraffe-readings
-   :store "~/notes/wm-next/giraffe-reads-2026-11-04/corpus"
+   :store "~/notes/wm-next/giraffe-reads-2026-11-04/corpus (symlink to the current corpus.generations/<sha>)"
    :schema/version 1
    :pin/method :generation-id-and-source-sha256
    :retention :immutable-generation
    :rebuild/role #{:derived}
-   :check "find ~/notes/wm-next/giraffe-reads-2026-11-04/corpus -maxdepth 1 -type f -printf '.' | head -c 5000 | wc -c"}
+   :check "find ~/notes/wm-next/giraffe-reads-2026-11-04/corpus/ -maxdepth 1 -type f -printf '.' | head -c 5000 | wc -c"}
 
   {:source/id :giraffe-reread-queue
    :store "~/.local/state/futon3c/giraffe-reread/requests.sqlite"
@@ -74,9 +76,9 @@
    :check "python3 -c 'import os,sqlite3; p=os.path.expanduser(\"~/.local/state/futon3c/giraffe-reread/requests.sqlite\"); db=sqlite3.connect(\"file:\"+p+\"?mode=ro\",uri=True); print(db.execute(\"select count(*) from reread_requests\").fetchone()[0])'"}
 
   {:source/id :giraffe-products
-   :store "~/code/storage/giraffe/<run-id>"
+   :store "~/storage/giraffe/<run-id>"
    :schema/version :manifest/current
    :pin/method :manifest-generation-id-git-sha-and-file-sha256
    :retention :immutable-run-directory
    :rebuild/role #{:derived}
-   :check "find ~/code/storage/giraffe -mindepth 1 -maxdepth 1 -type d -printf '.' | head -c 5000 | wc -c"}]}
+   :check "find ~/storage/giraffe -mindepth 1 -maxdepth 1 -type d -printf '.' | head -c 5000 | wc -c"}]}
