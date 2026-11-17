@@ -67,6 +67,30 @@
 (defn- print-edn [value]
   (with-out-str (pp/pprint (sorted value))))
 
+(def ^:private focus-schema [:hou/focus 1])
+
+(defn- canonical-focus-pins
+  "Canonicalize focus pins as an unordered evidence set.  Map key order and
+  pin collection order therefore cannot change the version digest."
+  [x]
+  (cond
+    (map? x) (into (sorted-map)
+                   (map (fn [[k v]]
+                          (let [v' (canonical-focus-pins v)]
+                            [k (if (and (#{:evidence-pin :header-ids :turn-record-ids} k)
+                                        (sequential? v'))
+                                 (vec (sort-by pr-str v'))
+                                 v')]))) x)
+    (set? x) (->> x (map canonical-focus-pins) (sort-by pr-str) vec)
+    (sequential? x) (mapv canonical-focus-pins x)
+    :else x))
+
+(defn focus-version
+  "Version record for the exact focus evidence pins sealed by a run."
+  [evidence-pin]
+  {:schema focus-schema
+   :digest (sha256 (print-edn (canonical-focus-pins evidence-pin)))})
+
 ;; ------------------------------------------------------------- run id
 
 (defn- timestamp []
@@ -287,6 +311,8 @@
                             {:status :present
                              :evidence-pin (:evidence-pin focus-relation-input)}
                             {:status :absent :reason :focus-relation-input-absent})
+                          :focus/version
+                          (focus-version (:evidence-pin focus-relation-input))
                           :priority-projection
                           (if priority-entry
                             (assoc priority-entry :status :present
@@ -395,7 +421,18 @@
         unlisted (vec (for [f required :when (not (listed f))]
                         (cond-> {:file f :missing-from-manifest true}
                           (nil? format) (assoc :format-undecidable true))))
-        mismatches (into unlisted
+        focus-version-record (:focus/version manifest)
+        actual-focus-version (focus-version
+                              (get-in manifest [:focus-relation-input :evidence-pin]))
+        focus-version-mismatches
+        (if (and focus-version-record
+                 (not= actual-focus-version focus-version-record))
+          [{:reason :focus-version-mismatch
+            :manifest focus-version-record
+            :actual actual-focus-version}]
+          [])
+        notes (if focus-version-record [] [{:reason :focus-version-absent}])
+        mismatches (into (into unlisted focus-version-mismatches)
                          (for [{:keys [file] :as entry} (:files manifest)
                               :let [f (io/file dir file)
                                     actual (when (.isFile f) (sha256 f))]
@@ -403,7 +440,7 @@
                           {:file file
                            :manifest-sha256 (:sha256 entry)
                            :actual-sha256 actual}))]
-    {:ok? (empty? mismatches) :mismatches (vec mismatches)}))
+    {:ok? (empty? mismatches) :mismatches (vec mismatches) :notes notes}))
 
 ;; -------------------------------------------------- freshness (no write)
 

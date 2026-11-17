@@ -161,6 +161,49 @@
            (slurp (io/file focused-dir "pass.edn")))
         "the optional projection does not alter pass.edn bytes")))
 
+(deftest focus-version-digest-is-order-stable-and-verified
+  (let [pins-a {:producer :hou
+                :evidence-pin [["turn-b" "sha-b"] ["turn-a" "sha-a"]]
+                :header-ids ["header-b" "header-a"]}
+        pins-b {:header-ids ["header-a" "header-b"]
+                :evidence-pin [["turn-a" "sha-a"] ["turn-b" "sha-b"]]
+                :producer :hou}
+        root (temp-root "focus-version")
+        run-a (:written (pilot-run root {:run-id "focus-version-a"
+                                         :focus-relation-input
+                                         {:relations {} :evidence-pin pins-a}}))
+        run-b (:written (pilot-run root {:run-id "focus-version-b"
+                                         :focus-relation-input
+                                         {:relations {} :evidence-pin pins-b}}))]
+    (is (= {:schema [:hou/focus 1]
+            :digest (get-in run-a [:manifest :focus/version :digest])}
+           (get-in run-a [:manifest :focus/version])))
+    (is (= (get-in run-a [:manifest :focus/version])
+           (get-in run-b [:manifest :focus/version])))
+    (is (:ok? (gr/verify-run (:dir run-a))))))
+
+(deftest focus-version-verifier-reports-tamper-and-legacy-absence
+  (let [root (temp-root "focus-version-verifier")
+        {:keys [written]}
+        (pilot-run root {:run-id "focus-version-verifier"
+                         :focus-relation-input
+                         {:relations {}
+                          :evidence-pin {:evidence-pin [["turn-a" "sha-a"]]}}})
+        manifest-file (io/file (:dir written) "manifest.edn")
+        original (edn/read-string (slurp manifest-file))]
+    (spit manifest-file
+          (pr-str (assoc-in original
+                            [:focus-relation-input :evidence-pin :evidence-pin 0 1]
+                            "tampered")))
+    (let [verified (gr/verify-run (:dir written))]
+      (is (not (:ok? verified)))
+      (is (= :focus-version-mismatch
+             (:reason (first (:mismatches verified))))))
+    (spit manifest-file (pr-str (dissoc original :focus/version)))
+    (let [verified (gr/verify-run (:dir written))]
+      (is (:ok? verified))
+      (is (= [{:reason :focus-version-absent}] (:notes verified))))))
+
 (deftest retained-focus-mint-boundary-writes-priority
   (let [root (temp-root "hou-focus-mint")
         pass-output (:pass-output (pilot-run (temp-root "hou-focus-source")))
@@ -272,12 +315,14 @@
         original-cwd (System/getProperty "user.dir")]
     (try
       (System/setProperty "user.dir" (str empty-cwd))
-      (is (= {:ok? true :mismatches []}
+      (is (= {:ok? true :mismatches []
+              :notes [{:reason :focus-version-absent}]}
              (gr/verify-run legacy-dir)))
       (is (= {:ok? false
               :mismatches [{:file "work-clusters.json"
                             :missing-from-manifest true
-                            :format-undecidable true}]}
+                            :format-undecidable true}]
+              :notes [{:reason :focus-version-absent}]}
              (gr/verify-run nonsense-dir)))
       (finally
         (System/setProperty "user.dir" original-cwd)))))
