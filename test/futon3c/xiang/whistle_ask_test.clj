@@ -44,3 +44,13 @@
                   (wa/ask {:seat "invented" :prompt "invented"
                            :timeout-ms 1 :caller "test"}))))]
     (is (= "model/timeout" (:failure_kind out)))))
+
+(deftest animal-wrappers-pass-the-typed-result-and-their-caller
+  (let [seen (atom [])
+        failure {:failure_kind "model/quota" :http_status 429}]
+    (with-redefs [wa/ask (fn [req] (swap! seen conj (:caller req)) failure)]
+      (is (= failure ((requiring-resolve 'futon3c.xiang.lu-rerank/whistle-ask)
+                      {:seat "invented" :prompt "invented"})))
+      (is (= failure ((requiring-resolve 'futon3c.xiang.ma-occurrence/whistle-ask)
+                      {:seat "invented" :prompt "invented"}))))
+    (is (= ["lu-rerank" "ma-occurrence"] @seen))))
