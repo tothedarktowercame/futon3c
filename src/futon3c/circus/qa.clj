@@ -91,7 +91,10 @@
      :turn (when record (select-keys (:turn record) [:id :created_at]))
      :gcc-counts (when record (gcc-counts record))}))
 
-(defn- focus-tags [cfg manifest input item]
+(defn- tag-index
+  "Mission-tag focus rows for every item, from one read of the pinned turns
+  (reading them once per item made a cold top-items call take 90 s)."
+  [cfg manifest input]
   (let [turn-ids (pinned-turn-ids manifest)
         scanned-ids (take max-focus-pins turn-ids)
         read-record (or (:read-turn-fn cfg) turns/read-record)
@@ -113,26 +116,28 @@
         with-successors (or (:with-successors-fn cfg) operator-focus/with-gcc-successors)
         resolved-items (with-successors cfg items roots)
         by-id (into {} (map (juxt :id identity)) resolved-items)
-        rows (->> tagged-turns
-                  (keep (fn [turn]
-                          (let [resolved (operator-focus/resolve-tag by-id (:mission-id turn))]
-                            (when (= item (:item resolved))
-                              {:turn-id (:id turn)
-                               :created_at (:created-at turn)
-                               :seat (:seat turn)
-                               :tag (:mission-id turn)
-                               :supersession-path (:path resolved)}))))
-                  (sort-by (juxt :created_at :turn-id)) vec)]
-    {:rows rows
+        rows-by-item (->> tagged-turns
+                          (map (fn [turn]
+                                 (let [resolved (operator-focus/resolve-tag by-id (:mission-id turn))]
+                                   [(:item resolved)
+                                    {:turn-id (:id turn)
+                                     :created_at (:created-at turn)
+                                     :seat (:seat turn)
+                                     :tag (:mission-id turn)
+                                     :supersession-path (:path resolved)}])))
+                          (group-by first)
+                          (into {} (map (fn [[k vs]]
+                                          [k (vec (sort-by (juxt :created_at :turn-id)
+                                                           (map second vs)))]))))]
+    {:rows-by-item rows-by-item
      :pin-count (count turn-ids)
      :scanned (count scanned-ids)
      :truncated? (> (count turn-ids) max-focus-pins)}))
 
-(defn- focus-evidence [cfg manifest input run-dir item]
+(defn- focus-evidence [cfg manifest tags run-dir item]
   (let [{:keys [relations truncated? pin-count scanned]} (focus-relations cfg manifest item)
-        tags (focus-tags cfg manifest input item)
         relation-rows (mapv #(explain-relation cfg run-dir %) relations)
-        tag-rows (:rows tags)
+        tag-rows (get-in tags [:rows-by-item item] [])
         route (cond
                 (and (seq relation-rows) (seq tag-rows)) "both"
                 (seq relation-rows) "relation"
@@ -157,7 +162,8 @@
         manifest (read-edn run-dir "manifest.edn" {})
         input (read-edn run-dir "input.edn" {})
         priority (read-edn run-dir "priority.edn" [])
-        rows (take limit priority)]
+        rows (take limit priority)
+        tags (tag-index cfg manifest input)]
     {:status :ok
      :run-id (:run-id manifest)
      :limit limit
@@ -168,7 +174,7 @@
                (merge {:item item :rank rank :pass-rank (:pass-rank row)
                        :priority-band (:priority-band row)
                        :cutoff-status (:cutoff-status row)}
-                      (focus-evidence cfg manifest input run-dir item))))
+                      (focus-evidence cfg manifest tags run-dir item))))
            (range 1 (inc (count rows))) rows)}))
 
 (defn- find-item [rows item]
@@ -205,7 +211,7 @@
         priority-index (first (keep-indexed #(when (= item (item-name (:target %2))) %1)
                                             priority))
         priority-row* (when (some? priority-index) (nth priority priority-index))
-        focus (focus-evidence cfg manifest input run-dir item)
+        focus (focus-evidence cfg manifest (tag-index cfg manifest input) run-dir item)
         outcome (cond
                   (nil? input-row) {:stage :input :reason :not-in-input :evidence {}}
                   excluded-row {:stage :excluded :reason (:reason excluded-row)
