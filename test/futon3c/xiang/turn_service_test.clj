@@ -69,6 +69,29 @@
     (is (= "象-1" (svc/analysis-seat (:svc h))))
     (is (= "象-1" (svc/other-seat (:svc h) "象-sonnet")))))
 
+(declare turn!)
+
+(deftest invoke-terminal-reply-absence-is-typed-and-cleared-by-a-later-reply
+  (let [h (harness)
+        store (get-in (:svc h) [:config :store])
+        interrupted (:id (turn! h {:dispatch :none}))
+        errored (:id (turn! h {:dispatch :none}))
+        replied (:id (turn! h {:dispatch :none}))]
+    (svc/attach-reply-absence! (:svc h) interrupted "interrupted" "e-invoke-stop")
+    (is (= {:reason "interrupted" :at "1970-01-01T00:16:40Z"
+            :evidence_id "e-invoke-stop"}
+           (:reply_absence (ts/read-record store interrupted))))
+    (svc/attach-reply-absence! (:svc h) errored "error" nil)
+    (is (= "error" (get-in (ts/read-record store errored) [:reply_absence :reason])))
+    (ts/update-record! store replied #(assoc % :reply_text "existing"))
+    (svc/attach-reply-absence! (:svc h) replied "error" "e-ignored")
+    (is (= "existing" (:reply_text (ts/read-record store replied))))
+    (is (nil? (:reply_absence (ts/read-record store replied))))
+    (svc/attach-happened! (:svc h) interrupted {:reply "retry replied" :commits []})
+    (let [record (ts/read-record store interrupted)]
+      (is (= "retry replied" (:reply_text record)))
+      (is (nil? (:reply_absence record))))))
+
 (defn- run-next!
   "Run the oldest scheduled thunk; returns [delay result]."
   [{:keys [scheduled]}]

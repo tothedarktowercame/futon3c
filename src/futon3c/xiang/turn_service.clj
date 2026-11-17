@@ -1392,6 +1392,7 @@
       (try (ts/update-record! store id #(cond-> (assoc % :happened_summary summary)
                                           reply? (assoc :reply_text reply
                                                         :reply_at reply-at)
+                                          reply? (dissoc :reply_absence)
                                           (seq excluded) (assoc :commits_excluded (vec excluded))))
            (catch Exception _ nil)))
     (let [record (ts/read-record store id)
@@ -1429,6 +1430,26 @@
           (< (- (now-ms svc) at) (* 5 60 1000)))
         {:dispatched false :reason :dispatch-scheduled}
         :else (dispatch! svc id {})))))
+
+(defn attach-reply-absence!
+  "Record that an operator invoke terminated without a reply. Existing reply
+  text wins; attach-happened! removes the receipt if a retry later replies."
+  [svc id reason evidence-id]
+  (let [store (cfg svc :store)
+        reason (if (= "interrupted" (name reason)) "interrupted" "error")]
+    (try
+      (ts/update-record!
+       store (str id)
+       (fn [record]
+         (if (or (not= "operator" (or (:origin record) "operator"))
+                 (contains? record :reply_text))
+           record
+           (assoc record :reply_absence
+                  (cond-> {:reason reason :at (iso (now-ms svc))}
+                    evidence-id (assoc :evidence_id (str evidence-id)))))))
+      (catch Exception e
+        (set-health! svc nil (str id ": reply absence not stored: " (.getMessage e)))
+        nil))))
 
 ;; ---------------------------------------------------------------------------
 ;; Dispatch (session-mode--dispatch-analysis)

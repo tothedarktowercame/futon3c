@@ -504,7 +504,29 @@
    :jobs {}})
 
 (declare terminal-invoke-state?)
-(declare maybe-record-bell-turn! maybe-close-bell-turn!)
+(declare maybe-record-bell-turn! maybe-close-bell-turn! xiang-bell-service)
+
+(defn- invoke-reply-absence [result]
+  (let [error (:error result)
+        code (some-> (if (map? error) (:error/code error) error) str str/lower-case)
+        message (some-> (if (map? error) (:error/message error) error) str str/lower-case)
+        reason (if (or (str/includes? (or code "") "interrupt")
+                       (str/includes? (or message "") "interrupt"))
+                 "interrupted" "error")
+        evidence-id (or (:evidence_id result) (:evidence-id result)
+                        (when (map? error)
+                          (or (:evidence_id error) (:evidence-id error))))]
+    {:reason reason :evidence-id evidence-id}))
+
+(defn- record-invoke-reply-absence! [turn-record-id result]
+  (when (and turn-record-id (not (:ok result)))
+    (try
+      (when-let [svc (xiang-bell-service)]
+        (let [{:keys [reason evidence-id]} (invoke-reply-absence result)]
+          (xiang-turns/attach-reply-absence! svc turn-record-id reason evidence-id)))
+      (catch Throwable t
+        (println (str "[xiang-turns] reply absence failed for " turn-record-id ": "
+                      (.getMessage t)))))))
 
 (def ^:private invoke-terminal-detail-retention-ms
   "Keep terminal job transcripts for one day; thereafter retain a small
@@ -5960,6 +5982,7 @@
                                 :job-id job-id
                                 :result result})
         (finalize-invoke-job! job-id terminal-state terminal-code terminal-message result sid)
+        (record-invoke-reply-absence! turn-record-id result)
         (if no-evidence?
           (json-response 502 {:ok false
                               :error "invoke-no-execution-evidence"
@@ -5991,6 +6014,9 @@
         (if @execution-started?
           (do
             (finalize-invoke-job! job-id "failed" "invoke-error" (.getMessage t) {:ok false} nil)
+            (record-invoke-reply-absence!
+             turn-record-id
+             {:ok false :error {:error/code :invoke-error :error/message (.getMessage t)}})
             (json-response 500 {:ok false
                                 :job-id job-id
                                 :error "invoke-error"
@@ -7143,7 +7169,8 @@
                             (sink-fn (cond-> (invoke-done-event result prompt-line)
                                        (= "emacs-repl" (str surface))
                                        (assoc :prompt-line-wait-ms wait-ms)))))
-                        (let [err (:error result)
+                        (let [_ (record-invoke-reply-absence! turn-record-id result)
+                              err (:error result)
                               code (if (map? err) (:error/code err) :invoke-failed)
                               msg (if (map? err) (:error/message err) (str err))]
                           (sink-fn {:type "done" :ok false :error (name code) :message msg})))))]

@@ -77,6 +77,16 @@
     (is (every? #(= "turn-identity-1" (:turn-id %)) stamped)
         "started, intermediate, and terminal events share one identity")))
 
+(deftest invoke-reply-absence-classifies-interruption-error-and-evidence-id
+  (let [classify #'http/invoke-reply-absence]
+    (is (= {:reason "interrupted" :evidence-id "e-stop"}
+           (classify {:ok false :error {:error/code :invoke-interrupted
+                                        :error/message "invoke interrupted"
+                                        :evidence-id "e-stop"}})))
+    (is (= {:reason "error" :evidence-id nil}
+           (classify {:ok false :error {:error/code :invoke-failed
+                                        :error/message "adapter failed"}})))))
+
 (deftest invoke-session-recovery-forwards-solver-process-options
   (let [seen (atom nil)]
     (with-redefs [reg/invoke-agent!
