@@ -94,6 +94,7 @@
 
 (def lean-family
   {:name :family :pattern '[:app [:lam ?B] ?A]
+   :domain-guards #{:choose-family}
    :guards [[:choose-family #(= [[:const "Classical.choose"]] (body-head (get % '?B)))]]
    :rewrite (fn [b] [:family-at [:lam (get b '?B)] (get b '?A)])})
 

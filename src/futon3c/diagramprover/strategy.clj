@@ -80,6 +80,10 @@
         guard-probes
         (for [s schemas :when (contains? names (:name s))
               [g _] (:guards s)
+              ;; Domain guards say where a rule applies (e.g. lean-family's
+              ;; :choose-family); dropping one changes the rule, not the order
+              ;; between rules, so it cannot settle a conflict (claude-5 review).
+              :when (not (contains? (set (:domain-guards s)) g))
               :let [receipts (vec (filter #(and (= (:name s) (:name %))
                                                (= g (:guard-failed %))) blocked))]
               :when (or (contains? losers (:name s)) (seq receipts))

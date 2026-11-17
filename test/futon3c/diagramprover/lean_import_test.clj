@@ -31,11 +31,16 @@
     (is (= 44 (count results)))
     (is (every? #(contains? (:loaded %) :host) results))
     (is (= [17 18 20 22 25 27 29 31 33 35 36] (mapv :hit found)))
-    ;; Correction: broad imported schema + choose guard yields guard evidence;
-    ;; narrow transcribed schema has no guard, so its label stays nothing.
-    (is (= #{{:rules #{:beta :family} :status :non-joining :settled-by #{:guard} :family-applied? true}} shapes))
-    (is (= #{{:rules #{:beta :family} :status :non-joining :settled-by #{:nothing} :family-applied? true}} transcribed))
-    (is (= (set (map #(dissoc % :settled-by) shapes)) (set (map #(dissoc % :settled-by) transcribed))))
+    ;; lean-family's :choose-family guard is a domain guard (it says where the
+    ;; rule applies), so it does not settle the conflict: at equal priority
+    ;; nothing does, on real data as on the transcribed host (claude-5 review).
+    (is (= #{{:rules #{:beta :family} :status :non-joining :settled-by #{:nothing} :family-applied? true}} shapes))
+    (is (= shapes transcribed))
+    ;; Mutation: treating the domain guard as an exemption reports #{:guard}.
+    (let [as-exemption (dissoc li/lean-family :domain-guards)
+          r (hp/host-pairs [ts/beta as-exemption] (:host (li/host hit opts)) search-opts)]
+      (is (contains? (set (map li/finding-shape (conflicts r)))
+                     {:rules #{:beta :family} :status :non-joining :settled-by #{:guard} :family-applied? true})))
     (is (empty? (conflicts broken)))
     (is (= {:complete 36 :inconclusive 8} (frequencies (map #(get-in % [:report :status]) results))))
     (println "Importer B1: hits" (mapv :hit found) "states" (reduce + (map #(count (get-in % [:report :states])) results)))))
