@@ -278,7 +278,7 @@
                  (temp-turn-record
                   "turn-fallback"
                   {:version 1 :at "2026-10-25T00:00:05Z" :ms 3500
-                   :source "embedding-fallback" :reason "timeout-or-empty-reply"
+                   :source "embedding-fallback" :reason "model/timeout"
                    :ranked [{:id "fb/one" :rank 1}]})]]
     (pattern/observe-results!
      "claude-17" "target" [{:id "emb/top" :score 0.9 :rank 1}

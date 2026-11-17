@@ -134,15 +134,20 @@
                (:ranked (lu/rerank {:ask ask} store "turn-q")))
             "the non-verbatim pick is dropped and the next one taken")))))
 
-(deftest timeout-or-thrown-ask-gives-embedding-fallback-with-a-reason
+(deftest typed-or-nil-failed-ask-gives-embedding-fallback-with-a-reason
   (let [store (temp-store)]
     (record! store "turn-f" {:source_text "some operator text"})
     (with-redefs [lu/embedding-top (stub-search ["f/one" "f/two" "f/three"])
                   lu/load-graph (constantly nil)]
-      (let [timeout (lu/rerank {:ask (fn [_] nil)} store "turn-f")]
-        (is (= "embedding-fallback" (:source timeout)))
-        (is (= "timeout-or-empty-reply" (:reason timeout)))
-        (is (= ["f/one" "f/two" "f/three"] (mapv :id (:ranked timeout)))))
+      (let [quota (lu/rerank {:ask (fn [_] {:failure_kind "model/quota"
+                                             :http_status 429})} store "turn-f")]
+        (is (= "embedding-fallback" (:source quota)))
+        (is (= "model/quota" (:reason quota)))
+        (is (= {:failure_kind "model/quota" :http_status 429} (:model_outcome quota)))
+        (is (= ["f/one" "f/two" "f/three"] (mapv :id (:ranked quota)))))
+      (let [nil-result (lu/rerank {:ask (fn [_] nil)} store "turn-f")]
+        (is (= "model/error" (:reason nil-result)))
+        (is (= "model/error" (get-in nil-result [:model_outcome :failure_kind]))))
       (let [thrown (lu/rerank {:ask (fn [_] (throw (ex-info "seat down" {})))}
                               store "turn-f")]
         (is (= "embedding-fallback" (:source thrown)))
@@ -151,6 +156,19 @@
       (let [zero (lu/rerank {:ask (fn [_] "[]")} store "turn-f")]
         (is (= "embedding-fallback" (:source zero)))
         (is (= "zero-surviving-picks" (:reason zero)))))))
+
+(deftest listener-stores-the-rerank-model-outcome
+  (let [store (temp-store)]
+    (record! store "turn-model-outcome" {})
+    (with-redefs [lu/embedding-top (stub-search ["f/one" "f/two" "f/three"])
+                  lu/load-graph (constantly nil)
+                  proposals/write! (fn [& _] {:written 0})]
+      (lu/handle-event {:store store :off-switch "/does/not/exist"
+                        :ask (fn [_] {:failure_kind "model/quota" :http_status 429})}
+                       {:event :recorded :id "turn-model-outcome"}))
+    (is (= {:failure_kind "model/quota" :http_status 429}
+           (get-in (ts/read-record store "turn-model-outcome")
+                   [:lu_ranked :model_outcome])))))
 
 (deftest rerank-never-throws
   (let [store (temp-store)]

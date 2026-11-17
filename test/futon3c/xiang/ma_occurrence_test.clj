@@ -9,10 +9,7 @@
             [clojure.test :refer [deftest is]]
             [futon3c.xiang.ma-occurrence :as mo]
             [futon3c.xiang.turn-service :as turn-service]
-            [futon3c.xiang.turn-store :as ts])
-  (:import [com.sun.net.httpserver HttpServer HttpHandler]
-           [java.net InetSocketAddress]
-           [java.nio.charset StandardCharsets]))
+            [futon3c.xiang.turn-store :as ts]))
 
 (defn- temp-store []
   (ts/store (str (java.nio.file.Files/createTempDirectory
@@ -94,47 +91,6 @@
 
 (defn- verdicts [store id]
   (:pattern_verdicts (ts/read-record store id)))
-
-(defn- with-http-response [status body delay-ms f]
-  (let [server (HttpServer/create (InetSocketAddress. 0) 0)]
-    (.createContext
-     server "/"
-     (reify HttpHandler
-       (handle [_ exchange]
-         (try
-           (when (pos? delay-ms) (Thread/sleep delay-ms))
-           (let [bytes (.getBytes (str body) StandardCharsets/UTF_8)]
-             (.sendResponseHeaders exchange status (count bytes))
-             (with-open [out (.getResponseBody exchange)] (.write out bytes)))
-           (catch Throwable _)
-           (finally (.close exchange))))))
-    (.start server)
-    (try (f (str "http://127.0.0.1:" (.getPort (.getAddress server)) "/"))
-         (finally (.stop server 0)))))
-
-(deftest whistle-ask-types-http-parse-timeout-and-success
-  (let [call (fn [status body]
-               (with-http-response
-                 status body 0
-                 (fn [url]
-                   (binding [mo/*whistle-url* url]
-                     (mo/whistle-ask {:seat "invented" :prompt "invented"
-                                      :timeout-ms 100})))))]
-    (is (= "model/quota" (:failure_kind (call 429 "{\"ok\":false,\"error\":\"busy\"}"))))
-    (is (= "model/http" (:failure_kind (call 500 "{\"ok\":false,\"error\":\"broken\"}"))))
-    (is (= "model/parse" (:failure_kind (call 200 "not-json"))))
-    (is (= "answer" (call 200 "{\"ok\":true,\"response\":\"answer\"}")))
-    ;; Agency's whistle reports its own timeout as 504 + error "timeout",
-    ;; and a provider quota only in the error text (transport/http.clj).
-    (is (= "model/timeout" (:failure_kind (call 504 "{\"ok\":false,\"error\":\"timeout\"}"))))
-    (is (= "model/quota" (:failure_kind (call 502 "{\"ok\":false,\"error\":\"invented rate limit hit\"}")))))
-  (let [out (with-http-response
-              200 "{\"ok\":true,\"response\":\"late\"}" 100
-              (fn [url]
-                (binding [mo/*whistle-url* url mo/*whistle-read-slack-ms* 0]
-                  (mo/whistle-ask {:seat "invented" :prompt "invented"
-                                   :timeout-ms 1}))))]
-    (is (= "model/timeout" (:failure_kind out)))))
 
 (deftest absent-gcc-proposals-record-a-retryable-pending-outcome
   (let [store (temp-store)]

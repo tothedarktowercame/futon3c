@@ -22,9 +22,9 @@
             [futon3c.arxana.turn-mention-writer :as mention-writer]
             [futon3c.xiang.ma-occurrence :as ma]
             [futon3c.xiang.turn-service :as turn-service]
-            [futon3c.xiang.turn-store :as ts])
-  (:import [java.net HttpURLConnection URL]
-           [java.util.concurrent ExecutorService Executors ThreadFactory]))
+            [futon3c.xiang.turn-store :as ts]
+            [futon3c.xiang.whistle-ask :as wa])
+  (:import [java.util.concurrent ExecutorService Executors ThreadFactory]))
 
 (def defaults
   {:seat "驴-haiku"
@@ -261,13 +261,18 @@
                                        (embedding-top source-text (:keep opts))))
              :source "embedding-fallback" :ms ms
              :reason "zero-surviving-picks" :pool-n (count pool)}))
-        {:ranked (vec (map-indexed (fn [i id] {:id id :rank (inc i)})
-                                   (embedding-top source-text (:keep opts))))
-         :source "embedding-fallback" :ms ms
-         :reason (cond
-                   (not (seq pool)) "empty-pool"
-                   (nil? (:ask opts)) "no-reader"
-                   :else "timeout-or-empty-reply")}))
+        (let [outcome (cond
+                        (map? reply) reply
+                        (and (seq pool) (:ask opts))
+                        (wa/model-failure "model/error" nil "ask returned nil"))]
+          (cond-> {:ranked (vec (map-indexed (fn [i id] {:id id :rank (inc i)})
+                                              (embedding-top source-text (:keep opts))))
+                   :source "embedding-fallback" :ms ms
+                   :reason (cond
+                             (not (seq pool)) "empty-pool"
+                             (nil? (:ask opts)) "no-reader"
+                             :else (:failure_kind outcome))}
+            outcome (assoc :model_outcome outcome)))))
     (catch Throwable t
       (try
         (let [record (and store (ts/read-record store record-id))
@@ -284,24 +289,10 @@
 
 (defn whistle-ask
   "The production :ask: a bounded whistle to SEAT through Agency's HTTP API,
-  synchronous, as ma-reading's. Returns the seat's text, or nil on any
-  failure or timeout."
-  [{:keys [seat prompt timeout-ms]}]
-  (try
-    (let [conn (doto ^HttpURLConnection
-                (.openConnection (URL. "http://127.0.0.1:7070/api/alpha/whistle"))
-                 (.setRequestMethod "POST")
-                 (.setDoOutput true)
-                 (.setConnectTimeout 5000)
-                 (.setReadTimeout (int (+ (or timeout-ms 60000) 15000)))
-                 (.setRequestProperty "Content-Type" "application/json"))]
-      (with-open [w (io/writer (.getOutputStream conn))]
-        (.write w (json/generate-string {:agent-id seat :prompt prompt
-                                         :timeout-ms (or timeout-ms 60000)
-                                         :caller "lu-rerank"})))
-      (let [body (json/parse-string (slurp (.getInputStream conn)) true)]
-        (when (:ok body) (some-> (:response body) str))))
-    (catch Throwable _ nil)))
+  synchronous, as ma-reading's. Returns the seat's text or a typed model
+  failure map."
+  [request]
+  (wa/ask (assoc request :caller "lu-rerank")))
 
 ;; ------------------------------------------- Packet B: the record-time trigger
 
@@ -384,12 +375,13 @@
                    (not (str/blank? (str (or (:source_text record) ""))))
                    (not (:lu_ranked record)))
           (reset! stage :rerank)
-          (let [{:keys [ranked source ms reason]} (rerank opts store (str id))
-                lu {:version 1
+          (let [{:keys [ranked source ms reason model_outcome]} (rerank opts store (str id))
+                lu (cond-> {:version 1
                     :at (str (java.time.Instant/now))
                     :ms (long (or ms 0)) :source (str source) :reason reason
                     :ranked (mapv (fn [r] (select-keys r [:id :rank :quote]))
-                                  (or ranked []))}]
+                                  (or ranked []))}
+                     model_outcome (assoc :model_outcome model_outcome))]
             (reset! stage :store-ranked)
             (ts/update-record! store (str id)
                                #(-> %

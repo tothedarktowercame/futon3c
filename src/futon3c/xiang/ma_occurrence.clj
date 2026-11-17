@@ -29,9 +29,9 @@
             [futon3c.arxana.pattern-proposals :as proposals]
             [futon3c.arxana.turn-mention-writer :as mention-writer]
             [futon3c.xiang.turn-service :as turn-service]
-            [futon3c.xiang.turn-store :as ts])
+            [futon3c.xiang.turn-store :as ts]
+            [futon3c.xiang.whistle-ask :as wa])
   (:import [java.nio.file Files]
-           [java.net SocketTimeoutException]
            [java.util.concurrent ExecutorService Executors ThreadFactory]
            [java.security MessageDigest]))
 
@@ -48,22 +48,16 @@
   "Root of the .flexiarg pattern library (scripts/occurrence_square.py's LIB)."
   "/home/joe/code/futon3/library")
 
-(def model-failure-kinds
-  #{"model/quota" "model/timeout" "model/http" "model/parse"
-    "model/error" "model/no-reader" "model/unparsed-reply"})
+(def model-failure-kinds wa/failure-kinds)
 
 (def retryable-model-failure-kinds
   #{"model/quota" "model/timeout"})
 
-(def ^:dynamic *whistle-url* "http://127.0.0.1:7070/api/alpha/whistle")
-(def ^:dynamic *whistle-read-slack-ms* 15000)
-
 (defn- model-failure
   ([kind]
-   {:failure_kind (if (contains? model-failure-kinds kind) kind "model/error")})
+   (wa/model-failure kind))
   ([kind http-status error]
-   {:failure_kind (if (contains? model-failure-kinds kind) kind "model/error")
-    :http_status http-status :error error}))
+   (wa/model-failure kind http-status error)))
 
 (def ^:private role-names ["I1" "I2" "G" "B"])
 (def ^:private min-quote-words
@@ -555,57 +549,8 @@
   "The production :ask: a bounded whistle to SEAT through Agency's HTTP API
   (synchronous, so the request and its answer cannot cross). Returns the
   seat's text or one typed model failure map."
-  [{:keys [seat prompt timeout-ms]}]
-  (try
-    (let [conn (doto ^java.net.HttpURLConnection
-                (.openConnection (java.net.URL. *whistle-url*))
-                 (.setRequestMethod "POST")
-                 (.setDoOutput true)
-                 (.setConnectTimeout 5000)
-                 (.setReadTimeout (int (+ (or timeout-ms 60000) *whistle-read-slack-ms*)))
-                 (.setRequestProperty "Content-Type" "application/json"))]
-      (with-open [w (io/writer (.getOutputStream conn))]
-        (.write w (json/generate-string {:agent-id seat :prompt prompt
-                                         :timeout-ms (or timeout-ms 60000)
-                                         :caller "ma-occurrence"})))
-      (let [status (.getResponseCode conn)
-            stream (if (<= 200 status 299) (.getInputStream conn) (.getErrorStream conn))
-            raw (if stream (slurp stream) "")
-            body (try (json/parse-string raw true) (catch Throwable _ ::invalid-json))]
-        (cond
-          (= status 429)
-          (model-failure "model/quota" status
-                         (when-not (= ::invalid-json body)
-                           (some-> (or (:error body) (:message body)) str)))
-
-          (and (= ::invalid-json body) (not (<= 200 status 299)))
-          (model-failure "model/http" status "non-JSON HTTP failure")
-
-          (= ::invalid-json body)
-          (model-failure "model/parse" status "invalid JSON response")
-
-          (and (<= 200 status 299) (:ok body) (some? (:response body)))
-          (str (:response body))
-
-          :else
-          (let [typed (some-> (or (:failure-kind body) (:failure_kind body)) str
-                              (str/replace-first #"^:" ""))
-                error (some-> (or (:error body) (:message body)) str)
-                kind (cond
-                       (= status 429) "model/quota"
-                       (= typed "provider/quota") "model/quota"
-                       (contains? #{"timeout" "provider/timeout"} typed) "model/timeout"
-                       (= "timeout" error) "model/timeout"
-                       ;; The current whistle failure body exposes only :error,
-                       ;; not invoke-job :failure-kind (transport/http.clj
-                       ;; handle-whistle). Keep this one ingestion fallback.
-                       (re-find #"(?i)quota|rate[ ._-]?limit|HTTP 429" (or error "")) "model/quota"
-                       :else "model/http")]
-            (model-failure kind status error)))))
-    (catch SocketTimeoutException e
-      (model-failure "model/timeout" nil (.getMessage e)))
-    (catch Throwable e
-      (model-failure "model/error" nil (.getMessage e)))))
+  [request]
+  (wa/ask (assoc request :caller "ma-occurrence")))
 
 (defn- live-service []
   (try (some-> (requiring-resolve 'futon3c.transport.http/xiang-bell-service) deref (apply []))

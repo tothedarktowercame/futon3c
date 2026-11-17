@@ -1,0 +1,46 @@
+(ns futon3c.xiang.whistle-ask-test
+  (:require [clojure.test :refer [deftest is]]
+            [futon3c.xiang.whistle-ask :as wa])
+  (:import [com.sun.net.httpserver HttpServer HttpHandler]
+           [java.net InetSocketAddress]
+           [java.nio.charset StandardCharsets]))
+
+(defn- with-http-response [status body delay-ms f]
+  (let [server (HttpServer/create (InetSocketAddress. 0) 0)]
+    (.createContext
+     server "/"
+     (reify HttpHandler
+       (handle [_ exchange]
+         (try
+           (when (pos? delay-ms) (Thread/sleep delay-ms))
+           (let [bytes (.getBytes (str body) StandardCharsets/UTF_8)]
+             (.sendResponseHeaders exchange status (count bytes))
+             (with-open [out (.getResponseBody exchange)] (.write out bytes)))
+           (catch Throwable _)
+           (finally (.close exchange))))))
+    (.start server)
+    (try (f (str "http://127.0.0.1:" (.getPort (.getAddress server)) "/"))
+         (finally (.stop server 0)))))
+
+(deftest ask-types-http-parse-timeout-quota-and-success
+  (let [call (fn [status body]
+               (with-http-response
+                 status body 0
+                 (fn [url]
+                   (binding [wa/*whistle-url* url]
+                     (wa/ask {:seat "invented" :prompt "invented"
+                              :timeout-ms 100 :caller "test"})))))]
+    (is (= "model/quota" (:failure_kind (call 429 "{\"ok\":false,\"error\":\"busy\"}"))))
+    (is (= "model/http" (:failure_kind (call 500 "{\"ok\":false,\"error\":\"broken\"}"))))
+    (is (= "model/parse" (:failure_kind (call 200 "not-json"))))
+    (is (= "answer" (call 200 "{\"ok\":true,\"response\":\"answer\"}")))
+    (is (= "model/timeout" (:failure_kind (call 504 "{\"ok\":false,\"error\":\"timeout\"}"))))
+    (is (= "model/quota" (:failure_kind
+                            (call 502 "{\"ok\":false,\"error\":\"invented rate limit hit\"}")))))
+  (let [out (with-http-response
+              200 "{\"ok\":true,\"response\":\"late\"}" 100
+              (fn [url]
+                (binding [wa/*whistle-url* url wa/*whistle-read-slack-ms* 0]
+                  (wa/ask {:seat "invented" :prompt "invented"
+                           :timeout-ms 1 :caller "test"}))))]
+    (is (= "model/timeout" (:failure_kind out)))))
