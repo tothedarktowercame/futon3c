@@ -625,39 +625,45 @@
                      (println "[turn-mentions/hou] failed" (:id record) field (.getMessage e))))]
       (try
         ((or (cfg svc :evidence-async!) #((cfg svc :schedule!) 0 %))
-         #(let [mention-cfg (or (cfg svc :mentions-config) (mention-writer/default-config))
-                hou-cfg (or (cfg svc :hou-config) (hou-store/default-config))
-                store (cfg svc :store)
-                current (assoc (or (ts/read-record store (:id record)) record) :id (:id record))
-                ready? (and (cfg svc :hou-enabled?)
-                            (= "operator" (or (:origin current) "operator"))
-                            (hou-store/settled? current)
-                            (hou-store/reply-landed? current))
-                fields (cond
-                         ready? [:source_text :reply_text]
-                         (and (not= "operator" (or (:origin current) "operator"))
-                              (= field :source_text)) []
-                         :else [field])
-                mentions-ok?
-                (if-not (cfg svc :mentions-enabled?)
-                  true
-                  (try
-                    (doseq [f fields]
-                      ((cfg svc :mentions-writer!) mention-cfg current f))
-                    (when (seq fields)
-                      (ts/update-record! store (:id current)
-                                         (fn [r] (dissoc r :mentions_failure))))
-                    true
-                    (catch Exception e
-                      (failed e)
-                      (record-mentions-failure! store (:id current) fields e)
-                      false)))]
-            (when (and mentions-ok? ready?)
-              (try
-                (write-hou-with-retry! svc current (cfg svc :hou-retry-delays))
-                (catch Exception e
-                  (failed e)
-                  (record-hou-hook-failure! hou-cfg current e))))))
+         #(try
+           (let [mention-cfg (or (cfg svc :mentions-config) (mention-writer/default-config))
+                 store (cfg svc :store)
+                 current (assoc (or (ts/read-record store (:id record)) record) :id (:id record))
+                 ready? (and (cfg svc :hou-enabled?)
+                             (= "operator" (or (:origin current) "operator"))
+                             (hou-store/settled? current)
+                             (hou-store/reply-landed? current))
+                 fields (cond
+                          ready? [:source_text :reply_text]
+                          (and (not= "operator" (or (:origin current) "operator"))
+                               (= field :source_text)) []
+                          :else [field])
+                 mentions-ok?
+                 (if-not (cfg svc :mentions-enabled?)
+                   true
+                   (try
+                     (doseq [f fields]
+                       ((cfg svc :mentions-writer!) mention-cfg current f))
+                     true
+                     (catch Exception e
+                       (failed e)
+                       (record-mentions-failure! store (:id current) fields e)
+                       false)))]
+             ;; Clear an earlier receipt only when this pass read one: an
+             ;; unconditional update rewrote every turn on every pass, and
+             ;; threw (skipping 猴) for a turn not yet in the store.
+             (when (and mentions-ok? (seq fields) (contains? current :mentions_failure))
+               (try
+                 (ts/update-record! store (:id current) (fn [r] (dissoc r :mentions_failure)))
+                 (catch Exception e (failed e))))
+             (when (and mentions-ok? ready?)
+               (try
+                 (write-hou-with-retry! svc current (cfg svc :hou-retry-delays))
+                 (catch Exception e
+                   (failed e)
+                   (record-hou-hook-failure!
+                    (or (cfg svc :hou-config) (hou-store/default-config)) current e)))))
+           (catch Exception e (failed e))))
         (catch Exception e (failed e))))))
 
 (defn- settle-evidence!

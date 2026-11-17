@@ -1641,6 +1641,22 @@
                   (fn [& _] (throw (ex-info "attempt store down" {})))]
       (is (nil? (svc/write-mentions-async! (:svc h) turn :reply_text))))))
 
+(deftest clean-pass-on-unstored-turn-still-runs-hou
+  ;; The receipt clear must not touch a turn the store does not hold yet:
+  ;; update-record! throws there, and that throw once skipped 猴.
+  (let [hou-calls (atom 0)
+        h (harness {:mentions-enabled? true :hou-enabled? true
+                    :mentions-config {} :hou-config {}
+                    :evidence-async! (fn [f] (f))
+                    :mentions-writer! (fn [& _] {:written 1})
+                    :hou-writer! (fn [& _] (swap! hou-calls inc) {:written 1})})
+        turn {:id "turn-unstored" :origin "operator" :analysis_status "analyzed"
+              :source_text "M-toy" :reply_text "done"}]
+    (with-redefs [hou-store/write-attempt! (fn [& _] nil)]
+      (svc/write-mentions-async! (:svc h) turn :reply_text))
+    (is (= 1 @hou-calls))
+    (is (nil? (ts/read-record (get-in (:svc h) [:config :store]) "turn-unstored")))))
+
 (deftest declared-agent-turn-mentions-settle-with-reply
   (let [calls (atom [])
         h (harness {:mentions-enabled? true :mentions-config {}
