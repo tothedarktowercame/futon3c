@@ -12961,6 +12961,20 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      ;; Circus QA for Mojira (CL-43). Here rather than in make-handler's
+      ;; cond so a plain Drawbridge reload activates them.
+      (and (= :get method) (= "/api/alpha/circus/top-items" uri))
+      (let [{:keys [status body]}
+            (circus-routes/top-items-response
+             (:circus-routes config) (parse-query-params request))]
+        (json-response status body))
+
+      (and (= :get method) (= "/api/alpha/circus/why-not" uri))
+      (let [{:keys [status body]}
+            (circus-routes/why-not-response
+             (:circus-routes config) (parse-query-params request))]
+        (json-response status body))
+
       ;; Not under /api/alpha/xiang/: handle-xiang only sees that prefix.
       (and (= :get method) (= "/api/alpha/diagram/dispatch" uri))
       (handle-diagram-dispatch request config)
@@ -13720,18 +13734,6 @@
 
           (and (= :get method) (= "/api/alpha/evidence" uri))
           (handle-evidence-query request config)
-
-          (and (= :get method) (= "/api/alpha/circus/top-items" uri))
-          (let [{:keys [status body]}
-                (circus-routes/top-items-response
-                 (:circus-routes config) (parse-query-params request))]
-            (json-response status body))
-
-          (and (= :get method) (= "/api/alpha/circus/why-not" uri))
-          (let [{:keys [status body]}
-                (circus-routes/why-not-response
-                 (:circus-routes config) (parse-query-params request))]
-            (json-response status body))
 
           (and (= :get method) (= "/api/alpha/evidence/count" uri))
           (handle-evidence-count request config)
