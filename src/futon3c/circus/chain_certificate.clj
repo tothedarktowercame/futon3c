@@ -95,6 +95,11 @@
     (io/make-parents output)
     (spit output (render record (pinned-ids run-dir)))
     (let [result (lean-check output)]
+      (spit (str (.getAbsolutePath output) ".check.json")
+            (json/generate-string
+             {"exit" (:exit result) "ok" (zero? (:exit result))
+              "at" (str (java.time.Instant/now))
+              "record_sha256" (:record/sha256 record)}))
       {:ok? (zero? (:exit result)) :exit (:exit result)
        :path (.getAbsolutePath output) :record-sha (:record/sha256 record)})))
 

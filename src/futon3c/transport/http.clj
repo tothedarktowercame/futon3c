@@ -154,6 +154,7 @@
             [futon3c.enrichment.query :as enrich]
             [futon3c.transport.peripheral-events :as peripheral-events]
             [futon3c.transport.ws.invoke :as ws-invoke]
+            [futon3c.circus.routes :as circus-routes]
             [futon3c.blackboard :as bb]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.wm.run4-attempt-admission :as run4-admission]
@@ -13719,6 +13720,18 @@
 
           (and (= :get method) (= "/api/alpha/evidence" uri))
           (handle-evidence-query request config)
+
+          (and (= :get method) (= "/api/alpha/circus/top-items" uri))
+          (let [{:keys [status body]}
+                (circus-routes/top-items-response
+                 (:circus-routes config) (parse-query-params request))]
+            (json-response status body))
+
+          (and (= :get method) (= "/api/alpha/circus/why-not" uri))
+          (let [{:keys [status body]}
+                (circus-routes/why-not-response
+                 (:circus-routes config) (parse-query-params request))]
+            (json-response status body))
 
           (and (= :get method) (= "/api/alpha/evidence/count" uri))
           (handle-evidence-count request config)
