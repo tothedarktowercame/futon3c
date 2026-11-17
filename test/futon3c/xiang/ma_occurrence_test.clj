@@ -7,6 +7,10 @@
   (:require [cheshire.core :as json]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
+            [futon3c.arxana.pattern-occurrences :as occurrences]
+            [futon3c.arxana.pattern-proposals :as proposals]
+            [futon3c.arxana.store-http :as store-http]
+            [futon3c.arxana.turn-mention-writer :as mentions]
             [futon3c.xiang.ma-occurrence :as mo]
             [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts]))
@@ -134,6 +138,40 @@
          (@queued)
          (is (= [:write :notify] @order))
          (is (= {:written 1} (:pattern_occurrences (ts/read-record store "turn-order"))))))))
+
+(deftest fresh-listener-verdict-writes-occurrence-through-real-writer
+  (let [store (temp-store)
+        appended (atom nil)
+        quote "operator words of turn-gcc that can be quoted at length"]
+    (record! store "turn-gcc"
+             {:source_text quote
+              :reply_text "reply words of turn-gcc that can be quoted at length"
+              :proposed_patterns [{:patterns [pid] :at "x" :job_id "j"}]})
+    (with-redefs [mentions/field-evidence
+                  (fn [& _] {:reference {:id "external-reference/turn-gcc"}})
+                  proposals/pattern-reference
+                  (fn [_ _] {:id "external-reference/pattern-gcc"
+                             :revision/digest "fixture-digest"})
+                  store-http/append-batch!
+                  (fn [_ message-id rows]
+                    (reset! appended {:message-id message-id :rows rows})
+                    {:ok {}})]
+      (mo/handle-event
+       {:store store
+        :library (temp-library)
+        :ask (constantly
+              (ask-reply
+               [{:pattern pid
+                 :turn {"I1" (map-of "one intent" "turn-gcc" "operator" quote)}
+                 :chain {}}]))
+        :proposal-reader fixture-proposals
+        :occurrence-writer! occurrences/write!
+        :occurrence-config {:graph-store :fixture}
+        :occurrence-async! (fn [f] (f))}
+       {:event :aligned :id "turn-gcc"})
+      (is (= {:written 1 :skipped []}
+             (:pattern_occurrences (ts/read-record store "turn-gcc"))))
+      (is (seq (:rows @appended)) "the real writer submitted its invented GCC batch"))))
 
 (deftest a-wrong-quote-is-voided-with-its-reason
   (let [store (base-records (temp-store))]

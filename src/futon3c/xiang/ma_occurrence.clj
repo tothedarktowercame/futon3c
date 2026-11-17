@@ -250,10 +250,11 @@
   [raw texts allowed-ids]
   (into {}
         (map (fn [role]
-               [role (let [m (or (get raw role) (get raw (keyword role)))]
-                       (if (map? m)
-                         (check-map texts allowed-ids (update m :turn str))
-                         (void-map m "map-missing")))]))
+               [(keyword role)
+                (let [m (or (get raw role) (get raw (keyword role)))]
+                  (if (map? m)
+                    (check-map texts allowed-ids (update m :turn str))
+                    (void-map m "map-missing")))]))
         role-names))
 
 (defn- stored-count [window-maps]
