@@ -5,7 +5,8 @@
   clojure -M:test -n futon3c.xiang.lu-rerank-test"
   (:require [cheshire.core :as json]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
+            [futon3c.arxana.pattern-proposals :as proposals]
             [futon3c.arxana.pattern-occurrences :as occurrences]
             [futon3c.xiang.lu-rerank :as lu]
             [futon3c.xiang.turn-service]
@@ -235,6 +236,69 @@
                        {:event :recorded :id "turn-blank"})
       (is (not (contains? (ts/read-record store "turn-blank") :lu_ranked))
           "no :source_text, no rerank"))))
+
+(deftest listener-failures-leave-stage-specific-durable-receipts
+  (testing "rerank failure"
+    (let [store (temp-store)]
+      (record! store "turn-rerank-fail" {})
+      (with-redefs [lu/rerank (fn [& _] (throw (ex-info "synthetic rerank failure" {})))]
+        (lu/handle-event {:store store :off-switch "/does/not/exist"}
+                         {:event :recorded :id "turn-rerank-fail"}))
+      (let [record (ts/read-record store "turn-rerank-fail")]
+        (is (nil? (:lu_ranked record)))
+        (is (= {:failure_kind "lu/listener-error"
+                :stage "rerank"
+                :error "synthetic rerank failure"}
+               (dissoc (:lu_ranked_failure record) :at))))))
+  (testing "ranked-record storage failure"
+    (let [store (temp-store)
+          update! ts/update-record!]
+      (record! store "turn-store-fail" {})
+      (with-redefs [lu/rerank (fn [& _] {:ranked [] :source "驴" :ms 1})
+                    ts/update-record!
+                    (fn [s id f]
+                      (if (:lu_ranked (f (ts/read-record s id)))
+                        (throw (ex-info "synthetic store failure" {}))
+                        (update! s id f)))]
+        (lu/handle-event {:store store :off-switch "/does/not/exist"}
+                         {:event :recorded :id "turn-store-fail"}))
+      (let [record (ts/read-record store "turn-store-fail")]
+        (is (nil? (:lu_ranked record)))
+        (is (= "store-ranked" (get-in record [:lu_ranked_failure :stage])))
+        (is (= "synthetic store failure" (get-in record [:lu_ranked_failure :error])))))))
+
+(deftest a-successful-rerun-clears-the-listener-failure-receipt
+  (let [store (temp-store)
+        calls (atom 0)]
+    (record! store "turn-recover" {})
+    (with-redefs [lu/rerank (fn [& _]
+                              (if (= 1 (swap! calls inc))
+                                (throw (ex-info "first run failed" {}))
+                                {:ranked [] :source "驴" :ms 1}))
+                  proposals/write! (fn [& _] {:written 0})]
+      (lu/handle-event {:store store :off-switch "/does/not/exist"}
+                       {:event :recorded :id "turn-recover"})
+      (is (contains? (ts/read-record store "turn-recover") :lu_ranked_failure))
+      (lu/handle-event {:store store :off-switch "/does/not/exist"}
+                       {:event :recorded :id "turn-recover"}))
+    (let [record (ts/read-record store "turn-recover")]
+      (is (map? (:lu_ranked record)))
+      (is (not (contains? record :lu_ranked_failure))))))
+
+(deftest policy-skips-do-not-write-listener-failure-receipts
+  (let [store (temp-store)
+        off-dir (java.nio.file.Files/createTempDirectory
+                 "lu-policy-off-" (make-array java.nio.file.attribute.FileAttribute 0))
+        off-file (java.io.File. (str off-dir) "switch")]
+    (record! store "turn-policy-blank" {:source_text ""})
+    (lu/handle-event {:store store :off-switch "/does/not/exist"}
+                     {:event :recorded :id "turn-policy-blank"})
+    (spit off-file "")
+    (record! store "turn-policy-off" {})
+    (lu/handle-event {:store store :off-switch (.getPath off-file)}
+                     {:event :recorded :id "turn-policy-off"})
+    (is (not (contains? (ts/read-record store "turn-policy-blank") :lu_ranked_failure)))
+    (is (not (contains? (ts/read-record store "turn-policy-off") :lu_ranked_failure)))))
 
 (deftest a-repeated-pick-cannot-take-two-slots
   (let [store (temp-store)]

@@ -324,6 +324,22 @@
   (try (.isFile (io/file (str (or (:off-switch opts) off-switch-path))))
        (catch Throwable _ false)))
 
+(defn- listener-failure!
+  [store id stage error]
+  (try
+    (ts/update-record!
+     store id
+     #(assoc % :lu_ranked_failure
+             {:at (str (java.time.Instant/now))
+              :failure_kind "lu/listener-error"
+              :stage (name stage)
+              :error (or (.getMessage ^Throwable error)
+                         (str error))}))
+    (catch Throwable receipt-error
+      (binding [*out* *err*]
+        (println "[lu-rerank] could not store listener failure receipt"
+                 id (.getMessage ^Throwable receipt-error))))))
+
 (defn handle-event
   "One turn-service event for the record-time 驴 rerank under OPTS: run it
   only for a :recorded event with a record id. The :recorded event is
@@ -335,26 +351,31 @@
   (when (and (= :recorded event) id (not (trigger-off? opts)))
     (let [store (if (fn? store) (store) store)]
       (when store
-        (try
-          (when-let [record (and (ts/record-id? (str id)) (ts/read-record store (str id)))]
-            (when (and (= "operator" (or (:origin record) "operator"))
-                       (not (str/blank? (str (or (:source_text record) ""))))
-                       (not (:lu_ranked record)))
-              (let [{:keys [ranked source ms reason]} (rerank opts store (str id))
-                    lu {:version 1
+        (let [stage (atom :read-record)]
+          (try
+            (when-let [record (and (ts/record-id? (str id)) (ts/read-record store (str id)))]
+              (when (and (= "operator" (or (:origin record) "operator"))
+                         (not (str/blank? (str (or (:source_text record) ""))))
+                         (not (:lu_ranked record)))
+                (reset! stage :rerank)
+                (let [{:keys [ranked source ms reason]} (rerank opts store (str id))
+                      lu {:version 1
                           :at (str (java.time.Instant/now))
                           :ms (long (or ms 0)) :source (str source) :reason reason
                           :ranked (mapv (fn [r] (select-keys r [:id :rank :quote]))
                                         (or ranked []))}]
-                (ts/update-record! store (str id)
-                                   #(assoc % :lu_ranked lu))
-                (let [result (try (proposals/write! (or (:proposal-config opts)
-                                                        (mention-writer/default-config))
-                                                    (assoc record :id (str id)) lu)
-                                  (catch Throwable e {:failed :proposal-write-exception
-                                                      :detail (.getMessage e)}))]
-                  (ts/update-record! store (str id) #(assoc % :lu_proposals result))))))
-          (catch Throwable _ nil))))))
+                  (reset! stage :store-ranked)
+                  (ts/update-record! store (str id)
+                                     #(-> %
+                                          (assoc :lu_ranked lu)
+                                          (dissoc :lu_ranked_failure)))
+                  (reset! stage :write-proposals)
+                  (let [result (proposals/write! (or (:proposal-config opts)
+                                                     (mention-writer/default-config))
+                                                 (assoc record :id (str id)) lu)]
+                    (ts/update-record! store (str id) #(assoc % :lu_proposals result))))))
+            (catch Throwable e
+              (listener-failure! store (str id) @stage e))))))))
 
 (defn start!
   "Register the record-time 驴 listener on turn-service events. OPTS as per
