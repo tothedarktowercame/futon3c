@@ -846,6 +846,23 @@ priorities with traceable reasons.
    it. The witness is a query over futon1b (the XTQL layer) that joins at
    least three animals' records for the same turns and returns rows, with
    its text, row count and time recorded. Survey: CL-22.
+   *Witness, 2026-11-17 (claude-13, live futon1b, `:edge-join` from futon1b
+   8633463 + 5be8ce8, reloaded without restart).* Query sent through
+   `futon3c.arxana.store/bounded-query!` on the mention writer's graph store:
+   ```edn
+   {:query/type :edge-join :limit 50
+    :patterns [{:edge-type [:pattern/proposal 1]   :bind {:turn "t" :pattern "p"}}
+               {:edge-type [:pattern/occurrence 1] :bind {:turn "t" :pattern "p"}}
+               {:edge-type [:memory/recall 1]      :bind {:turn "t" :memory "m"}}]}
+   ```
+   24 rows over 3 turns, not truncated, 94 ms (驴, 馬, 狗). Adding
+   `{[:interpretation 1] {:source "t" :intent "a"}}` (象): 51 rows, 3 turns,
+   110 ms. Turn to Giraffe through an item: `[:pattern/proposal 1] {:turn t}`
+   + `[:workplan/mention 2] {:evidence t :item i}` + `[:needs 1] {:needing i}`:
+   19 rows, 4 turns, 75 ms; with `[:hou/focus 1] {:evidence t}` (猴) in place of
+   驴: 7 rows, 4 turns, 62 ms. So the six animals' records meet in one
+   connected graph. Open: few turns carry all of 驴/馬/狗 on the same
+   pattern (3); CL-22 gap 4 (writer completeness) is the follow-up.
 
 ### Concrete objections found in this review
 
