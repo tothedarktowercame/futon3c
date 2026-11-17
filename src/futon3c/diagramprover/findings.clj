@@ -131,7 +131,13 @@
                (every? position? (:finding/positions f))
                (= (count (:finding/positions f)) (count (distinct (:finding/positions f))))
                (set? (:finding/kinds f)) (seq (:finding/kinds f))
-               (set/subset? (:finding/kinds f) #{:root :pattern-nested :variable-nested :created})
+               ;; Opaque rules run in their own runtime (a transition table, not
+               ;; term_schema matching); their only overlap kind is :whole-sequence.
+               ;; :mode stays the exploration mode, which is :unordered for both.
+               (#{:schema :opaque} (get pins :rule-form :schema))
+               (if (= :opaque (:rule-form pins))
+                 (= #{:whole-sequence} (:finding/kinds f))
+                 (set/subset? (:finding/kinds f) #{:root :pattern-nested :variable-nested :created}))
                (#{:joining :non-joining :inconclusive} status)
                (or (nil? settled) (and (set? settled)
                                        (set/subset? settled #{:guard :priority :traversal :nothing})

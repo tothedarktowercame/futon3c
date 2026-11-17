@@ -105,3 +105,18 @@
     (is (not= digest (f/schema-digest [(assoc left-rule :priority 1) right-rule])))
     (is (not= (f/schema-digest [guarded])
               (f/schema-digest [(assoc guarded :guards [[:guard-b (constantly true)]])])))))
+
+(deftest opaque-rule-form-is-explicit
+  ;; Opaque rules (2C): :whole-sequence is valid only with :rule-form :opaque,
+  ;; and an opaque finding has no schema overlap kind.
+  (let [base (first (simple [:f [:x]] "host:x"))
+        opaque (-> base (assoc-in [:finding/pins :rule-form] :opaque)
+                   (assoc :finding/kinds #{:whole-sequence}))]
+    (is (f/valid-finding? base))
+    (is (f/valid-finding? opaque))
+    (is (string? (f/findings->edn [opaque])))
+    (is (not (f/valid-finding? (assoc base :finding/kinds #{:whole-sequence}))))
+    (is (not (f/valid-finding? (assoc-in base [:finding/pins :rule-form] :opaque))))
+    (is (not (f/valid-finding? (update opaque :finding/kinds conj :root))))
+    (is (not (f/valid-finding? (assoc-in opaque [:finding/pins :rule-form] :other))))
+    (is (not (f/valid-finding? (assoc-in opaque [:finding/pins :mode] :opaque))))))
