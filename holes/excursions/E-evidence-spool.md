@@ -452,3 +452,24 @@ inherited `FUTON3C_DURABLE_QUEUE_PATH` pointing at the shared Agency queue,
 overriding the test alias's temporary default. Earlier runs may have touched
 that queue; no restoration was attempted. Subsequent checks explicitly set
 both queue and invoke-ledger paths to temporary files.
+
+## Live trial, 2026-11-18 (futon1b restart under load)
+
+Agency restarted 05:59:47 onto the spool code; Joe then restarted futon1b
+(new pid up 06:02:42). Result, confirmed by Joe ("The spool has worked as
+desired"):
+
+- During the outage two evidence appends sat in `pending` with
+  `failure_kind connection` (20 attempts each) and drained to 0 once futon1b
+  answered. `dead_letter` did not grow.
+- The two `dead_letter` rows present before the restart are not outage
+  casualties: they are `:promise/*` rows refused 422 `:wrong-store` by futon1b
+  since 4f43c51 (2026-11-07). futon3c still sends them (promise-history
+  `record!` and `shadow-write!`); removal dispatched to codex-12
+  (invoke-1794982087937-23837-167e3a61).
+- Open: cold-caller ingress returned `503 clock-store-busy` (3.6 s) at about
+  06:05, while futon1b was listening but `:evidence-text :serving? false
+  :not-reconciled-since-boot`; plain evidence reads answered in 3 ms. The
+  restart wait covers only connection refusal, so a busy store during boot
+  catch-up gets the 5 s budget. Bells succeeded again by 06:08. Which read
+  inside clock inheritance is slow before reconciliation is not yet known.
