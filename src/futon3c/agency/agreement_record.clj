@@ -107,6 +107,25 @@
                          :option/scope {:reply-evidence (str (:evidence/id reply-evidence))}})
                       asks))})))
 
+(defn answerable-offers
+  "Drop offers minted from an EARLIER reply when a bare `yes` (no offer id)
+   answers REPLY-ID. A reply offer is keyed to its reply (:option/scope
+   :reply-evidence); it has no :until, so without this it stayed visible and
+   made a later single 🈸 ambiguous (2026-11-18: claude-5's offer from the
+   previous evening outranked the ask Joe was answering). Offers without a
+   reply scope, and acceptances naming an offer id, are unchanged."
+  [visible-offers parsed reply-id]
+  (if (:offer-id parsed)
+    visible-offers
+    (update visible-offers :offers
+            (fn [offers]
+              (vec (remove (fn [offer]
+                             (let [scopes (keep #(get-in % [:option/scope :reply-evidence])
+                                                (:options offer))]
+                               (and (seq scopes)
+                                    (not-any? #(= (str reply-id) (str %)) scopes))))
+                           offers))))))
+
 (defn- candidate [offer option]
   {:offer-id (:id offer) :option-id (:option/id option)})
 

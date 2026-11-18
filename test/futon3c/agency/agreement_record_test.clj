@@ -206,3 +206,23 @@
   (testing "a question inside a gist paragraph, as claude-4 first asked about stop C"
     (is (= 1 (count (agreement/reply-asks
                      "㊥ (results) Stop C accounts for 6 of 14. Shall I authorize it, or would you rather review first? No fixes are out."))))))
+
+(deftest a-bare-yes-answers-the-reply-it-follows-not-an-older-reply-offer
+  ;; 2026-11-18: an offer minted from an earlier reply (two options) was still
+  ;; visible, so "🈸: yes" to a later single ask came back ambiguous.
+  (let [old {:id "act:old" :options [{:option/id "1" :option/scope {:reply-evidence "reply-old"}}
+                                     {:option/id "2" :option/scope {:reply-evidence "reply-old"}}]}
+        plain {:id "act:plain" :options [{:option/id "1"}]}
+        visible {:offers [old]}]
+    (testing "an older reply's offer is not answerable by a bare yes to a newer reply"
+      (is (= [] (:offers (agreement/answerable-offers visible {} "reply-new"))))
+      (is (= {:refused {:reason :no-visible-offer}}
+             (agreement/resolve-acceptance
+              (agreement/answerable-offers visible {} "reply-new") {}))))
+    (testing "a bare yes to the same reply still sees its offer"
+      (is (= [old] (:offers (agreement/answerable-offers visible {} "reply-old")))))
+    (testing "naming the offer id still reaches an older offer"
+      (is (= [old] (:offers (agreement/answerable-offers visible {:offer-id "act:old"} "reply-new")))))
+    (testing "offers without a reply scope are unchanged"
+      (is (= [plain] (:offers (agreement/answerable-offers {:offers [plain]} {} "reply-new")))))))
+

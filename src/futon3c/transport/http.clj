@@ -11987,8 +11987,10 @@
                                           (= (str evidence-id)
                                              (str (:agreement/acceptance-evidence %)))) %)
                              records)
-              visible (offer-record/active-offers-as-of
-                       records {:agent agent :session session} at)
+              visible (agreement-record/answerable-offers
+                       (offer-record/active-offers-as-of
+                        records {:agent agent :session session} at)
+                       parsed (:evidence/in-reply-to evidence))
               resolution (agreement-record/resolve-acceptance visible parsed)
               ;; No stored offer: the agent may have asked in prose. A 🈸
               ;; paragraph in the reply this turn answers is that offer.
