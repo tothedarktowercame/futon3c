@@ -1,0 +1,1413 @@
+{"B11"
+ {:trunk "B",
+  :trunk-name "business model programming",
+  :name "**HOLE**: *a twin run: simulate a business before acting*",
+  :pattern "**HOLE**: *a twin run: simulate a business before acting*",
+  :gloss
+  "run a member's cascade through the forward model without actuation; compare with what happens",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 53,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+  :trunk-source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 1,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+ "B12"
+ {:trunk "B",
+  :trunk-name "business model programming",
+  :name "vsatlas/offer-ladder; vsatlas/pilot-offers",
+  :pattern "vsatlas/offer-ladder; vsatlas/pilot-offers",
+  :gloss
+  "intro workshop → pilot → programme, each with scope, price band, outcome (offer-ladder records no grounding source)",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 54,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+  :trunk-source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 1,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+ "B13"
+ {:trunk "B",
+  :trunk-name "business model programming",
+  :name "nomad/self-certifying-artifact",
+  :pattern "nomad/self-certifying-artifact",
+  :gloss
+  "artefacts \"whose validity is machine- or institution-checked\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 55,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+  :trunk-source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 1,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+ "B14"
+ {:trunk "B",
+  :trunk-name "business model programming",
+  :name
+  "ways-of-working/stays-alive-and-paid; or3/sustainability-without-enclosure",
+  :pattern
+  "ways-of-working/stays-alive-and-paid; or3/sustainability-without-enclosure",
+  :gloss
+  "bills paid, runway known; sustain open tools without closing the core",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 56,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+  :trunk-source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 1,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+ "B2"
+ {:trunk "B",
+  :trunk-name "business model programming",
+  :name "forward-model/the-forward-model-is-a-pattern-cascade",
+  :pattern "forward-model/the-forward-model-is-a-pattern-cascade",
+  :gloss
+  "\"Characterize the future build as a typed cascade of design patterns … holes are patterns that should exist and do not\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 44,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+  :trunk-source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 1,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+ "B3"
+ {:trunk "B",
+  :trunk-name "business model programming",
+  :name
+  "problems/undeclared-cascades-cannot-be-audited; cascades/declared-skeleton",
+  :pattern
+  "problems/undeclared-cascades-cannot-be-audited; cascades/declared-skeleton",
+  :gloss
+  "a business held only in someone's head \"cannot be measured, reviewed, or diffed\"; declare its relations",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 45,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+  :trunk-source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 1,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+ "B4"
+ {:trunk "B",
+  :trunk-name "business model programming",
+  :name "**HOLE**: *the program: Hyperreal written as a cascade*",
+  :pattern "**HOLE**: *the program: Hyperreal written as a cascade*",
+  :gloss
+  "Cascade Live read top-down as one business, with its functions (work, money, clients, collaborators) as sections",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 46,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+  :trunk-source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 1,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+ "B5"
+ {:trunk "B",
+  :trunk-name "business model programming",
+  :name
+  "**HOLE**: *the cone: a coordination layer over members' cascades*",
+  :pattern
+  "**HOLE**: *the cone: a coordination layer over members' cascades*",
+  :gloss
+  "an apex with a map into each member's cascade; maps agree where members share a function",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 47,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+  :trunk-source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+   :line 1,
+   :sha256
+   "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+ "C"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name "C Clients and income",
+  :pattern nil,
+  :gloss "C Clients and income",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "C10"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name "vsatlas/offer-ladder",
+  :pattern "vsatlas/offer-ladder",
+  :gloss
+  "intro workshop → multi-session pilot → annual programme, each with scope, price band and outcome",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 51,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "C11"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name "or3/sustainability-without-enclosure",
+  :pattern "or3/sustainability-without-enclosure",
+  :gloss "sustain openly licensed tools without closing the core",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 52,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "C2"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name "ways-of-working/stays-alive-and-paid",
+  :pattern "ways-of-working/stays-alive-and-paid",
+  :gloss "\"Bills are paid … and runway is known\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 43,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "C3"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name "task-selection/work-that-pays",
+  :pattern "task-selection/work-that-pays",
+  :gloss
+  "select work \"because it earns money or builds the evidence a buyer will see … not against internal leverage\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 44,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "C4"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name "nomad/owner-of-the-problem",
+  :pattern "nomad/owner-of-the-problem",
+  :gloss
+  "\"route to the individual who owns the problem; the instrument is a proposal, not an application\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 45,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "C5"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name "**HOLE**: *say \"this is different\" in the buyer's terms*",
+  :pattern
+  "**HOLE**: *say \"this is different\" in the buyer's terms*",
+  :gloss
+  "the answer to \"why would I bother?\" uses the buyer's words, not the stack's glossary",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 46,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "C6"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name "depositing/scan-talk-frame",
+  :pattern "depositing/scan-talk-frame",
+  :gloss
+  "a recurring scan, a live conversation and a fixed frame make pipeline-building repeatable",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 47,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "C7"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name "correspondence-coherence/mission-unlocks-eoi",
+  :pattern "correspondence-coherence/mission-unlocks-eoi",
+  :gloss
+  "gate an outward letter on a mission that has produced a showable artefact",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 48,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "C8"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name
+  "depositing/upstream-patch-signal; nomad/self-certifying-artifact",
+  :pattern
+  "depositing/upstream-patch-signal; nomad/self-certifying-artifact",
+  :gloss
+  "a merged patch or a passing benchmark in a codebase the client cares about counts for more than self-promotion",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 49,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "C9"
+ {:trunk "C",
+  :trunk-name "C Clients and income",
+  :name "snatch/probe-before-committing",
+  :pattern "snatch/probe-before-committing",
+  :gloss
+  "\"make the first offer the smallest one that still discriminates, and read it as information\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 50,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "G"
+ {:trunk "G",
+  :trunk-name "G Community and governance",
+  :name "G Community and governance",
+  :pattern nil,
+  :gloss "G Community and governance",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "G2"
+ {:trunk "G",
+  :trunk-name "G Community and governance",
+  :name "institutions/ARGUMENT; creativity-commons/ARGUMENT",
+  :pattern "institutions/ARGUMENT; creativity-commons/ARGUMENT",
+  :gloss
+  "Ostrom's principles \"restated for contribution rather than appropriation and expressed as tests that Producers can run, read and change\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 133,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "G3"
+ {:trunk "G",
+  :trunk-name "G Community and governance",
+  :name "**HOLE**: *cui bono, as an argument that can fail*",
+  :pattern "**HOLE**: *cui bono, as an argument that can fail*",
+  :gloss
+  "who the work benefits, \"stated as a fall-through argument in which each claim records what still stands … when it fails\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 134,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "G4"
+ {:trunk "G",
+  :trunk-name "G Community and governance",
+  :name "ukrns/design-as-function-of-evidence",
+  :pattern "ukrns/design-as-function-of-evidence",
+  :gloss
+  "a learning system changes when evidence says so, and stays stable enough to plan against",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 135,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "G5"
+ {:trunk "G",
+  :trunk-name "G Community and governance",
+  :name "ukrns/distinguish-delivery-from-practice-change",
+  :pattern "ukrns/distinguish-delivery-from-practice-change",
+  :gloss
+  "\"Attendance proves reach into rooms; it does not prove changed research practice afterwards\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 136,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "G6"
+ {:trunk "G",
+  :trunk-name "G Community and governance",
+  :name "workshop/open-proposals-named-adoption",
+  :pattern "workshop/open-proposals-named-adoption",
+  :gloss
+  "anyone may propose; a proposal binds only through a named adoption by those whose work it governs",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 137,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "G7"
+ {:trunk "G",
+  :trunk-name "G Community and governance",
+  :name "creativity-commons/affected-participants-change-the-rules",
+  :pattern "creativity-commons/affected-participants-change-the-rules",
+  :gloss
+  "affected Producers can modify the operational rules, and \"changing the rules means writing new tests\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 138,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "G8"
+ {:trunk "G",
+  :trunk-name "G Community and governance",
+  :name "workshop/feedback-reaches-every-participant",
+  :pattern "workshop/feedback-reaches-every-participant",
+  :gloss
+  "every participant receives the feedback that changes their behaviour, on a typed channel",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 139,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "H1"
+ {:trunk "harm",
+  :trunk-name "Harm avoided (H1-H7)",
+  :name "the stack's records say something that is not so",
+  :pattern nil,
+  :gloss "the stack's records say something that is not so",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+   :line 25,
+   :sha256
+   "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 14,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "H2"
+ {:trunk "harm",
+  :trunk-name "Harm avoided (H1-H7)",
+  :name "failures and losses that nobody is told about",
+  :pattern nil,
+  :gloss "failures and losses that nobody is told about",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+   :line 26,
+   :sha256
+   "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 14,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "H3"
+ {:trunk "harm",
+  :trunk-name "Harm avoided (H1-H7)",
+  :name "Joe has to notice, nudge, re-send or wait",
+  :pattern nil,
+  :gloss "Joe has to notice, nudge, re-send or wait",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+   :line 27,
+   :sha256
+   "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 14,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "H4"
+ {:trunk "harm",
+  :trunk-name "Harm avoided (H1-H7)",
+  :name
+  "the War Machine chooses wrongly, ties, or cannot choose (infra-only)",
+  :pattern nil,
+  :gloss
+  "the War Machine chooses wrongly, ties, or cannot choose (infra-only)",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+   :line 28,
+   :sha256
+   "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 14,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "H5"
+ {:trunk "harm",
+  :trunk-name "Harm avoided (H1-H7)",
+  :name "state goes stale, drifts or piles up",
+  :pattern nil,
+  :gloss "state goes stale, drifts or piles up",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+   :line 29,
+   :sha256
+   "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 14,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "H6"
+ {:trunk "harm",
+  :trunk-name "Harm avoided (H1-H7)",
+  :name "slow paths and wasted compute or effort",
+  :pattern nil,
+  :gloss "slow paths and wasted compute or effort",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+   :line 30,
+   :sha256
+   "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 14,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "H7"
+ {:trunk "harm",
+  :trunk-name "Harm avoided (H1-H7)",
+  :name "the model cannot be read or checked",
+  :pattern nil,
+  :gloss "the model cannot be read or checked",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+   :line 31,
+   :sha256
+   "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 14,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "K"
+ {:trunk "K",
+  :trunk-name "K Collaborators",
+  :name "K Collaborators",
+  :pattern nil,
+  :gloss "K Collaborators",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "K10"
+ {:trunk "K",
+  :trunk-name "K Collaborators",
+  :name "peeragogy/wrapper",
+  :pattern "peeragogy/wrapper",
+  :gloss
+  "small contributions plus an integrating function that stitches them together",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 104,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "K2"
+ {:trunk "K",
+  :trunk-name "K Collaborators",
+  :name "creativity-commons/benefit-proportional-to-contribution",
+  :pattern "creativity-commons/benefit-proportional-to-contribution",
+  :gloss
+  "\"every party's effort is counted, including the effort a contribution asks of others\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 96,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "K3"
+ {:trunk "K",
+  :trunk-name "K Collaborators",
+  :name "collaboration-coherence/isolation",
+  :pattern "collaboration-coherence/isolation",
+  :gloss
+  "schedule \"deliberate, recurring coupling to its surrounding field … not hope it happens\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 97,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "K4"
+ {:trunk "K",
+  :trunk-name "K Collaborators",
+  :name "social/scope-bounded-handoff",
+  :pattern "social/scope-bounded-handoff",
+  :gloss
+  "a handoff declares what is read-only and what is written, and the output is checked against that",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 98,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "K5"
+ {:trunk "K",
+  :trunk-name "K Collaborators",
+  :name "social/derive-the-contract",
+  :pattern "social/derive-the-contract",
+  :gloss
+  "producer and consumer derive their views of a shared structure from one source, and check it by behaviour",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 99,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "K6"
+ {:trunk "K",
+  :trunk-name "K Collaborators",
+  :name "nomad/self-certifying-artifact",
+  :pattern "nomad/self-certifying-artifact",
+  :gloss
+  "produce something checked by a machine or an institution: \"a merged pull request, a verified proof, a passing benchmark\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 100,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "K7"
+ {:trunk "K",
+  :trunk-name "K Collaborators",
+  :name "workshop/feedback-reaches-every-participant",
+  :pattern "workshop/feedback-reaches-every-participant",
+  :gloss
+  "every participant, stakeholders included, receives the feedback that changes their behaviour",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 101,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "K8"
+ {:trunk "K",
+  :trunk-name "K Collaborators",
+  :name
+  "**HOLE**: *join two systems where one supplies the other's measured gap*",
+  :pattern
+  "**HOLE**: *join two systems where one supplies the other's measured gap*",
+  :gloss
+  "a joint build starts from a deficit one side has measured and the other side's system produces, not from \"two nice systems could combine\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 102,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "K9"
+ {:trunk "K",
+  :trunk-name "K Collaborators",
+  :name "corps/working-where-others-can-see",
+  :pattern "corps/working-where-others-can-see",
+  :gloss
+  "move the work into shared spaces so others can respond without asking",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 103,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "L"
+ {:trunk "L",
+  :trunk-name "L Learning",
+  :name "L Learning",
+  :pattern nil,
+  :gloss "L Learning",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "L1"
+ {:trunk "L",
+  :trunk-name "L Learning",
+  :name "**HOLE** — *the loop develops its people*",
+  :pattern "**HOLE** — *the loop develops its people*",
+  :gloss
+  "judge the work by capability gained, not output (renga verses 1 and 7)",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 29,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "L2"
+ {:trunk "L",
+  :trunk-name "L Learning",
+  :name "peeragogy/pattern-language; creativity-commons/ARGUMENT",
+  :pattern "peeragogy/pattern-language; creativity-commons/ARGUMENT",
+  :gloss
+  "a commons-based learning institution, generative not prescriptive (\"a commons-based educational institution, which, to my knowledge, still doesn't really exist yet\": Joe, Oct 2026)",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 30,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "L3"
+ {:trunk "L",
+  :trunk-name "L Learning",
+  :name "peeragogy/use-or-make",
+  :pattern "peeragogy/use-or-make",
+  :gloss "peer learning advances by using as much as by making",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 31,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "L4"
+ {:trunk "L",
+  :trunk-name "L Learning",
+  :name "workshop/records-carry-warrant (applied to mathematics)",
+  :pattern "workshop/records-carry-warrant (applied to mathematics)",
+  :gloss
+  "a reference the learner can trust because each entry carries its derivation",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 32,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "L5"
+ {:trunk "L",
+  :trunk-name "L Learning",
+  :name "cascade-construction/run-it-on-a-real-case",
+  :pattern "cascade-construction/run-it-on-a-real-case",
+  :gloss "one problem at a time, to 100%",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 33,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "L6"
+ {:trunk "L",
+  :trunk-name "L Learning",
+  :name "**HOLE** — *teach the move, not the proof*",
+  :pattern "**HOLE** — *teach the move, not the proof*",
+  :gloss
+  "a lesson isolates the reusable move (\"find a quantity locally constant off the curve and bound its jump\")",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 34,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "L7"
+ {:trunk "L",
+  :trunk-name "L Learning",
+  :name "math-informal/construct-an-explicit-witness",
+  :pattern "math-informal/construct-an-explicit-witness",
+  :gloss "an explanation is a witness the learner can check",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 35,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "L8"
+ {:trunk "L",
+  :trunk-name "L Learning",
+  :name "**HOLE** — *a belief about what the learner can do*",
+  :pattern "**HOLE** — *a belief about what the learner can do*",
+  :gloss
+  "the tutor keeps a model of the learner's capabilities and updates it from attempts",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 36,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "L9"
+ {:trunk "L",
+  :trunk-name "L Learning",
+  :name "gauntlet/teaching-inversion",
+  :pattern "gauntlet/teaching-inversion",
+  :gloss "the human starts as teacher and the roles can turn",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 37,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "N"
+ {:trunk "N",
+  :trunk-name "N Newcomers and users",
+  :name "N Newcomers and users",
+  :pattern nil,
+  :gloss "N Newcomers and users",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 9,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 9,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "N2"
+ {:trunk "N",
+  :trunk-name "N Newcomers and users",
+  :name "ways-of-working/real-users",
+  :pattern "ways-of-working/real-users",
+  :gloss
+  "each population holds \"a dated, sourced value on the scale none, asked, tried, uses, depends\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 165,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 9,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "N3"
+ {:trunk "N",
+  :trunk-name "N Newcomers and users",
+  :name "peeragogy/newcomer",
+  :pattern "peeragogy/newcomer",
+  :gloss
+  "newcomers are \"the recurring pressure that keeps the project's vocabulary, guides, and onboarding paths from going stale\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 166,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 9,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "N4"
+ {:trunk "N",
+  :trunk-name "N Newcomers and users",
+  :name "**HOLE**: *say \"this is different\" in the reader's terms*",
+  :pattern
+  "**HOLE**: *say \"this is different\" in the reader's terms*",
+  :gloss
+  "the same hole as C5: \"Do not answer Q-bother in the stack's own vocabulary\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 167,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 9,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "N5"
+ {:trunk "N",
+  :trunk-name "N Newcomers and users",
+  :name "ukrns/reader-run-path",
+  :pattern "ukrns/reader-run-path",
+  :gloss
+  "state where the offer sits between \"a reader runs the notebook\" and \"accessible readout\"",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 168,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 9,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "N6"
+ {:trunk "N",
+  :trunk-name "N Newcomers and users",
+  :name "peeragogy/wrapper",
+  :pattern "peeragogy/wrapper",
+  :gloss "a maintained overview lets newcomers see the whole",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 169,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 9,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "N7"
+ {:trunk "N",
+  :trunk-name "N Newcomers and users",
+  :name "collaboration-coherence/messy-with-lurkers",
+  :pattern "collaboration-coherence/messy-with-lurkers",
+  :gloss
+  "design for the gradient of participation, with low-cost partial participation",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 170,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 9,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "N8"
+ {:trunk "N",
+  :trunk-name "N Newcomers and users",
+  :name "task-selection/end-in-something-shown",
+  :pattern "task-selection/end-in-something-shown",
+  :gloss "select work that ends in a capability someone can verify",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 171,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 9,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "N9"
+ {:trunk "N",
+  :trunk-name "N Newcomers and users",
+  :name "**HOLE**: *a tool a stranger can run on their own material*",
+  :pattern
+  "**HOLE**: *a tool a stranger can run on their own material*",
+  :gloss
+  "the first use by someone else needs something that works on their data, not ours",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+   :line 172,
+   :sha256
+   "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 9,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name "P Patterns and the Alexandrian way",
+  :pattern nil,
+  :gloss "P Patterns and the Alexandrian way",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P10"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name "pattern-discipline/patterns-as-categorical-objects",
+  :pattern "pattern-discipline/patterns-as-categorical-objects",
+  :gloss "patterns can be stated formally and checked",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 58,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P11"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name "**HOLE** — *the medium is editable hypertext*",
+  :pattern "**HOLE** — *the medium is editable hypertext*",
+  :gloss
+  "Nelson's line: links and transclusion keep a pattern joined to its sources (Arxana)",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 59,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P2"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name "peeragogy/pattern-language",
+  :pattern "peeragogy/pattern-language",
+  :gloss
+  "a language gives enough generative structure to design something coherent without dictating it",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 50,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P3"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name "forward-model/the-forward-model-is-a-pattern-cascade",
+  :pattern "forward-model/the-forward-model-is-a-pattern-cascade",
+  :gloss "plan the next build as patterns, not missions",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 51,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P4"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name "cascades/declared-skeleton",
+  :pattern "cascades/declared-skeleton",
+  :gloss
+  "declare the relations you would defend, each with its because",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 52,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P5"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name
+  "cascade-construction/add-a-pattern-when-an-item-fits-no-class",
+  :pattern
+  "cascade-construction/add-a-pattern-when-an-item-fits-no-class",
+  :gloss "a hole names a pattern that should exist",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 53,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P6"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name "cascade-construction/mine-patterns-from-incidents",
+  :pattern "cascade-construction/mine-patterns-from-incidents",
+  :gloss "patterns come from what actually happened",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 54,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P7"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name "workshop/revise-patterns-from-observed-use",
+  :pattern "workshop/revise-patterns-from-observed-use",
+  :gloss "retain, revise or retire patterns from outcomes",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 55,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P8"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name "library-coherence/library-staleness-scan",
+  :pattern "library-coherence/library-staleness-scan",
+  :gloss "the library is findable and current",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 56,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "P9"
+ {:trunk "P",
+  :trunk-name "P Patterns and the Alexandrian way",
+  :name "pattern-discipline/pattern-to-code-receipts",
+  :pattern "pattern-discipline/pattern-to-code-receipts",
+  :gloss "a pattern's use leaves a receipt in the work",
+  :source
+  {:path
+   "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+   :line 57,
+   :sha256
+   "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 13,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+ "commons"
+ {:trunk "commons",
+  :trunk-name "Commons and public",
+  :name "Commons and public",
+  :pattern nil,
+  :gloss "Commons and public",
+  :source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 14,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+  :trunk-source
+  {:path
+   "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+   :line 14,
+   :sha256
+   "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}}}

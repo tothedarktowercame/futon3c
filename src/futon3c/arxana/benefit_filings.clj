@@ -1,6 +1,7 @@
 (ns futon3c.arxana.benefit-filings
   "Historical benefit filings, with substrate identities kept in a separate lane."
   (:require [futon3c.arxana.catalogue-view :as catalogue]
+            [futon3c.arxana.benefit-names :as names]
             [futon3c.arxana.batch-read :as batch]
             [futon3c.arxana.queries :as queries]))
 
@@ -55,7 +56,9 @@
           (assoc (benefit-view records benefit-id valid-time) :queries @batch/*receipts*)
           {:status :ok :mode :list :valid-time valid-time :interpretation :historical-filings
            :queries @batch/*receipts*
-           :benefits (mapv (fn [b] {:benefit b :evidence-completeness :complete
+           :benefits (mapv (fn [b] {:label (names/label (get-in b [:asserted-content :benefit/line]))
+                                   :cluster (or (:trunk (names/label (get-in b [:asserted-content :benefit/line]))) "unnamed")
+                                   :benefit b :evidence-completeness :complete
                                    :evidence (filterv #(= (:id b) (:subject-clusion-id %)) evidence)
                                    :serves-v1 (count (filter #(= (:id b) (endpoint % :benefit-line)) old))
                                    :serves-v2 (count (filter #(= (:id b) (endpoint % :benefit-line)) substrate))})

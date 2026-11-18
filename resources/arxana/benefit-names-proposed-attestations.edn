@@ -1,0 +1,3036 @@
+{:dry-run true,
+ :named 75,
+ :unnamed [],
+ :attestations
+ [{:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 53,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:baa08af5e68d247775ff6040983786bf3f3ecc6ee9ebe3ba1b3599d313b4d3c0",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 53,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+    :trunk-source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+   :content
+   {:name "**HOLE**: *a twin run: simulate a business before acting*",
+    :pattern
+    "**HOLE**: *a twin run: simulate a business before acting*",
+    :gloss
+    "run a member's cascade through the forward model without actuation; compare with what happens",
+    :trunk "B",
+    :trunk-name "business model programming",
+    :benefit/line "B11"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:a1fa8d56c4a85beb6ce36bef6aad2581f6f1b44832f072f340e404341b21fcd5"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 54,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:21570601783c42513b57d26d736af81292066af7ba386e0d9895d4a070c98743",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 54,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+    :trunk-source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+   :content
+   {:name "vsatlas/offer-ladder; vsatlas/pilot-offers",
+    :pattern "vsatlas/offer-ladder; vsatlas/pilot-offers",
+    :gloss
+    "intro workshop → pilot → programme, each with scope, price band, outcome (offer-ladder records no grounding source)",
+    :trunk "B",
+    :trunk-name "business model programming",
+    :benefit/line "B12"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:7ac0ba02da55b59aa84c37a28d65b6bf0428ece89720b0d0042356ab31ddc243"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 55,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:291a2dae585745154683b21cf78890b031c6dec2f6d2e5cf7755f5ec56bd8414",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 55,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+    :trunk-source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+   :content
+   {:name "nomad/self-certifying-artifact",
+    :pattern "nomad/self-certifying-artifact",
+    :gloss
+    "artefacts \"whose validity is machine- or institution-checked\"",
+    :trunk "B",
+    :trunk-name "business model programming",
+    :benefit/line "B13"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:3c91dd89b3fc292be12f7766fdb903f3f53ce490fdebdcff9506e942d8516c57"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 56,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:eaff5bbd5bf2b5c50fe54181dcd4a53eefab418df4c61f386f1936359947d27d",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 56,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+    :trunk-source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+   :content
+   {:name
+    "ways-of-working/stays-alive-and-paid; or3/sustainability-without-enclosure",
+    :pattern
+    "ways-of-working/stays-alive-and-paid; or3/sustainability-without-enclosure",
+    :gloss
+    "bills paid, runway known; sustain open tools without closing the core",
+    :trunk "B",
+    :trunk-name "business model programming",
+    :benefit/line "B14"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:3d2dd9f383ae346e8a1f08f1d8dfe010499524a8b979ddccca626ea573bc98c9"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 44,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:c81d8d34876063b817d0dd59b81aca1a4a9e1d3b36be39b992e197fd129f1b46",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 44,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+    :trunk-source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+   :content
+   {:name "forward-model/the-forward-model-is-a-pattern-cascade",
+    :pattern "forward-model/the-forward-model-is-a-pattern-cascade",
+    :gloss
+    "\"Characterize the future build as a typed cascade of design patterns … holes are patterns that should exist and do not\"",
+    :trunk "B",
+    :trunk-name "business model programming",
+    :benefit/line "B2"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:61cc7f4f492a44b7aa150d62f40c49cb744c37d65af796736f04ac8dbba3a286"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 45,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:d5a78e89ae7dafa8f83cef8cdd531e7c4b362dda10541117acbf81b2bb1e89aa",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 45,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+    :trunk-source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+   :content
+   {:name
+    "problems/undeclared-cascades-cannot-be-audited; cascades/declared-skeleton",
+    :pattern
+    "problems/undeclared-cascades-cannot-be-audited; cascades/declared-skeleton",
+    :gloss
+    "a business held only in someone's head \"cannot be measured, reviewed, or diffed\"; declare its relations",
+    :trunk "B",
+    :trunk-name "business model programming",
+    :benefit/line "B3"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:e865cfcc1e6cefa2e83800a5532d25f2892cffd5078b5c95b4a41b9e06972f32"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 46,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:aa86108655653ff801cbb05206afe5fb469466333be4d3342ed42bf3d9fc7bf5",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 46,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+    :trunk-source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+   :content
+   {:name "**HOLE**: *the program: Hyperreal written as a cascade*",
+    :pattern "**HOLE**: *the program: Hyperreal written as a cascade*",
+    :gloss
+    "Cascade Live read top-down as one business, with its functions (work, money, clients, collaborators) as sections",
+    :trunk "B",
+    :trunk-name "business model programming",
+    :benefit/line "B4"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:cb8778b9de9f1dd41f65c1e601d27373162e296e6a51407371bdfac6bafb9dbc"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 47,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:f16c422c9e1235dacc41f467cb99a3894695f50a50513da45f8d92c7b5af81b3",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 47,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"},
+    :trunk-source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-business-model-programming-2026-11-08.md",
+     :line 1,
+     :sha256
+     "39c1776940cc2770212de398dcfc24937ec5b11e168b822d9ee14647532c0091"}},
+   :content
+   {:name
+    "**HOLE**: *the cone: a coordination layer over members' cascades*",
+    :pattern
+    "**HOLE**: *the cone: a coordination layer over members' cascades*",
+    :gloss
+    "an apex with a map into each member's cascade; maps agree where members share a function",
+    :trunk "B",
+    :trunk-name "business model programming",
+    :benefit/line "B5"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:aeee15f938a354e9cfda6705e3e478653f65715d6d65298f8d367ade8fa15125"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:366cee090a7d5010a698f499d4173cde58289af95a339bc7c8cc2825dbca2813",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "C Clients and income",
+    :pattern nil,
+    :gloss "C Clients and income",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:9b3bb90fdd2d1903c36705df3e6b0fadaad947930a52f521a650659157fca7a2"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 51,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:3f6fdffd710cc255e259000ac656be2173e9ae5749563e26e8df92b39d3ecac3",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 51,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "vsatlas/offer-ladder",
+    :pattern "vsatlas/offer-ladder",
+    :gloss
+    "intro workshop → multi-session pilot → annual programme, each with scope, price band and outcome",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C10"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:125e9ce3ef858b61074f8b3e3892669160491abe5a334a86b91d0f41d98b31f1"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 52,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:1dd94b14c142cea346163467bb5ee366e090f760c493185ecdb5d6f3c59ab371",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 52,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "or3/sustainability-without-enclosure",
+    :pattern "or3/sustainability-without-enclosure",
+    :gloss "sustain openly licensed tools without closing the core",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C11"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:1911a275c85a7899f5f8ec8442b88348b42ca3e9c012b3e8e94b51eeeb3780b2"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 43,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:501049db57752e459f216c026df6d51a19389ee3166d255e7014daf5c8d3233b",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 43,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "ways-of-working/stays-alive-and-paid",
+    :pattern "ways-of-working/stays-alive-and-paid",
+    :gloss "\"Bills are paid … and runway is known\"",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C2"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:2a57f6a0468f2c466771f9396d6f4180f6d9b6aa8abf46bbf085d7501fc68282"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 44,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:efbe0502ecf3d06eb1ecea92945ed2c558d0a76fa88ecfa470d88ae627ff8af0",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 44,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "task-selection/work-that-pays",
+    :pattern "task-selection/work-that-pays",
+    :gloss
+    "select work \"because it earns money or builds the evidence a buyer will see … not against internal leverage\"",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C3"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:1dec6e604a3fad9143bacde02e62e5abace5f6781a8ac7c7804bbc82635550e7"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 45,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:557848c70d5c6b95e0037bb2a4c0f07e194b698ec5a15fb086f634f41668c567",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 45,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "nomad/owner-of-the-problem",
+    :pattern "nomad/owner-of-the-problem",
+    :gloss
+    "\"route to the individual who owns the problem; the instrument is a proposal, not an application\"",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C4"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:cfa4f739961437f0c2a99115de38b9549e8d39a5b9ae431f6c4facf2a7b5b1fb"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 46,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:3e3e8eab0a52fb9acc33955f0e25b459ed1c93408ef33ae66af7a7c824578ba8",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 46,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "**HOLE**: *say \"this is different\" in the buyer's terms*",
+    :pattern
+    "**HOLE**: *say \"this is different\" in the buyer's terms*",
+    :gloss
+    "the answer to \"why would I bother?\" uses the buyer's words, not the stack's glossary",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C5"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:6fcba2eddbadf20bf036c626d7b5314f9e346fa3f5160b6d140b627182ffc1fd"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 47,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:c929b74396881676aa67e181eb8d47179d7c9e4f42682794175f68d785609f6b",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 47,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "depositing/scan-talk-frame",
+    :pattern "depositing/scan-talk-frame",
+    :gloss
+    "a recurring scan, a live conversation and a fixed frame make pipeline-building repeatable",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C6"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:c2981ce122c4361043b903ca601036fc3ef8e6f62947ab34a41e07e229fdb20a"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 48,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:ed6ca6f3ebbd95b380dc24752b068f2899cc2c6c7d5602fecf36a2e4b723a896",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 48,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "correspondence-coherence/mission-unlocks-eoi",
+    :pattern "correspondence-coherence/mission-unlocks-eoi",
+    :gloss
+    "gate an outward letter on a mission that has produced a showable artefact",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C7"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:1bcb8c1065881c1a51cf13fde46ca17b0835a9caf69e94869353ace026a4ff2d"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 49,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:cf303fc861b59c3ed24dea95b4a33043139ff048ac233caa84a49c3abf023349",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 49,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name
+    "depositing/upstream-patch-signal; nomad/self-certifying-artifact",
+    :pattern
+    "depositing/upstream-patch-signal; nomad/self-certifying-artifact",
+    :gloss
+    "a merged patch or a passing benchmark in a codebase the client cares about counts for more than self-promotion",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C8"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:463d00bb93af287cca3f998dcba0696fb0599b7643f8302c6ce28bf50c6e340b"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 50,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:765b0a94ca4c315cd0cf0405ee06c38f0c1e1e7eb4fa3f68fedb05e48c322f8f",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 50,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "snatch/probe-before-committing",
+    :pattern "snatch/probe-before-committing",
+    :gloss
+    "\"make the first offer the smallest one that still discriminates, and read it as information\"",
+    :trunk "C",
+    :trunk-name "C Clients and income",
+    :benefit/line "C9"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:01635c440281d8286ce4beb8bea28e26a900ae5f386bdc97df097d8ca88ac6d5"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:1ce5138d07769f3da963676c3ec955a345e853bb42c25a047091b82b41e02364",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "G Community and governance",
+    :pattern nil,
+    :gloss "G Community and governance",
+    :trunk "G",
+    :trunk-name "G Community and governance",
+    :benefit/line "G"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:ae9b82867213700888ca12cbeba83f5800d375d98266b67ea81d3d3cda528c3f"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 133,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:012d6f75a597c6b89be34c6fedc5cb8736312dce304d4be1b7e0746a2759c283",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 133,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "institutions/ARGUMENT; creativity-commons/ARGUMENT",
+    :pattern "institutions/ARGUMENT; creativity-commons/ARGUMENT",
+    :gloss
+    "Ostrom's principles \"restated for contribution rather than appropriation and expressed as tests that Producers can run, read and change\"",
+    :trunk "G",
+    :trunk-name "G Community and governance",
+    :benefit/line "G2"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:166434c85148b55a6f574f801397e1b58889d39848f10e691447ef6687386a07"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 134,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:91726d26f5d43b388d5324c3db2669ac6bcf5d359a7283ce20400c241d469d00",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 134,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "**HOLE**: *cui bono, as an argument that can fail*",
+    :pattern "**HOLE**: *cui bono, as an argument that can fail*",
+    :gloss
+    "who the work benefits, \"stated as a fall-through argument in which each claim records what still stands … when it fails\"",
+    :trunk "G",
+    :trunk-name "G Community and governance",
+    :benefit/line "G3"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:b895a4f9a575c443128d85e0dd7933987837811e20488405ee5f147cff57d6a9"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 135,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:951d09fb102693bd0dd279b86ce61b0be7e511ca9fbed12fa09c28ea26f25e9b",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 135,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "ukrns/design-as-function-of-evidence",
+    :pattern "ukrns/design-as-function-of-evidence",
+    :gloss
+    "a learning system changes when evidence says so, and stays stable enough to plan against",
+    :trunk "G",
+    :trunk-name "G Community and governance",
+    :benefit/line "G4"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:32c4f821a1c69a4b8913e1e1db8ae200bbce6d2ba88938c2054e235d32037d3c"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 136,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:76cda69326e20237f5d51c32a3f14da2f26608959f904d7bb5fed61cead7ff85",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 136,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "ukrns/distinguish-delivery-from-practice-change",
+    :pattern "ukrns/distinguish-delivery-from-practice-change",
+    :gloss
+    "\"Attendance proves reach into rooms; it does not prove changed research practice afterwards\"",
+    :trunk "G",
+    :trunk-name "G Community and governance",
+    :benefit/line "G5"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:c8945ba917d90e9e6e42e88b1b638aeaef94fa4d90dad644b896906a49d3c8b2"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 137,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:8e8d162fafbe119541e3f0901d54ee75947d1e82f56b7c85f2564b9b13cbd219",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 137,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "workshop/open-proposals-named-adoption",
+    :pattern "workshop/open-proposals-named-adoption",
+    :gloss
+    "anyone may propose; a proposal binds only through a named adoption by those whose work it governs",
+    :trunk "G",
+    :trunk-name "G Community and governance",
+    :benefit/line "G6"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:ff5b554976372391387c8daf809bc7415a9d9ceb198e4dfd7d9f0f1a1b8fcf53"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 138,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:b6253122cf6a33e414980972a3ecf21b92882bbfd67affdd38845224e31ccc1e",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 138,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "creativity-commons/affected-participants-change-the-rules",
+    :pattern
+    "creativity-commons/affected-participants-change-the-rules",
+    :gloss
+    "affected Producers can modify the operational rules, and \"changing the rules means writing new tests\"",
+    :trunk "G",
+    :trunk-name "G Community and governance",
+    :benefit/line "G7"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:09b53066da2ac69f8493614643baf98ae6c91f4f871d02710a7c1f33cecc5c46"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 139,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:2f892958faae0e72041e9781e128a2cbefc0b9ea0377f572df5a8a0dc5aaf404",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 139,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "workshop/feedback-reaches-every-participant",
+    :pattern "workshop/feedback-reaches-every-participant",
+    :gloss
+    "every participant receives the feedback that changes their behaviour, on a typed channel",
+    :trunk "G",
+    :trunk-name "G Community and governance",
+    :benefit/line "G8"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:a3c3a7cfb47bdc18d4c5207d836fd382ce7ba949025d737a6825fa1dfc60d048"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 25,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:9b3ce7c0fe64941175c8f03a6872a8ee6589e9fbc3161b721f0533ef9bc64877",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 25,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "the stack's records say something that is not so",
+    :pattern nil,
+    :gloss "the stack's records say something that is not so",
+    :trunk "harm",
+    :trunk-name "Harm avoided (H1-H7)",
+    :benefit/line "H1"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:b6e79528d39ce46ea79fcb40ecebe75e3ff9a0d4f177f8c3e8724fd04e72c9c4"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 26,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:ee7ca1018919db7d8bdd3cf96e3b46e4f12df20e8c419c2ba2d57180c5f1b692",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 26,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "failures and losses that nobody is told about",
+    :pattern nil,
+    :gloss "failures and losses that nobody is told about",
+    :trunk "harm",
+    :trunk-name "Harm avoided (H1-H7)",
+    :benefit/line "H2"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:adafe0eab090416a1f2edf22213b8fef0966876afa1e759debb36f639f8a78cd"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 27,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:84dca8bb60c1224e810a6b3a11636ca887822a3f3b0c69999916f1c4cc7141c9",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 27,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "Joe has to notice, nudge, re-send or wait",
+    :pattern nil,
+    :gloss "Joe has to notice, nudge, re-send or wait",
+    :trunk "harm",
+    :trunk-name "Harm avoided (H1-H7)",
+    :benefit/line "H3"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:2027632438085c47582ede57c99502800401258301afe0b0f88ef503ab0119e1"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 28,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:cd4738db01a415d871300d42307bab05828fbc1114cba0d48ce661471c856029",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 28,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name
+    "the War Machine chooses wrongly, ties, or cannot choose (infra-only)",
+    :pattern nil,
+    :gloss
+    "the War Machine chooses wrongly, ties, or cannot choose (infra-only)",
+    :trunk "harm",
+    :trunk-name "Harm avoided (H1-H7)",
+    :benefit/line "H4"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:16e5a2cb09e002b0724bc42b30510e02577f434ba32b2db5bf223a4e2f369b03"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 29,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:3129381aeeb7e66bca9bd688eddea3e73ec8adfea9c8d38181f358ccf97ad332",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 29,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "state goes stale, drifts or piles up",
+    :pattern nil,
+    :gloss "state goes stale, drifts or piles up",
+    :trunk "harm",
+    :trunk-name "Harm avoided (H1-H7)",
+    :benefit/line "H5"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:667ad287ceaf11fac868e5f65f0bf9cf1ec294aa03402891491921a4bdac4ccf"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 30,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:af73b596d6878df10b2609112263336a423177410baa1a5a7dcb3ccdbb051370",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 30,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "slow paths and wasted compute or effort",
+    :pattern nil,
+    :gloss "slow paths and wasted compute or effort",
+    :trunk "harm",
+    :trunk-name "Harm avoided (H1-H7)",
+    :benefit/line "H6"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:7df17af7313210be28e8b1742bf3f91fbb93e65cf061ec72d261e032d12abf85"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 31,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:4ba8c19cd1bfc8b6ae2bcca332d98460c73f9ae50228df8be5e1c2c09939223d",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/disbenefits-avoided-2026-11-08.md",
+     :line 31,
+     :sha256
+     "cd34c91346f8a4d6339971ad47e3f9ce8a3b78cfe20a88b2bbcb22af5434b00a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "the model cannot be read or checked",
+    :pattern nil,
+    :gloss "the model cannot be read or checked",
+    :trunk "harm",
+    :trunk-name "Harm avoided (H1-H7)",
+    :benefit/line "H7"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:d371e740faf91d02f8a340dc54f0e1310fe090e3610063c2108f0eb27e834f31"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:d0e16582121d0533cadf84f943f79cf6304a27e8f61508c85a0557ae2ca26271",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "K Collaborators",
+    :pattern nil,
+    :gloss "K Collaborators",
+    :trunk "K",
+    :trunk-name "K Collaborators",
+    :benefit/line "K"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:31abbfc0762f3ce460c8f9298ca8908beae0b56558a7368fa11e44fe75fd73c7"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 104,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:ccf23d36a26e2647c346cbf5aec7a270b3f8da7d641f6162b1488977923569fd",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 104,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "peeragogy/wrapper",
+    :pattern "peeragogy/wrapper",
+    :gloss
+    "small contributions plus an integrating function that stitches them together",
+    :trunk "K",
+    :trunk-name "K Collaborators",
+    :benefit/line "K10"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:5f446c03ead2d0345618cf277b0cdcb3447e193b1daedb73bcf254535c12e9fc"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 96,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:4188e6824bf131b666613a3c8daad2436bc91cefa22565984dbfc9e02f32dac5",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 96,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "creativity-commons/benefit-proportional-to-contribution",
+    :pattern "creativity-commons/benefit-proportional-to-contribution",
+    :gloss
+    "\"every party's effort is counted, including the effort a contribution asks of others\"",
+    :trunk "K",
+    :trunk-name "K Collaborators",
+    :benefit/line "K2"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:df3ddd47bf220fbb5bf3fe3acb2b258ea2de2036e6e487f36379b9e93ee407d9"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 97,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:efb0ef59b3a4b03967ee2c9c7277deabe0ab609d98c2eb9baf4c08ceed8af130",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 97,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "collaboration-coherence/isolation",
+    :pattern "collaboration-coherence/isolation",
+    :gloss
+    "schedule \"deliberate, recurring coupling to its surrounding field … not hope it happens\"",
+    :trunk "K",
+    :trunk-name "K Collaborators",
+    :benefit/line "K3"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:abf28d35a05bce53fc873239f4ce585ec3ce6afefc4af58b3eff7d0ec2e71151"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 98,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:15bfce233eb0b19f23cfb059aefb6e3a67e9d6770ffd63f61121903214a560c2",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 98,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "social/scope-bounded-handoff",
+    :pattern "social/scope-bounded-handoff",
+    :gloss
+    "a handoff declares what is read-only and what is written, and the output is checked against that",
+    :trunk "K",
+    :trunk-name "K Collaborators",
+    :benefit/line "K4"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:f0cb3a3cad739e04ec48d35d566a0696d6077abc50772e4506ca497bcce895ce"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 99,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:655386d883f7013cbd97a9778ed02736f54210caf5e7e47a7ed30d6832b6d6d2",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 99,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "social/derive-the-contract",
+    :pattern "social/derive-the-contract",
+    :gloss
+    "producer and consumer derive their views of a shared structure from one source, and check it by behaviour",
+    :trunk "K",
+    :trunk-name "K Collaborators",
+    :benefit/line "K5"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:4624552075f578bf99839b19f83da8e3460a39c597d3a60cc52b5d504ca2a430"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 100,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:4cdc6db507605895e87810952d3ff7d1748c94cace74c8ba2d7f1706a9a60b12",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 100,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "nomad/self-certifying-artifact",
+    :pattern "nomad/self-certifying-artifact",
+    :gloss
+    "produce something checked by a machine or an institution: \"a merged pull request, a verified proof, a passing benchmark\"",
+    :trunk "K",
+    :trunk-name "K Collaborators",
+    :benefit/line "K6"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:89523d3d63437c57a6dc9ee634dd605ba800896f5f0df779aa0cf63792085faf"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 101,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:a02f4725e04c2ebacc973d18d609b489bb92638b9e07b929c02785b8e747c001",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 101,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "workshop/feedback-reaches-every-participant",
+    :pattern "workshop/feedback-reaches-every-participant",
+    :gloss
+    "every participant, stakeholders included, receives the feedback that changes their behaviour",
+    :trunk "K",
+    :trunk-name "K Collaborators",
+    :benefit/line "K7"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:e207cc4acbab6502c6ea47ec0069f2b79221b05f5d0ddf3983e1f43f78f109c3"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 102,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:f8f70679790e39d1f45a4a955ee4418eaf0de4690b702c7627a9c802ea35ed51",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 102,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name
+    "**HOLE**: *join two systems where one supplies the other's measured gap*",
+    :pattern
+    "**HOLE**: *join two systems where one supplies the other's measured gap*",
+    :gloss
+    "a joint build starts from a deficit one side has measured and the other side's system produces, not from \"two nice systems could combine\"",
+    :trunk "K",
+    :trunk-name "K Collaborators",
+    :benefit/line "K8"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:90db151f0c6dc94d8d32dcc6ab6b2fec2aae035871fbde94f4273adc8b08e02e"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 103,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:52608faffa198a0bfa788bb7c5f4e4517db331a00d0cb2f976e366cda868b710",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 103,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "corps/working-where-others-can-see",
+    :pattern "corps/working-where-others-can-see",
+    :gloss
+    "move the work into shared spaces so others can respond without asking",
+    :trunk "K",
+    :trunk-name "K Collaborators",
+    :benefit/line "K9"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:efe6ace4ce0a850806b8e7a3a1a9c30f302e93853636a3b4b9d79f5ef7343c45"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:57e86871d0d563ae7671f0dcb2696f35e492f6e71df8d9fe809c4680c4e0c765",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "L Learning",
+    :pattern nil,
+    :gloss "L Learning",
+    :trunk "L",
+    :trunk-name "L Learning",
+    :benefit/line "L"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:a897b4e459352b148ae49b565d543a514edabd35f5fbd6a03ee7ad4db3b4c2a1"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 29,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:052f3b697a57576ab6ace0b43e9273b6dd0fb43f6cd0e6ff9e2fbb3476c3aeb9",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 29,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "**HOLE** — *the loop develops its people*",
+    :pattern "**HOLE** — *the loop develops its people*",
+    :gloss
+    "judge the work by capability gained, not output (renga verses 1 and 7)",
+    :trunk "L",
+    :trunk-name "L Learning",
+    :benefit/line "L1"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:5d2bf67ffedc9b9a3368ec29ceb1b36d2e72ac5b52d9b0129146df93cb2e3246"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 30,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:94f43f7931cf0590675820a74361902bc4eff36b6f868797d720e0ffed69f0e2",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 30,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "peeragogy/pattern-language; creativity-commons/ARGUMENT",
+    :pattern "peeragogy/pattern-language; creativity-commons/ARGUMENT",
+    :gloss
+    "a commons-based learning institution, generative not prescriptive (\"a commons-based educational institution, which, to my knowledge, still doesn't really exist yet\": Joe, Oct 2026)",
+    :trunk "L",
+    :trunk-name "L Learning",
+    :benefit/line "L2"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:3425cf3697ab89b63798f0387ef1cf8e6b8c2b0fe0747718fb9b2827b3480eec"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 31,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:7464bde9efab8a317c9fad9f8c3a5c50a3fc1a48df9d296b02f791c051450179",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 31,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "peeragogy/use-or-make",
+    :pattern "peeragogy/use-or-make",
+    :gloss "peer learning advances by using as much as by making",
+    :trunk "L",
+    :trunk-name "L Learning",
+    :benefit/line "L3"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:b07f21c1a381290443a72563458cf74d1a3a139346270fedb6e51f06232cb1fd"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 32,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:de79c0bbddab4eaba7b793ffcb9bcf3387b2c6824513c0868e8bea20d02604b5",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 32,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "workshop/records-carry-warrant (applied to mathematics)",
+    :pattern "workshop/records-carry-warrant (applied to mathematics)",
+    :gloss
+    "a reference the learner can trust because each entry carries its derivation",
+    :trunk "L",
+    :trunk-name "L Learning",
+    :benefit/line "L4"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:fbd863ef06b0dc6ae05a14f90269766a7c330c12dee50bb25d3042761adcc0a9"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 33,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:0fd3c4015622ca1e6d66ce5bb1670304b134933c473b6036adc9d252004cd9de",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 33,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "cascade-construction/run-it-on-a-real-case",
+    :pattern "cascade-construction/run-it-on-a-real-case",
+    :gloss "one problem at a time, to 100%",
+    :trunk "L",
+    :trunk-name "L Learning",
+    :benefit/line "L5"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:cf70e6d62a61b6dd2a3ccedddcc0e42ec4a5bedb2b3fb8891b1a54eec3165df1"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 34,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:e7e4b70453512be887a2eeab8101b5af77c14731ac9e2b05ab4b0897667be42a",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 34,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "**HOLE** — *teach the move, not the proof*",
+    :pattern "**HOLE** — *teach the move, not the proof*",
+    :gloss
+    "a lesson isolates the reusable move (\"find a quantity locally constant off the curve and bound its jump\")",
+    :trunk "L",
+    :trunk-name "L Learning",
+    :benefit/line "L6"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:627966ec499edfbb27ec7a156ad1eba560a0dc5a6c7daa297184914d3ae3e6ce"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 35,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:b69a9c8a4465edf20d2773b1c69156fac72e17d777157993476d46b4e6a8f4a5",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 35,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "math-informal/construct-an-explicit-witness",
+    :pattern "math-informal/construct-an-explicit-witness",
+    :gloss "an explanation is a witness the learner can check",
+    :trunk "L",
+    :trunk-name "L Learning",
+    :benefit/line "L7"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:d14b32ae6c1597bb556e2adcda5fe8dae2c0e969441b566d9e9d1817c49bdeec"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 36,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:d3a1a4958b399e20e7a0d54faa7939594e77a4d4d60e8f979307b60ca086bedc",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 36,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "**HOLE** — *a belief about what the learner can do*",
+    :pattern "**HOLE** — *a belief about what the learner can do*",
+    :gloss
+    "the tutor keeps a model of the learner's capabilities and updates it from attempts",
+    :trunk "L",
+    :trunk-name "L Learning",
+    :benefit/line "L8"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:2aedeebcf008e2c6a991202adea532236ee42ebdb434489a2f5c98010805f031"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 37,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:393fddf25da509c117c75c0bec87b0d3606d394e992613549e6978efc5fcf9c9",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 37,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "gauntlet/teaching-inversion",
+    :pattern "gauntlet/teaching-inversion",
+    :gloss "the human starts as teacher and the roles can turn",
+    :trunk "L",
+    :trunk-name "L Learning",
+    :benefit/line "L9"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:825ba95bc3108266cabbb9f56d49d5d19a6dc70a7b5abb3a9316aa4fe1aca584"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:cdc802a25c0f5e55203296e6b930b67fd0c955999f65e10bcd9cbe352429ed5c",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "N Newcomers and users",
+    :pattern nil,
+    :gloss "N Newcomers and users",
+    :trunk "N",
+    :trunk-name "N Newcomers and users",
+    :benefit/line "N"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:8bc050792e5ef11dc9083929a4b19d6ac64ea1b49d03cce82ccf5dace1afd55b"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 165,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:844568514c61e48da4e4bf704aca909a92fcad642268c054e05c72055029ad54",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 165,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "ways-of-working/real-users",
+    :pattern "ways-of-working/real-users",
+    :gloss
+    "each population holds \"a dated, sourced value on the scale none, asked, tried, uses, depends\"",
+    :trunk "N",
+    :trunk-name "N Newcomers and users",
+    :benefit/line "N2"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:22647a82cc9a502e579b36bd2ad6aa286cdeaf1419f9740d522934a866f7f121"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 166,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:ae364937b9355fa1b5b11f79323d3475cafd11e861574eed3829bb2ff14f7f63",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 166,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "peeragogy/newcomer",
+    :pattern "peeragogy/newcomer",
+    :gloss
+    "newcomers are \"the recurring pressure that keeps the project's vocabulary, guides, and onboarding paths from going stale\"",
+    :trunk "N",
+    :trunk-name "N Newcomers and users",
+    :benefit/line "N3"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:acb3cac6b283dbac4c5daad46d92a1ce4a7363c6a3e88b9dd3c7449f2a2b6aeb"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 167,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:c06a71906d6cc27b61decf0e7fafee64e7df13b1fff10e7e9d0aa913bf7d4bb5",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 167,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name
+    "**HOLE**: *say \"this is different\" in the reader's terms*",
+    :pattern
+    "**HOLE**: *say \"this is different\" in the reader's terms*",
+    :gloss
+    "the same hole as C5: \"Do not answer Q-bother in the stack's own vocabulary\"",
+    :trunk "N",
+    :trunk-name "N Newcomers and users",
+    :benefit/line "N4"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:0ab78680af32b94fbdf7e381d16e423e26b03c06bc8768366ac686e19387b213"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 168,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:d8c81649cf71cb19f2ec5db32f296822db29d578947581ea0de1775dacc1fe5d",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 168,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "ukrns/reader-run-path",
+    :pattern "ukrns/reader-run-path",
+    :gloss
+    "state where the offer sits between \"a reader runs the notebook\" and \"accessible readout\"",
+    :trunk "N",
+    :trunk-name "N Newcomers and users",
+    :benefit/line "N5"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:172136dd7dceda1badf113dc9e86e76f3e8ead722210dade64a1dbbac9893a68"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 169,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:58b6d3dcf511d24dcfddde9c63c2832914e4f09fe5092bf1854f7d1862c7a13f",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 169,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "peeragogy/wrapper",
+    :pattern "peeragogy/wrapper",
+    :gloss "a maintained overview lets newcomers see the whole",
+    :trunk "N",
+    :trunk-name "N Newcomers and users",
+    :benefit/line "N6"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:626cac141073f122f93b7793bd2755d0dfcd7f1d9841d78d66ed9fbe056c072e"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 170,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:d542be004b54fd8363689f64a6e22b18824f4e7cb940c763106e272ffd9de0a6",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 170,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "collaboration-coherence/messy-with-lurkers",
+    :pattern "collaboration-coherence/messy-with-lurkers",
+    :gloss
+    "design for the gradient of participation, with low-cost partial participation",
+    :trunk "N",
+    :trunk-name "N Newcomers and users",
+    :benefit/line "N7"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:9864dfaf86fa8ea186e86a893b7c35dd9c3bff8b73320cb0c242bde0a50607f9"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 171,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:7099a76dc2b18995043446b6a7b0d7c20b0b2a0bae6f559da9254213d9fa91a8",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 171,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "task-selection/end-in-something-shown",
+    :pattern "task-selection/end-in-something-shown",
+    :gloss "select work that ends in a capability someone can verify",
+    :trunk "N",
+    :trunk-name "N Newcomers and users",
+    :benefit/line "N8"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:7b99a3e923ccfb72551af9894b65f5b0f931df07a9251186f2f1678e0619bdd7"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 172,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:d0da7c6e603688a6ddc593ecd94b6109b49d836b6e1bd8fff73e1321770e5244",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-four-more-lines-2026-11-08.md",
+     :line 172,
+     :sha256
+     "a7b238151ce4b989c491c22b0d824a7c5c5e38b39f5d1bddfc538f55c233df8c"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 9,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name
+    "**HOLE**: *a tool a stranger can run on their own material*",
+    :pattern
+    "**HOLE**: *a tool a stranger can run on their own material*",
+    :gloss
+    "the first use by someone else needs something that works on their data, not ours",
+    :trunk "N",
+    :trunk-name "N Newcomers and users",
+    :benefit/line "N9"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:2e4aa95a81993fc1c1d12328c73a4f25122abc3f283a86b5835ff8013345753a"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:14a33a59b4b04022226b4f0774c871fa4c53abcc58c1ca61726303c702ed6d78",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "P Patterns and the Alexandrian way",
+    :pattern nil,
+    :gloss "P Patterns and the Alexandrian way",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:12a77de7dba1ca3369dbed45353db7efec5700249151214b20acb853b6a4c84b"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 58,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:5fb0a5e160212ea861f15680b7014e3d23d9fe3239b921ad03c0a714440ee637",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 58,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "pattern-discipline/patterns-as-categorical-objects",
+    :pattern "pattern-discipline/patterns-as-categorical-objects",
+    :gloss "patterns can be stated formally and checked",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P10"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:0a9fec73193b1691a44be6124f63f4403f53376ee8d6b7719c2bf0d2635f9b10"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 59,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:af272515138fbedcbd42cb0699d45d75eb569f452b41a481902e07792d33bdeb",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 59,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "**HOLE** — *the medium is editable hypertext*",
+    :pattern "**HOLE** — *the medium is editable hypertext*",
+    :gloss
+    "Nelson's line: links and transclusion keep a pattern joined to its sources (Arxana)",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P11"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:7fbfc30e88d231d525bf4c157cd43e182cf1f792b99d7f74710abddb09daa2c1"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 50,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:5078d426862a268d7ff9a33ac35eb84a8daa218f6ec3fe9b5de3bef299fc40d3",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 50,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "peeragogy/pattern-language",
+    :pattern "peeragogy/pattern-language",
+    :gloss
+    "a language gives enough generative structure to design something coherent without dictating it",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P2"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:38a29134121231eeaff6dc10a19b4de66e11a1a298afb42c0bd17cda13ed4d19"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 51,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:e1636e70e8386a607267267f1899526c5e356a336e43ed33ef22f7d69dd7eea6",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 51,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "forward-model/the-forward-model-is-a-pattern-cascade",
+    :pattern "forward-model/the-forward-model-is-a-pattern-cascade",
+    :gloss "plan the next build as patterns, not missions",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P3"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:f0f7ea7f7fd2d341b7c71374c956f6ef48b29a57c39542af7c546ae70596cebf"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 52,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:d3e64cefdd0f78a3d7845908f617f65a1da6563620f0c292cf0b5c9560259ea2",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 52,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "cascades/declared-skeleton",
+    :pattern "cascades/declared-skeleton",
+    :gloss
+    "declare the relations you would defend, each with its because",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P4"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:705d10132c9beb71f6a3db84da6cdc67c903fcdac4476dcea36b4bdea836fe23"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 53,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:45cf5a26939d5c33353c1bc60fbbe6224192bf747b07e9920d850db891990b54",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 53,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name
+    "cascade-construction/add-a-pattern-when-an-item-fits-no-class",
+    :pattern
+    "cascade-construction/add-a-pattern-when-an-item-fits-no-class",
+    :gloss "a hole names a pattern that should exist",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P5"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:fd3d35a16795bca3f73968bf43023e794b1c7b5563e33a3977561dd9ee132b40"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 54,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:df227e2ef6c7b21ff3b8700a42660c1742cb7cdc89e6facb85b2cd7b907031ca",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 54,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "cascade-construction/mine-patterns-from-incidents",
+    :pattern "cascade-construction/mine-patterns-from-incidents",
+    :gloss "patterns come from what actually happened",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P6"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:b807dadd211911dae133bf57abe67bebdf9b7aab9b30b82e1bb0f64b0a787bb6"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 55,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:a6ee1dac681e4ddb121a998a86b9bd1da06110b0d4cb022884c8ecfe32ec7d53",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 55,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "workshop/revise-patterns-from-observed-use",
+    :pattern "workshop/revise-patterns-from-observed-use",
+    :gloss "retain, revise or retire patterns from outcomes",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P7"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:11008830a6b81b7d50ca4b01eda612205e8f0d2e858cc16a6f37b77639f33440"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 56,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:8a46aa3a48fe7761395842a8f7729eea0f2ebee94e11271253a42a3b8fc7c346",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 56,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "library-coherence/library-staleness-scan",
+    :pattern "library-coherence/library-staleness-scan",
+    :gloss "the library is findable and current",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P8"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:aeea8dcbb537eed2b8f0b03f85b45fa139219625f98a2bc88e5049f04bb99778"}
+  {:source-refs
+   [{:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 57,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"}
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:39b04f390fe15e839e8ee65489a82e86e2e95759cf52a2b8e8bed647ea1877c7",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/code/futon3c/holes/excursions/PROJECT-LANGUAGE-learning-and-patterns-2026-11-08.md",
+     :line 57,
+     :sha256
+     "8da075522a8b7b1afd9e84b39db011f6291c6189443a9a6fb524df31a202aa4a"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 13,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "pattern-discipline/pattern-to-code-receipts",
+    :pattern "pattern-discipline/pattern-to-code-receipts",
+    :gloss "a pattern's use leaves a receipt in the work",
+    :trunk "P",
+    :trunk-name "P Patterns and the Alexandrian way",
+    :benefit/line "P9"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:6650a94f114925d65f6b81a5d022b1bf13be751eb991b65d6fe374dbbf40af94"}
+  {:source-refs
+   [{:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}],
+   :producer {:parser "futon3c.arxana.benefit-names", :version 1},
+   :standing :unverified,
+   :subject-clusion-id
+   "arxana:clusion:sha256:52f56f3348507321110e7c219014d0e4e893da02d8b1bf27067a6cec758697f9",
+   :method
+   {:procedure :explicit-source-row,
+    :source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"},
+    :trunk-source
+    {:path
+     "/home/joe/notes/cascade-live-outline/pending/pending_index.py",
+     :line 14,
+     :sha256
+     "6b4695f83b4b832df27f7766d1c60eacd97366ceaa9bfd0ebea8e52384a411b3"}},
+   :content
+   {:name "Commons and public",
+    :pattern nil,
+    :gloss "Commons and public",
+    :trunk "commons",
+    :trunk-name "Commons and public",
+    :benefit/line "commons"},
+   :coverage :complete,
+   :basis :parser,
+   :id
+   "arxana:attestation:sha256:2ffb0a6b45d483c4f067f89c8e9c876050c76846b0a5363abc83f79d0b426b74"}]}
