@@ -200,6 +200,7 @@
         items (->> links (map :item-id) distinct sort vec)]
     {:turn {:id turn-id :evidence-ref turn-ref-id
             :created_at (:created_at turn) :origin (:origin turn)
+            :mission_id (:mission_id turn)
             :prev_operator_turn_id (:prev_operator_turn_id turn)
             :next_operator_turn_id (:next_operator_turn_id turn)}
      :ma-connection (get-in turn [:pattern_verdicts :connection])
@@ -207,6 +208,7 @@
      ;; turn read as the GCC.  Keeping these source fields here avoids a
      ;; second turn-store read on the request path.
      :pattern-verdicts (:pattern_verdicts turn)
+     :lu-ranked (:lu_ranked turn)
      :still-open (get-in turn [:ports :still_open])
      :gcc gcc
      :items items

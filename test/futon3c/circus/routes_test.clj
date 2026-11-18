@@ -291,3 +291,30 @@
       (reset! lagging false)
       (routes/strand-response cfg params)
       (is (= 1 (get @calls "turn-two")) "not cached while unavailable; read once it answers"))))
+
+(deftest common-ground-refreshes-old-cache-shape-once
+  (let [{:keys [cfg calls]} (strand-fixture)
+        params {"session" "session-one" "n" "4"}]
+    (routes/strand-response cfg params)
+    (swap! (:entries (:strand-cache cfg)) update "turn-two" dissoc :mission_id :patterns)
+    (routes/strand-response cfg params)
+    (is (= 2 (get @calls "turn-two")))
+    (routes/strand-response cfg params)
+    (is (= 2 (get @calls "turn-two")))
+    (is (= {:proposed [] :occurs []}
+           (get-in @(:entries (:strand-cache cfg)) ["turn-two" :patterns])))))
+
+(deftest unavailable-turn-keeps-recorded-common-ground-without-caching
+  (let [cfg {:turn-store ::store :strand-cache (routes/strand-cache)
+             :session-head-fn (fn [_ _] "turn-offline")
+             :turn-gcc-fn (fn [_] (throw (ex-info "index lagging" {:reason :stale-index})))}]
+    (with-redefs [turn-store/read-record
+                  (fn [_ _] {:created_at "2026-01-01T02:00:00Z" :mission_id "M-invented"
+                             :lu_ranked {:ranked [{:id "p-invented" :rank 1}]}
+                             :pattern_verdicts {:patterns [{:pattern "p-invented" :status :partial}]}})]
+      (let [response (routes/strand-response cfg {"session" "s-invented"})]
+        (is (= 200 (:status response)))
+        (is (= "M-invented" (get-in response [:body "turns" 0 "mission_id"])))
+        (is (= {"proposed" ["p-invented"] "occurs" ["p-invented"]}
+               (get-in response [:body "turns" 0 "patterns"])))
+        (is (= {} @(:entries (:strand-cache cfg))))))))

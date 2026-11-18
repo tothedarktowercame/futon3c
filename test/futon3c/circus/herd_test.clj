@@ -24,12 +24,14 @@
         calls (atom [])
         gcc (fn [{:keys [turn-id]}]
               (swap! calls conj turn-id)
-              {:turn (assoc (turns/read-record store turn-id) :id turn-id)
-               :pattern-verdicts {:state :read
+              (let [record (turns/read-record store turn-id)]
+                {:turn (assoc record :id turn-id)
+                 :lu-ranked (:lu_ranked record)
+                 :pattern-verdicts (or (:pattern_verdicts record) {:state :read
                                   :patterns (if (= turn-id a)
                                               [{:pattern "invented-pattern" :status :partial
                                                 :chain {:G {:element "gap" :turn old}}}]
-                                              [])} :gcc {}})]
+                                              [])}) :gcc {}}))]
     {:store store :a a :b b :old old :inactive inactive :boundary boundary :bell bell :calls calls
      :cfg {:turn-store store :strand-cache (routes/strand-cache) :turn-gcc-fn gcc}}))
 
@@ -49,7 +51,8 @@
         (is (= [a b] (mapv #(get-in % ["turns" 0 "id"]) (get body "lanes"))))
         (is (= "2026-01-01T02:00:00Z" (get-in body ["lanes" 0 "first"])))
         (is (= {"id" a "created_at" "2026-01-01T02:00:00Z" "ma_status" "read"
-                "threads_n" 1 "quotes_n" 1} (get-in body ["lanes" 0 "turns" 0])))
+                "threads_n" 1 "quotes_n" 1 "mission_id" nil
+                "patterns" {"proposed" [] "occurs" ["invented-pattern"]}} (get-in body ["lanes" 0 "turns" 0])))
         (is (= [{"at" "2026-01-01T04:00:00Z" "from_agent" "agent-a" "from_session" "s-a"
                  "to_agent" "agent-b" "turn_id" bell "kind" "bell"}] (get body "bells")))
         (is (= "2026-01-01T04:00:00Z" (get body "cursor")))
@@ -102,3 +105,71 @@
     (turns/write-record-id! store "turn-deterministic-bell" rec)
     (turns/write-record-id! store "turn-deterministic-bell" rec)
     (is (= 3 (count (mapcat :turns (turns/bell-indexes store)))))))
+
+(deftest common-ground-uses-windowed-cached-rows-without-scanning
+  (let [{:keys [store cfg a b boundary calls]} (fixture)
+        _ (turns/update-record! store a
+                               #(assoc % :mission_id "M-shared"
+                                       :lu_ranked {:ranked [{:id "p-proposed" :rank 1}
+                                                            {:id "p-mixed" :rank 2}
+                                                            {:id "p-only-a" :rank 3}]}
+                                       :pattern_verdicts {:patterns [{:pattern "p-void" :status "void"}]}))
+        _ (turns/update-record! store b
+                               #(assoc % :mission_id "M-shared"
+                                       :lu_ranked {:ranked [{:id "p-proposed" :rank 1}
+                                                            {:id "p-mixed" :rank 2}]}
+                                       :pattern_verdicts {:patterns [{:pattern "p-mixed" :status "partial"}
+                                                                    {:pattern "p-void" :status "void"}]}))
+        _ (turns/update-record! store boundary #(assoc % :mission_id "M-outside"))
+        a2 (:id (turns/write-record! store
+                                     {:origin "operator" :session_id "s-a" :agent_id "agent-a"
+                                      :created_at "2026-01-01T04:00:00Z" :mission_id "M-next"
+                                      :lu_ranked {:ranked [{:id "p-only-a" :rank 1}]}
+                                      :pattern_verdicts {:patterns [{:pattern "p-mixed" :status :occurrence}]}}))]
+    (with-redefs [turns/list-records (fn [& _] (throw (ex-info "no scans" {})))]
+      (let [strand (routes/strand-response cfg {"session" "s-a" "n" "2"})
+            _ (is (= "M-next" (get-in strand [:body "turns" 0 "mission_id"])))
+            _ (is (= {"proposed" ["p-only-a"] "occurs" ["p-mixed"]}
+                     (get-in strand [:body "turns" 0 "patterns"])))
+            response (routes/herd-response cfg window)
+            body (:body response)
+            ground (get body "common_ground")
+            by-key (into {} (map (juxt #(get % "key") identity)) ground)]
+        (is (= 200 (:status response)))
+        (is (= ["M-shared" "M-next"] (get-in body ["lanes" 0 "missions"])))
+        (is (= #{"M-shared" "p-proposed" "p-mixed"} (set (keys by-key))))
+        (is (= {"kind" "mission" "key" "M-shared" "via" []
+                "lanes" [{"session" "s-a" "agent" "agent-a" "turns" [a]
+                          "first_at" "2026-01-01T02:00:00Z"}
+                         {"session" "s-b" "agent" "agent-b" "turns" [b]
+                          "first_at" "2026-01-01T03:00:00Z"}]}
+               (get by-key "M-shared")))
+        (is (= ["proposed"] (get-in by-key ["p-proposed" "via"])))
+        (is (= ["proposed" "occurs"] (get-in by-key ["p-mixed" "via"])))
+        (is (= [a a2] (get-in by-key ["p-mixed" "lanes" 0 "turns"])))
+        (is (= [b] (get-in by-key ["p-mixed" "lanes" 1 "turns"]))
+            "a turn that both proposes and occurs is listed once")
+        (is (= "p-mixed" (get-in ground [0 "key"])) "recency breaks the lane-count tie")
+        (is (= [a2 a b] @calls) "the herd reused both strand cache entries")
+        (is (= body (:body (routes/herd-response cfg window))))
+        (is (= [a2 a b] @calls) "a repeated herd poll does not compute again")
+        (is (= [] (get-in (routes/herd-response cfg (assoc window "agents" "agent-a"))
+                         [:body "common_ground"])))
+        (is (= [] (get-in (routes/herd-response cfg (assoc window "until" "2026-01-01T02:30:00Z"))
+                         [:body "common_ground"])))))))
+
+(deftest common-ground-orders-by-lane-count-then-recency-and-caps-at-fifty
+  (let [ground (ns-resolve 'futon3c.circus.routes 'common-ground)
+        keys (mapv #(str "p-" %) (range 60))
+        lane (fn [session patterns at]
+               {:session session :agent session
+                :turns [{:id (str "turn-" session) :created_at at
+                         :patterns {:proposed patterns :occurs []}}]})
+        result (ground [(lane "a" (conj keys "widest") "2026-01-01T02:00:00Z")
+                        (lane "b" keys "2026-01-01T03:00:00Z")
+                        (lane "c" ["widest"] "2026-01-01T01:00:00Z")
+                        (lane "d" ["widest"] "2026-01-01T01:00:00Z")])]
+    (is (= 50 (count result)))
+    (is (= "widest" (:key (first result))) "three lanes beat a more recent two-lane key")
+    (is (= 3 (count (:lanes (first result)))))
+    (is (every? #(>= (count (:lanes %)) 2) result))))

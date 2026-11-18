@@ -160,3 +160,18 @@
     (is (nil? (chain/item-absence [] ["mention-1"] [])))
     (is (nil? (chain/item-absence [] [] ["focus-relation-1"]))))
   (is (nil? (chain/item-absence ["M-one"] ["mention-1"] []))))
+
+(deftest light-turn-carries-common-ground-source-fields-from-one-read
+  (let [reads (atom 0)
+        cfg (assoc (fixture-config "/not-read" nil)
+                   :read-turn-fn (fn [_ _]
+                                   (swap! reads inc)
+                                   {:mission_id "M-invented"
+                                    :lu_ranked {:ranked [{:id "p-invented" :rank 1}]}
+                                    :pattern_verdicts {:patterns [{:pattern "p-invented"
+                                                                  :status :occurrence}]}}))
+        light (chain/turn-gcc cfg)]
+    (is (= 1 @reads))
+    (is (= "M-invented" (get-in light [:turn :mission_id])))
+    (is (= [{:id "p-invented" :rank 1}] (get-in light [:lu-ranked :ranked])))
+    (is (= :occurrence (get-in light [:pattern-verdicts :patterns 0 :status])))))

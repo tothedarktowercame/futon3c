@@ -232,12 +232,25 @@
            (:threads (ma-projection pattern-verdicts)))
       (ma-quote-edges id pattern-verdicts)))))
 
+(defn- distinct-ids [ids]
+  (vec (distinct (remove #(or (nil? %) (str/blank? (str %))) ids))))
+
+(defn- turn-patterns [ranked verdict]
+  {:proposed (distinct-ids (map :id (:ranked ranked)))
+   :occurs (distinct-ids
+            (keep #(when (contains? #{:partial :occurrence "partial" "occurrence"}
+                                    (:status %))
+                     (:pattern %))
+                  (:patterns verdict)))})
+
 (defn- compute-turn [cfg turn-id]
   (let [gcc-fn (or (:turn-gcc-fn cfg) chain/turn-gcc)
         light (gcc-fn (merge (:gcc-opts cfg)
                              {:turn-store (:turn-store cfg) :turn-id turn-id}))]
     {:id turn-id
      :evidence_ref (get-in light [:turn :evidence-ref])
+     :mission_id (get-in light [:turn :mission_id])
+     :patterns (turn-patterns (:lu-ranked light) (:pattern-verdicts light))
      :created_at (get-in light [:turn :created_at])
      :prev_operator_turn_id (get-in light [:turn :prev_operator_turn_id])
      :next_operator_turn_id (get-in light [:turn :next_operator_turn_id])
@@ -258,6 +271,8 @@
         record (turns/read-record (:turn-store cfg) turn-id)]
     (when-not record (throw e))
     {:id turn-id :created_at (:created_at record)
+     :mission_id (:mission_id record)
+     :patterns (turn-patterns (:lu_ranked record) (:pattern_verdicts record))
      :prev_operator_turn_id (:prev_operator_turn_id record)
      :next_operator_turn_id (:next_operator_turn_id record)
      :unavailable (or (get-in d [:answer :ok :status]) (:reason d) :graph-read-failed)
@@ -268,9 +283,12 @@
 (defn- cached-turn [cfg turn-id force?]
   (let [cache (or (:strand-cache cfg) default-strand-cache)
         dirty-version (get @(:dirty cache) turn-id)
-        dirty? (some? dirty-version)]
-    (if (and (not force?) (not dirty?) (contains? @(:entries cache) turn-id))
-      (get @(:entries cache) turn-id)
+        dirty? (some? dirty-version)
+        cached (get @(:entries cache) turn-id)]
+    (if (and (not force?) (not dirty?)
+             ;; Refresh a pre-common-ground row once after a code reload.
+             (contains? cached :mission_id) (contains? cached :patterns))
+      cached
       (let [result (try (compute-turn cfg turn-id)
                         (catch clojure.lang.ExceptionInfo e
                           (unavailable-turn cfg turn-id e)))]
@@ -344,7 +362,8 @@
       (when (seq rows)
         (let [ordered (vec (sort-by (comp instant :created_at) rows))]
           {:session session :agent agent :first (:created_at (first ordered))
-           :last (:created_at (peek ordered)) :turns ordered}))
+           :last (:created_at (peek ordered)) :turns ordered
+           :missions (distinct-ids (map :mission_id ordered))}))
       (if-let [record (turns/read-record store id)]
         (let [at (:created_at record)
               owner (or agent (:agent_id record))]
@@ -357,6 +376,8 @@
                                (cached-turn (assoc cfg :turn-store store) id false))
                   row (when projection
                         {:id id :created_at at :ma_status (get-in projection [:ma :status])
+                         :mission_id (:mission_id projection)
+                         :patterns (:patterns projection)
                          :threads_n (count (get-in projection [:ma :threads]))
                          :quotes_n (count (filter #(= :quotes (:kind %)) (:edges projection)))})]
               (recur (:prev_operator_turn_id record) (conj seen id)
@@ -379,6 +400,42 @@
                      (known-session (:session_id r)) (assoc :to_session (:session_id r)))))))
        (sort-by (juxt (comp instant :at) :turn_id)) vec))
 
+(defn- common-ground
+  "Shared keys from windowed lane rows only. More lanes rank first, then the
+  latest supporting turn. Mission membership needs no pattern-strength label."
+  [lanes]
+  (let [observations
+        (for [lane lanes
+              turn (:turns lane)
+              :let [at (instant (:created_at turn))]
+              [kind key via] (concat
+                              (for [id (distinct-ids [(:mission_id turn)])]
+                                ["mission" id nil])
+                              (for [via [:proposed :occurs]
+                                    id (get-in turn [:patterns via])]
+                                ["pattern" id (name via)]))]
+          {:kind kind :key key :via via :at at :turn (:id turn)
+           :lane (select-keys lane [:session :agent])})]
+    (->> observations
+         (group-by (juxt :kind :key))
+         (keep (fn [[[kind key] rows]]
+                 (let [by-lane (group-by :lane rows)]
+                   (when (>= (count by-lane) 2)
+                     {:kind kind :key key
+                      :lanes (->> by-lane
+                                  (map (fn [[lane hits]]
+                                         (let [ordered (sort-by :at hits)]
+                                           (assoc lane
+                                                  :turns (vec (distinct (map :turn ordered)))
+                                                  :first_at (str (:at (first ordered)))))))
+                                  (sort-by (juxt :session :agent)) vec)
+                      :via (filterv (set (keep :via rows)) ["proposed" "occurs"])
+                      :latest-at (:at (last (sort-by :at rows)))}))))
+         (sort-by (juxt #(count (:lanes %)) :latest-at :kind (comp str :key))
+                  #(compare %2 %1))
+         (take 50)
+         (mapv #(dissoc % :latest-at)))))
+
 (defn herd-response
   "Parallel operator strands plus indexed agent-origin interactions. Window is
   (since, until], defaulting to the last six hours. Cursor is latest served time;
@@ -398,6 +455,7 @@
               bells (herd-bells store since until agents)
               cursor (reduce (fn [latest at] (let [t (instant at)] (if (.isAfter t latest) t latest)))
                              since (concat (map :last lanes) (map :at bells)))]
-          {:status 200 :body (json-ready {:lanes lanes :bells bells :cursor (str cursor)})})))
+          {:status 200 :body (json-ready {:lanes lanes :bells bells :cursor (str cursor)
+                                          :common_ground (common-ground lanes)})})))
     (catch java.time.format.DateTimeParseException _ (error-response 400 "invalid-time"))
     (catch Exception e (error-response 503 "herd-unavailable" {:message (.getMessage e)}))))
