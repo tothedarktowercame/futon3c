@@ -109,6 +109,27 @@
            (catch Exception e {:status :unknown :reason :unreadable-source
                                :source-file file :message (.getMessage e)})))))
 
+;; Inspections are cached per namespace record, keyed by the file's stamp
+;; (path, modification time, size: a stat, not a read), so a repeated
+;; built-on? re-parses only files that changed. A path that is not a file
+;; on disk (test fixtures) is never cached.
+(defonce ^:private inspection-cache (atom {}))
+(defn- stamp [file]
+  (let [f (io/file file)]
+    (when (.isFile f) [(.lastModified f) (.length f)])))
+(defn- inspect-cached [r]
+  (let [file (prop r :source-file)
+        st (when (string? file) (stamp file))
+        k [(some-> file canonical) (:hx/id r)]]
+    (if-not st
+      (inspect r)
+      (let [hit (get @inspection-cache k)]
+        (if (= st (:stamp hit))
+          (:scan hit)
+          (let [scan (inspect r)]
+            (swap! inspection-cache assoc k {:stamp st :scan scan})
+            scan))))))
+
 (defn edges [inspection]
   (mapv (fn [{:keys [direction type-revision line]}]
           (let [[t rev] type-revision
@@ -142,6 +163,18 @@
        (if next (recur next (conj seen next) (into rows (:hyperedges r)))
            (into rows (:hyperedges r)))))))
 
+;; The index is re-fetched only when the census count of code/v05/namespace
+;; changes (one small request instead of every page).
+(defonce ^:private index-cache (atom nil))
+(defn- cached-index [url]
+  (let [n (:count (request! url :get "/api/alpha/census?type=code/v05/namespace" nil))
+        c @index-cache]
+    (if (and c (= url (:url c)) (integer? n) (= n (:count c)))
+      (:rows c)
+      (let [rows (indexed-namespaces url)]
+        (reset! index-cache {:url url :count n :rows rows})
+        rows))))
+
 (defn built-on?
   "YES means a literal construction/query site, not observed execution.
   Unknown coverage takes precedence over positive sites. Dynamic sites cannot
@@ -149,11 +182,11 @@
   The target must match a registered revision and have an indexed literal writer.
   The 3-arity accepts an index snapshot for hermetic checks."
   ([subject-files type-prefix]
-   (try (built-on? (indexed-namespaces) subject-files type-prefix)
+   (try (built-on? (cached-index default-url) subject-files type-prefix)
         (catch Exception e {:answer :unknown :evidence [] :coverage []
                             :reason :index-unavailable :message (.getMessage e)})))
   ([index subject-files type-prefix]
-   (let [inspect-once (memoize inspect)
+   (let [inspect-once (memoize inspect-cached)
          by-file (group-by #(some-> (prop % :source-file) canonical) index)
          scans (mapcat (fn [file]
                          (if-let [rs (get by-file (canonical file))]

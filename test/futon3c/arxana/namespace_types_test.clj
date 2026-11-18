@@ -77,3 +77,28 @@
       (let [r (nt/built-on? index ["/invented/writer.clj"] :arxana)]
         (is (= :yes (:answer r)) "a literal site still answers :yes")
         (is (nil? (:reason r)))))))
+
+(deftest repeated-built-on-reads-only-changed-files
+  ;; Finding 2 of the CL-76 review: a second call with unchanged files reads
+  ;; none of them; a changed file is read again.
+  (let [dir (doto (java.io.File/createTempFile "nt-cache" "") (.delete) (.mkdirs))
+        writer (java.io.File. dir "writer.clj")
+        subject (java.io.File. dir "subject.clj")
+        _ (spit writer "(ns invented.cwriter (:require [futon3c.arxana.records :as r]))\n(r/make-clusion {:type-revision [:ma/strand 1]})")
+        _ (spit subject "(ns invented.csubject)")
+        index [{:hx/id "namespace:cwriter" :prop/source-file (.getPath writer) :prop/repo "futon3c"}
+               {:hx/id "namespace:csubject" :prop/source-file (.getPath subject) :prop/repo "futon3c"}]
+        reads (atom [])
+        real-slurp slurp]
+    (try
+      (with-redefs [slurp (fn [f & opts] (swap! reads conj (str f)) (apply real-slurp f opts))]
+        (is (= :not-yet (:answer (nt/built-on? index [(.getPath subject)] :arxana))))
+        (reset! reads [])
+        (is (= :not-yet (:answer (nt/built-on? index [(.getPath subject)] :arxana))))
+        (is (empty? @reads) "unchanged files are not read again")
+        (Thread/sleep 1100)
+        (spit subject "(ns invented.csubject (:require [futon3c.arxana.records :as r]))\n(r/make-clusion {:type-revision [:ma/strand 1]})")
+        (reset! reads [])
+        (is (= :yes (:answer (nt/built-on? index [(.getPath subject)] :arxana))))
+        (is (= [(.getPath subject)] @reads) "only the changed file is read"))
+      (finally (.delete writer) (.delete subject) (.delete dir)))))
