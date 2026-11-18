@@ -204,6 +204,10 @@
       (is (= {:from-sha old-sha :at "2026-11-18T00:00:00Z" :reason :pin-once}
              (:migrated (edn/read-string (slurp (io/file dir "manifest.edn"))))))
       (is (some #(= :priority-pin-migrated (:reason %)) (:notes (gr/verify-run dir))))
+      (is (= (gr/sha256 (io/file dir "priority.edn"))
+             (get-in (edn/read-string (slurp (io/file dir "manifest.edn")))
+                     [:priority-projection :sha256]))
+          "both manifest sha locations follow the migrated file")
       (is (= :unchanged (get-in (gr/migrate-priority-pins! root {:write? true})
                                 [:runs 0 :status])))
       (let [manifest-file (io/file dir "manifest.edn")
