@@ -210,6 +210,8 @@
      :pattern-verdicts (:pattern_verdicts turn)
      :lu-ranked (:lu_ranked turn)
      :still-open (get-in turn [:ports :still_open])
+     :closed-this-turn (get-in turn [:ports :closed_this_turn])
+     :acts (:acts turn)
      :gcc gcc
      :items items
      :item-links links

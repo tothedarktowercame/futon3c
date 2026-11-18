@@ -183,6 +183,15 @@
                                 [{:act "act-one" :author "operator"
                                   :kind "ask-action" :text "not exposed"
                                   :since "turn-one"}])
+                  :closed-this-turn (when (= turn-id "turn-four")
+                                      [{:act "act-zero" :kind "propose" :text "not exposed"}])
+                  :acts (when (= turn-id "turn-four")
+                          [{:id "act-two" :kind "propose" :about "an invented proposal"
+                            :author "operator" :port? true :text "not exposed" :start 0 :end 9}
+                           {:id "act-three" :kind "commit" :author "agent-invented"
+                            :target "act-zero" :port? false :text "not exposed"}
+                           {:id "act-four" :kind "report" :author "agent-invented"
+                            :port? false :text "not exposed"}])
                   :gcc {:驴 {:status :present :clusion-ids [(str "proposal-" turn-id)]}
                         :馬 {:status :absent :reason :no-clusions}
                         :狗 {:status :absent :reason :no-clusions}}
@@ -224,6 +233,13 @@
            (get-in turn ["ma" "threads" 0 "parts" "G"])))
     (is (= [{"act" "act-one" "author" "operator" "kind" "ask-action"}]
            (get turn "open_acts")))
+    ;; the intent graph's inputs: what this turn closed, and the acts that
+    ;; open an intent or close one (a plain report is left out), no text
+    (is (= [{"act" "act-zero" "kind" "propose"}] (get turn "closed_acts")))
+    (is (= ["act-two" "act-three"] (mapv #(get % "id") (get turn "acts"))))
+    (is (= "act-zero" (get-in turn ["acts" 1 "target"])))
+    (is (= "an invented proposal" (get-in turn ["acts" 0 "about"])))
+    (is (not-any? #(contains? % "text") (concat (get turn "acts") (get turn "closed_acts"))))
     (is (some #(= {"from" "turn-four" "to" "turn-one" "kind" "quotes"
                    "pattern" "pattern-partial" "part" "G"}
                  %)

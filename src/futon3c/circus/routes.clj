@@ -217,6 +217,19 @@
 (defn- open-acts [rows]
   (mapv #(select-keys % [:act :author :kind]) (or rows [])))
 
+;; The intents a turn opened or closed, for Mojira's intent graph (Joe
+;; 2026-11-18: "a flowchart that runs top to bottom, a bit like a git merge
+;; diagram, but showing the intents that are realised"). Only acts that
+;; open a port or target another act; each with its short "about" label,
+;; never its full text.
+(defn- intent-acts [acts]
+  (->> (or acts [])
+       (filter #(or (:port? %) (:target %)))
+       (mapv #(select-keys % [:id :kind :about :author :target :port?]))))
+
+(defn- closed-acts [rows]
+  (mapv #(select-keys % [:act :kind]) (or rows [])))
+
 (defn- turn-edges [{:keys [turn gcc item-links pattern-verdicts]}]
   (let [id (:id turn)
         prev (:prev_operator_turn_id turn)]
@@ -257,6 +270,8 @@
      :ma_connection (:ma-connection light)
      :ma (ma-projection (:pattern-verdicts light))
      :open_acts (open-acts (:still-open light))
+     :closed_acts (closed-acts (:closed-this-turn light))
+     :acts (intent-acts (:acts light))
      :gcc (gcc-counts (:gcc light))
      :items (:items light)
      :item_absence (:item-absence light)
@@ -287,7 +302,8 @@
         cached (get @(:entries cache) turn-id)]
     (if (and (not force?) (not dirty?)
              ;; Refresh a pre-common-ground row once after a code reload.
-             (contains? cached :mission_id) (contains? cached :patterns))
+             (contains? cached :mission_id) (contains? cached :patterns)
+             (contains? cached :acts))
       cached
       (let [result (try (compute-turn cfg turn-id)
                         (catch clojure.lang.ExceptionInfo e
