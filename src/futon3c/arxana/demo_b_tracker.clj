@@ -22,8 +22,9 @@
        :views [{:mode :list :operation :cascade/benefit-filings}
                {:mode :h1 :operation :cascade/benefit-filings
                 :benefit-id "arxana:clusion:sha256:9b3ce7c0fe64941175c8f03a6872a8ee6589e9fbc3161b721f0533ef9bc64877"}]
-       :mojira {:status :not-built :source :tracker-declaration
-                :note "Mojira presentation is the next packet; backend availability is not a built page."}}))
+       :mojira {:status :built :source :tracker-declaration
+                :commit "futon4 b14879b" :route "mojira://bf"
+                :note "Declared, not detected: the page is in futon4 dev/mojira; reload the code-server window to load it."}}))
 
 (defn read-tracker [store at]
   (tracker-view (filings/manifest) (catalogue/read-catalogue store at)))

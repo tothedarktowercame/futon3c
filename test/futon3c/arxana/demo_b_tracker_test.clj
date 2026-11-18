@@ -19,6 +19,6 @@
     (is (= :ok (:status v)))
     (is (= 9 (count (:reads v))))
     (is (= :no-run (first (get-in v [:coverage 0 :enforcement-status :reasons]))))
-    (is (= :not-built (get-in v [:mojira :status])))
+    (is (= :built (get-in v [:mojira :status])))
     (is (:error (service/dispatch {:graph-store s} (assoc-in envelope [:body :unknown] true))))
     (is (not-any? #(= :role-reverse (:query/type %)) @calls))))
