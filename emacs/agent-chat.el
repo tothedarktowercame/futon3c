@@ -3499,7 +3499,8 @@ operator input arriving while they run is queued for the next turn."
       (funcall before-send trimmed))
     (when (and (agent-chat--operator-speaker-p speaker)
                (agent-chat--acceptance-command trimmed))
-      (agent-chat--check-acceptance trimmed agent-chat--last-evidence-id))
+      (agent-chat--check-acceptance trimmed agent-chat--last-evidence-id
+                                    agent-chat--last-evidence-id-pending))
     (setq agent-chat--last-auto-clock-witness nil)
     (agent-chat-insert-thinking)
     (agent-chat-start-turn-commit-window!)
@@ -3666,12 +3667,44 @@ The next turn's header carries the full ids, so this line uses short ones."
                    ((and status (not (eql status 0))) (format "http %s" status))
                    (t "timeout")))))))
 
-(defun agent-chat--check-acceptance (text evidence-id)
+(defvar agent-chat--acceptances-awaiting-evidence nil
+  "Alist of evidence id -> (BUFFER . TEXT): acceptances whose operator turn
+was queued in the evidence outbox when they were typed.  Each is checked
+when the outbox acknowledges its row (`agent-chat-evidence--finish-replay').")
+
+(defun agent-chat--check-acceptance (text evidence-id &optional pending-id)
   "Record classical acceptance TEXT backed by EVIDENCE-ID, without blocking.
 The request runs in the background and its outcome line is inserted in this
 buffer when it returns: on 2026-10-01 the route took 11 s under futon1b load,
 so a blocking call either froze Emacs or reported a recorded agreement as
-\"not checked\".  TEXT is never consumed or changed."
+\"not checked\".  TEXT is never consumed or changed.
+When the turn's evidence row is only queued (PENDING-ID, no acknowledged
+EVIDENCE-ID), the check waits for the outbox to deliver it.  Until
+2026-11-18 it reported \"not checked: no evidence id\" although the row
+landed seconds later (claude-5 buffer, turn-1bWqsV)."
+  (if (and (not (and (stringp evidence-id) (not (string-empty-p evidence-id))))
+           (stringp pending-id) (not (string-empty-p pending-id)))
+      (progn
+        (push (cons pending-id (cons (current-buffer) text))
+              agent-chat--acceptances-awaiting-evidence)
+        (agent-chat--insert-note "· yes will be checked when its evidence lands"))
+    (agent-chat--check-acceptance-now text evidence-id)))
+
+(defun agent-chat--resume-acceptance (evidence-id outcome)
+  "Check, or report, the acceptance waiting on EVIDENCE-ID after OUTCOME."
+  (when-let* ((entry (assoc evidence-id agent-chat--acceptances-awaiting-evidence)))
+    (setq agent-chat--acceptances-awaiting-evidence
+          (delq entry agent-chat--acceptances-awaiting-evidence))
+    (let ((buffer (cadr entry)) (text (cddr entry)))
+      (when (buffer-live-p buffer)
+        (with-current-buffer buffer
+          (if (eq outcome 'acked)
+              (agent-chat--check-acceptance-now text evidence-id)
+            (agent-chat--insert-note
+             "✗ yes not checked: its evidence was rejected")))))))
+
+(defun agent-chat--check-acceptance-now (text evidence-id)
+  "Record acceptance TEXT backed by acknowledged EVIDENCE-ID, without blocking."
   (when-let* ((agent-id (and (stringp agent-chat--agent-id)
                              (not (string-empty-p agent-chat--agent-id))
                              agent-chat--agent-id))
@@ -4292,13 +4325,19 @@ sentinel runs, so the status is not necessarily the final text."
     (path record response-file process-buffer response)
   "Apply RESPONSE to PATH, clean replay resources, and expose queue state."
   (pcase (agent-chat-evidence--classify-response response record)
-    ('acked (when (file-exists-p path) (delete-file path)))
+    ('acked (when (file-exists-p path) (delete-file path))
+            (agent-chat--resume-acceptance
+             (cadr (agent-chat-evidence--ensure-id (alist-get 'payload record)))
+             'acked))
     ('retry
      (when (file-exists-p path)
        (agent-chat-evidence--schedule-retry path record)))
     ('failed
      (when (file-exists-p path)
        (rename-file path (agent-chat-evidence--failed-path path) t)
+       (agent-chat--resume-acceptance
+        (cadr (agent-chat-evidence--ensure-id (alist-get 'payload record)))
+        'failed)
        (message "Evidence delivery rejected permanently; retained in %s"
                 (agent-chat-evidence--failed-path path)))))
   (when (file-exists-p response-file) (delete-file response-file))
