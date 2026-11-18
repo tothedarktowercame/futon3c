@@ -20,6 +20,7 @@ import sys
 import sqlite3
 import tempfile
 import time
+from giraffe_run_data import load_run_file
 
 CHARACTERS = ('thor', 'merlin', 'questor', 'thyra')
 READY = 'ready (one small handoff)'
@@ -1049,6 +1050,16 @@ def load(path, edn=False, strict=False):
     spec = importlib.util.spec_from_file_location('gcc_edn', Path(__file__).with_name('gcc_preview.py'))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    if Path(path).name in ('input.edn', 'pass.edn'):
+        def parse_edn(source):
+            if not strict:
+                return module.edn_load(source)
+            reader = module._EdnReader(source)
+            value = reader.read()
+            if reader.pos != len(reader.tokens):
+                raise ValueError('trailing EDN input')
+            return value
+        return load_run_file(path, parse_edn)
     if strict:
         reader = module._EdnReader(text)
         value = reader.read()

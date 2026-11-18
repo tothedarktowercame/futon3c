@@ -10,7 +10,8 @@
             [futon3c.arxana.records :as records]
             [futon3c.arxana.store :as store]
             [futon3c.arxana.store-http :as http]
-            [futon3c.arxana.turn-mention-writer :as mentions])
+            [futon3c.arxana.turn-mention-writer :as mentions]
+            [futon3c.giraffe.run-data :as run-data])
   (:import [java.util.concurrent Callable ExecutorService Executors ThreadFactory]))
 
 (defn- sha-file [path]
@@ -45,7 +46,7 @@
         _ (require! (= input-sha (:sha256 (first (filter #(= "input.edn" (:file %))
                                                          (:files manifest)))))
                     :invalidEvidence)
-        input (edn/read-string (slurp input-path))
+        input (run-data/read-run-file dir "input.edn")
         members (into {} (map (fn [m] [(id-text (:id m)) m]))
                       (get-in input [:graph-coverage :members]))]
     {:run run :manifest manifest :input input :input-path input-path
@@ -197,7 +198,7 @@
   completeness census for a needs read of RUN; a member the writer skips
   (e.g. an edge to an item no longer in the inventory) is not expected."
   [cfg run item-ids]
-  (let [input (edn/read-string (slurp (io/file (:runs-dir cfg) run "input.edn")))
+  (let [input (run-data/read-run-file (io/file (:runs-dir cfg) run) "input.edn")
         item-set (set item-ids)]
     (->> (:edges input)
          (remove #(= :alternative (:class %)))
@@ -216,7 +217,7 @@
         missing (remove (set observed) candidate)]
     (if (or (empty? missing) (:writer-item-ids cfg))
       candidate
-      (let [input (edn/read-string (slurp (io/file (:runs-dir cfg) run "input.edn")))
+      (let [input (run-data/read-run-file (io/file (:runs-dir cfg) run) "input.edn")
             missing-set (set missing)
             endpoints (->> (:edges input)
                            (filter #(missing-set (id-text (:reading-member %))))

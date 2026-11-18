@@ -7,6 +7,7 @@
             [futon3c.arxana.store :as store]
             [futon3c.arxana.turn-mention-writer :as mentions]
             [futon3c.giraffe.run :as giraffe]
+            [futon3c.giraffe.run-data :as run-data]
             [futon3c.xiang.turn-store :as turns]))
 
 (def ^:private animal-specs
@@ -96,7 +97,6 @@
                               distinct)
         items (->> item-clusion-ids (keep #(item-id cfg %)) distinct sort vec)
         manifest (edn/read-string (slurp (io/file run-dir "manifest.edn")))
-        input-file (io/file run-dir "input.edn")
         priority-file (io/file run-dir "priority.edn")
         priority (if (.isFile priority-file) (edn/read-string (slurp priority-file)) [])
         ranked (map-indexed (fn [i row] (priority-row (inc i) row)) priority)
@@ -110,7 +110,8 @@
               :run {:run-id (:run-id manifest)
                     :producer-git-sha (:git-sha manifest)
                     :readings-generation (:readings-generation manifest)
-                    :input-sha256 (giraffe/sha256 input-file)
+                    :input-sha256 (run-data/logical-sha
+                                   (run-data/read-run-file run-dir "input.edn"))
                     :focus/version (:focus/version manifest)
                     :verification ((or (:verify-run-fn cfg) giraffe/verify-run) run-dir)}
               :focus-link focus-link

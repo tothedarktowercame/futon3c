@@ -9,6 +9,7 @@
             [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.pass :as gp]
             [futon3c.giraffe.run :as gr]
+            [futon3c.giraffe.run-data :as run-data]
             [futon3c.circus.operator-focus :as operator-focus]
             [futon3c.giraffe.tickets :as gt]))
 
@@ -60,7 +61,7 @@
       (is (:ok? (gr/verify-run (str dir))))
       (is (= [] (:mismatches (gr/verify-run (str dir))))))
     (testing "pass.edn round-trips to a value equal to the pass output"
-      (is (= pass-output (edn/read-string (slurp (io/file dir "pass.edn"))))))
+      (is (= pass-output (run-data/read-run-file dir "pass.edn"))))
     (testing "the browser projection carries the same cluster membership"
       (let [projection (json/parse-string
                         (slurp (io/file dir "work-clusters.json")) true)]
@@ -77,7 +78,7 @@
                (get-in projection [:interpretation :tickets :unlinked])))))
     (testing "input.edn round-trips to the adapter's pass input"
       (is (= (:input adapter-result)
-             (edn/read-string (slurp (io/file dir "input.edn"))))))
+             (run-data/read-run-file dir "input.edn"))))
     (testing "manifest pins the source files it read"
       (is (= (gr/sha256 (io/file index-file))
              (get-in (:manifest written) [:sources :tickets-index :sha256])))
@@ -573,8 +574,44 @@
         result (gr/check-freshness {:root root :adapter-result adapter-result})]
     (is (:fresh? result))
     (is (= (:run-id written) (:run-id (:newest result))))
-    (is (= (gr/sha256 (io/file (:dir written) "input.edn"))
+    (is (= (run-data/logical-sha (:input adapter-result))
            (:adapter-input-sha256 result)))))
+
+(deftest content-addressed-run-roundtrip-and-dedup
+  (let [root (temp-root "cas")
+        first-run (pilot-run root {:run-id "run-a"})
+        dir-a (get-in first-run [:written :dir])
+        input (:input (:adapter-result first-run))
+        pass (:pass-output first-run)
+        index-in (edn/read-string (slurp (io/file dir-a "input.edn")))
+        index-pass (edn/read-string (slurp (io/file dir-a "pass.edn")))
+        object-files (fn [] (count (filter (fn [f] (.isFile f))
+                                          (file-seq (io/file root "objects")))))
+        before (object-files)]
+    (is (= (run-data/canonical-edn input)
+           (run-data/canonical-edn (run-data/read-run-file dir-a "input.edn"))))
+    (is (= (run-data/canonical-edn pass)
+           (run-data/canonical-edn (run-data/read-run-file dir-a "pass.edn"))))
+    (is (= (get-in index-in [:content :graph-coverage])
+           (get-in index-pass [:content :graph-coverage])))
+    (is (= (get-in index-in [:content :reading-evidence])
+           (get-in index-pass [:content :reading-evidence])))
+    (pilot-run root {:run-id "run-b"})
+    (is (= before (object-files)) "identical run creates no new objects")))
+
+(deftest verify-run-checks-referenced-objects
+  (doseq [mode [:corrupt :missing]]
+    (let [root (temp-root (name mode))
+          {:keys [written]} (pilot-run root)
+          dir (:dir written)
+          index (edn/read-string (slurp (io/file dir "input.edn")))
+          sha (first (run-data/referenced-shas index))
+          object (run-data/object-file root sha)]
+      (if (= :corrupt mode) (spit object "{:corrupt true}\n") (.delete object))
+      (is (false? (:ok? (gr/verify-run dir))))
+      (is (some #(= (if (= :corrupt mode) :object-sha-mismatch :object-missing)
+                    (:reason %))
+                (:mismatches (gr/verify-run dir)))))))
 
 (deftest check-freshness-different-input-is-stale
   (let [root (temp-root "stale")]

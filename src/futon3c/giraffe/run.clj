@@ -28,6 +28,7 @@
             [futon3c.giraffe.excursions :as excursions]
             [futon3c.giraffe.pass :as gp]
             [futon3c.giraffe.priority :as priority]
+            [futon3c.giraffe.run-data :as run-data]
             [futon3c.giraffe.stale-markers :as stale]
             [futon3c.giraffe.tickets :as gt]))
 
@@ -276,12 +277,13 @@
                  (let [f (io/file dir name)]
                    (spit f content)
                    {:file name :sha256 (sha256 f)}))
-        input-entry (assoc (write! "input.edn" (print-edn input))
+        indexes (run-data/make-indexes! root input pass-output)
+        input-entry (assoc (write! "input.edn" (run-data/canonical-edn (:input-index indexes)))
                            :bytes input-bytes)
         rejected-entry (write! "rejected.edn" (print-edn rejected))
         excluded-entry (when (contains? adapter-result :excluded)
                          (write! "excluded.edn" (print-edn (:excluded adapter-result))))
-        pass-entry (write! "pass.edn" (print-edn pass-output))
+        pass-entry (write! "pass.edn" (run-data/canonical-edn (:pass-index indexes)))
         priority-entry (when usable-focus?
                          (write! "priority.edn"
                                  (print-edn
@@ -325,6 +327,8 @@
                             {:status :absent :reason :focus-relation-input-absent})
                           :invocation invocation
                           :readings-generation (:readings-generation adapter-result)
+                          :content-addressed {:schema run-data/index-schema
+                                              :object-count (count (:object-shas indexes))}
                           :sources (cond-> {}
                                      index-file (assoc :tickets-index
                                                        {:path (str index-file)
@@ -450,7 +454,11 @@
                 (:migrated manifest)
                 (conj {:reason :priority-pin-migrated
                        :migration (:migrated manifest)}))
-        mismatches (into (into unlisted focus-version-mismatches)
+        object-mismatches (mapcat :mismatches
+                                  [(run-data/verify-index dir "input.edn")
+                                   (run-data/verify-index dir "pass.edn")])
+        mismatches (into (into (into unlisted focus-version-mismatches)
+                               object-mismatches)
                          (for [{:keys [file] :as entry} (:files manifest)
                               :let [f (io/file dir file)
                                     actual (when (.isFile f) (sha256 f))]
@@ -564,7 +572,8 @@
                    (when (and (field-run? manifest)
                               (:ok? (verify-run dir)))
                      {:run-id (.getName ^java.io.File dir)
-                      :input-sha256 (sha256 (io/file dir "input.edn"))}))
+                      :input-sha256 (run-data/logical-sha
+                                     (run-data/read-run-file dir "input.edn"))}))
                  (catch Exception _ nil))))))
 
 (defn check-freshness
@@ -687,7 +696,9 @@
         (:detail notice) (assoc :detail (:detail notice))))))
 
 (defn- read-run-edn [dir name]
-  (edn/read-string (slurp (io/file dir name))))
+  (if (contains? #{"input.edn" "pass.edn"} name)
+    (run-data/read-run-file dir name)
+    (edn/read-string (slurp (io/file dir name)))))
 
 (def ^:private prior-scan-limit
   "Runs are minted every few minutes; a complete one is normally among the

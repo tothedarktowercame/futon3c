@@ -18,6 +18,7 @@
             [futon3c.circus.chain-record :as chain]
             [futon3c.circus.hou :as hou]
             [futon3c.circus.operator-focus :as operator-focus]
+            [futon3c.giraffe.run-data :as run-data]
             [futon3c.xiang.turn-store :as turns]))
 
 (def ^:private max-top-items 50)
@@ -27,7 +28,11 @@
 
 (defn- read-edn [run-dir file fallback]
   (let [f (io/file run-dir file)]
-    (if (.isFile f) (edn/read-string (slurp f)) fallback)))
+    (if (.isFile f)
+      (if (contains? #{"input.edn" "pass.edn"} file)
+        (run-data/read-run-file run-dir file)
+        (edn/read-string (slurp f)))
+      fallback)))
 
 (defn- item-name [x]
   (when (some? x) (if (keyword? x) (name x) (str x))))

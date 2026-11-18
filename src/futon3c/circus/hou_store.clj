@@ -16,6 +16,7 @@
             [futon3c.arxana.store-http :as http]
             [futon3c.arxana.turn-mention-writer :as writer]
             [futon3c.circus.hou :as hou]
+            [futon3c.giraffe.run-data :as run-data]
             [futon3c.xiang.turn-store :as turns]))
 
 (defn default-config []
@@ -44,7 +45,7 @@
         input-bytes (java.nio.file.Files/readAllBytes (.toPath (io/file path)))
         sha (digest/sha256-hex input-bytes)
         _ (require! (= sha (:sha256 (first (filter #(= "input.edn" (:file %)) (:files manifest))))) :invalidEvidence)
-        inp (edn/read-string (String. ^bytes input-bytes "UTF-8"))
+        inp (run-data/read-run-file dir "input.edn")
         edges (remove #(= :alternative (:class %)) (:edges inp))
         owners (group-by (comp id-text :reading-member) edges)
         _ (require! (not (contains? owners nil)) :invalidEvidence)

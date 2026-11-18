@@ -42,6 +42,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gcc_preview  # edn_load, read_lines, doc_title, load_corpus  (same dir)
+from giraffe_run_data import load_run_file
 
 STORAGE = os.path.expanduser("~/storage")
 NOTES = os.path.expanduser("~/notes")
@@ -58,8 +59,7 @@ def newest_run(storage_root=STORAGE):
 
 
 def load_pass(run_dir):
-    return gcc_preview.edn_load(
-        open(os.path.join(run_dir, "pass.edn"), encoding="utf-8").read())
+    return load_run_file(os.path.join(run_dir, "pass.edn"), gcc_preview.edn_load)
 
 
 def load_pending(path):
@@ -328,8 +328,7 @@ def party_vote(orderings, count=12, skip_seen=True, needs=None, cascade=None):
 # ---------------------------------------------------------------- main ----
 
 def load_input(run_dir):
-    with open(os.path.join(run_dir, "input.edn"), encoding="utf-8") as stream:
-        return gcc_preview.edn_load(stream.read())
+    return load_run_file(os.path.join(run_dir, "input.edn"), gcc_preview.edn_load)
 
 
 def party_dependencies(rows, inputs):
