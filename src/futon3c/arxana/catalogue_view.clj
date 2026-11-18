@@ -2,7 +2,7 @@
   "Read-only catalogue projection and complete-or-inconclusive acquisition."
   (:require [futon3c.arxana.design-catalogue :as catalogue]
             [futon3c.arxana.queries :as queries]
-            [futon3c.arxana.store-http :as http])
+            [futon3c.arxana.batch-read :as batch])
   (:import [java.time Instant]))
 
 (defn valid-time? [at]
@@ -104,6 +104,7 @@
   (if-not (valid-time? at)
     {:status :inconclusive :reason :invalid-valid-time}
     (let [receipts (atom [])]
+     (binding [batch/*receipts* receipts]
       (try
         (letfn [(read! [query field f]
                   (let [r (f)]
@@ -114,45 +115,27 @@
                                                      (not= :ok (:status r)) (or (:status r) :query-error)
                                                      :else :invalid-response)
                                        :query query :response r})))
-                    (get r field)))
-                (hydrate! [id optional?]
-                  (let [r (http/get-entity-as-of graph-store id at)]
-                    (cond
-                      (and optional? (= :arxana.store/record-not-found (get-in r [:error :error/code]))) nil
-                      (or (:error r) (nil? (:ok r)))
-                      (throw (ex-info "catalogue record unavailable"
-                                      {:catalogue/refusal true :reason (if optional? :run-unavailable :reference-unavailable)
-                                       :record-id id :response r}))
-                      :else (:ok r))))]
+                    (get r field)))]
           (let [by-type (into {} (for [type [:design/choice :design/check :design/checked-by
                                             :design/shaped-by :design/constrains]
                                       :let [q {:type-revision [type 1] :valid-time at :limit 200}]]
                                   [type (read! (assoc q :query/type :records-by-type) :records
                                                #(queries/records-by-type graph-store q))]))
-                runs (mapcat
-                      (fn [choice]
-                        (let [id (:id choice)
-                              checks (set (keep #(when (= id (target % :choice)) (target % :check))
-                                                (by-type :design/checked-by)))]
-                          (when (seq checks)
-                            (let [q {:subject-clusion-id id :limit 200}
-                                  ids (read! (assoc q :query/type :attestations) :attestation-ids
-                                             #(queries/attestations graph-store q))]
-                              (filter #(and (= id (:subject-clusion-id %))
-                                            (checks (get-in % [:method :check/id])))
-                                      (keep #(hydrate! % true) (distinct ids)))))))
-                      (by-type :design/choice))
-                refs (mapv #(hydrate! % false)
-                           (sort (distinct (map #(target % :target) (by-type :design/constrains)))))
+                linked (group-by #(target % :choice) (by-type :design/checked-by))
+                runs (filter (fn [r] (some #(= (get-in r [:method :check/id]) (target % :check))
+                                         (get linked (:subject-clusion-id r))))
+                             (batch/evidence graph-store (keys linked) at))
+                refs (try (batch/records graph-store (sort (distinct (map #(target % :target) (by-type :design/constrains)))) at false)
+                          (catch Exception e (throw (ex-info "reference unavailable" {:catalogue/refusal true :reason :reference-unavailable} e))))
                 records (vec (vals (into {} (map (juxt :id identity)
                                                  (concat (mapcat val by-type) runs refs)))))]
             (assoc (catalogue-view records at) :queries @receipts)))
         (catch Exception e
           (let [detail (ex-data e)]
             (merge {:status :inconclusive :reason :query-error}
-                   (if (:catalogue/refusal detail)
+                   (if (or (:catalogue/refusal detail) (:reason detail))
                      (dissoc detail :catalogue/refusal)
-                     {:message (.getMessage e)}))))))))
+                     {:message (.getMessage e)})))))))))
 
 (defn read-catalogue
   "As read-catalogue-once, retried up to three times when the only refusal is

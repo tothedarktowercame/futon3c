@@ -1,5 +1,6 @@
 (ns futon3c.arxana.catalogue-view-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.arxana.batch-read-support :as batches]
+            [clojure.test :refer [deftest is]]
             [futon3c.arxana.catalogue-view :as view]
             [futon3c.arxana.design-catalogue-test :as fixtures]
             [futon3c.arxana.service :as service]
@@ -11,7 +12,7 @@
         coverage (:id (first (filter #(= :coverage (get-in % [:asserted-content :choice/key])) choices)))]
     (vec (remove #(= coverage (:subject-clusion-id %)) records))))
 (defn fake-store [rs calls override]
-  (reify store/ArxanaGraphStore
+  (batches/wrap (reify store/ArxanaGraphStore
     (bounded-query! [_ query]
       (swap! calls conj query)
       (or (override query)
@@ -21,8 +22,7 @@
                                 :truncated? false :attestation-ids (mapv :id (filter #(= (:subject-clusion-id query) (:subject-clusion-id %)) rs))}
                  :record-by-id (if-let [r (first (filter #(= (:record-id query) (:id %)) rs))]
                                  {:status :ok :record r} {:status :missing}))}))
-    (conditional-write! [_ _] (throw (ex-info "view wrote to store" {})))))
-
+    (conditional-write! [_ _] (throw (ex-info "view wrote to store" {}))))))
 (deftest pure-and-queried-view
   (let [rs (fixture-records)
         v (view/catalogue-view rs at)

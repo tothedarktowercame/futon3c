@@ -1,9 +1,8 @@
 (ns futon3c.arxana.benefit-filings
   "Historical benefit filings, with substrate identities kept in a separate lane."
   (:require [futon3c.arxana.catalogue-view :as catalogue]
-            [futon3c.arxana.dependence :as dep]
-            [futon3c.arxana.queries :as queries]
-            [futon3c.arxana.store-http :as http]))
+            [futon3c.arxana.batch-read :as batch]
+            [futon3c.arxana.queries :as queries]))
 
 (defn- endpoint [r role] (some #(when (= role (:role %)) (val (first (:target %)))) (:endpoints r)))
 (defn- typed [rs t] (filter #(= t (:type-revision %)) rs))
@@ -30,61 +29,35 @@
               :entities (count (set (map #(get-in % [:entity :record :id]) (mapcat :names items))))}}))
 
 (defn read-filings
-  "Without benefit-id list all benefits with visible serving counts per lane.
-  With it, acquire both serving sets, item/lexicon records and all their evidence.
-  Caps are 200; any incomplete/refused acquisition returns no partial view.
-  Reverse discovery is current; candidate records and evidence are read at AT."
+  "Acquire each dependency level in batches; any incomplete set refuses the page."
   [store {:keys [benefit-id valid-time]}]
-  (if-not (and (catalogue/valid-time? valid-time) (or (nil? benefit-id) (and (string? benefit-id) (seq benefit-id))))
+  (if-not (and (catalogue/valid-time? valid-time) (or (nil? benefit-id) (string? benefit-id)))
     {:status :inconclusive :reason :invalid-request}
-    (let [saved (atom {}) queried (atom []) evidenced (atom #{})]
-      (try
-        (letfn [(fail! [reason response] (throw (ex-info "Benefit acquisition incomplete" {:reason reason :response response})))
-                (get! [id optional?]
-                  (or (@saved id)
-                      (let [r (http/get-entity-as-of store id valid-time)]
-                        (cond (and optional? (dep/missing? r)) nil
-                              (or (:error r) (nil? (:ok r))) (fail! :record-unavailable r)
-                              :else (do (swap! saved assoc id (:ok r)) (:ok r))))))
-                (evidence! [r]
-                  (when-not (@evidenced (:id r))
-                    (let [q {:subject-clusion-id (:id r) :limit 200}
-                          a (queries/attestations store q)]
-                      (swap! queried conj (assoc q :query/type :attestations))
-                      (when (or (not= :ok (:status a)) (:truncated? a) (not (sequential? (:attestation-ids a))))
-                        (fail! (if (:truncated? a) :truncated :evidence-unavailable) a))
-                      (doseq [id (:attestation-ids a)] (get! id true))
-                      (swap! evidenced conj (:id r)))))
-                (reverse! [type role id]
-                  (let [r (dep/reverse-records store type role id valid-time)]
-                    (swap! queried conj (dep/reverse-query type role id))
-                    (when (not= :ok (:status r)) (fail! (or (:reason r) :reverse-unavailable) r))
-                    (doseq [record (:records r)] (swap! saved assoc (:id record) record))
-                    (:records r)))
-                (lanes! [id] [(reverse! [:workplan/serves 1] :benefit-line id)
-                              (reverse! [:workplan/serves 2] :benefit-line id)])]
-          (if benefit-id
-            (let [benefit (get! benefit-id false)]
-              (when-not (= [:benefit-line 1] (:type-revision benefit)) (fail! :not-a-benefit benefit))
-              (evidence! benefit)
-              (let [[old substrate] (lanes! benefit-id)]
-                (doseq [link (concat old substrate)] (evidence! link))
-                (doseq [id (sort (set (map #(endpoint % :item) old)))]
-                  (evidence! (get! id false))
-                  (doseq [link (reverse! [:workplan/names 1] :item id)]
-                    (evidence! link) (evidence! (get! (endpoint link :entity) false))))
-                (assoc (benefit-view (vals @saved) benefit-id valid-time) :queries @queried)))
-            (let [q {:type-revision [:benefit-line 1] :valid-time valid-time :limit 200}
-                  r (queries/records-by-type store q)]
-              (when (or (not= :ok (:status r)) (:truncated? r) (not (sequential? (:records r))))
-                (fail! (if (:truncated? r) :truncated :benefits-unavailable) r))
-              (swap! queried conj (assoc q :query/type :records-by-type))
-              {:status :ok :mode :list :valid-time valid-time :interpretation :historical-filings
-               :benefits (mapv (fn [b] (let [[old substrate] (lanes! (:id b))]
-                                        (swap! saved assoc (:id b) b) (evidence! b)
-                                        {:benefit b :evidence (vec (filter #(= (:id b) (:subject-clusion-id %)) (vals @saved)))
-                                         :evidence-completeness :complete
-                                         :serves-v1 (count old) :serves-v2 (count substrate)}))
-                              (sort-by #(get-in % [:asserted-content :benefit/line]) (:records r)))
-               :queries @queried})))
-        (catch Exception e (merge {:status :inconclusive :reason :query-error} (ex-data e)))))))
+    (binding [batch/*receipts* (atom [])]
+     (try
+      (let [benefits (if benefit-id (batch/records store [benefit-id] valid-time false)
+                         (:records (batch/checked (batch/fetch! queries/records-by-type store {:type-revision [:benefit-line 1] :limit 200 :valid-time valid-time}))))
+            _ (when-not (sequential? benefits)
+                (throw (ex-info "benefits unavailable" {:reason :invalid-response})))
+            _ (when (some #(not= [:benefit-line 1] (:type-revision %)) benefits)
+                (throw (ex-info "not a benefit" {:reason :not-a-benefit})))
+            ids (mapv :id benefits)
+            old (batch/reverse-records store [:workplan/serves 1] :benefit-line ids valid-time)
+            substrate (batch/reverse-records store [:workplan/serves 2] :benefit-line ids valid-time)
+            item-ids (when benefit-id (distinct (map #(endpoint % :item) old)))
+            items (batch/records store item-ids valid-time false)
+            names (batch/reverse-records store [:workplan/names 1] :item item-ids valid-time)
+            entities (batch/records store (map #(endpoint % :entity) names) valid-time false)
+            base (concat benefits (when benefit-id (concat old substrate items names entities)))
+            evidence (batch/evidence store (map :id base) valid-time)
+            records (concat base evidence)]
+        (if benefit-id
+          (assoc (benefit-view records benefit-id valid-time) :queries @batch/*receipts*)
+          {:status :ok :mode :list :valid-time valid-time :interpretation :historical-filings
+           :queries @batch/*receipts*
+           :benefits (mapv (fn [b] {:benefit b :evidence-completeness :complete
+                                   :evidence (filterv #(= (:id b) (:subject-clusion-id %)) evidence)
+                                   :serves-v1 (count (filter #(= (:id b) (endpoint % :benefit-line)) old))
+                                   :serves-v2 (count (filter #(= (:id b) (endpoint % :benefit-line)) substrate))})
+                           (sort-by #(get-in % [:asserted-content :benefit/line]) benefits))}))
+      (catch Exception e (merge {:status :inconclusive :reason :query-error} (ex-data e)))))))

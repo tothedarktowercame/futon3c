@@ -26,3 +26,8 @@
   (let [r (cache/set-query! graph-store (assoc options :query/type :attestations)
                             #(store/bounded-query-settled! graph-store %))]
     (if (:error r) r (:ok r))))
+
+(defn attestations-by-subjects [s options] (query s :attestations-by-subjects options))
+(defn role-reverse-many [s options] (query s :role-reverse-many options))
+(defn records-by-ids [s options] (query s :records-by-ids options))
+(defn count-by-field [s options] (query s :count-by-field options))

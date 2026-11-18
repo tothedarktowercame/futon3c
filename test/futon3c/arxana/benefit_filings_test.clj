@@ -1,5 +1,6 @@
 (ns futon3c.arxana.benefit-filings-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [futon3c.arxana.batch-read-support :as batches]
+            [clojure.test :refer [deftest is]]
             [futon3c.arxana.benefit-filings :as f]
             [futon3c.arxana.benefit-filings-catalogue :as c]
             [futon3c.arxana.design-catalogue-test :as fixtures]
@@ -22,7 +23,7 @@
    {:id "a" :subject-clusion-id "s" :basis :model :standing :unverified :coverage :partial
     :source-refs [{:path "invented-source"}] :content {}}])
 (defn fake [calls override]
-  (reify store/ArxanaGraphStore
+  (batches/wrap (reify store/ArxanaGraphStore
     (bounded-query! [_ q]
       (swap! calls conj q)
       (or (override q)
@@ -36,7 +37,7 @@
                                                                                 (some (fn [ep] (and (= (:endpoint-role q) (:role ep))
                                                                                                     (= (:endpoint-id q) (val (first (:target ep)))))) (:endpoints %))) rs))]
                                  {:status :ok :total (count ids) :truncated? false :edge-ids ids}))}))
-    (conditional-write! [_ _] (throw (ex-info "No writes" {})))))
+    (conditional-write! [_ _] (throw (ex-info "No writes" {}))))))
 (def request {:benefit-id "b" :valid-time at})
 (deftest parents-evidence-and-lanes
   (let [calls (atom []) s (fake calls (constantly nil)) v (f/read-filings s request)]

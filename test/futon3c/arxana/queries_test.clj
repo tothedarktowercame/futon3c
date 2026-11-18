@@ -49,6 +49,11 @@
         (is (= {:total 2 :truncated? true :limit 1}
                (select-keys (q/attestations s {:subject-id (:id (first records)) :limit 1})
                             [:total :truncated? :limit])))
+        (is (= records (mapv :record (:results (q/records-by-ids s {:record-ids (mapv :id records) :valid-time at})))))
+        (is (= 2 (:total (q/count-by-field s (assoc base :field :tag :value :example)))))
+        (is (= 2 (get-in (q/attestations-by-subjects s {:subject-ids [(:id (first records))] :limit 1}) [:results 0 :total])))
+        (is (true? (get-in (q/attestations-by-subjects s {:subject-ids [(:id (first records))] :limit 1}) [:results 0 :truncated?])))
+        (is (= 0 (get-in (q/role-reverse-many s {:endpoint-ids ["absent"] :edge-type [:invented/span 1] :endpoint-role :item}) [:results 0 :total])))
         (finally (server/stop-server! srv) (.delete f))))))
 
 (deftest stale-index-settles-then-persistent-stale-is-returned
