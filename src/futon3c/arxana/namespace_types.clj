@@ -6,6 +6,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.arxana.digest :as digest]
+            [futon3c.arxana.type-registry :as registry]
             [org.httpkit.client :as http]
             [rewrite-clj.zip :as z])
   (:import [java.net URLEncoder]))
@@ -130,26 +131,40 @@
   "YES means a literal construction/query site, not observed execution.
   Unknown coverage takes precedence over positive sites. Dynamic sites cannot
   justify NOT-YET. Source is rescanned so stale published edges are not facts.
+  The target must match a registered revision and have an indexed literal writer.
   The 3-arity accepts an index snapshot for hermetic checks."
   ([subject-files type-prefix]
    (try (built-on? (indexed-namespaces) subject-files type-prefix)
         (catch Exception e {:answer :unknown :evidence [] :coverage []
                             :reason :index-unavailable :message (.getMessage e)})))
   ([index subject-files type-prefix]
-   (let [by-file (group-by #(some-> (prop % :source-file) canonical) index)
+   (let [inspect-once (memoize inspect)
+         by-file (group-by #(some-> (prop % :source-file) canonical) index)
          scans (mapcat (fn [file]
                          (if-let [rs (get by-file (canonical file))]
-                           (map inspect rs)
+                           (map inspect-once rs)
                            [{:status :unknown :reason :unindexed :source-file file}])) subject-files)
          unknown (filter #(not= :ok (:status %)) scans)
          dynamic (mapcat #(filter (comp #{:dynamic} :status) (:uses %)) scans)
          prefix (str/replace (str type-prefix) #"^:" "")
+         registered (set (filter #(str/starts-with? (subs (str (first %)) 1) prefix)
+                                 (keys registry/registry-v1)))
+         writer (when (seq registered)
+                  (some (fn [r]
+                          (let [scan (inspect-once r)]
+                            (when-let [use (some #(when (and (= :writes (:direction %))
+                                                           (registered (:type-revision %))) %) (:uses scan))]
+                              (merge (select-keys scan [:namespace-id :source-file :source-sha256]) use)))) index))
+         target-reason (cond (empty? registered) :unregistered-target
+                             (nil? writer) :no-indexed-target-writer)
          evidence (vec (for [scan scans use (:uses scan) :when (:type-revision use)
                             :when (str/starts-with? (subs (str (first (:type-revision use))) 1) prefix)]
                         (merge (select-keys scan [:namespace-id :source-file :source-sha256]) use)))]
-     {:answer (cond (or (empty? subject-files) (seq unknown)) :unknown
+     {:answer (cond (or target-reason (empty? subject-files) (seq unknown)) :unknown
                     (seq evidence) :yes (seq dynamic) :unknown :else :not-yet)
-      :evidence evidence :coverage (vec scans)})))
+      :evidence evidence :coverage (vec scans)
+      :target-coverage {:type-revisions (vec (sort-by pr-str registered))
+                        :writer writer :reason target-reason}})))
 
 (defn backfill!
   "Default dry-run. Only indexed futon3c .clj files; positive edges in batches.

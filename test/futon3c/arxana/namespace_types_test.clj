@@ -18,6 +18,12 @@
     (is (= :dynamic (-> (nt/extract "(futon3c.arxana.records/make-clusion {:type-revision t})") :uses first :status)))
     (with-redefs [slurp (fn [file] (if (= file "/invented/strand.clj") source "(ns invented.empty)"))]
       (is (= :yes (:answer (nt/built-on? index ["/invented/strand.clj"] "ma/"))))
+      (let [unknown (nt/built-on? index ["/invented/empty.clj"] "invented-unregistered/")
+            unwritten (nt/built-on? [(second index)] ["/invented/empty.clj"] "ma/")]
+        (is (= :unknown (:answer unknown)))
+        (is (= :unregistered-target (get-in unknown [:target-coverage :reason])))
+        (is (= :unknown (:answer unwritten)))
+        (is (= :no-indexed-target-writer (get-in unwritten [:target-coverage :reason]))))
       (is (= :unknown (:answer (nt/built-on? index ["/invented/nip_merge.py"] "ma/"))))
       (is (= :not-yet (:answer (nt/built-on? index ["/invented/empty.clj"] "ma/"))))
       (is (= :unknown (:answer (nt/built-on? index ["/invented/strand.clj" "/invented/nip_merge.py"] "ma/"))))
