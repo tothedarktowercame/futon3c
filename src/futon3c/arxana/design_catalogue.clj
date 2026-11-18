@@ -150,7 +150,7 @@
         mission "holes/missions/M-arxana-incubator.md"
         rows [[:scope :constraint "Manifestation revision 3 scope is :role or :declaration." :manifestation-scope (source derive "§9 R6(a)")]
               [:fibres :constraint "Every view opens its evidence fibre." :evidence-fibres (source argue "§3.6 The outcome surface and fibres")]
-              [:functions :ruling "A rule record identifies one function, not its introducing unit." :rule-identity (source derive "§8, 8C: Rule identity")]
+              [:functions :ruling "A function rule record identifies one function, not its introducing unit; at a valid time at most one unsuperseded rule record names a function." :rule-identity (source derive "§8, 8C: Rule identity")]
               [:coverage :constraint "Every backend feature cited by Demo B has a documenting choice." :demo-coverage (source mission "§6 Shared backend, and a coverage invariant")]
               [:links :constraint "Catalogue links connect the right kinds." :catalogue-links (source derive "§9 R6(b)")]]]
     (mapv (fn [[key kind statement feature citation]]
