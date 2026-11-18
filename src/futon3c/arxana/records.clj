@@ -24,14 +24,23 @@
   (let [declaration (or (get registry type-revision)
                         (throw (ex-info "unknown type revision"
                                         {:type-revision type-revision})))
-        expected-roles (mapv :role (:roles declaration))
-        actual-roles (mapv :role endpoints)]
+        roles (:roles declaration)
+        expected-roles (mapv :role roles)
+        actual-roles (mapv :role endpoints)
+        allowed-role-sequences (->> roles
+                                    (reduce (fn [xs role]
+                                              (if (false? (:required? role))
+                                                (into xs (map #(conj % role) xs))
+                                                (mapv #(conj % role) xs)))
+                                            [[]])
+                                    (mapv #(mapv :role %)))]
     (when-not (= :clusion (:record/kind declaration))
       (throw (ex-info "type is not a clusion" {:type-revision type-revision})))
-    (when-not (= expected-roles actual-roles)
+    (when-not (some #{actual-roles} allowed-role-sequences)
       (throw (ex-info "endpoint roles/order do not match declaration"
                       {:expected expected-roles :actual actual-roles})))
-    (doseq [[endpoint role-decl] (map vector endpoints (:roles declaration))]
+    (doseq [endpoint endpoints
+            :let [role-decl (first (filter #(= (:role endpoint) (:role %)) roles))]]
       (when-not ((:endpoint/kinds role-decl) (:kind endpoint))
         (throw (ex-info "endpoint kind not allowed for role"
                         {:role (:role endpoint) :kind (:kind endpoint)}))))

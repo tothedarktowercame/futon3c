@@ -241,6 +241,19 @@
          (is (= [:write :notify] @order))
          (is (= {:written 1} (:pattern_occurrences (ts/read-record store "turn-order"))))))))
 
+(deftest ma-strand-writer-failure-is-a-typed-receipt-not-a-turn-failure
+  (let [store (temp-store)]
+    (record! store "turn-strand-failure" {:proposed_patterns [{:patterns [pid]}]})
+    (with-redefs-fn {#'futon3c.xiang.ma-occurrence/verdict-map (fn [& _] strand-verdict)}
+      #(is (map? (mo/verdict! {:store store
+                               :proposal-reader fixture-proposals
+                               :strand-writer! (fn [& _] (throw (ex-info "invented" {})))
+                               :occurrence-async! (fn [f] (f))}
+                              "turn-strand-failure"))))
+    (is (= "ma-strand-write-exception"
+           (get-in (ts/read-record store "turn-strand-failure")
+                   [:ma_strand_write :failed])))))
+
 (deftest fresh-listener-verdict-writes-occurrence-through-real-writer
   (let [store (temp-store)
         appended (atom nil)

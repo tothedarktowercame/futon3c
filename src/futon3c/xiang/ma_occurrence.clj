@@ -27,6 +27,7 @@
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
             [clojure.string :as str]
+            [futon3c.arxana.ma-strand :as ma-strand]
             [futon3c.arxana.pattern-occurrences :as occurrences]
             [futon3c.arxana.pattern-proposals :as proposals]
             [futon3c.arxana.turn-mention-writer :as mention-writer]
@@ -229,11 +230,33 @@
   (when-let [{successor-id :id} (adjacent-turn store id 1)]
     (repair-connection! store successor-id)))
 
+(declare occurrence-writer-executor)
+
+(defn- publish-connection-async!
+  [opts store id]
+  (when-let [writer (:strand-writer! opts)]
+    ((or (:occurrence-async! opts)
+         #(.submit occurrence-writer-executor ^Runnable %))
+     (fn []
+       (let [turn (some-> (ts/read-record store id) (assoc :id id))
+             result (try
+                      (writer (or (:strand-config opts)
+                                  (mention-writer/default-config)) turn)
+                      (catch Throwable e
+                        {:failed :ma-strand-write-exception
+                         :detail (.getMessage e)}))]
+         (ts/update-record! store id #(assoc % :ma_strand_write result)))))))
+
 (defn- ensure-connection!
-  [store id]
+  ([store id] (ensure-connection! {} store id))
+  ([opts store id]
   (with-session-lock
     store id
-    #(let [connection (connection-for store id)]
+    #(let [connection (connection-for store id)
+           successor-id (:id (adjacent-turn store id 1))
+           successor-before (when successor-id
+                              (get-in (ts/read-record store successor-id)
+                                      [:pattern_verdicts :connection]))]
        (ts/update-record!
         store id
         (fn [record]
@@ -243,7 +266,13 @@
             record)))
        (repair-connection! store id)
        (repair-successor! store id)
-       (:pattern_verdicts (ts/read-record store id)))))
+       (publish-connection-async! opts store id)
+       (when (and successor-id
+                  (not= successor-before
+                        (get-in (ts/read-record store successor-id)
+                                [:pattern_verdicts :connection])))
+         (publish-connection-async! opts store successor-id))
+       (:pattern_verdicts (ts/read-record store id))))))
 
 (defn backfill-connections!
   "Give every stored 馬 verdict without a :connection one, from the strand
@@ -594,8 +623,6 @@
   (contains? retryable-model-failure-kinds
              (get-in verdict [:model_outcome :failure_kind])))
 
-(declare occurrence-writer-executor)
-
 (def ^:private max-listener-attempts 3)
 
 (defn- record-listener-failure!
@@ -649,7 +676,7 @@
                                       (assoc :pattern_verdicts pending)
                                       (dissoc :ma_listener_failure))
                                   %)))
-          (ensure-connection! store id))
+          (ensure-connection! opts store id))
         (if (and record (= "operator" (:origin record)) (empty? proposed))
           ;; Joe 2026-11-18: every Circus animal writes into one connected
           ;; component. A turn with nothing to read still gets a typed 馬
@@ -663,7 +690,7 @@
                                               :why "no proposed patterns" :patterns []
                                               :connection (connection-for store id)})
                                       %)))
-              (ensure-connection! store id))
+              (ensure-connection! opts store id))
         (when (and record
                  (= "operator" (:origin record))
                  (seq proposed))
@@ -672,7 +699,7 @@
                    (= (set (map :id proposed)) (verdict-pattern-ids existing))
                    (or (not (retryable-verdict? existing))
                        (>= (long (or (:model_attempts existing) 1)) 3)))
-            (ensure-connection! store id)
+            (ensure-connection! opts store id)
             (let [attempt (if (and (map? existing) (retryable-verdict? existing))
                             (inc (long (or (:model_attempts existing) 1)))
                             1)
@@ -706,7 +733,7 @@
                      ;; is durable. lu-memory remains a field consumer.
                      (when notify! (notify! {:event :pattern-verdicts :id id})))))
                 (when notify! (notify! {:event :pattern-verdicts :id id})))
-              (ensure-connection! store id))))))))
+              (ensure-connection! opts store id))))))))
     (catch Exception e
       (record-listener-failure! store id e)
       nil)))
@@ -813,6 +840,7 @@
   []
   (start! {:ask whistle-ask
            :occurrence-writer! occurrences/write!
+           :strand-writer! ma-strand/write!
            :store (fn [] (some-> (live-service) :config :store))
            :notify! (fn [ev] (when-let [svc (live-service)]
                                (@#'turn-service/notify-turn! svc ev)))}))

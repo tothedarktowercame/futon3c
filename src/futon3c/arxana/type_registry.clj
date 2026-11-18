@@ -229,6 +229,15 @@
                  [{:role :pattern :endpoint/kinds #{:external-ref}}
                   {:role :turn :endpoint/kinds #{:external-ref}}]
                  [:window :proposal])
+   (clusion-type :ma/strand 1
+                 [{:role :turn :endpoint/kinds #{:external-ref}}
+                  {:role :prev :endpoint/kinds #{:external-ref} :required? false}]
+                 [:connection/status :connection/sha256 :connection/reason])
+   (clusion-type :ma/quote 1
+                 [{:role :turn :endpoint/kinds #{:external-ref}}
+                  {:role :quoted-turn :endpoint/kinds #{:external-ref}}
+                  {:role :pattern :endpoint/kinds #{:external-ref}}]
+                 [:part :window])
    (clusion-type :needs 1
                  [{:role :needing :endpoint/kinds #{:external-ref}}
                   {:role :supplier :endpoint/kinds #{:external-ref}}]
