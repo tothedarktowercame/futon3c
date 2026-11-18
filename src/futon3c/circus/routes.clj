@@ -307,3 +307,77 @@
                                :message (.getMessage e)}))
             (catch Throwable t
               (error-response 503 "strand-unavailable" {:message (.getMessage t)}))))))))
+
+;; ------------------------------------------------------- parallel session herd
+
+(defn- instant [s] (java.time.Instant/parse (str s)))
+
+(defn- in-window? [at since until]
+  (and at (.isAfter (instant at) since) (not (.isAfter (instant at) until))))
+
+(defn- known-session [s]
+  (when (and (some? s) (not (str/blank? (str s))) (not= "pending" s)) s))
+
+(defn- herd-lane [cfg store {:keys [session head]} since until agents]
+  (loop [id head seen #{} rows [] agent nil]
+    (if (or (nil? id) (seen id))
+      (when (seq rows)
+        (let [ordered (vec (sort-by (comp instant :created_at) rows))]
+          {:session session :agent agent :first (:created_at (first ordered))
+           :last (:created_at (peek ordered)) :turns ordered}))
+      (if-let [record (turns/read-record store id)]
+        (let [at (:created_at record)
+              owner (or agent (:agent_id record))]
+          (if (or (and at (not (.isAfter (instant at) since)))
+                  (and (seq agents) (not (agents owner))))
+            (recur nil seen rows owner)
+            (let [projection (when (in-window? at since until)
+                               ;; The strand's exact cache and dirty-event versions;
+                               ;; a herd poll does not force a second projection.
+                               (cached-turn (assoc cfg :turn-store store) id false))
+                  row (when projection
+                        {:id id :created_at at :ma_status (get-in projection [:ma :status])
+                         :threads_n (count (get-in projection [:ma :threads]))
+                         :quotes_n (count (filter #(= :quotes (:kind %)) (:edges projection)))})]
+              (recur (:prev_operator_turn_id record) (conj seen id)
+                     (cond-> rows row (conj row)) owner))))
+        (recur nil seen rows agent)))))
+
+(defn- herd-bells [store since until agents]
+  (->> (turns/bell-indexes store)
+       (mapcat :turns)
+       (filter #(in-window? (:created_at %) since until))
+       (keep (fn [{:keys [id]}]
+               (when-let [r (turns/read-record store id)]
+                 (when (and (= "agent" (:origin r))
+                            (in-window? (:created_at r) since until)
+                            (or (empty? agents) (agents (:caller r)) (agents (:agent_id r))))
+                   (cond-> {:at (:created_at r) :from_agent (:caller r)
+                            :to_agent (:agent_id r) :turn_id id
+                            :kind (or (:surface r) "agent")}
+                     (known-session (:caller_session r)) (assoc :from_session (:caller_session r))
+                     (known-session (:session_id r)) (assoc :to_session (:session_id r)))))))
+       (sort-by (juxt (comp instant :at) :turn_id)) vec))
+
+(defn herd-response
+  "Parallel operator strands plus indexed agent-origin interactions. Window is
+  (since, until], defaulting to the last six hours. Cursor is latest served time;
+  an empty result retains since. Pending bell sessions stay agent-addressed."
+  [cfg params]
+  (try
+    (let [until (instant (or (get params "until")
+                             (str ((or (:now-fn cfg) #(java.time.Instant/now))))))
+          since (if-let [s (get params "since")] (instant s) (.minusSeconds until (* 6 3600)))
+          agents (set (remove str/blank? (map str/trim (str/split (or (get params "agents") "") #","))))]
+      (if (.isAfter since until)
+        (error-response 400 "invalid-window")
+        (let [store (or (:turn-store cfg) (turns/store))
+              lanes (->> (turns/active-session-heads store (.toEpochMilli since))
+                         (keep #(herd-lane cfg store % since until agents))
+                         (sort-by (juxt :agent :session)) vec)
+              bells (herd-bells store since until agents)
+              cursor (reduce (fn [latest at] (let [t (instant at)] (if (.isAfter t latest) t latest)))
+                             since (concat (map :last lanes) (map :at bells)))]
+          {:status 200 :body (json-ready {:lanes lanes :bells bells :cursor (str cursor)})})))
+    (catch java.time.format.DateTimeParseException _ (error-response 400 "invalid-time"))
+    (catch Exception e (error-response 503 "herd-unavailable" {:message (.getMessage e)}))))

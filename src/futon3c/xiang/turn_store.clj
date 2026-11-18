@@ -114,6 +114,58 @@
   (.computeIfAbsent session-locks (str (:dir store) "\u0000" session-id)
                     (reify java.util.function.Function (apply [_ _] (Object.)))))
 
+(defn active-session-heads
+  "Enumerate only head receipts whose mtime is at least SINCE-MS; never scan turns."
+  [store since-ms]
+  (into []
+        (keep (fn [^java.io.File f]
+                (when (and (.isFile f) (str/ends-with? (.getName f) ".json")
+                           (>= (.lastModified f) since-ms))
+                  {:session (java.net.URLDecoder/decode
+                              (subs (.getName f) 0 (- (count (.getName f)) 5)) "UTF-8")
+                   :head (:head (read-json (str f)))})))
+        (or (.listFiles (io/file (:dir store) "session-heads")) [])))
+
+(defn- bell-index-path [store recipient]
+  (str (io/file (:dir store) "bell-index"
+               (str (java.net.URLEncoder/encode (str recipient) "UTF-8") ".json"))))
+
+(defn- index-bell! [store {:keys [id record] :as written}]
+  (when (= "agent" (:origin record))
+    (let [recipient (or (:agent_id record) "unknown")
+          path (bell-index-path store recipient)]
+      #_{:clj-kondo/ignore [:locking-suspicious-lock]}
+      (locking (session-lock store (str "bell-index:" recipient))
+        (.mkdirs (.getParentFile (io/file path)))
+        ;; Backfill can run in a separate JVM while Agency appends. Lock a
+        ;; stable sibling (the JSON itself is atomically replaced).
+        (with-open [channel (java.nio.channels.FileChannel/open
+                              (.toPath (io/file (str path ".lock")))
+                              (into-array StandardOpenOption [StandardOpenOption/CREATE StandardOpenOption/WRITE]))
+                    _file-lock (.lock channel)]
+          (let [index (or (read-json path) {:recipient recipient :turns []})]
+            (when-not (some #(= id (:id %)) (:turns index))
+              (write-json! path (update index :turns conj
+                                       {:id id :created_at (:created_at record)}))))))))
+  written)
+
+(defn bell-indexes
+  "Read only small per-recipient receipts. Record bodies remain in the turn store."
+  [store]
+  (mapv #(read-json (str %))
+        (filter #(and (.isFile %) (str/ends-with? (.getName %) ".json"))
+                (or (.listFiles (io/file (:dir store) "bell-index")) []))))
+
+(defn backfill-bells!
+  "One-off scan of agent-origin records. Dry-run by default; write is idempotent.
+  Uses the same per-recipient file lock as live append, including across JVMs."
+  [store & {:keys [write?]}]
+  (let [bells (filter #(= "agent" (get-in % [:record :origin]))
+                      (list-records store :limit Long/MAX_VALUE))]
+    (when write? (doseq [row bells] (index-bell! store row)))
+    {:mode (if write? :write :dry-run) :bells (count bells)
+     :recipients (count (set (map #(get-in % [:record :agent_id]) bells)))}))
+
 (defn- scan-session-tail
   "Newest operator turn of SESSION-ID by scan: only when no head file exists
    (the first new turn of a session that began before the links)."
@@ -162,7 +214,7 @@
   [store record]
   (ensure-dir! store)
   (if-not (operator-record? record)
-    (create-record! store record)
+    (index-bell! store (create-record! store record))
     (let [session-id (:session_id record)]
       #_{:clj-kondo/ignore [:locking-suspicious-lock]}
       (locking (session-lock store session-id)
@@ -229,8 +281,8 @@
           true
           (catch java.nio.file.FileAlreadyExistsException _ false))
       (do (write-json! path record)
-          {:id id :path path :record record :created? true})
-      {:id id :path path :record (read-json path) :created? false})))
+          (index-bell! store {:id id :path path :record record :created? true}))
+      (index-bell! store {:id id :path path :record (read-json path) :created? false}))))
 
 (defn read-record
   "The record for ID, or nil."
