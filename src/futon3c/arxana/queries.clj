@@ -3,7 +3,8 @@
   success (including stale-index/truncated), or the store's {:error ...}.
   A caller must inspect :status and :truncated? before treating results as
   complete. These wrappers neither page nor turn missing facts into success."
-  (:require [futon3c.arxana.store :as store]))
+  (:require [futon3c.arxana.store :as store]
+            [futon3c.arxana.read-cache :as cache]))
 
 (defn- query [graph-store type options]
   (let [response (store/bounded-query-settled! graph-store (assoc options :query/type type))]
@@ -22,4 +23,6 @@
 (defn attestations
   "Subject history with server total/truncated metadata; never silently complete."
   [graph-store options]
-  (query graph-store :attestations options))
+  (let [r (cache/set-query! graph-store (assoc options :query/type :attestations)
+                            #(store/bounded-query-settled! graph-store %))]
+    (if (:error r) r (:ok r))))

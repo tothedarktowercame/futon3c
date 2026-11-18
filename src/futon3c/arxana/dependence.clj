@@ -1,6 +1,7 @@
 (ns futon3c.arxana.dependence
   "Bounded reverse discovery followed by valid-time reads. No persistence."
   (:require [futon3c.arxana.store :as store]
+            [futon3c.arxana.read-cache :as cache]
             [futon3c.arxana.store-http :as http]))
 
 (defn missing? [r]
@@ -22,7 +23,7 @@
   (letfn [(finish [r receipts] (if receipts? (assoc r :queries receipts) r))]
     (loop [qs queries receipts [] candidates []]
       (if-let [q (first qs)]
-        (let [{:keys [ok error] :as response} (store/bounded-query-settled! s q)
+        (let [{:keys [ok error] :as response} (cache/set-query! s q #(store/bounded-query-settled! s %))
               receipts (conj receipts {:query q :total (:total ok) :watermark (:watermark ok)
                                       :response response})]
           (cond

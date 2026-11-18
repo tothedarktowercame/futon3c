@@ -7,7 +7,8 @@
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
             [futon3c.arxana.envelope :as env]
-            [futon3c.arxana.store :as store])
+            [futon3c.arxana.store :as store]
+            [futon3c.arxana.read-cache :as cache])
   (:import [java.net URI]
            [java.net.http HttpClient HttpRequest HttpRequest$BodyPublishers
             HttpResponse$BodyHandlers]))
@@ -48,6 +49,8 @@
         (keyword "arxana.store" (name code)))))
 
 (defrecord HttpStore [base-url principal ^HttpClient client]
+  cache/CacheIdentity
+  (cache-identity [_] [(str/replace base-url #"/$" "") principal])
   store/ArxanaGraphStore
   (get-entity [_ entity-id]
     (let [request (-> (HttpRequest/newBuilder
@@ -147,9 +150,10 @@
   "Read a reserved Arxana record at valid-time (fixed-width ISO milliseconds).
   Uses the same record-by-id route as get-entity; missing remains typed."
   [graph-store entity-id valid-time]
-  (let [{:keys [ok error]} (store/bounded-query! graph-store
+  (let [{:keys [ok error]} (cache/record-query! graph-store
                                                {:query/type :record-by-id
-                                                :record-id entity-id :valid-time valid-time})]
+                                                :record-id entity-id :valid-time valid-time}
+                                               #(store/bounded-query! graph-store %))]
     (cond error {:error error}
           (= :ok (:status ok)) {:ok (:record ok)}
           (= :missing (:status ok))
