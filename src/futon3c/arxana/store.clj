@@ -111,3 +111,19 @@
                        {:capability cap
                         :reported (capabilities store)}
                        nil)}))
+
+
+(defn bounded-query-settled!
+  "BOUNDED-QUERY!, retried while the answer is a sidecar :stale-index refusal.
+  The Arxana sidecar trails the store by a record or two while other writers
+  append (sampled 2026-11-18: one stale answer in ten, one record behind), so
+  a view that issues hundreds of sidecar reads almost always met one. Retries
+  up to ATTEMPTS times, SLEEP-MS apart; a refusal that persists is returned
+  as it is. No other answer is retried."
+  ([graph-store query] (bounded-query-settled! graph-store query 5 200))
+  ([graph-store query attempts sleep-ms]
+   (loop [n 1]
+     (let [r (bounded-query! graph-store query)]
+       (if (and (= :stale-index (get-in r [:ok :status])) (< n attempts))
+         (do (Thread/sleep sleep-ms) (recur (inc n)))
+         r)))))

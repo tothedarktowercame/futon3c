@@ -6,7 +6,7 @@
   (:require [futon3c.arxana.store :as store]))
 
 (defn- query [graph-store type options]
-  (let [response (store/bounded-query! graph-store (assoc options :query/type type))]
+  (let [response (store/bounded-query-settled! graph-store (assoc options :query/type type))]
     (if (:error response) response (:ok response))))
 
 (defn records-by-type [graph-store options]

@@ -50,3 +50,13 @@
                (select-keys (q/attestations s {:subject-id (:id (first records)) :limit 1})
                             [:total :truncated? :limit])))
         (finally (server/stop-server! srv) (.delete f))))))
+
+(deftest stale-index-settles-then-persistent-stale-is-returned
+  (let [calls (atom 0)
+        flaky (reify futon3c.arxana.store/ArxanaGraphStore
+                (bounded-query! [_ _] (if (< (swap! calls inc) 3) {:ok {:status :stale-index}} {:ok {:status :ok :attestation-ids []}})))
+        stuck (reify futon3c.arxana.store/ArxanaGraphStore
+                (bounded-query! [_ _] {:ok {:status :stale-index}}))]
+    (is (= :ok (:status (futon3c.arxana.queries/attestations flaky {:subject-clusion-id "x"}))))
+    (is (= 3 @calls))
+    (is (= :stale-index (:status (futon3c.arxana.queries/attestations stuck {:subject-clusion-id "x"}))))))

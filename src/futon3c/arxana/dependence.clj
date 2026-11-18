@@ -22,7 +22,7 @@
   (letfn [(finish [r receipts] (if receipts? (assoc r :queries receipts) r))]
     (loop [qs queries receipts [] candidates []]
       (if-let [q (first qs)]
-        (let [{:keys [ok error] :as response} (store/bounded-query! s q)
+        (let [{:keys [ok error] :as response} (store/bounded-query-settled! s q)
               receipts (conj receipts {:query q :total (:total ok) :watermark (:watermark ok)
                                       :response response})]
           (cond
