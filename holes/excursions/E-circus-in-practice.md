@@ -18,7 +18,13 @@ Carried items, to take up when practice shows a need:
 3. Giraffe band stability: CL-47 (keep the last complete focus input when
    the needs read is incomplete) in progress at closure; afterwards watch
    that bands move only on real focus changes.
-4. Giraffe run storage: 45 MB per run, 2.9 GB over 265 runs, because every
+4. *(Joe, 2026-11-18, not a follow-on: critical.)* "I do not want duplicated
+   data stored"; "I don't want girafe to rebuild the whole field each time
+   mulitple times. It's on you to prevent both Giraffe and me from endlessly
+   repeating the same thing." Storage: CL-49 done (5.7 -> 2.5 GB), CL-54
+   (content-addressed objects) in progress. Computation: CL-55 (where run
+   time goes; incremental stages) in progress.
+   Giraffe run storage: 45 MB per run, 2.9 GB over 265 runs, because every
    priority row repeats the run's evidence pin.
 5. Recovery: a query for rejected and superseded readings; bounded counts
    for the :7093/:7094 stores (obligation 4, kept as practical checks; the
