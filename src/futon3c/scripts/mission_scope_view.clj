@@ -89,7 +89,9 @@
      :target_state (kw-name (:target/state props))
      :source_ref (:source/ref props)
      :source_state (kw-name (:source/state props))
-     :polarity (kw-name (:scope/polarity props))}))
+     :polarity (kw-name (:scope/polarity props))
+     :pattern_id (:pattern/ident props)
+     :pattern_ref (:pattern/ref props)}))
 
 (defn project-hyperedges [mission hyperedges]
   (let [rows (->> hyperedges

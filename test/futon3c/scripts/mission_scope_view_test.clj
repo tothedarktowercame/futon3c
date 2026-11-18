@@ -57,3 +57,13 @@
         {#'futon3c.scripts.mission-scope-view/http-edn (fn [& _] response)}
         #(is (thrown-with-msg? clojure.lang.ExceptionInfo message
                               (view/fetch-view "M-a" "http://substrate")))))))
+
+(deftest scope-row-carries-the-pattern-ident-apart-from-the-scope-id
+  (let [row (view/scope-row {:hx/id "hx-p"
+                            :hx/props {:scope/id "m/pattern/invented-one"
+                                       :scope/binder-type "pattern"
+                                       :pattern/ident "invented/one"
+                                       :pattern/ref "futon3/library/invented/one.flexiarg"}})]
+    (is (= "m/pattern/invented-one" (:id row)))
+    (is (= "invented/one" (:pattern_id row)))
+    (is (= "futon3/library/invented/one.flexiarg" (:pattern_ref row)))))

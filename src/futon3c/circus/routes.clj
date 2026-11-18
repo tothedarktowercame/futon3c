@@ -532,7 +532,7 @@
          (let [view (fetch mission (scope-view/substrate-url) pattern-binders)
                scopes (->> (:scopes view)
                            (filter #(some #{(:type %)} pattern-binders))
-                           (mapv #(-> (select-keys % [:id :type :title :passage :anchor_state :hx_id])
+                           (mapv #(-> (select-keys % [:id :pattern_id :pattern_ref :type :title :passage :anchor_state :hx_id])
                                       (update :passage (fn [p] (when p (subs p 0 (min 200 (count p)))))))))]
            {:status 200 :body (json-ready {:mission mission :scopes scopes})})
          (catch Exception e

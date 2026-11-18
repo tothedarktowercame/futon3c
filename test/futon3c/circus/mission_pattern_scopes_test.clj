@@ -5,7 +5,9 @@
 (defn- fake-fetch [calls]
   (fn [mission _url binders]
     (swap! calls conj [mission binders])
-    {:scopes [{:id "s1" :type "pattern" :title "pattern: invented/one"
+    {:scopes [{:id "m/pattern/invented-one" :pattern_id "invented/one"
+               :pattern_ref "futon3/library/invented/one.flexiarg"
+               :type "pattern" :title "pattern: invented/one"
                :passage (apply str (repeat 300 "x")) :anchor_state "resolved" :hx_id "hx-1"
                :mission mission}
               {:id "s2" :type "psr" :title "psr: invented/two" :passage "short" :hx_id "hx-2"}
@@ -18,7 +20,10 @@
     (is (= 200 status))
     (is (= [["M-invented" ["pattern" "psr" "pur"]]] @calls)
         "asks the substrate only for the three pattern binders")
-    (is (= ["s1" "s2"] (map #(get % "id") (get body "scopes"))))
+    (is (= ["m/pattern/invented-one" "s2"] (map #(get % "id") (get body "scopes"))))
+    (is (= "invented/one" (get-in body ["scopes" 0 "pattern_id"]))
+        "the pattern id is carried, distinct from the scope id")
+    (is (= "futon3/library/invented/one.flexiarg" (get-in body ["scopes" 0 "pattern_ref"])))
     (is (= 200 (count (get-in body ["scopes" 0 "passage"]))) "passages are clipped")
     (is (= "short" (get-in body ["scopes" 1 "passage"])))))
 
