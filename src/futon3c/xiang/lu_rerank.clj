@@ -391,7 +391,11 @@
             (let [result (proposals/write! (or (:proposal-config opts)
                                                (mention-writer/default-config))
                                            (assoc record :id (str id)) lu)]
-              (ts/update-record! store (str id) #(assoc % :lu_proposals result))))))
+              (ts/update-record! store (str id) #(assoc % :lu_proposals result))
+              ;; 馬 may already have read this turn and left a "proposals
+              ;; pending" placeholder; tell it the proposals have landed.
+              (when-let [notify! (:notify! opts)]
+                (notify! {:event :lu-proposals :id (str id)}))))))
       (catch Throwable e
         (listener-failure! store (str id) @stage e)))))
 
@@ -417,4 +421,7 @@
   time, so this survives reloads of either namespace."
   []
   (start! {:ask whistle-ask
-           :store (fn [] (some-> (live-service) :config :store))}))
+           :store (fn [] (some-> (live-service) :config :store))
+           :notify! (fn [ev] (when-let [svc (live-service)]
+                               (@(requiring-resolve 'futon3c.xiang.turn-service/notify-turn!)
+                                svc ev)))}))

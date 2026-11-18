@@ -727,27 +727,32 @@
      (newThread [_ r] (doto (Thread. ^Runnable r "ma-occurrence-gcc") (.setDaemon true))))))
 
 (def ^:private retry-window
-  "How many of the most recent turn records an aligned event re-checks."
+  "How many earlier operator turns of the same session an aligned event
+  re-checks, walking the strand links back from it."
   20)
 
 (defn- retry-candidates
-  "Ids among the RETRY-WINDOW newest records, other than ID, whose verdict
-  is a retryable model failure, pending proposals, or whose listener failure
-  receipt remains under the attempt cap."
+  "Ids among the RETRY-WINDOW operator turns before ID in its session (strand
+  links, no store listing) whose verdict is a retryable model failure,
+  pending proposals, or whose listener failure receipt remains under the
+  attempt cap."
   [store id]
-  (->> (try (ts/list-records store :limit retry-window) (catch Exception _ nil))
-       (keep (fn [{rid :id record :record}]
-               (let [v (:pattern_verdicts record)
+  (->> (iterate (fn [rid] (when rid (:id (adjacent-turn store rid -1)))) id)
+       (drop 1)
+       (take-while some?)
+       (take retry-window)
+       (keep (fn [rid]
+               (let [record (ts/read-record store rid)
+                     v (:pattern_verdicts record)
                      listener-failure (:ma_listener_failure record)]
-                 (when (and (not= rid id)
-                            (or (and (map? v)
-                                     (or (= "lu-proposals-pending" (some-> v :state name))
-                                         (and (retryable-verdict? v)
-                                              (not (:model_retry_exhausted v)))))
-                                (and (not (map? v))
-                                     (map? listener-failure)
-                                     (< (long (or (:attempts listener-failure) 0))
-                                        max-listener-attempts))))
+                 (when (or (and (map? v)
+                                (or (= "lu-proposals-pending" (some-> v :state name))
+                                    (and (retryable-verdict? v)
+                                         (not (:model_retry_exhausted v)))))
+                           (and (not (map? v))
+                                (map? listener-failure)
+                                (< (long (or (:attempts listener-failure) 0))
+                                   max-listener-attempts)))
                    rid))))
        vec))
 
@@ -758,6 +763,12 @@
   reading needs the reply and the computed ports too, so a fair verdict
   runs after it, not on :ported)."
   [{:keys [store notify!] :as opts} {:keys [event id]}]
+  (when (and (= :lu-proposals event) id)
+    ;; 驴's proposals landed after 馬 read the turn: replace the placeholder.
+    (let [store (if (fn? store) (store) store)]
+      (when (and store (= "lu-proposals-pending"
+                          (some-> (ts/read-record store id) :pattern_verdicts :state name)))
+        (verdict! (assoc opts :store store :notify! notify!) id))))
   (when (and (= :aligned event) id)
     (let [store (if (fn? store) (store) store)]
       (when store

@@ -178,6 +178,26 @@
     (is (= {:status "prev-absent" :turn/id "turn-no-reply" :reason "no-reply"}
            (:connection (verdicts store "turn-after-absence"))))))
 
+(deftest landed-proposals-replace-the-pending-placeholder-by-event
+  ;; 2026-11-18: turn-N1xn8d's proposals landed after 馬 read it; nothing
+  ;; re-read it (the retry swept only the 20 newest store records).
+  (let [store (temp-store)
+        ready (atom false)
+        reader (fn [_ record]
+                 (if @ready (fixture-proposals nil record) {:pending :lu-proposals-pending}))
+        opts {:store store :library (temp-library) :ask (fn [_] "[]")
+              :seat "馬-sonnet" :proposal-reader reader}]
+    (record! store "turn-late" {:lu_ranked {:ranked [{:id pid :rank 1}]}})
+    (mo/verdict! opts "turn-late")
+    (is (= "lu-proposals-pending" (some-> (verdicts store "turn-late") :state name)))
+    (mo/handle-event opts {:event :lu-proposals :id "turn-late"})
+    (is (= "lu-proposals-pending" (some-> (verdicts store "turn-late") :state name))
+        "still pending while 驴 has nothing")
+    (reset! ready true)
+    (mo/handle-event opts {:event :lu-proposals :id "turn-late"})
+    (is (nil? (:state (verdicts store "turn-late"))) "read once proposals land")
+    (is (= #{pid} (set (map :pattern (:patterns (verdicts store "turn-late"))))))))
+
 (deftest absent-gcc-proposals-record-a-retryable-pending-outcome
   (let [store (temp-store)]
     (record! store "turn-pending" {:lu_ranked {:ranked [{:id "must/not/fallback" :rank 1}]}})
@@ -409,8 +429,10 @@
         success {:version 1 :reader "馬-test" :model_outcome {:failure_kind nil}
                  :patterns [{:pattern pid :status "void"}]}
         opts {:store store :proposal-reader (fn [& _] {:ids [pid]})}]
-    (doseq [id ["turn-listener-failure" "turn-later"]]
-      (record! store id {:proposed_patterns [{:patterns [pid]}]}))
+    (record! store "turn-listener-failure" {:proposed_patterns [{:patterns [pid]}]})
+    ;; Retries walk the session strand back from the aligned turn.
+    (record! store "turn-later" {:created_at "2026-10-24T00:01:00Z"
+                                 :proposed_patterns [{:patterns [pid]}]})
     (mo/verdict! {:store store
                   :proposal-reader
                   (fn [& _] (throw (ex-info "invented listener failure" {})))}
