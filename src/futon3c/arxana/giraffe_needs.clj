@@ -305,7 +305,14 @@
   seconds only, so repeated per-turn reads stay cheap without hiding backfill."
   [cfg]
   (let [run (party-run cfg)
-        k [(:graph-store cfg) (hash (vec (:item-ids cfg))) run]
+        ;; Key by the store's identity, not the HttpStore object: every
+        ;; default-config builds a new HttpClient, so object equality missed
+        ;; the cache on each call (CL-55: 45.9 s cold, 2 ms on a hit).
+        store (:graph-store cfg)
+        store-key (if (and (map? store) (contains? store :base-url))
+                    [(:base-url store) (:principal store)]
+                    store)
+        k [store-key (hash (vec (:item-ids cfg))) run]
         now (System/currentTimeMillis)
         cached (get @read-cache k)]
     (cond
@@ -315,7 +322,11 @@
       :else
       (try
         (let [result (read-needs-gcc* cfg run)]
-          (when (:cache-needs? cfg) (swap! read-cache assoc k {:result result :at now}))
+          ;; One party run at a time: drop entries for runs the party has
+          ;; moved past, so the cache does not grow with every mint.
+          (when (:cache-needs? cfg)
+            (swap! read-cache (fn [m] (assoc (into {} (filter #(= run (peek (key %)))) m)
+                                             k {:result result :at now}))))
           result)
         (catch clojure.lang.ExceptionInfo e
           (when (and (:cache-needs? cfg) (= :needs-unavailable (:reason (ex-data e))))

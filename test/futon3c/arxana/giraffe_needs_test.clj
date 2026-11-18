@@ -307,3 +307,22 @@
              (try (run-attestations {:graph-store :stub} {:id "claim"} nil) nil
                   (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))))))
 
+
+(deftest needs-cache-keys-on-store-identity-and-keeps-one-run
+  ;; CL-55: each default config builds a new HttpClient, so keying on the
+  ;; HttpStore object missed the cache every time (45.9 s instead of 2 ms).
+  (reset! @#'sut/read-cache {})
+  (let [reads (atom 0)
+        run (atom "run-1")
+        store (fn [] {:base-url "http://store.example" :principal "p" :client (Object.)})
+        cfg (fn [] {:graph-store (store) :item-ids ["M-a"] :cache-needs? true})]
+    (with-redefs [sut/party-run (fn [_] @run)
+                  sut/read-needs-gcc* (fn [_ r] (swap! reads inc) {:readings [] :run r})]
+      (sut/read-needs-gcc (cfg))
+      (sut/read-needs-gcc (cfg))
+      (is (= 1 @reads) "a second config for the same store hits the cache")
+      (reset! run "run-2")
+      (sut/read-needs-gcc (cfg))
+      (is (= 2 @reads))
+      (is (= #{"run-2"} (set (map #(peek (key %)) @@#'sut/read-cache)))
+          "entries for runs the party moved past are dropped"))))
