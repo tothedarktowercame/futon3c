@@ -3,13 +3,12 @@
   (:require [cheshire.core :as json] [clojure.edn :as edn]
             [clojure.string :as str] [clojure.java.io :as io]
             [futon3c.arxana.digest :as digest]
-            [futon3c.arxana.records :as records] [futon3c.arxana.store :as store]
-            [futon3c.arxana.store-http :as http]
+            [futon3c.arxana.records :as records]
+            [futon3c.arxana.dependence :as dependence]
             [futon3c.diagramprover.arxana-records :as ar]))
 (def publication-log "/home/joe/storage/arxana/diagramprover/first-write-2026-11-17.edn")
 (def q83-id "arxana:clusion:sha256:777d1f59d5a939011126a8bebe9e4422cc9bc5b6d4799fa8451d75eca1c60bec")
 (defn- endpoint [role id] {:role role :kind :clusion :target {:clusion/id id}})
-(defn- target [r role] (some #(when (= role (:role %)) (get-in % [:target :clusion/id])) (:endpoints r)))
 (defn- role-record [l]
   (records/make-clusion {:type-revision [:sentence/role 1] :endpoints []
                         :asserted-content {:module (:module l) :declaration (:declaration l)
@@ -96,44 +95,13 @@
                        (scoped-manifestation role (:commit r) (:time r) sha words :declaration))
                    :event-time (:time r))))
         (:records (json/parse-string (slurp path) true))))
-(defn- missing? [r] (= :arxana.store/record-not-found (get-in r [:error :error/code])))
-(defn- visible [s id at] (http/get-entity-as-of s id at))
-(defn- reverse-records [s type role id at]
-  (let [q {:query/type :role-reverse :edge-type type :endpoint-role role :endpoint-id id}
-        {:keys [ok error] :as response} (store/bounded-query! s q)]
-    (cond error response
-          (= :stale-index (:status ok)) {:status :inconclusive :reason :stale-index}
-          (:truncated? ok) {:status :inconclusive :reason :truncated}
-          (not= :ok (:status ok)) {:error {:error/code :sentence/query-response :response response}}
-          :else (loop [ids (:edge-ids ok) rs []]
-                  (if-let [id (first ids)]
-                    (let [r (visible s id at)]
-                      (cond (missing? r) (recur (rest ids) rs)
-                            (:error r) r
-                            :else (recur (rest ids) (conj rs (:ok r)))))
-                    {:status :ok :records rs})))))
 (defn sentence-view [s role-id at]
-  (let [role (visible s role-id at)]
-    (cond (missing? role) {:status :missing :id role-id}
-          (:error role) role
-          :else
-          (let [apps (reverse-records s [:rule/application 1] :sentence role-id at)]
-            (if (not= :ok (:status apps)) apps
-                (loop [rules (distinct (map #(target % :rule) (:records apps))) because []]
-                  (if-let [r (first rules)]
-                    (let [sup (reverse-records s [:supersedes 1] :predecessor r at)]
-                      (if (not= :ok (:status sup)) sup
-                          (recur (rest rules) (into because (map :id (:records sup))))))
-                    {:status :ok :stale? (boolean (seq because)) :stale-because (vec (sort (distinct because)))})))))))
+  (dependence/staleness s [:rule/application 1] :sentence :rule role-id at))
 (defn rule-fibre [s rule-id at]
-  (let [apps (reverse-records s [:rule/application 1] :rule rule-id at)]
-    (if (not= :ok (:status apps)) apps
-        (loop [ids (sort (distinct (map #(target % :sentence) (:records apps)))) out []]
-          (if-let [id (first ids)]
-            (let [r (visible s id at)]
-              (cond (missing? r) (recur (rest ids) out) (:error r) r
-                    :else (recur (rest ids) (conj out id))))
-            {:status :ok :roles out})))))
+  (let [result (dependence/fibre s [:rule/application 1] :rule :sentence rule-id at)]
+    (if (= :ok (:status result))
+      (-> result (assoc :roles (:ids result)) (dissoc :ids))
+      result)))
 
 (defn role-manifestations
   "Read both revision indexes completely before returning scoped records. The
@@ -141,7 +109,7 @@
   [s role-id at]
   (loop [revisions [1 2] out []]
     (if-let [rev (first revisions)]
-      (let [r (reverse-records s [:sentence/manifestation rev] :role role-id at)]
+      (let [r (dependence/reverse-records s [:sentence/manifestation rev] :role role-id at)]
         (if (not= :ok (:status r)) r
             (recur (rest revisions)
                    (into out (map #(hash-map :record % :scope (if (= rev 1) :role (get-in % [:asserted-content :scope])))
