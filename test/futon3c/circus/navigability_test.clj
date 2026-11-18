@@ -23,7 +23,12 @@
   (testing "a claimed closure omitting a UI successor violates closed_blocks"
     (is (thrown-with-msg?
          clojure.lang.ExceptionInfo #"invalid navigability closure witness"
-         (nav/check-witness! #{[:turn :pattern]} :turn :mission #{:turn})))))
+         (nav/check-witness! #{[:turn :pattern]} :turn :mission #{:turn}))))
+  (testing "the witness must contain the source and exclude the target"
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (nav/check-witness! #{} :turn :mission #{:pattern})))
+    (is (thrown? clojure.lang.ExceptionInfo
+                 (nav/check-witness! #{} :turn :mission #{:turn :mission})))))
 
 (deftest navigability-get-is-wired
   (with-redefs [nav/response (constantly {:status 200 :body {:summary {:edges 2}}})]
