@@ -9,9 +9,25 @@
             [futon3c.giraffe.pass :as gp]
             [futon3c.giraffe.run :as gr]
             [futon3c.giraffe.run-data :as run-data]
+            [futon3c.giraffe.object-migration :as object-migration]
             [futon3c.arxana.giraffe-needs :as giraffe-needs]
             [futon3c.circus.operator-focus :as operator-focus]
             [futon3c.giraffe.tickets :as gt]))
+
+(defn- object-count [root]
+  (with-open [c (run-data/connect-objects root false)
+              s (.createStatement c)
+              r (.executeQuery s "SELECT count(*) FROM objects")]
+    (.next r) (.getLong r 1)))
+
+(defn- plant-object! [root sha body]
+  (with-open [c (run-data/connect-objects root true)
+              s (.prepareStatement c (if body "UPDATE objects SET body=? WHERE sha=?"
+                                            "DELETE FROM objects WHERE sha=?"))]
+    (if body
+      (do (.setBytes s 1 (.getBytes ^String body "UTF-8")) (.setString s 2 sha))
+      (.setString s 1 sha))
+    (.executeUpdate s)))
 
 (def tickets-dir "holes/tickets")
 (def index-file "holes/tickets/tickets-index.edn")
@@ -392,30 +408,22 @@
 ;; format compatibility (zai-4 repair, 2026-10-31): e90fe14bb added
 ;; work-clusters.json to the sealed file set, which made verify-run
 ;; reject every historical run whose manifest predates it.  These tests
-;; copy REAL run directories from the canonical storage root (read-only
-;; source, copy-then-mutate) so both formats are exercised in their
-;; actual on-disk shapes.
-
-(def storage-root "/home/joe/code/storage/giraffe/")
-
-(def legacy-run-ids
-  ["20261028T154151.285Z-b916cd4e"   ;; git-sha ff0734e1 (pre-e90fe14bb); pinned by live pending f74df9cc
-   "20261029T230756.734Z-3fa8fa14"   ;; git-sha e1eea834
-   "20261030T193432.152Z-dc280cbf"]) ;; git-sha deeae229
-
-(def current-run-id "20261030T213938.828Z-dc280cbf") ;; git-sha 6b5597d03
+;; Invented sealed fixtures: never read the operator's Giraffe store.
+(def legacy-run-ids ["legacy-a" "legacy-b" "legacy-c"])
+(def current-run-id "current-a")
 
 (defn- copy-run [run-id tag]
-  (let [dest (io/file (temp-root tag) run-id)]
-    (when (.isDirectory (io/file storage-root run-id))
-      (.mkdirs dest)
-      (doseq [f (file-seq (io/file storage-root run-id))
-              :when (.isFile f)]
-        (io/copy f (io/file dest (.getName f))))
-      (str dest))))
+  (let [dest (io/file (temp-root tag) run-id)
+        files (cond-> ["input.edn" "rejected.edn" "pass.edn" "report.md"]
+                (= run-id current-run-id) (conj "work-clusters.json"))]
+    (.mkdirs dest)
+    (doseq [file files] (spit (io/file dest file) "{:invented true}\n"))
+    (spit (io/file dest "manifest.edn")
+          (pr-str {:run-id run-id
+                   :files (mapv (fn [file] {:file file :sha256 (gr/sha256 (io/file dest file))}) files)}))
+    (str dest)))
 
-(defn- run-dir-exists? [run-id]
-  (.isDirectory (io/file storage-root run-id)))
+(defn- run-dir-exists? [run-id] (boolean (some #{run-id} (conj legacy-run-ids current-run-id))))
 
 (defn- write-legacy-run-fixture! [tag git-sha]
   (let [dir (io/file (temp-root tag) "legacy-run")
@@ -453,7 +461,7 @@
 (deftest legacy-runs-verify-their-original-sealed-files
   (doseq [id legacy-run-ids
           :when (run-dir-exists? id)]
-    (when-let [copy (copy-run id "legacy-ok")]
+    (let [copy (copy-run id "legacy-ok")]
       (testing id
         (is (:ok? (gr/verify-run copy)))
         (is (= [] (:mismatches (gr/verify-run copy))))))))
@@ -549,8 +557,7 @@
         pass (:pass-output first-run)
         index-in (edn/read-string (slurp (io/file dir-a "input.edn")))
         index-pass (edn/read-string (slurp (io/file dir-a "pass.edn")))
-        object-files (fn [] (count (filter (fn [f] (.isFile f))
-                                          (file-seq (io/file root "objects")))))
+        object-files (fn [] (object-count root))
         before (object-files)]
     (is (= (run-data/canonical-edn input)
            (run-data/canonical-edn (run-data/read-run-file dir-a "input.edn"))))
@@ -579,9 +586,8 @@
           {:keys [written]} (pilot-run root)
           dir (:dir written)
           index (edn/read-string (slurp (io/file dir "input.edn")))
-          sha (first (run-data/referenced-shas index))
-          object (run-data/object-file root sha)]
-      (if (= :corrupt mode) (spit object "{:corrupt true}\n") (.delete object))
+          sha (first (run-data/referenced-shas index))]
+      (plant-object! root sha (when (= :corrupt mode) "{:corrupt true}\n"))
       (is (false? (:ok? (gr/verify-run dir))))
       (is (some #(= (if (= :corrupt mode) :object-sha-mismatch :object-missing)
                     (:reason %))
@@ -626,12 +632,11 @@
     (is (= :unchanged (:status (gr/migrate-cas-run! dir {:write? true :root root}))))
     (let [index (edn/read-string (slurp (io/file dir "input.edn")))
           sha (first (run-data/referenced-shas index))
-          object (run-data/object-file root sha)
-          original (slurp object)]
-      (spit object "{:corrupt true}\n")
+          original (String. ^bytes (run-data/object-bytes root sha) "UTF-8")]
+      (plant-object! root sha "{:corrupt true}\n")
       (is (= :object-invalid
              (:status (gr/migrate-cas-run! dir {:write? true :root root}))))
-      (spit object original))
+      (plant-object! root sha original))
     ;; Planted manifest check: stale index sha must be rejected.
     (let [m (edn/read-string (slurp manifest-file))]
       (spit manifest-file (run-data/canonical-edn
@@ -735,8 +740,9 @@
         ticks (atom 0)
         run-count #(count (filter (fn [f] (.isFile (io/file f "manifest.edn")))
                                   (.listFiles (io/file root))))
-        snapshot #(into {} (for [f (file-seq (io/file root)) :when (.isFile f)]
-                             [(str f) (slurp f)]))]
+        snapshot #(into {} (for [f (file-seq (io/file root)) :when (and (.isFile f)
+                                             (not (re-find #"objects.sqlite-(wal|shm)$" (.getName f))))]
+                             [(str f) (gr/sha256 f)]))]
     (with-redefs [gr/build-adapter-result (fn [_] {:input @input :rejected []})
                   gr/retained-focus-input (fn [_ _] @focus)
                   gr/git-head-sha (constantly "e90fe14bb3c181964f8d8b239e5bff16225dff37")]
@@ -768,3 +774,24 @@
           (swap! focus assoc-in [:focus/completeness :observed] 0)
           (is (= :minted (:status (gr/mint! {:root root}))))
           (is (= 6 (run-count)))))))))
+
+(deftest cl70-migration-verifies-a-sealed-run-before-deletion
+  (let [root (temp-root "cl70")
+        {:keys [written]} (pilot-run root)
+        indexes (mapv #(slurp (io/file (:dir written) %)) ["input.edn" "pass.edn"])]
+    ;; Turn this invented run into a legacy file-CAS store.
+    (with-open [c (run-data/connect-objects root false)
+                s (.createStatement c) r (.executeQuery s "SELECT sha,body FROM objects")]
+      (while (.next r)
+        (let [f (run-data/object-file root (.getString r 1))]
+          (io/make-parents f)
+          (with-open [out (io/output-stream f)] (.write out (.getBytes r 2))))))
+    (doseq [name ["objects.sqlite" "objects.sqlite-wal" "objects.sqlite-shm"]]
+      (io/delete-file (io/file root name) true))
+    (is (:ok? (gr/verify-run (:dir written))))
+    (let [result (object-migration/migrate! root {:write? true})]
+      (is (pos? (:deleted result)))
+      (is (= 1 (count (:checks result))))
+      (is (every? #(get-in % [:verification :ok?]) (:checks result))))
+    (is (= indexes (mapv #(slurp (io/file (:dir written) %)) ["input.edn" "pass.edn"])))
+    (is (:ok? (gr/verify-run (:dir written))))))

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for turn_frames.py — fixture data only, no live calls."""
 
+import sqlite3
 import json
 import hashlib
 import os
@@ -683,10 +684,9 @@ class DispatchPayloads(unittest.TestCase):
 
     def store(self, text):
         sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
-        path = os.path.join(self.root, "objects", sha[:2], sha)
-        os.makedirs(os.path.dirname(path))
-        with open(path, "w", encoding="utf-8") as out:
-            out.write(text)
+        with sqlite3.connect(os.path.join(self.root, "objects.sqlite")) as conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS objects (sha TEXT PRIMARY KEY, body BLOB)")
+            conn.execute("INSERT OR IGNORE INTO objects VALUES (?,?)", (sha, text.encode("utf-8")))
         return sha
 
     def test_promptless_turn_start_resolves_and_builds_a_frame(self):

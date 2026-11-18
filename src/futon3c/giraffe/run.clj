@@ -564,11 +564,11 @@
                                  (= logical-pass
                                     (run-data/read-run-file temp-run "pass.edn")))
                      existing (set (filter #(or (contains? (or known-shas #{}) %)
-                                                (.isFile (run-data/object-file root %)))
+                                                (some? (run-data/object-bytes root %)))
                                            (:object-shas indexes)))
                      added (remove existing (:object-shas indexes))
                      new-objects (into {} (map (fn [sha]
-                                                 [sha (.length (run-data/object-file temp-root sha))]))
+                                                 [sha (alength ^bytes (run-data/object-bytes temp-root sha))]))
                                        added)
                      added-bytes (reduce + 0 (vals new-objects))
                      before (+ (.length input-file) (.length pass-file)

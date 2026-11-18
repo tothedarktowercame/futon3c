@@ -6,8 +6,8 @@
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.pprint :as pp])
-  (:import [java.nio.file AtomicMoveNotSupportedException CopyOption Files
-            StandardCopyOption]))
+  (:import [java.nio.file Files]
+           [java.sql Connection DriverManager]))
 
 (def index-schema [:giraffe/run-index 1])
 (def ref-key :giraffe/object-ref)
@@ -29,30 +29,56 @@
 (defn logical-sha [x]
   (sha256-bytes (.getBytes ^String (canonical-edn x) "UTF-8")))
 
-(defn object-file [root sha]
+(defn object-file
+  "Legacy object location, used only when objects.sqlite is absent."
+  [root sha]
   (io/file root "objects" (subs sha 0 2) (str sha ".edn")))
 
-(defn- atomic-move! [from to]
-  (try
-    (Files/move (.toPath from) (.toPath to)
-                (into-array CopyOption [StandardCopyOption/ATOMIC_MOVE]))
-    (catch AtomicMoveNotSupportedException _
-      (Files/move (.toPath from) (.toPath to)
-                  (into-array CopyOption [StandardCopyOption/REPLACE_EXISTING])))))
+(defn object-db [root] (io/file root "objects.sqlite"))
+(def ^:dynamic *object-connection* nil)
+
+(defn connect-objects ^Connection [root write?]
+  (let [db (object-db root)
+        _ (when (and write? (not (.exists db))
+                     (some #(.isFile %) (file-seq (io/file root "objects"))))
+            (throw (ex-info "Migrate legacy objects before writing a SQLite run" {:root (str root)})))
+        _ (when write? (io/make-parents db))
+        c (DriverManager/getConnection
+           (str "jdbc:sqlite:" (if write? (.getPath db)
+                                  (str "file:" (.getPath db) "?mode=ro"))))]
+    (with-open [s (.createStatement c)]
+      (.execute s "PRAGMA busy_timeout=30000")
+      (when write?
+        (.execute s "PRAGMA journal_mode=WAL")
+        (.execute s "CREATE TABLE IF NOT EXISTS objects (sha TEXT PRIMARY KEY, body BLOB NOT NULL)")))
+    c))
+
+(defn object-bytes
+  "Read exact bytes; a present database is authoritative, even for missing rows."
+  [root sha]
+  (if *object-connection*
+    (with-open [s (.prepareStatement ^Connection *object-connection*
+                                     "SELECT body FROM objects WHERE sha=?")]
+      (.setString s 1 sha)
+      (with-open [r (.executeQuery s)] (when (.next r) (.getBytes r 1))))
+    (if (.isFile (object-db root))
+      (with-open [c (connect-objects root false)]
+        (binding [*object-connection* c] (object-bytes root sha)))
+      (let [f (object-file root sha)]
+        (when (.isFile f) (Files/readAllBytes (.toPath f)))))))
+
+(defn put-object-bytes! [^Connection c sha ^bytes bytes]
+  (with-open [s (.prepareStatement c "INSERT OR IGNORE INTO objects(sha,body) VALUES (?,?)")]
+    (.setString s 1 sha)
+    (.setBytes s 2 bytes)
+    (.executeUpdate s)))
 
 (defn- write-object! [root value written]
-  (let [text (canonical-edn value)
-        bytes (.getBytes ^String text "UTF-8")
-        sha (sha256-bytes bytes)
-        target (object-file root sha)]
-    (when-not (.isFile target)
-      (io/make-parents target)
-      (let [tmp (io/file (.getParentFile target)
-                         (str "." sha "." (java.util.UUID/randomUUID) ".tmp"))]
-        (spit tmp text)
-        (if (.isFile target)
-          (.delete tmp)
-          (atomic-move! tmp target))))
+  (let [bytes (.getBytes ^String (canonical-edn value) "UTF-8")
+        sha (sha256-bytes bytes)]
+    (if *object-connection*
+      (put-object-bytes! *object-connection* sha bytes)
+      (with-open [c (connect-objects root true)] (put-object-bytes! c sha bytes)))
     (swap! written conj sha)
     {ref-key sha}))
 
@@ -115,7 +141,7 @@
                  :work-clusters (write-object! root (row-refs root v written) written)
                  (if (coll? v) (write-object! root v written) v))]))))
 
-(defn make-indexes!
+(defn- make-indexes-on-connection!
   "Write immutable objects below ROOT and return input/pass index maps."
   [root input pass]
   (let [written (atom #{})
@@ -127,14 +153,27 @@
                     :content (pass-content root pass input-index written)}]
     {:input-index input-index :pass-index pass-index :object-shas @written}))
 
+(defn make-indexes!
+  "Write immutable objects in one transaction; canonical bytes and indexes are unchanged."
+  [root input pass]
+  (with-open [c (connect-objects root true)]
+    (.setAutoCommit c false)
+    (try
+      (let [result (binding [*object-connection* c]
+                     (make-indexes-on-connection! root input pass))]
+        (.commit c)
+        result)
+      (catch Exception e (.rollback c) (throw e)))))
+
 (defn index? [x]
   (= index-schema (:schema x)))
 
 (defn- read-object [root sha cache]
   (if-let [v (get @cache sha)]
     v
-    (let [f (object-file root sha)
-          value (edn/read-string (slurp f))]
+    (let [bytes (or (object-bytes root sha)
+                    (throw (ex-info "Missing Giraffe object" {:sha sha})))
+          value (edn/read-string (String. ^bytes bytes "UTF-8"))]
       (swap! cache assoc sha value)
       value)))
 
@@ -156,7 +195,7 @@
             logical [:readiness :cones :unblocks])
     logical))
 
-(defn read-run-file
+(defn- read-run-file*
   "Read logical input/pass data from legacy full EDN or a version-1 index."
   [run-dir filename]
   (let [value (edn/read-string (slurp (io/file run-dir filename)))]
@@ -171,7 +210,7 @@
        (keep #(when (object-ref? %) (get % ref-key)))
        set))
 
-(defn verify-index
+(defn- verify-index*
   "Verify every transitively referenced object. Returns typed mismatches."
   [run-dir filename]
   (let [index-file (io/file run-dir filename)]
@@ -185,12 +224,11 @@
           (if-let [sha (peek pending)]
             (if (seen sha)
               (recur (pop pending) seen mismatches)
-              (let [f (object-file root sha)]
-                (if-not (.isFile f)
+              (let [bytes (object-bytes root sha)]
+                (if-not bytes
                   (recur (pop pending) (conj seen sha)
                          (conj mismatches {:file filename :reason :object-missing :object-sha256 sha}))
-                  (let [bytes (Files/readAllBytes (.toPath f))
-                        actual (sha256-bytes bytes)
+                  (let [actual (sha256-bytes bytes)
                         value (try (edn/read-string (String. bytes "UTF-8"))
                                    (catch Exception _ nil))]
                     (recur (into (pop pending) (referenced-shas value))
@@ -200,3 +238,20 @@
                              (conj {:file filename :reason :object-sha-mismatch
                                     :object-sha256 sha :actual-sha256 actual})))))))
             {:mismatches mismatches :object-count (count seen)}))))))))
+
+(defn- with-object-reader [run-dir f]
+  (let [root (.getParentFile (io/file run-dir))]
+    (if (.isFile (object-db root))
+      (with-open [c (connect-objects root false)]
+        (binding [*object-connection* c] (f)))
+      (f))))
+
+(defn read-run-file
+  "Read legacy or indexed run data, reusing one read-only connection for the DAG."
+  [run-dir filename]
+  (with-object-reader run-dir #(read-run-file* run-dir filename)))
+
+(defn verify-index
+  "Check all transitive object digests; missing/corrupt rows remain typed mismatches."
+  [run-dir filename]
+  (with-object-reader run-dir #(verify-index* run-dir filename)))

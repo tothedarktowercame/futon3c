@@ -1,4 +1,5 @@
 """Tests for ma_observe.py's card logic (no network, no model)."""
+import sqlite3
 import datetime
 import hashlib
 import os
@@ -185,10 +186,9 @@ class HarnessTest(unittest.TestCase):
         def row_for(packet):
             payload = "retrieved memory block\nFACT\n\n" + packet
             sha = hashlib.sha256(payload.encode("utf-8")).hexdigest()
-            path = os.path.join(root, "objects", sha[:2], sha)
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "w", encoding="utf-8") as out:
-                out.write(payload)
+            with sqlite3.connect(os.path.join(root, "objects.sqlite")) as conn:
+                conn.execute("CREATE TABLE IF NOT EXISTS objects (sha TEXT PRIMARY KEY, body BLOB)")
+                conn.execute("INSERT OR IGNORE INTO objects VALUES (?,?)", (sha, payload.encode("utf-8")))
             return {"evidence/type": "coordination",
                     "evidence/body": {"event": "turn-start", "turn-id": "zt",
                                       "dispatch-id": "invoke-z", "payload-sha256": sha}}

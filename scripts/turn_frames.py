@@ -45,6 +45,7 @@ import argparse
 import glob
 import http.client
 import json
+import sqlite3
 import os
 import re
 import sys
@@ -54,6 +55,7 @@ import urllib.request
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
+from giraffe_run_data import read_object_bytes
 from scope_view_data import MEMORY_TOOLS, m40_facts, memories_named, result_text
 
 DEFAULT_BASE = "http://localhost:7073"
@@ -75,9 +77,8 @@ def turn_start_prompt_result(body, root=None):
         valid = bool(re.fullmatch(r"[0-9a-f]{64}", str(sha)))
         path = os.path.join(root, "objects", str(sha)[:2], str(sha)) if valid else None
         try:
-            if path and os.path.isfile(path):
-                with open(path, "rb") as payload:
-                    raw = payload.read()
+            if path:
+                raw = read_object_bytes(root, str(sha), suffix="")
                 # The payload is what the model received: any injected memory
                 # block, then the prompt. "text" keeps the old :prompt meaning;
                 # the writer records where the prompt starts, in UTF-8 bytes.
@@ -86,8 +87,9 @@ def turn_start_prompt_result(body, root=None):
                         "text": raw[offset:].decode("utf-8"),
                         "delivered": raw.decode("utf-8"),
                         "sha256": sha}
-        except OSError as exc:
-            reason = "payload-unreadable:%s" % type(exc).__name__
+        except (OSError, sqlite3.Error) as exc:
+            reason = ("payload-missing" if isinstance(exc, FileNotFoundError) else
+                      "payload-unreadable:%s" % type(exc).__name__)
         else:
             reason = "payload-missing" if valid else "payload-sha-invalid"
         if inline is not None:
