@@ -124,6 +124,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--summary", required=True)
     ap.add_argument("--emacs-context", help="file of Emacs-side context (markdown)")
+    ap.add_argument("--context-label", default="Emacs",
+                    help="where the context file came from (Mojira sends 'Mojira')")
     ap.add_argument("--out-dir", default=os.path.join(HOME, "notes", "futon-bugs"))
     ap.add_argument("--minutes", type=int, default=10, help="journal window")
     ap.add_argument("--zone-health", action="store_true",
@@ -155,7 +157,7 @@ def main():
         "you checked. This report is self-contained; the host it came from may "
         "not be reachable from where you are.",
         "",
-        "## Emacs context",
+        f"## {a.context_label} context",
         "",
         emacs or "(none supplied)",
         "",
