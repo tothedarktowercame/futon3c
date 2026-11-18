@@ -58,14 +58,29 @@
      {:roles roles :manifestations manifestations :rules rules :applications apps
       :records (vec (concat (vals rules) roles manifestations apps))
       :omitted-other-reason :no-established-source-role-locator})))
+(defn scoped-manifestation
+  "Build revision 2. Registry declarations select identity fields but do not
+  validate content enums, so scope is checked here. Commit time is UTC millis."
+  [role commit commit-time sha words scope]
+  (when-not (#{:role :declaration} scope)
+    (throw (ex-info "Invalid manifestation scope" {:error :sentence/invalid-scope :scope scope})))
+  (let [time (.format (.toFormatter (.appendInstant (java.time.format.DateTimeFormatterBuilder.) 3))
+                     (.truncatedTo (java.time.Instant/parse commit-time) java.time.temporal.ChronoUnit/MILLIS))]
+    (records/make-clusion
+     {:type-revision [:sentence/manifestation 2] :endpoints [(endpoint :role (:id role))]
+      :asserted-content {:renderer-commit commit :renderer-commit-time time
+                         :corpus-sha256 sha :wordings (vec words) :count (count words) :scope scope}})))
 (defn history-records
-  "8A supplies declaration-wide case-closer wording counts before typed ownership
-  exists. Retain that reported history; from Q83 use the explicit outer wording."
+  "Untyped historical counts are explicitly declaration-scoped revision 2.
+  Explicit outer wordings retain the exact revision-1 record and event-time."
   [path]
   (mapv (fn [r]
-          (let [words (if (seq (:outer_typed_closer_wordings r)) (:outer_typed_closer_wordings r)
-                          (mapcat (fn [[word n]] (repeat n (name word))) (sort-by key (:case_closer_wordings r))))]
-            (assoc (manifestation (role-record (:outer_locator r)) (:commit r) (:corpus_sha256 (:outer_locator r)) words)
+          (let [typed (:outer_typed_closer_wordings r)
+                words (if (seq typed) typed
+                          (mapcat (fn [[word n]] (repeat n (name word))) (sort-by key (:case_closer_wordings r))))
+                role (role-record (:outer_locator r)) sha (:corpus_sha256 (:outer_locator r))]
+            (assoc (if (seq typed) (manifestation role (:commit r) sha words)
+                       (scoped-manifestation role (:commit r) (:time r) sha words :declaration))
                    :event-time (:time r))))
         (:records (json/parse-string (slurp path) true))))
 (defn- missing? [r] (= :arxana.store/record-not-found (get-in r [:error :error/code])))
@@ -106,3 +121,16 @@
               (cond (missing? r) (recur (rest ids) out) (:error r) r
                     :else (recur (rest ids) (conj out id))))
             {:status :ok :roles out})))))
+
+(defn role-manifestations
+  "Read both revision indexes completely before returning scoped records. The
+  stored revision-1 bytes are preserved; scope is carried alongside each record."
+  [s role-id at]
+  (loop [revisions [1 2] out []]
+    (if-let [rev (first revisions)]
+      (let [r (reverse-records s [:sentence/manifestation rev] :role role-id at)]
+        (if (not= :ok (:status r)) r
+            (recur (rest revisions)
+                   (into out (map #(hash-map :record % :scope (if (= rev 1) :role (get-in % [:asserted-content :scope])))
+                                  (:records r))))))
+      {:status :ok :manifestations (vec (sort-by #(get-in % [:record :id]) out))})))

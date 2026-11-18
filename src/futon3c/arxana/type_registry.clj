@@ -96,8 +96,11 @@
                   :schema-digest :mode :max-states :host/locator])
    (clusion-type :sentence/role 1 []
                  [:module :declaration :corpus-sha256 :split-expression-key :role])
+   ;; Six live revision-1 records are all role-scoped; preserve their identity.
    (clusion-type :sentence/manifestation 1 [{:role :role :endpoint/kinds #{:clusion}}]
                  [:renderer-commit :corpus-sha256 :wordings :count])
+   (clusion-type :sentence/manifestation 2 [{:role :role :endpoint/kinds #{:clusion}}]
+                 [:renderer-commit :renderer-commit-time :corpus-sha256 :wordings :count :scope])
    (clusion-type :rule/application 1
                  [{:role :sentence :endpoint/kinds #{:clusion}} {:role :rule :endpoint/kinds #{:clusion}}]
                  [:method :renderer-commit :corpus-sha256 :tested-rules :interventions])
