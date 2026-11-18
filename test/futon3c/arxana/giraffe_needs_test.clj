@@ -1,5 +1,6 @@
 (ns futon3c.arxana.giraffe-needs-test
   (:require [cheshire.core :as json]
+            [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is]]
@@ -326,3 +327,146 @@
       (is (= 2 @reads))
       (is (= #{"run-2"} (set (map #(peek (key %)) @@#'sut/read-cache)))
           "entries for runs the party moved past are dropped"))))
+
+(defn publication-fixture [f]
+  (let [{:keys [run batch]} (fixture)
+        b (io/file (.getParentFile batch) "batch-b.jsonl")
+        _ (spit b (slurp batch))
+        input (-> run
+                  (assoc-in [:members "reading-b"]
+                            (-> (get-in run [:members "reading-a"])
+                                (assoc :id "reading-b")
+                                (assoc-in [:record-pin :batch] (str b))))
+                  (update-in [:input :edges] into
+                             (mapv #(assoc % :reading-member "reading-b") (get-in run [:input :edges]))))
+        current (atom input) entities (atom {}) calls (atom {:history 0 :get 0})
+        availability (atom :available)
+        cfg {:graph-store {:base-url "http://invented.invalid" :principal "fixture"}
+             :item-ids ["M-a" "M-b"] :written-at "2026-11-18T00:00:00Z"
+             :publication-check-every 20
+             :receipt-path (str (io/file (.getParentFile batch) "receipt.edn"))}]
+    (with-redefs [sut/current-run (fn [_] @current)
+                  store/bounded-query!
+                  (fn [_ q]
+                    (swap! calls update :history inc)
+                    (case @availability
+                      :transport {:error {:error/code :fixture/unavailable}}
+                      :stale {:ok {:status :stale-index}}
+                      :truncated {:ok {:status :ok :truncated? true}}
+                      :capped {:ok {:status :ok :attestation-ids (mapv str (range 200))}}
+                      {:ok {:status :ok :watermark 1 :attestation-ids
+                            (mapv :id (filter #(= (:subject-id q) (:subject-clusion-id %)) (vals @entities)))}}))
+                  store/get-entity
+                  (fn [_ id]
+                    (swap! calls update :get inc)
+                    (if-let [r (@entities id)] {:ok r} {:error {:error/category :missing}}))]
+      (let [full #(sut/full-plan cfg)
+            seed! #(swap! entities into (map (comp (juxt :id identity) :record)
+                                             (mapcat :rows (:readings (sut/full-plan (dissoc cfg :graph-store))))))]
+        (f {:cfg cfg :current current :entities entities :calls calls :availability availability
+            :batch batch :seed! seed! :full full})))))
+(defn plan-core [p] (select-keys p [:run :input-sha :readings]))
+
+(deftest positive-publication-equality-and-reuse
+  (publication-fixture
+   (fn [{:keys [cfg current entities calls batch seed! full]}]
+     (is (= (full) (plan-core (sut/plan cfg))) "initial unpublished rows are equal")
+     (is (empty? (:proofs (edn/read-string (slurp (:receipt-path cfg))))) "planned writes are not proof")
+     (seed!)
+     (is (= (full) (plan-core (sut/plan cfg))))
+     (reset! calls {:history 0 :get 0})
+     (let [warm (sut/plan cfg)]
+       (is (= {:history 0 :get 1} @calls))
+       (is (= 2 (get-in warm [:publication-receipt :proofs])) "two readings sharing a claim keep distinct receipts")
+       (is (= (full) (plan-core warm))))
+     (let [line (json/generate-string {:id "reading-a" :revision 2})
+           sha (digest/sha256-hex (.getBytes line "UTF-8"))]
+       (spit batch (str line "\n"))
+       (swap! current assoc-in [:members "reading-a" :record-pin :sha256] sha)
+       (reset! calls {:history 0 :get 0})
+       (let [changed (sut/plan cfg)]
+         (is (= 1 (:history @calls)) "only changed member is re-proved")
+         (is (= 1 (get-in changed [:readings 0 :written])))
+         (is (= (full) (plan-core changed)))
+         (is (= 1 (count (:proofs (edn/read-string (slurp (:receipt-path cfg)))))))))
+     (swap! current update-in [:input :edges] #(filterv (fn [e] (= "reading-b" (:reading-member e))) %))
+     (swap! current update :members dissoc "reading-a")
+     (is (= (full) (plan-core (sut/plan cfg))))
+     (doseq [ids [["M-a"] ["M-a" "M-b" "M-missing"] ["M-a" "M-b"]]]
+       (let [c (assoc cfg :item-ids ids)]
+         (is (= (sut/full-plan c) (plan-core (sut/plan c))))))
+     (reset! calls {:history 0 :get 0})
+     (sut/plan (assoc-in cfg [:graph-store :principal] "another"))
+     (is (pos? (:history @calls)))
+     (is (seq @entities)))))
+
+(deftest unavailable-history-is-not-absence-or-new-proof
+  (publication-fixture
+   (fn [{:keys [cfg seed! availability calls]}]
+     (seed!) (sut/plan cfg)
+     (let [proofs (:proofs (edn/read-string (slurp (:receipt-path cfg))))]
+       (doseq [unavailable [:transport :stale :truncated :capped]]
+         (reset! availability unavailable)
+         (reset! calls {:history 0 :get 0})
+         (let [p (sut/plan (assoc cfg :full-publication-check? true))]
+           (is (= :unavailable (:history-availability p)))
+           (is (every? #(empty? (:rows %)) (:readings p)))
+           (is (= proofs (:proofs (edn/read-string (slurp (:receipt-path cfg)))))))
+         ;; Unproven plan still refuses; no append is involved.
+         (is (= :needs-unavailable
+                (try (sut/plan (assoc cfg :receipt-path (str (:receipt-path cfg) "-" (name unavailable)))) nil
+                     (catch clojure.lang.ExceptionInfo e (:reason (ex-data e)))))))))))
+
+(deftest incarnation-and-divergence
+  (publication-fixture
+   (fn [{:keys [cfg seed! entities calls full]}]
+     (seed!) (sut/plan cfg)
+     (reset! entities {}) (reset! calls {:history 0 :get 0})
+     (let [p (sut/plan cfg)]
+       (is (= :missing (get-in p [:publication-receipt :guard])))
+       (is (= (full) (plan-core p)))
+       (is (pos? (:history @calls)))
+       (is (zero? (get-in p [:publication-receipt :proofs]))))
+     (seed!) (sut/plan cfg)
+     ;; Selective loss leaves the rotating guard intact but breaks another
+     ;; member's proof. This honestly plants a divergence found by the audit.
+     (let [receipt (edn/read-string (slurp (:receipt-path cfg)))
+           ordered (vec (sort-by (comp pr-str key) (:proofs receipt)))
+           guard-idx (mod (:publications receipt) (count ordered))
+           lost (val (nth ordered (- 1 guard-idx)))]
+       (swap! entities dissoc (:attestation-id lost))
+       (let [p (sut/plan (assoc cfg :full-publication-check? true))]
+         (is (= :needs/incremental-divergence (:publication-error p)))
+         (is (= (full) (plan-core p)))
+         (is (empty? (:proofs (edn/read-string (slurp (:receipt-path cfg)))))))))))
+
+(deftest verified-inventory-reuses-only-positive-ids
+  (publication-fixture
+   (fn [{:keys [cfg seed! batch calls]}]
+     (seed!)
+     (let [items (atom [{:id "M-a" :path (str batch)} {:id "M-b" :path (str batch)}])
+           verified (atom []) c (dissoc cfg :item-ids)]
+       (with-redefs [inventory/current-items (fn [_] @items)
+                     sut/verify-item-ids (fn [_ ids] (swap! verified conj (vec ids)) (vec ids))]
+         (sut/plan c)
+         (reset! verified []) (reset! calls {:history 0 :get 0})
+         (sut/plan c)
+         (is (empty? @verified))
+         (is (= {:get 1 :history 0} @calls))
+         (swap! items conj {:id "M-new" :path (str batch)})
+         (sut/plan c)
+         (is (= [["M-new"]] @verified)))))))
+
+(deftest scheduled-full-check-and-positive-inventory-contract
+  (publication-fixture
+   (fn [{:keys [cfg seed! calls entities]}]
+     (seed!)
+     (let [c (assoc cfg :publication-check-every 2)]
+       (is (false? (get-in (sut/plan c) [:publication-receipt :full-check?])))
+       (reset! calls {:get 0 :history 0})
+       (is (true? (get-in (sut/plan c) [:publication-receipt :full-check?])))
+       (is (pos? (:history @calls))))
+     (swap! entities assoc (:id (inventory/item-record "M-a")) (inventory/item-record "M-a"))
+     (is (= ["M-a"] (#'sut/verify-item-ids cfg ["M-a" "M-absent"])))
+     (with-redefs [store/get-entity (fn [_ _] {:error {:error/category :failed}})]
+       (is (thrown? clojure.lang.ExceptionInfo (#'sut/verify-item-ids cfg ["M-a"])))))))

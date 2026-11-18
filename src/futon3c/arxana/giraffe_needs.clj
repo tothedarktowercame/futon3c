@@ -24,7 +24,10 @@
   (merge (mentions/default-config)
          {:party-path (str (System/getProperty "user.home") "/storage/gcc-preview/party.json")
           :runs-dir (str (System/getProperty "user.home") "/storage/giraffe")
-          :pause-ms 200}))
+          :pause-ms 200
+          :publication-check-every 20
+          :receipt-path (str (System/getProperty "user.home")
+                             "/storage/arxana/giraffe-needs/publication-receipt.edn")}))
 
 (defn party-run
   "The Giraffe run the party (Mojira's GCC pages) is built from."
@@ -54,8 +57,8 @@
 
 (declare run-attestations)
 
-(defn plan [cfg]
-  (let [{:keys [run manifest input input-path input-sha members]} (current-run cfg)
+(defn full-plan [cfg]
+  (let [{:keys [run manifest input input-path input-sha members]} (or (:run-context cfg) (current-run cfg))
         item-set (set (:item-ids cfg))
         generation (get-in manifest [:readings-generation :path])
         accepted (remove #(= :alternative (:class %)) (:edges input))
@@ -63,12 +66,22 @@
         seen (atom {})
         existing? (fn [claim member pin]
                     (let [k [(:id claim) member (:sha256 pin)]
-                          found (if (contains? @seen k)
-                                  (get @seen k)
-                                  (let [atts (run-attestations cfg claim {member pin})]
-                                    (swap! seen assoc k atts)
-                                    atts))]
-                      (seq found)))]
+                          receipt (get (:publication-proofs cfg) k)
+                          found (if receipt
+                                  receipt
+                                  (if (contains? @seen k)
+                                    (get @seen k)
+                                    (let [witness (atom nil)
+                                          atts (vec (run-attestations
+                                                     (assoc cfg :history-query-observed! #(reset! witness %))
+                                                     claim {member pin}))
+                                          proof (when-let [att (first atts)]
+                                                  {:attestation-id (:id att) :triple k :history-witness @witness})]
+                                      (swap! seen assoc k proof)
+                                      proof)))]
+                      (when (and found (:positive-proof! cfg))
+                        ((:positive-proof! cfg) k found))
+                      (boolean found)))]
     {:run run :input-sha input-sha
      :readings
      (mapv
@@ -119,6 +132,148 @@
                           "giraffe-needs/" {:id (str run "/" member)} rows))}))
       grouped)}))
 
+(defonce ^:private publication-lock (Object.))
+(def publication-version 1)
+
+(defn- store-identity [cfg]
+  (or (:publication-store-identity cfg)
+      (let [s (:graph-store cfg)]
+        (when (and (:base-url s) (:principal s))
+          {:base-url (:base-url s) :principal (:principal s)}))))
+
+(defn- read-receipt [path]
+  (try (when (.isFile (io/file path)) (edn/read-string (slurp path)))
+       (catch Exception _ nil)))
+
+(defn- save-receipt! [path receipt]
+  (let [target (.toPath (.getAbsoluteFile (io/file path)))
+        tmp (java.nio.file.Files/createTempFile (.getParent target) "needs-receipt-" ".edn"
+                                                (make-array java.nio.file.attribute.FileAttribute 0))]
+    (try
+      (spit (.toFile tmp) (pr-str receipt))
+      (java.nio.file.Files/move tmp target
+                                (into-array java.nio.file.CopyOption
+                                            [java.nio.file.StandardCopyOption/ATOMIC_MOVE
+                                             java.nio.file.StandardCopyOption/REPLACE_EXISTING]))
+      (finally (java.nio.file.Files/deleteIfExists tmp)))))
+
+(defn- verify-item-ids [cfg ids]
+  (into [] (keep (fn [id]
+                   (let [record (inventory/item-record id)
+                         answer (store/get-entity (:graph-store cfg) (:id record))]
+                     (cond (= record (:ok answer)) id
+                           (= :missing (get-in answer [:error :error/category])) nil
+                           :else (throw (ex-info "item inventory read refused" {:item id :result answer})))))) ids))
+
+(defn- publication-inventory [cfg previous]
+  (if (contains? cfg :item-ids)
+    {:ids (vec (:item-ids cfg)) :census nil}
+    (let [items (inventory/current-items cfg)
+          census (mapv (fn [{:keys [id path]}]
+                         [id path (when (.isFile (io/file path)) (sha-file path))]) items)
+          old-ids (set (:ids previous))
+          ;; Positive membership is immutable. Removed ids disappear; previously
+          ;; absent ids are retried, so a late inventory publication is visible.
+          keep-ids (set (filter old-ids (map :id items)))
+          added (remove keep-ids (map :id items))
+          verified (if (seq added)
+                     (verify-item-ids cfg added) [])]
+      {:ids (vec (sort (into keep-ids (filter (set added) verified)))) :census census})))
+
+(defn- guarded-receipt [cfg receipt]
+  (if-let [proof (when (seq (:proofs receipt))
+                  (nth (vec (sort-by (comp pr-str key) (:proofs receipt)))
+                       (mod (:publications receipt 0) (count (:proofs receipt)))))]
+    (let [r (store/get-entity (:graph-store cfg) (:attestation-id (val proof)))
+          att (:ok r)
+          [claim member sha] (key proof)]
+      (cond
+        (and att (= (:id att) (:attestation-id (val proof)))
+             (= claim (:subject-clusion-id att))
+             (= member (get-in att [:content :reading-member]))
+             (= sha (get-in att [:content :record-pin :sha256])))
+        {:receipt receipt :guard :present}
+        (or att (= :missing (get-in r [:error :error/category])))
+        {:receipt nil :guard :missing}
+        :else {:receipt receipt :guard :unavailable :reason (:error r)}))
+    ;; No attestation can guard an inventory-only receipt. Reverify that census.
+    {:receipt (dissoc receipt :inventory) :guard :no-proof}))
+
+(defn- incremental-plan* [cfg]
+  (let [path (:receipt-path cfg)
+        context (current-run cfg)
+        checker (io/file (get-in context [:manifest :readings-generation :path]) "check_edges.py")
+        identity {:store (store-identity cfg) :projection publication-version
+                  :checker (when (.isFile checker) (sha-file checker))}
+        raw (read-receipt path)
+        compatible (when (= identity (:identity raw)) raw)
+        guard (guarded-receipt cfg compatible)
+        previous (:receipt guard)
+        ;; Persist invalidation before a possible full-planner refusal.
+        _ (when (and raw (nil? previous)) (save-receipt! path {}))
+        inv (if (contains? cfg :item-ids)
+              {:ids (vec (:item-ids cfg)) :census nil}
+              (publication-inventory cfg (:inventory previous)))
+        stable-inventory? (= (set (:ids inv)) (set (get-in previous [:inventory :ids])))
+        proofs (if stable-inventory?
+                 (into {} (filter (fn [[[ _claim member sha] _proof]]
+                                    (= sha (get-in context [:members member :record-pin :sha256]))))
+                       (:proofs previous)) {})
+        _ (when (and previous (not= proofs (:proofs previous)))
+            (save-receipt! path (assoc previous :proofs proofs :inventory inv)))
+        seen (atom {})
+        full-cfg (assoc cfg :run-context context :item-ids (:ids inv)
+                       :written-at (or (:written-at cfg) (str (java.time.Instant/now))))
+        incremental (full-plan (assoc full-cfg :publication-proofs proofs
+                                     :positive-proof! #(swap! seen assoc %1 %2)))
+        n (inc (:publications previous 0))
+        every (max 1 (long (:publication-check-every cfg 20)))
+        audit? (or (:full-publication-check? cfg) (zero? (mod n every)))
+        checked (when audit?
+                  (try
+                    (let [positive (atom {})
+                          full (full-plan (assoc full-cfg :positive-proof! #(swap! positive assoc %1 %2)))]
+                      {:plan full :proofs @positive})
+                    (catch clojure.lang.ExceptionInfo e
+                      (if (= :needs-unavailable (:reason (ex-data e)))
+                        {:unavailable (ex-data e)} (throw e)))))
+        divergence? (and (:plan checked)
+                         (not= (digest/canonical-digest incremental)
+                               (digest/canonical-digest (:plan checked))))
+        _ (when divergence?
+            (binding [*out* *err*] (prn {:error :needs/incremental-divergence :run (:run context)})))
+        chosen (if divergence? (:plan checked) incremental)
+        next-proofs (if divergence? {} @seen)
+        receipt {:identity identity :publications n :inventory inv :proofs next-proofs
+                 :run (:run context)}]
+    (save-receipt! path receipt)
+    (assoc chosen
+           :history-availability (cond (:unavailable checked) :unavailable
+                                       (= :unavailable (:guard guard)) :unavailable
+                                       audit? :available
+                                       :else :not-queried-for-receipts)
+           :publication-receipt {:proofs (count next-proofs) :guard (:guard guard) :full-check? (boolean audit?)}
+           :history-reason (or (:unavailable checked) (:reason guard))
+           :publication-error (when divergence? :needs/incremental-divergence))))
+
+(defn plan
+  "Full planning without a receipt path; incremental positive-proof publication
+  with one. A cached proof survives query unavailability (CL-59b); availability
+  is reported separately. Unproven edges still refuse on incomplete history.
+  Receipt keys are claim/member/line-sha, not run names: unchanged readings are
+  deliberately shared across runs. Only proofs actually read back are saved."
+  [cfg]
+  (if (and (:receipt-path cfg) (:graph-store cfg) (store-identity cfg))
+    (locking publication-lock
+      (io/make-parents (:receipt-path cfg))
+      (with-open [channel (java.nio.channels.FileChannel/open
+                           (.toPath (io/file (str (:receipt-path cfg) ".lock")))
+                           (into-array java.nio.file.OpenOption
+                                       [java.nio.file.StandardOpenOption/CREATE java.nio.file.StandardOpenOption/WRITE]))
+                  _lock (.lock channel)]
+        (incremental-plan* cfg)))
+    (full-plan cfg)))
+
 (defn write! [cfg]
   (let [p (plan cfg)
         results (mapv
@@ -133,10 +288,11 @@
                            {:member member :failed :needs-write-refused
                             :unchanged unchanged :skipped skipped}))))
                  (:readings p))]
-    {:run (:run p) :readings results
+    (merge (select-keys p [:history-availability :history-reason :publication-receipt :publication-error])
+           {:run (:run p) :readings results
      :written (reduce + (map #(or (:written %) 0) results))
      :unchanged (reduce + (map #(or (:unchanged %) 0) results))
-     :skipped (reduce + (map #(count (:skipped %)) results))}))
+     :skipped (reduce + (map #(count (:skipped %)) results))})))
 
 (defn- run-attestations
   "CLAIM's attestations matching MEMBER-PINS, latest per reading member. Two readings
@@ -163,6 +319,8 @@
                                    (< (count (get-in r [:ok :attestation-ids])) limit))
                               :needs-unavailable)
                     (:ok r)))))]
+    (when-let [observed! (:history-query-observed! cfg)]
+      (observed! (select-keys q [:status :watermark :limit :truncated?])))
     (->> (:attestation-ids q)
          (keep #(-> (store/get-entity (:graph-store cfg) %) :ok))
          (filter (fn [att]
@@ -338,15 +496,16 @@
   before the party is repointed at it). Never throws."
   ([run] (write-run! (assoc (default-config) :pause-ms 50) run))
   ([cfg run]
-   (try (write! (assoc cfg :giraffe-run run :item-ids (mentions/inventory cfg nil)))
+   (try (write! (cond-> (assoc cfg :giraffe-run run)
+                  (not (:receipt-path cfg)) (assoc :item-ids (mentions/inventory cfg nil))))
         (catch Exception e {:run run :failed (or (:reason (ex-data e)) :needs-write-exception)
                             :detail (.getMessage e)}))))
 
 (defn backfill! [cfg {:keys [write?] :or {write? false}}]
-  (let [p (plan cfg)
-        eligible (filterv #(seq (:rows %)) (:readings p))]
-    (if write?
-      (write! cfg)
+  (if write?
+    (write! cfg)
+    (let [p (plan cfg)
+          eligible (filterv #(seq (:rows %)) (:readings p))]
       {:mode :dry-run :run (:run p) :readings (count (:readings p))
        :outcomes {:would-write (count eligible)
                   :empty (- (count (:readings p)) (count eligible))}
@@ -358,7 +517,6 @@
     (throw (ex-info "usage: --dry-run (default) | --write" {})))
   (when (= #{"--dry-run" "--write"} (set args))
     (throw (ex-info "choose dry-run or write" {})))
-  (let [base (default-config)
-        cfg (assoc base :item-ids (mentions/inventory base nil))]
+  (let [cfg (default-config)]
     (try (prn (backfill! cfg {:write? (boolean (some #{"--write"} args))}))
          (finally (shutdown-agents)))))
