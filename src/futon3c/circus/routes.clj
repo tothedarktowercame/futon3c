@@ -479,8 +479,11 @@
     (catch Exception e (error-response 503 "herd-unavailable" {:message (.getMessage e)}))))
 
 
-(defn mission-patterns-response
-  "Newest bounded mission receipts, projected through the shared strand cache.
+(defn mission-session-patterns-response
+  "The mission x session x pattern join: patterns that 驴 proposed or 馬 found
+  used in the mission's newest indexed turns, with the sessions they occurred
+  in. Not the mission document's own pattern scopes (Joe, 2026-11-18).
+  Newest bounded mission receipts, projected through the shared strand cache.
   Missing indexes are explicit; there is no scan fallback."
   [cfg params]
   (let [mission (get params "mission")]
@@ -509,4 +512,4 @@
                            (take 100) vec)]
           {:status 200 :body (json-ready {:mission mission :turns_read (count rows)
                                          :patterns ordered :unindexed (nil? index)})})
-        (catch Exception e (error-response 503 "mission-patterns-unavailable" {:message (.getMessage e)}))))))
+        (catch Exception e (error-response 503 "mission-session-patterns-unavailable" {:message (.getMessage e)}))))))

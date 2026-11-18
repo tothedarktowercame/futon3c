@@ -1,4 +1,4 @@
-(ns futon3c.circus.mission-patterns-test
+(ns futon3c.circus.mission-session-patterns-test
   (:require [clojure.test :refer [deftest is]]
             [clojure.java.io :as io]
             [futon3c.xiang.turn-store :as turns]
@@ -37,7 +37,7 @@
         (is (= 1000 (.lastModified f)))
         (is (= body (slurp f)))))))
 
-(deftest mission-patterns-counts-bounds-and-reuses-cache
+(deftest mission-session-patterns-counts-bounds-and-reuses-cache
   (let [s (store)
         a (turns/write-record! s {:mission_id "M-demo" :session_id "s-a" :created_at "2026-01-01T00:00:00Z"
                                  :lu_ranked {:ranked [{:id "p-a"} {:id "p-a"} {:id "p-b"}]}})
@@ -53,26 +53,26 @@
                               {:turn r :lu-ranked (:lu_ranked r) :pattern-verdicts (:pattern_verdicts r)}))}]
     (with-redefs [turns/list-records (fn [& _] (throw (ex-info "scan forbidden" {})))]
       (is (= {"mission" "M-absent" "turns_read" 0 "patterns" [] "unindexed" true}
-             (:body (routes/mission-patterns-response cfg {"mission" "M-absent"}))))
-      (let [body (:body (routes/mission-patterns-response cfg {"mission" "M-demo" "n" "1"}))]
+             (:body (routes/mission-session-patterns-response cfg {"mission" "M-absent"}))))
+      (let [body (:body (routes/mission-session-patterns-response cfg {"mission" "M-demo" "n" "1"}))]
         (is (= 1 (get body "turns_read")))
         (is (= [(:id b)] @calls))
         (is (= ["p-a" "p-c"] (mapv #(get % "id") (get body "patterns")))))
-      (let [body (:body (routes/mission-patterns-response cfg {"mission" "M-demo"}))
+      (let [body (:body (routes/mission-session-patterns-response cfg {"mission" "M-demo"}))
             p (first (get body "patterns"))]
         (is (= 2 (get body "turns_read")))
         (is (= {"id" "p-a" "proposed" 2 "occurs" 1 "sessions" ["s-b" "s-a"]
                 "latest_at" "2026-01-02T00:00:00Z" "latest_turn" (:id b)} p))
         (is (= [(:id b) (:id a)] @calls)))
       (with-redefs [turns/read-record (fn [& _] (throw (ex-info "cache missed" {})))]
-        (is (= 200 (:status (routes/mission-patterns-response cfg {"mission" "M-demo"}))))))))
+        (is (= 200 (:status (routes/mission-session-patterns-response cfg {"mission" "M-demo"}))))))))
 
-(deftest mission-patterns-cap-and-missing-parameter
+(deftest mission-session-patterns-cap-and-missing-parameter
   (let [s (store)
         record {:mission_id "M-many" :created_at "2026-01-01T00:00:00Z"
                 :lu_ranked {:ranked (mapv #(hash-map :id (str "invented-" %)) (range 105))}}
         _ (turns/write-record! s record)
         cfg {:turn-store s :strand-cache (routes/strand-cache)
              :turn-gcc-fn (fn [_] {:turn record :lu-ranked (:lu_ranked record)})}]
-    (is (= 100 (count (get-in (routes/mission-patterns-response cfg {"mission" "M-many"}) [:body "patterns"]))))
-    (is (= 400 (:status (routes/mission-patterns-response cfg {}))))))
+    (is (= 100 (count (get-in (routes/mission-session-patterns-response cfg {"mission" "M-many"}) [:body "patterns"]))))
+    (is (= 400 (:status (routes/mission-session-patterns-response cfg {}))))))
