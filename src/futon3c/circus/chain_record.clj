@@ -4,10 +4,12 @@
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
             [clojure.set :as set]
+            [clojure.string :as str]
             [futon3c.arxana.store :as store]
             [futon3c.arxana.turn-mention-writer :as mentions]
             [futon3c.giraffe.run :as giraffe]
             [futon3c.giraffe.run-data :as run-data]
+            [futon3c.xiang.ma-occurrence :as ma]
             [futon3c.xiang.turn-store :as turns]))
 
 (def ^:private animal-specs
@@ -68,6 +70,76 @@
   (->> (get-in manifest [:focus-relation-input :evidence-pin :evidence-pin])
        (keep #(when (sequential? %) (first %))) set))
 
+(def ^:private ma-parts [:I1 :I2 :G :B])
+
+(defn- text-present? [x]
+  (and (some? x) (not (str/blank? (str x)))))
+
+(defn- complete-part? [part]
+  (and (map? part)
+       (if (text-present? (:element part))
+         (and (text-present? (:turn part))
+              (text-present? (:quote part))
+              (text-present? (:who part)))
+         (text-present? (:why part)))))
+
+(defn- complete-pattern-row? [row]
+  (and (map? row)
+       (every? (fn [window]
+                 (let [reading (get row window)]
+                   (and (map? reading)
+                        (every? #(complete-part? (get reading %)) ma-parts))))
+               [:turn :chain])))
+
+(defn ma-reading
+  "Project the turn-local 馬 obligation from stored pattern verdicts. Reader
+  failures are failed work, never typed absence."
+  [turn]
+  (let [turn (if (contains? turn :lu_proposal_ids)
+               turn
+               (assoc turn :lu_proposal_ids
+                      (mapv :id (get-in turn [:lu_ranked :ranked]))))
+        proposed (mapv :id (ma/patterns-of turn))
+        verdict (:pattern_verdicts turn)
+        rows (into {} (keep (fn [row]
+                              (when-let [pattern (:pattern row)]
+                                [(str pattern) row])))
+                   (:patterns verdict))
+        batches (get-in verdict [:model_outcome :batches])
+        batch-status
+        (into {}
+              (mapcat (fn [batch]
+                        (let [failure (if (contains? batch :failure_kind)
+                                        (:failure_kind batch)
+                                        "legacy-unknown")]
+                          (map #(vector (str %) failure) (:patterns batch)))))
+              batches)
+        absence (cond
+                  (not= "operator" (name (or (:origin turn) :unknown))) :non-operator-origin
+                  (:reply_absence turn) :reply-absence
+                  (not (text-present? (:reply_text turn))) :no-reply-text
+                  (empty? proposed) :no-proposed-patterns
+                  :else nil)
+        pattern-rows
+        (mapv (fn [pattern]
+                (let [failure (get batch-status pattern "legacy-unknown")
+                      row (get rows pattern)
+                      completed? (and (nil? failure) (complete-pattern-row? row))]
+                  {:pattern pattern
+                   :status (if completed? :completed :not-completed)
+                   :batch/failure-kind failure}))
+              proposed)]
+    {:proposed-pattern-ids proposed
+     :patterns pattern-rows
+     :batch-failure-kinds (mapv (fn [batch]
+                                  (if (contains? batch :failure_kind)
+                                    (:failure_kind batch)
+                                    "legacy-unknown"))
+                                (or batches []))
+     :legitimate-absence-reason absence
+     :obligation-met? (or (some? absence)
+                          (every? #(= :completed (:status %)) pattern-rows))}))
+
 (defn chain-record
   "Collect one turn's recorded chain. Optional injected :query-fn,
   :get-entity-fn, :read-turn-fn and :turn-reference-id make proof evaluation
@@ -105,6 +177,7 @@
         body {:turn {:id turn-id :created_at (:created_at turn) :origin (:origin turn)
                      :reply_text_present? (contains? turn :reply_text)
                      :reply_absence (:reply_absence turn)}
+              :ma-reading (ma-reading turn)
               :gcc gcc
               :items items
               :run {:run-id (:run-id manifest)

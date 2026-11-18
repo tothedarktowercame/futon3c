@@ -14,17 +14,24 @@
                     [animal {:status :present :clusion-ids [(str "gcc-" i)]}])
                   animals))
    :items ["M-one"]
+   :ma-reading {:proposed-pattern-ids ["p-one"]
+                :patterns [{:pattern "p-one" :status :completed}]
+                :legitimate-absence-reason nil
+                :commit-state :post-1ae694834}
    :focus-link ["gcc-0"]
    :priority {:items [{:item-id "M-one" :status :ranked
                        :cutoff-status :within-cutoff}]}
    :record/sha256 "fixture-record-sha"})
 
-(defn- check [tag record pins]
+(defn- check-result [tag record pins]
   (let [file (io/file (System/getProperty "java.io.tmpdir")
                       (str "chain-certificate-" tag "-" (System/nanoTime) ".lean"))]
     (spit file (certificate/render record pins))
-    (try (:exit (certificate/lean-check file))
+    (try (certificate/lean-check file)
          (finally (io/delete-file file true)))))
+
+(defn- check [tag record pins]
+  (:exit (check-result tag record pins)))
 
 (deftest generated-chain-theorems-pass-and-negative-controls-fail-in-lean
   (let [good (fixture)]
@@ -47,4 +54,14 @@
     (testing "failed run verification fails the fixed run theorem"
       (is (not (zero? (check "unverified"
                              (assoc-in good [:run :verification :ok?] false)
-                             ["gcc-0"])))))))
+                             ["gcc-0"])))))
+    (testing "an unread proposed pattern fails the Ma theorem in Lean"
+      (let [result (check-result "ma-unread"
+                                 (assoc-in good [:ma-reading :patterns 0 :status]
+                                           :not-completed)
+                                 ["gcc-0"])]
+        (is (not (zero? (:exit result))))
+        (is (re-find #"ma_read_every_proposed_pattern.*depends on axioms: \[sorryAx\]"
+                     (:out result)))
+        (is (not (re-find #"turn_items_ranked_within_cutoff.*depends on axioms: \[sorryAx\]"
+                          (:out result))))))))

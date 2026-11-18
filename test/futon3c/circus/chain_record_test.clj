@@ -43,6 +43,24 @@
                    {:ok {:status :ok :truncated? false :edge-ids rows}}))
      :get-entity-fn (fn [_ id] {:ok (get entities id)})}))
 
+(defn- mapped-parts []
+  (into {} (map (fn [part]
+                  [part {:element "fixture element" :turn "turn-fixture"
+                         :quote "five exact fixture words are here"
+                         :who "operator"}]))
+        [:I1 :I2 :G :B]))
+
+(defn- ma-turn [failure-kind]
+  {:origin "operator" :reply_text "fixture reply"
+   :proposed_patterns [{:patterns ["p-one" "p-two"]}]
+   :pattern_verdicts
+   {:model_outcome
+    {:batches [{:batch 0 :patterns ["p-one" "p-two"]
+                :failure_kind failure-kind}]}
+    :patterns (mapv (fn [pattern]
+                      {:pattern pattern :turn (mapped-parts) :chain (mapped-parts)})
+                    ["p-one" "p-two"])}})
+
 (deftest collects-all-animal-records-items-priority-and-focus-link
   (let [run-dir (fixture-run [["lu-1" "sha"] ["hou-1" "sha"]
                               ["not-this-turn" "sha"]])
@@ -95,3 +113,31 @@
         record (chain/chain-record cfg)]
     (is (= [{:item-id "M-unranked" :status :not-ranked}]
            (get-in record [:priority :items])))))
+
+(deftest ma-reading-completes-every-pattern-only-when-its-batch-and-maps-complete
+  (let [reading (chain/ma-reading (ma-turn nil))]
+    (is (= ["p-one" "p-two"] (:proposed-pattern-ids reading)))
+    (is (every? #(= :completed (:status %)) (:patterns reading)))
+    (is (true? (:obligation-met? reading)))))
+
+(deftest ma-reading-failed-batch-does-not-complete-its-patterns
+  (let [reading (chain/ma-reading (ma-turn "model/truncated-reply"))]
+    (is (= ["model/truncated-reply"] (:batch-failure-kinds reading)))
+    (is (nil? (:legitimate-absence-reason reading)))
+    (is (every? #(= :not-completed (:status %)) (:patterns reading)))
+    (is (false? (:obligation-met? reading)))))
+
+(deftest ma-reading-no-reply-is-a-legitimate-absence
+  (let [reading (chain/ma-reading (dissoc (ma-turn nil) :reply_text))]
+    (is (= :no-reply-text (:legitimate-absence-reason reading)))
+    (is (true? (:obligation-met? reading)))))
+
+(deftest ma-reading-legacy-outcome-is-a-failure-not-an-absence
+  (let [turn (-> (ma-turn nil) (assoc :pattern_verdicts
+                                      {:patterns (get-in (ma-turn nil)
+                                                         [:pattern_verdicts :patterns])}))
+        reading (chain/ma-reading turn)]
+    (is (nil? (:legitimate-absence-reason reading)))
+    (is (= ["legacy-unknown" "legacy-unknown"]
+           (mapv :batch/failure-kind (:patterns reading))))
+    (is (false? (:obligation-met? reading)))))

@@ -34,12 +34,19 @@
   [record pinned-ids]
   (let [turn-id (get-in record [:turn :id])
         run-id (get-in record [:run :run-id])
+        ma-reading (:ma-reading record)
+        ma-proposed (:proposed-pattern-ids ma-reading)
+        ma-completed (keep #(when (= :completed (:status %)) (:pattern %))
+                           (:patterns ma-reading))
+        ma-absence (name-string (:legitimate-absence-reason ma-reading))
+        ma-commit-state (or (:commit-state ma-reading) :unspecified)
         gcc-ids (mapcat #(get-in record [:gcc % :clusion-ids] []) animals)]
     (str "import Mathlib\n\n"
          "/-! GENERATED FILE — DO NOT EDIT.\n"
          "Record SHA-256: " (:record/sha256 record) "\n"
          "Turn: " turn-id "\n"
          "Run: " run-id "\n-/\n\n"
+         "-- Ma read commit state: " (name-string ma-commit-state) "\n\n"
          "namespace DarkTower.Circus.ChainCertificate\n\n"
          "structure AnimalRecord where\n"
          "  animal : String\n  status : String\n  ids : List String\n  reason : String\n"
@@ -60,11 +67,19 @@
          (lean-bool (true? (get-in record [:run :verification :ok?]))) "\n"
          "def focusVersionPresent : Bool := "
          (lean-bool (some? (get-in record [:run :focus/version]))) "\n\n"
+         "def maProposedPatterns : List String := "
+         (lean-list lean-string ma-proposed) "\n"
+         "def maCompletedPatterns : List String := "
+         (lean-list lean-string ma-completed) "\n"
+         "def maLegitimateAbsence : String := " (lean-string ma-absence) "\n\n"
          "def validAnimal (a : AnimalRecord) : Bool :=\n"
          "  (a.status == \"present\" && !a.ids.isEmpty) ||\n"
          "  (a.status == \"absent\" && !a.reason.isEmpty)\n\n"
          "theorem every_animal_present_or_typed_absent :\n"
          "    animals.all validAnimal = true := by decide\n\n"
+         "theorem ma_read_every_proposed_pattern :\n"
+         "    (!maLegitimateAbsence.isEmpty || maProposedPatterns.all maCompletedPatterns.contains) = true := by\n"
+         "  decide\n\n"
          "theorem focus_link_in_turn_gcc_and_pin :\n"
          "    (!focusLink.isEmpty && focusLink.all (fun id => turnGccIds.contains id && pinnedIds.contains id)) = true := by\n"
          "  decide\n\n"
@@ -75,6 +90,7 @@
          "theorem run_verified : runVerified && focusVersionPresent = true := by\n"
          "  decide\n\n"
          "#print axioms every_animal_present_or_typed_absent\n"
+         "#print axioms ma_read_every_proposed_pattern\n"
          "#print axioms focus_link_in_turn_gcc_and_pin\n"
          "#print axioms turn_items_ranked_within_cutoff\n"
          "#print axioms run_verified\n"
@@ -89,8 +105,9 @@
   (shell/sh "lake" "env" "lean" (.getAbsolutePath (io/file path)) :dir mathlib-dir))
 
 (defn write-and-check!
-  [{:keys [turn-id run-dir output-path]}]
-  (let [record (chain/chain-record {:turn-id turn-id :run-dir run-dir})
+  [{:keys [turn-id run-dir output-path commit-state]}]
+  (let [record (cond-> (chain/chain-record {:turn-id turn-id :run-dir run-dir})
+                 commit-state (assoc-in [:ma-reading :commit-state] commit-state))
         output (io/file output-path)]
     (io/make-parents output)
     (spit output (render record (pinned-ids run-dir)))
