@@ -14,7 +14,9 @@
     (is (= 28 (count slots)))
     (is (= "Invented prompt 2" (:prompt (first slots))))
     (is (= ["Invented prompt 6" "Invented prompt 7" "Invented prompt 8"] (:options (nth slots 2))))
-    (is (every? #(= :unknown (get-in % [:limit :status])) slots))
+    ;; Joe 2026-11-18: free-text fields are 150 words; other kinds keep no limit.
+    (is (every? #(= 150 (get-in % [:limit :words])) (filter #(= :prose (:kind %)) slots)))
+    (is (every? #(= :unknown (get-in % [:limit :status])) (remove #(= :prose (:kind %)) slots)))
     (is (thrown? clojure.lang.ExceptionInfo (s/slots (str form "changed") (d/sha form))))
     (is (= (set (range 1 52)) (set (map :segment (:placements state)))))
     (let [[a b] (:placements state)] (is (= (:span a) (:span b))) (is (not= (:id a) (:id b))))

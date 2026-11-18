@@ -24,7 +24,11 @@
     (mapv (fn [[key line kind lo hi]]
             {:id (name key) :prompt (nth lines (dec line)) :kind kind
              :options (when lo (subvec (vec lines) (dec lo) hi))
-             :options-known? (boolean lo) :limit {:status :unknown}
+             :options-known? (boolean lo)
+             :limit (if (= kind :prose)
+                      {:status :known :words 150
+                       :source "Joe, 2026-11-18: \"all of the free-text fields in the form are 150 words\" (not in the captured form)"}
+                      {:status :unknown})
              :source {:digest expected-digest :line line}
              :duration-seconds (when (= key :video) 120)}) fields)))
 (def assignments
