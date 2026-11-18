@@ -105,3 +105,21 @@
   (is (thrown-with-msg? clojure.lang.ExceptionInfo #"No Claude Platform reader profile"
                         (platform/make-reader-invoke-fn
                          {:agent-id "claude-14"}))))
+
+(deftest ma-reader-sends-thinking-off-and-lu-does-not
+  ;; 2026-11-18: Sonnet 5.5's adaptive thinking took 700-1,520 of 馬's
+  ;; 2,048 output tokens, so its JSON replies were cut off or empty.
+  (let [key (private-file "secret\n")
+        ledger (str (Files/createTempFile "claude-platform-ledger" ""
+                                          (make-array FileAttribute 0)))
+        seen (atom [])
+        call (fn [request] (swap! seen conj request)
+               {:text "[]" :usage {:input_tokens 10 :output_tokens 10}})]
+    ((platform/make-reader-invoke-fn {:agent-id "馬-sonnet" :key-file key
+                                      :ledger ledger :call-fn call})
+     "read" nil)
+    ((platform/make-reader-invoke-fn {:agent-id "驴-haiku" :key-file key
+                                      :ledger ledger :call-fn call})
+     "read" nil)
+    (is (= {:type "between_tools"} (:thinking (first @seen))))
+    (is (nil? (:thinking (second @seen))))))

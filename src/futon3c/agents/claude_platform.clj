@@ -24,7 +24,14 @@
    "claude-sonnet-5-5" {:input 2.00 :output 10.00}})
 
 (def reader-profiles
-  {"馬-sonnet" {:model "claude-sonnet-5-5" :max-tokens 2048 :max-usd 0.08}
+  ;; 馬's occurrence reader returns strict JSON. With Sonnet 5.5's default
+  ;; adaptive thinking, thinking took 700-1,520 of its 2,048 output tokens
+  ;; (ledger, 2026-11-18), so replies were cut off or had no text block.
+  ;; {:type "between_tools"} is Sonnet 5.5's thinking-off setting
+  ;; ({:type "disabled"} is a 400); probe: end_turn, 0 thinking tokens,
+  ;; complete array.
+  {"馬-sonnet" {:model "claude-sonnet-5-5" :max-tokens 2048 :max-usd 0.08
+               :thinking {:type "between_tools"}}
    "驴-haiku" {:model "claude-haiku-5-5" :max-tokens 4096 :max-usd 0.02}})
 
 (defn- expand-home [path]
@@ -67,11 +74,12 @@
        1000000.0)))
 
 (defn call!
-  [{:keys [api-key model prompt max-tokens url]
+  [{:keys [api-key model prompt max-tokens url thinking]
     :or {url default-url}}]
   (let [body (json/generate-string
-              {:model model :max_tokens max-tokens
-               :messages [{:role "user" :content (str prompt)}]})
+              (cond-> {:model model :max_tokens max-tokens
+                       :messages [{:role "user" :content (str prompt)}]}
+                thinking (assoc :thinking thinking)))
         req (-> (HttpRequest/newBuilder (URI/create url))
                 (.header "content-type" "application/json")
                 (.header "x-api-key" api-key)
@@ -125,7 +133,8 @@
    `max-usd` is a hard per-call preflight bound. `call-fn` is injectable so
    the exact overspend and malformed-response cases can be tested without a
    network stub."
-  [{:keys [agent-id model key-file ledger max-tokens max-usd monthly-limit-usd call-fn]
+  [{:keys [agent-id model key-file ledger max-tokens max-usd monthly-limit-usd call-fn
+           thinking]
     :or {agent-id "claude-platform" model "claude-sonnet-5-5"
          key-file default-key-file ledger default-ledger max-tokens 2048
          max-usd 0.25 monthly-limit-usd 200.0 call-fn call!}}]
@@ -148,7 +157,8 @@
                              :monthly-limit-usd monthly-limit-usd}))))
         (let [started (System/nanoTime)
               response (call-fn {:api-key (read-api-key key-file) :model model
-                                 :prompt prompt :max-tokens max-tokens})
+                                 :prompt prompt :max-tokens max-tokens
+                                 :thinking thinking})
               text (str (:text response))
               cost (usage-cost model (:usage response))
               sid (str "platform-" (UUID/randomUUID))
