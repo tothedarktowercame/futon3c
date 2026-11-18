@@ -163,6 +163,10 @@
    {:schema-version 1 :required #{:valid-time} :allowed #{:valid-time :benefit-id}
     :projection [:operation :status :mode :valid-time [:benefit] [:items] [:substrate] [:benefits] :reason]}
 
+   :demo-b/tracker
+   {:schema-version 1 :required #{:valid-time} :allowed #{:valid-time}
+    :projection [:operation :status :valid-time [:reads] [:coverage] [:views] [:mojira] [:provenance] :reason]}
+
    :catalogue/view
    {:schema-version 1
     :required #{:valid-time}
