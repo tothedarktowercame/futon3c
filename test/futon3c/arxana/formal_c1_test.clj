@@ -63,6 +63,35 @@
              nil
              (catch clojure.lang.ExceptionInfo e (:error (ex-data e))))))))
 
+(deftest semantic-role-kinds-are-closed-and-export-a-schema-graph
+  (let [invented {:type/id :invented/partly-typed
+                  :type/revision 1
+                  :record/kind :clusion
+                  :roles [{:role :known :endpoint/kinds #{:external-ref}
+                           :endpoint/semantic-kinds #{:turn}}
+                          {:role :undeclared :endpoint/kinds #{:external-ref}}]
+                  :arity 2
+                  :endpoint/kinds #{:external-ref}
+                  :identity/content-fields []
+                  :identity/default [:type-revision :ordered-role-labelled-endpoints
+                                     :declared-asserted-content]
+                  :convergence/policy :append-only
+                  :recursion/cycle-policy :bounded-cyclic}
+        local (:registry (types/register-declaration {} invented))
+        quote-edges (filter #(= [:ma/quote 1] (:type %)) (types/schema-edges))]
+    (is (= :arxana.type/unknown-semantic-kind
+           (try
+             (types/validate-declaration
+              (assoc-in invented [:roles 0 :endpoint/semantic-kinds] #{:invented/not-a-kind}))
+             nil
+             (catch clojure.lang.ExceptionInfo e (:error (ex-data e))))))
+    (is (some #(= [:turn :turn] ((juxt :from :to) %)) quote-edges))
+    (is (some #(= [:turn :pattern] ((juxt :from :to) %)) quote-edges))
+    (is (some #(= [:pattern :turn] ((juxt :from :to) %)) quote-edges))
+    (is (empty? (types/schema-edges local))
+        "a role with no semantic declaration contributes no guessed edge")
+    (is (contains? (types/schema-kind-graph) [:turn :pattern]))))
+
 (deftest c1-declarations-are-resolved
   ;; C1's declarations plus the later formal-Arxana relation types.
   (is (= 96 (count types/registry-v1)))

@@ -9,6 +9,18 @@
 (def endpoint-kinds
   #{:entity :artifact-revision :manifestation-scope :clusion :external-ref})
 
+(def semantic-kinds
+  "Closed node-kind vocabulary for the navigability schema graph.
+
+  These names describe what an endpoint denotes, independently of how it is
+  represented above.  Each is backed by a production writer: :turn and
+  :pattern by pattern_proposals.clj and ma_strand.clj; :agent by
+  xiang_interpretations.clj; :item by turn_mentions.clj, circus/hou.clj and
+  giraffe_needs.clj; :focus by circus/hou.clj; and :memory by dog_memory.clj.
+  Mission/session/file/repo/code kinds stay out until an Arxana writer gives
+  them an endpoint contract rather than merely carrying their ids elsewhere."
+  #{:agent :focus :item :memory :pattern :turn})
+
 (def convergence-policies
   #{:append-only :cas :per-user-lww})
 
@@ -44,6 +56,15 @@
                       {:arity arity :roles role-names})))
     (when-not (every? endpoint-kinds kinds)
       (throw (ex-info "unknown endpoint kind" {:endpoint/kinds kinds})))
+    (doseq [{:keys [role] :as role-declaration} roles
+            :when (contains? role-declaration :endpoint/semantic-kinds)]
+      (let [declared-semantic-kinds (:endpoint/semantic-kinds role-declaration)]
+        (when-not (and (set? declared-semantic-kinds)
+                       (every? semantic-kinds declared-semantic-kinds))
+        (throw (ex-info "unknown endpoint semantic kind"
+                        {:error :arxana.type/unknown-semantic-kind
+                         :role role
+                         :endpoint/semantic-kinds declared-semantic-kinds})))))
     (when-not (vector? content-fields)
       (throw (ex-info "identity content fields must be an ordered vector"
                       {:identity/content-fields content-fields})))
@@ -187,20 +208,27 @@
                  [{:role :item :endpoint/kinds #{:entity}}]
                  [:legacy/source-record-id])
    (clusion-type :hou/focus 1
-                 [{:role :evidence :endpoint/kinds #{:external-ref}}]
+                 [{:role :evidence :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}]
                  [:hou/turn :hou/at :hou/rule :hou/relations :hou/associated-radius
                   :hou/hop-bound :hou/evidence-pin :hou/sources])
    (clusion-type :hou/focus-relation 1
-                 [{:role :focus :endpoint/kinds #{:clusion}}
-                  {:role :item :endpoint/kinds #{:clusion}}]
+                 [{:role :focus :endpoint/kinds #{:clusion}
+                   :endpoint/semantic-kinds #{:focus}}
+                  {:role :item :endpoint/kinds #{:clusion}
+                   :endpoint/semantic-kinds #{:item}}]
                  [:relation])
    (clusion-type :workplan/mention 1
-                 [{:role :item :endpoint/kinds #{:clusion}}
-                  {:role :evidence :endpoint/kinds #{:external-ref}}]
+                 [{:role :item :endpoint/kinds #{:clusion}
+                   :endpoint/semantic-kinds #{:item}}
+                  {:role :evidence :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}]
                  [:mention/role])
    (clusion-type :workplan/mention 2
-                 [{:role :item :endpoint/kinds #{:clusion}}
-                  {:role :evidence :endpoint/kinds #{:external-ref}}]
+                 [{:role :item :endpoint/kinds #{:clusion}
+                   :endpoint/semantic-kinds #{:item}}
+                  {:role :evidence :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}]
                  ;; :mention/quote is not identity content: it is stored
                  ;; only when the text at the range differs from the item id
                  ;; (Joe 2026-11-16: no ("Arxana" "Arxana") per mention).
@@ -218,7 +246,8 @@
    (clusion-type :interpretation 1
                  [{:role :source :endpoint/kinds #{:manifestation-scope}}
                   {:role :intent :endpoint/kinds #{:entity}}
-                  {:role :target :endpoint/kinds #{:entity :external-ref}}]
+                  {:role :target :endpoint/kinds #{:entity :external-ref}
+                   :endpoint/semantic-kinds #{:agent :turn}}]
                  [:reading/state])
    (clusion-type :resolution-observation 1
                  [{:role :subject :endpoint/kinds #{:clusion :manifestation-scope}}]
@@ -228,41 +257,60 @@
                   {:role :predecessor :endpoint/kinds #{:clusion}}]
                  [] :cycle :acyclic)
    (clusion-type :pattern/proposal 1
-                 [{:role :turn :endpoint/kinds #{:external-ref}}
-                  {:role :pattern :endpoint/kinds #{:external-ref}}]
+                 [{:role :turn :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}
+                  {:role :pattern :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:pattern}}]
                  [:intent])
    (clusion-type :pattern/occurrence 1
-                 [{:role :pattern :endpoint/kinds #{:external-ref}}
-                  {:role :turn :endpoint/kinds #{:external-ref}}]
+                 [{:role :pattern :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:pattern}}
+                  {:role :turn :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}]
                  [:window :proposal])
    (clusion-type :ma/strand 1
-                 [{:role :turn :endpoint/kinds #{:external-ref}}
-                  {:role :prev :endpoint/kinds #{:external-ref} :required? false}]
+                 [{:role :turn :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}
+                  {:role :prev :endpoint/kinds #{:external-ref} :required? false
+                   :endpoint/semantic-kinds #{:turn}}]
                  [:connection/status :connection/sha256 :connection/reason])
    (clusion-type :ma/quote 1
-                 [{:role :turn :endpoint/kinds #{:external-ref}}
-                  {:role :quoted-turn :endpoint/kinds #{:external-ref}}
-                  {:role :pattern :endpoint/kinds #{:external-ref}}]
+                 [{:role :turn :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}
+                  {:role :quoted-turn :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}
+                  {:role :pattern :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:pattern}}]
                  [:part :window])
    (clusion-type :needs 1
-                 [{:role :needing :endpoint/kinds #{:external-ref}}
-                  {:role :supplier :endpoint/kinds #{:external-ref}}]
+                 [{:role :needing :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:item}}
+                  {:role :supplier :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:item}}]
                  [:class])
    (clusion-type :memory/recall 1
-                 [{:role :turn :endpoint/kinds #{:external-ref}}
-                  {:role :memory :endpoint/kinds #{:external-ref}}]
+                 [{:role :turn :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}
+                  {:role :memory :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:memory}}]
                  [:arm :delivered])
    (clusion-type :memory/use 1
-                 [{:role :turn :endpoint/kinds #{:external-ref}}
-                  {:role :memory :endpoint/kinds #{:external-ref}}]
+                 [{:role :turn :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}
+                  {:role :memory :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:memory}}]
                  [])
    (clusion-type :memory/burial 1
-                 [{:role :turn :endpoint/kinds #{:external-ref}}
-                  {:role :memory :endpoint/kinds #{:external-ref}}]
+                 [{:role :turn :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}
+                  {:role :memory :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:memory}}]
                  [])
    (clusion-type :memory/repetition 1
-                 [{:role :turn :endpoint/kinds #{:external-ref}}
-                  {:role :memory :endpoint/kinds #{:external-ref}}]
+                 [{:role :turn :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:turn}}
+                  {:role :memory :endpoint/kinds #{:external-ref}
+                   :endpoint/semantic-kinds #{:memory}}]
                  [])
    (clusion-type :kernel-builds 1
                  [{:role :artifact :endpoint/kinds #{:artifact-revision}}]
@@ -482,6 +530,44 @@
              (register-declaration registry declaration))
            {:registry {}}
            declarations-v1)))
+
+(defn schema-edges
+  "The declared semantic schema edges in REGISTRY (registry-v1 by default).
+
+  Every ordered pair of distinct, semantically declared roles contributes
+  an edge for the Cartesian product of their kinds.  Ordered role pairs make
+  reverse-query navigation explicit.  Roles without semantic kinds are
+  deliberately invisible: this function never guesses from a role name."
+  ([] (schema-edges registry-v1))
+  ([registry]
+   (->> registry
+        (mapcat
+         (fn [[type-revision declaration]]
+           (for [from-role (:roles declaration)
+                 to-role (:roles declaration)
+                 :when (and (not= (:role from-role) (:role to-role))
+                            (seq (:endpoint/semantic-kinds from-role))
+                            (seq (:endpoint/semantic-kinds to-role)))
+                 from (:endpoint/semantic-kinds from-role)
+                 to (:endpoint/semantic-kinds to-role)]
+             {:from from :to to
+              :type type-revision
+              :from-role (:role from-role)
+              :to-role (:role to-role)})))
+        (sort-by pr-str)
+        vec)))
+
+(defn schema-kind-graph
+  "Sorted map [from-kind to-kind] -> the declarations that realise that move."
+  ([] (schema-kind-graph registry-v1))
+  ([registry]
+   (into (sorted-map)
+         (map (fn [[pair edges]]
+                [pair (->> edges
+                           (map #(select-keys % [:type :from-role :to-role]))
+                           (sort-by pr-str)
+                           vec)]))
+         (group-by (juxt :from :to) (schema-edges registry)))))
 
 (defn declaration [type-revision]
   (or (get registry-v1 type-revision)
