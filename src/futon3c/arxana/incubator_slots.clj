@@ -2,7 +2,8 @@
   "Session-only form overlays. No store dependency; every act has an explicit actor.
   Editorial acceptance is neither source acceptance nor benefit realization."
   (:require [clojure.string :as str]
-            [futon3c.arxana.draft-edition :as draft]))
+            [futon3c.arxana.draft-edition :as draft]
+            [futon3c.arxana.incubator-subslots :as subslots]))
 
 ;; Coordinates in the pinned 96-line capture, not invented form limits/options.
 (def fields
@@ -52,7 +53,7 @@
               {:basis :annual-salary :totals [300000 600000 900000]}]})
 (defn session [form segments]
   {:status :ok :authority :pinned-external-files :stored? false
-   :slots form :segments segments :placements (placements segments) :acts []
+   :slots (mapv subslots/annotate form) :segments segments :placements (placements segments) :acts []
    :claims (mapv #(hash-map :id (str "claim/" (:index %)) :segment (:index %) :span (:span %)) segments)
    :relations [] :challenges [budget-challenge]})
 (defn act

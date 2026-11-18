@@ -1,0 +1,287 @@
+{
+  "title": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    }
+  ],
+  "summary": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "mechanism",
+      "pattern": "writing-coherence/missing-mechanism",
+      "purpose": "Say how this works, rather than only naming a contrast."
+    },
+    {
+      "id": "consequence",
+      "pattern": "writing-coherence/meet-the-reader-where-they-are",
+      "purpose": "Name the practical consequence, measure or concrete ask for this reader."
+    }
+  ],
+  "public-benefit": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "scope",
+      "pattern": "writing-coherence/scope-mush",
+      "purpose": "Name the particular scope and reasons, without an inflated catch-all."
+    },
+    {
+      "id": "mechanism",
+      "pattern": "writing-coherence/missing-mechanism",
+      "purpose": "Say how this works, rather than only naming a contrast."
+    },
+    {
+      "id": "evidence",
+      "pattern": "writing-coherence/citation-density-load-bearing-claim",
+      "purpose": "Give the instance, observation and comparison supporting the central claim."
+    },
+    {
+      "id": "consequence",
+      "pattern": "writing-coherence/meet-the-reader-where-they-are",
+      "purpose": "Name the practical consequence, measure or concrete ask for this reader."
+    }
+  ],
+  "technology": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "problem",
+      "pattern": "writing-coherence/and-yet-as-problem-frame",
+      "purpose": "Name the capability/failure contrast the question asks to address."
+    },
+    {
+      "id": "mechanism",
+      "pattern": "writing-coherence/missing-mechanism",
+      "purpose": "Say how this works, rather than only naming a contrast."
+    },
+    {
+      "id": "evidence",
+      "pattern": "writing-coherence/citation-density-load-bearing-claim",
+      "purpose": "Give the instance, observation and comparison supporting the central claim."
+    },
+    {
+      "id": "consequence",
+      "pattern": "writing-coherence/meet-the-reader-where-they-are",
+      "purpose": "Name the practical consequence, measure or concrete ask for this reader."
+    }
+  ],
+  "small": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "mechanism",
+      "pattern": "writing-coherence/missing-mechanism",
+      "purpose": "Say how this works, rather than only naming a contrast."
+    },
+    {
+      "id": "evidence",
+      "pattern": "writing-coherence/citation-density-load-bearing-claim",
+      "purpose": "Give the instance, observation and comparison supporting the central claim."
+    }
+  ],
+  "intentional": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "mechanism",
+      "pattern": "writing-coherence/missing-mechanism",
+      "purpose": "Say how this works, rather than only naming a contrast."
+    },
+    {
+      "id": "evidence",
+      "pattern": "writing-coherence/citation-density-load-bearing-claim",
+      "purpose": "Give the instance, observation and comparison supporting the central claim."
+    },
+    {
+      "id": "consequence",
+      "pattern": "writing-coherence/meet-the-reader-where-they-are",
+      "purpose": "Name the practical consequence, measure or concrete ask for this reader."
+    }
+  ],
+  "tailored": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "problem",
+      "pattern": "writing-coherence/and-yet-as-problem-frame",
+      "purpose": "Name the capability/failure contrast the question asks to address."
+    },
+    {
+      "id": "mechanism",
+      "pattern": "writing-coherence/missing-mechanism",
+      "purpose": "Say how this works, rather than only naming a contrast."
+    },
+    {
+      "id": "evidence",
+      "pattern": "writing-coherence/citation-density-load-bearing-claim",
+      "purpose": "Give the instance, observation and comparison supporting the central claim."
+    }
+  ],
+  "traction": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "evidence",
+      "pattern": "writing-coherence/citation-density-load-bearing-claim",
+      "purpose": "Give the instance, observation and comparison supporting the central claim."
+    },
+    {
+      "id": "scope",
+      "pattern": "writing-coherence/scope-mush",
+      "purpose": "Name the particular scope and reasons, without an inflated catch-all."
+    }
+  ],
+  "blockers": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "problem",
+      "pattern": "writing-coherence/and-yet-as-problem-frame",
+      "purpose": "Name the capability/failure contrast the question asks to address."
+    },
+    {
+      "id": "mechanism",
+      "pattern": "writing-coherence/missing-mechanism",
+      "purpose": "Say how this works, rather than only naming a contrast."
+    },
+    {
+      "id": "consequence",
+      "pattern": "writing-coherence/meet-the-reader-where-they-are",
+      "purpose": "Name the practical consequence, measure or concrete ask for this reader."
+    }
+  ],
+  "team": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "experience",
+      "pattern": "writing-coherence/citation-density-load-bearing-claim",
+      "purpose": "Name relevant experience and what it demonstrates."
+    }
+  ],
+  "success": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "milestones",
+      "pattern": "writing-coherence/meet-the-reader-where-they-are",
+      "purpose": "Separate 12-month and 36-month outcomes and how each is measured."
+    },
+    {
+      "id": "evidence",
+      "pattern": "writing-coherence/citation-density-load-bearing-claim",
+      "purpose": "Give the instance, observation and comparison supporting the central claim."
+    }
+  ],
+  "sustainability": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "mechanism",
+      "pattern": "writing-coherence/missing-mechanism",
+      "purpose": "Say how this works, rather than only naming a contrast."
+    },
+    {
+      "id": "barriers",
+      "pattern": "writing-coherence/and-yet-as-problem-frame",
+      "purpose": "State what prevents the proposed sustainable arrangement."
+    },
+    {
+      "id": "consequence",
+      "pattern": "writing-coherence/meet-the-reader-where-they-are",
+      "purpose": "Name the practical consequence, measure or concrete ask for this reader."
+    }
+  ],
+  "grant": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "mechanism",
+      "pattern": "writing-coherence/missing-mechanism",
+      "purpose": "Say how this works, rather than only naming a contrast."
+    },
+    {
+      "id": "consequence",
+      "pattern": "writing-coherence/meet-the-reader-where-they-are",
+      "purpose": "Name the practical consequence, measure or concrete ask for this reader."
+    }
+  ],
+  "openness": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "sharing",
+      "pattern": "writing-coherence/meet-the-reader-where-they-are",
+      "purpose": "Name what is shared, with whom, where and when."
+    },
+    {
+      "id": "evidence",
+      "pattern": "writing-coherence/citation-density-load-bearing-claim",
+      "purpose": "Give the instance, observation and comparison supporting the central claim."
+    }
+  ],
+  "novelty": [
+    {
+      "id": "thesis",
+      "pattern": "writing-coherence/plain-language-thesis",
+      "purpose": "State the answer standalone, first; not an announcement of structure."
+    },
+    {
+      "id": "mechanism",
+      "pattern": "writing-coherence/missing-mechanism",
+      "purpose": "Say how this works, rather than only naming a contrast."
+    },
+    {
+      "id": "evidence",
+      "pattern": "writing-coherence/citation-density-load-bearing-claim",
+      "purpose": "Give the instance, observation and comparison supporting the central claim."
+    },
+    {
+      "id": "scope",
+      "pattern": "writing-coherence/scope-mush",
+      "purpose": "Name the particular scope and reasons, without an inflated catch-all."
+    }
+  ]
+}
