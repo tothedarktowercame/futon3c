@@ -16,6 +16,8 @@
    :items ["M-one"]
    :ma-reading {:proposed-pattern-ids ["p-one"]
                 :patterns [{:pattern "p-one" :status :completed}]
+                :connection {:status :linked :turn/id "turn-before"
+                             :sha256 "fixture-sha"}
                 :legitimate-absence-reason nil
                 :commit-state :post-1ae694834}
    :focus-link ["gcc-0"]
@@ -72,4 +74,12 @@
         (is (re-find #"ma_read_every_proposed_pattern.*depends on axioms: \[sorryAx\]"
                      (:out result)))
         (is (not (re-find #"turn_items_ranked_within_cutoff.*depends on axioms: \[sorryAx\]"
-                          (:out result))))))))
+                          (:out result))))))
+    (testing "a linked Ma receipt must name its predecessor and digest"
+      (is (not (zero? (check "ma-link-missing-sha"
+                             (assoc-in good [:ma-reading :connection :sha256] "")
+                             ["gcc-0"])))))
+    (testing "only the four Ma connection statuses are accepted"
+      (is (not (zero? (check "ma-unknown-connection"
+                             (assoc-in good [:ma-reading :connection :status] :unknown)
+                             ["gcc-0"])))))))

@@ -25,6 +25,7 @@
   futon3c.xiang.ma-reading-live."
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clojure.pprint :as pp]
             [clojure.string :as str]
             [futon3c.arxana.pattern-occurrences :as occurrences]
             [futon3c.arxana.pattern-proposals :as proposals]
@@ -54,6 +55,8 @@
   "/home/joe/code/futon3/library")
 
 (def model-failure-kinds wa/failure-kinds)
+
+(declare sha256-hex)
 
 (def retryable-model-failure-kinds
   #{"model/quota" "model/timeout"})
@@ -95,6 +98,123 @@
            ;; record plus the n-1 operator turns immediately before it.
            cut (max 0 (- (count all) (long n)))]
        (subvec all cut)))))
+
+;; ------------------------------------------------------- turn strand receipt
+
+(defn- sorted-value [x]
+  (cond
+    (map? x) (into (sorted-map) (map (fn [[k v]] [k (sorted-value v)])) x)
+    (set? x) (into (sorted-set) (map sorted-value) x)
+    (sequential? x) (mapv sorted-value x)
+    :else x))
+
+(defn verdict-digest
+  "Canonical SHA-256 of the durable 馬 payload. The predecessor connection and
+  write timestamp are excluded: they are receipt metadata, not the occurrence
+  reading, and excluding the connection keeps each strand edge small."
+  [verdict]
+  (sha256-hex (.getBytes (with-out-str
+                           (pp/pprint (sorted-value
+                                       (dissoc verdict :connection :at))))
+                         "UTF-8")))
+
+(defn- operator-turns
+  "All durable operator turns in RECORD's session, oldest first. Equal
+  timestamps are ordered by record id, so predecessor selection survives a
+  restart and does not depend on filesystem enumeration order."
+  [store record]
+  (let [session (:session_id record)]
+    (if (nil? session)
+      []
+      (->> (ts/list-records store :session-id session :limit Long/MAX_VALUE)
+           (filter #(= "operator" (get-in % [:record :origin])))
+           (sort-by (juxt #(str (get-in % [:record :created_at])) :id))
+           vec))))
+
+(defn- adjacent-turn
+  [store id direction]
+  (when-let [record (ts/read-record store id)]
+    (let [turns (operator-turns store record)
+          index (first (keep-indexed #(when (= id (:id %2)) %1) turns))
+          target (when (some? index) (+ index direction))]
+      (when (and target (<= 0 target) (< target (count turns)))
+        (nth turns target)))))
+
+(defn- absent-reason [record]
+  (cond
+    (or (:reply_absence record) (not (string? (:reply_text record)))) :no-reply
+    (contains? #{"interrupted" "cancelled" "aborted"}
+               (some-> (:analysis_status record) str/lower-case)) :interrupted
+    :else nil))
+
+(defonce ^:private ^java.util.concurrent.ConcurrentHashMap session-locks
+  (java.util.concurrent.ConcurrentHashMap.))
+
+(defn- session-lock [store id]
+  (let [record (ts/read-record store id)
+        key (str (:dir store) "\u0000" (or (:session_id record) id))]
+    (.computeIfAbsent session-locks key
+                      (reify java.util.function.Function
+                        (apply [_ _] (Object.))))))
+
+(defn- with-session-lock [store id f]
+  #_{:clj-kondo/ignore [:locking-suspicious-lock]}
+  (locking (session-lock store id) (f)))
+
+(defn connection-for
+  "Compute ID's connection from durable same-session records. Never skips an
+  immediate operator predecessor. A durable void verdict is still linked."
+  [store id]
+  (if-let [{prev-id :id prev :record} (adjacent-turn store id -1)]
+    (if-let [reason (absent-reason prev)]
+      {:status :prev-absent :turn/id prev-id :reason reason}
+      (if-let [verdict (:pattern_verdicts prev)]
+        {:status :linked :turn/id prev-id :sha256 (verdict-digest verdict)}
+        {:status :prev-pending :turn/id prev-id}))
+    {:status :session-start}))
+
+(defn repair-connection!
+  "CAS-like repair of ID's pending receipt. Only the exact pending receipt for
+  its immediate predecessor may become linked; linked and absence receipts are
+  immutable. Returns the resulting verdict, or nil when ID has none."
+  [store id]
+  (with-session-lock
+    store id
+    #(when-let [{prev-id :id prev :record} (adjacent-turn store id -1)]
+       (when-let [previous-verdict (when-not (absent-reason prev)
+                                    (:pattern_verdicts prev))]
+         (let [linked {:status :linked :turn/id prev-id
+                       :sha256 (verdict-digest previous-verdict)}]
+           (:pattern_verdicts
+            (ts/update-record!
+             store id
+             (fn [record]
+               (let [receipt (get-in record [:pattern_verdicts :connection])]
+                 (if (and (= :prev-pending (some-> (:status receipt) keyword))
+                          (= prev-id (:turn/id receipt)))
+                   (assoc-in record [:pattern_verdicts :connection] linked)
+                   record))))))))))
+
+(defn- repair-successor!
+  [store id]
+  (when-let [{successor-id :id} (adjacent-turn store id 1)]
+    (repair-connection! store successor-id)))
+
+(defn- ensure-connection!
+  [store id]
+  (with-session-lock
+    store id
+    #(let [connection (connection-for store id)]
+       (ts/update-record!
+        store id
+        (fn [record]
+          (if (and (map? (:pattern_verdicts record))
+                   (nil? (get-in record [:pattern_verdicts :connection])))
+            (assoc-in record [:pattern_verdicts :connection] connection)
+            record)))
+       (repair-connection! store id)
+       (repair-successor! store id)
+       (:pattern_verdicts (ts/read-record store id)))))
 
 ;; ------------------------------------------------------------- pattern parts
 
@@ -465,7 +585,8 @@
       (if (and (= "operator" (:origin record)) (:pending lu))
         (let [pending {:version 1 :at (str (java.time.Instant/now))
                        :reader "none" :state :lu-proposals-pending
-                       :why "lu proposals pending" :patterns []}]
+                       :why "lu proposals pending" :patterns []
+                       :connection (connection-for store id)}]
           ;; Never clobber a real verdict (a re-fired :aligned on a turn
           ;; read before CL-3); only an absent or pending one is replaced.
           (ts/update-record! store id
@@ -475,7 +596,7 @@
                                       (assoc :pattern_verdicts pending)
                                       (dissoc :ma_listener_failure))
                                   %)))
-          pending)
+          (ensure-connection! store id))
         (when (and record
                  (= "operator" (:origin record))
                  (seq proposed))
@@ -484,12 +605,14 @@
                    (= (set (map :id proposed)) (verdict-pattern-ids existing))
                    (or (not (retryable-verdict? existing))
                        (>= (long (or (:model_attempts existing) 1)) 3)))
-            existing
+            (ensure-connection! store id)
             (let [attempt (if (and (map? existing) (retryable-verdict? existing))
                             (inc (long (or (:model_attempts existing) 1)))
                             1)
                   read-verdict (verdict-map opts store id)
-                  verdicts (cond-> (assoc read-verdict :model_attempts attempt)
+                  verdicts (cond-> (assoc read-verdict
+                                          :model_attempts attempt
+                                          :connection (connection-for store id))
                              (and (retryable-verdict? read-verdict)
                                   (>= attempt 3))
                              (assoc :model_retry_exhausted true))]
@@ -516,7 +639,7 @@
                      ;; is durable. lu-memory remains a field consumer.
                      (when notify! (notify! {:event :pattern-verdicts :id id})))))
                 (when notify! (notify! {:event :pattern-verdicts :id id})))
-              verdicts))))))
+              (ensure-connection! store id)))))))
     (catch Exception e
       (record-listener-failure! store id e)
       nil)))

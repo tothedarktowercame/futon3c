@@ -96,13 +96,76 @@
 (defn- verdicts [store id]
   (:pattern_verdicts (ts/read-record store id)))
 
+(def strand-verdict
+  {:version 1 :at "fixture-at" :reader "fixture"
+   :window [] :model_outcome {:failure_kind nil :batches []}
+   :patterns [{:pattern pid :status "void"}]})
+
+(defn- store-strand-verdict! [store id]
+  (with-redefs-fn {#'futon3c.xiang.ma-occurrence/verdict-map
+                   (fn [& _] strand-verdict)}
+    #(mo/verdict! {:store store :proposal-reader fixture-proposals} id)))
+
+(deftest ma-verdicts-form-a-session-local-durable-strand
+  (let [store (temp-store)]
+    (record! store "turn-first" {:created_at "2026-10-24T00:00:00Z"
+                                  :proposed_patterns [{:patterns [pid]}]})
+    (store-strand-verdict! store "turn-first")
+    (is (= {:status "session-start"}
+           (:connection (verdicts store "turn-first"))))
+
+    (record! store "turn-second" {:created_at "2026-10-24T00:01:00Z"
+                                   :proposed_patterns [{:patterns [pid]}]})
+    (store-strand-verdict! store "turn-second")
+    (is (= {:status "linked" :turn/id "turn-first"
+            :sha256 (mo/verdict-digest (verdicts store "turn-first"))}
+           (:connection (verdicts store "turn-second"))))
+
+    (record! store "turn-other-session" {:session_id "sess-2"
+                                          :created_at "2026-10-24T00:00:30Z"
+                                          :proposed_patterns [{:patterns [pid]}]})
+    (store-strand-verdict! store "turn-other-session")
+    (is (= {:status "session-start"}
+           (:connection (verdicts store "turn-other-session")))
+        "interleaved sessions never cross-link")))
+
+(deftest out-of-order-verdict-is-pending-then-repaired-without-overwriting-links
+  (let [store (temp-store)]
+    (record! store "turn-prev" {:created_at "2026-10-24T00:00:00Z"
+                                 :proposed_patterns [{:patterns [pid]}]})
+    (record! store "turn-next" {:created_at "2026-10-24T00:01:00Z"
+                                 :proposed_patterns [{:patterns [pid]}]})
+    (store-strand-verdict! store "turn-next")
+    (is (= {:status "prev-pending" :turn/id "turn-prev"}
+           (:connection (verdicts store "turn-next"))))
+    (store-strand-verdict! store "turn-prev")
+    (let [linked (:connection (verdicts store "turn-next"))]
+      (is (= "linked" (:status linked)))
+      (is (= "turn-prev" (:turn/id linked)))
+      (is (= (mo/verdict-digest (verdicts store "turn-prev")) (:sha256 linked)))
+      (ts/update-record! store "turn-prev"
+                         #(assoc-in % [:pattern_verdicts :reader] "late replacement"))
+      (mo/repair-connection! store "turn-next")
+      (is (= linked (:connection (verdicts store "turn-next")))
+          "a late repair cannot overwrite an established link"))))
+
+(deftest no-reply-predecessor-is-typed-absent-and-never-skipped
+  (let [store (temp-store)]
+    (record! store "turn-no-reply" {:created_at "2026-10-24T00:00:00Z"
+                                     :reply_text nil})
+    (record! store "turn-after-absence" {:created_at "2026-10-24T00:01:00Z"
+                                          :proposed_patterns [{:patterns [pid]}]})
+    (store-strand-verdict! store "turn-after-absence")
+    (is (= {:status "prev-absent" :turn/id "turn-no-reply" :reason "no-reply"}
+           (:connection (verdicts store "turn-after-absence"))))))
+
 (deftest absent-gcc-proposals-record-a-retryable-pending-outcome
   (let [store (temp-store)]
     (record! store "turn-pending" {:lu_ranked {:ranked [{:id "must/not/fallback" :rank 1}]}})
     (let [out (mo/verdict! {:store store
                             :proposal-reader (fn [& _] {:pending :lu-proposals-pending})}
                            "turn-pending")]
-      (is (= :lu-proposals-pending (:state out)))
+      (is (= "lu-proposals-pending" (:state out)))
       (is (= "lu proposals pending" (:why out)))
       (is (= "lu-proposals-pending" (:state (verdicts store "turn-pending"))))))
   (let [store (temp-store)
@@ -337,7 +400,7 @@
                      (fn [& _] success)}
       #(mo/handle-event opts {:event :aligned :id "turn-later"}))
     (let [record (ts/read-record store "turn-listener-failure")]
-      (is (= success (dissoc (:pattern_verdicts record) :model_attempts)))
+      (is (= success (dissoc (:pattern_verdicts record) :model_attempts :connection)))
       (is (= 1 (get-in record [:pattern_verdicts :model_attempts])))
       (is (nil? (:ma_listener_failure record))))))
 

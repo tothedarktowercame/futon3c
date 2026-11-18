@@ -136,6 +136,7 @@
                                     (:failure_kind batch)
                                     "legacy-unknown"))
                                 (or batches []))
+     :connection (:connection verdict)
      :legitimate-absence-reason absence
      :obligation-met? (or (some? absence)
                           (every? #(= :completed (:status %)) pattern-rows))}))

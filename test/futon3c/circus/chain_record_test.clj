@@ -54,7 +54,8 @@
   {:origin "operator" :reply_text "fixture reply"
    :proposed_patterns [{:patterns ["p-one" "p-two"]}]
    :pattern_verdicts
-   {:model_outcome
+   {:connection {:status :linked :turn/id "turn-before" :sha256 "fixture-sha"}
+    :model_outcome
     {:batches [{:batch 0 :patterns ["p-one" "p-two"]
                 :failure_kind failure-kind}]}
     :patterns (mapv (fn [pattern]
@@ -118,6 +119,8 @@
   (let [reading (chain/ma-reading (ma-turn nil))]
     (is (= ["p-one" "p-two"] (:proposed-pattern-ids reading)))
     (is (every? #(= :completed (:status %)) (:patterns reading)))
+    (is (= {:status :linked :turn/id "turn-before" :sha256 "fixture-sha"}
+           (:connection reading)))
     (is (true? (:obligation-met? reading)))))
 
 (deftest ma-reading-failed-batch-does-not-complete-its-patterns
