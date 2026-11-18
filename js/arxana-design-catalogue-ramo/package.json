@@ -1,0 +1,9 @@
+{
+  "name": "arxana-design-catalogue-ramo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Finite query-result catalogue checks using ramo",
+  "main": "index.js",
+  "scripts": { "test": "node --test test.js" },
+  "dependencies": { "ramo": "0.1.2" }
+}
