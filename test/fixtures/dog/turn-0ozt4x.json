@@ -1,0 +1,112 @@
+{
+ "turn-record": "turn-0ozt4x",
+ "query": "s2 and s3 are good; s1 is plausible, but \ud83c\ude32 (constrain) would probably be better, because \ud83c\ude38 is typically used for informational requests, where is this \"please\" isn't really an ask but a boundary",
+ "response": {
+  "results": [
+   {
+    "score": -98.13090161763328,
+    "entry": {
+     "evidence/body": {
+      "text": "s2 and s3 are good; s1 is plausible, but \ud83c\ude32 (constrain) would probably be better, because \ud83c\ude38 is typically used for informational requests, where is this \"please\" isn't really an ask but a boundary",
+      "text-source": "operator-source-text",
+      "record": "claude-13-turn-35",
+      "agent": "claude-13",
+      "session": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+      "created-at": "2026-11-08T01:18:46Z",
+      "pattern": "ukrns/reader-as-participant"
+     },
+     "evidence/session-id": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+     "evidence/tags": [
+      "lu",
+      "lu/occurrence",
+      "xiang"
+     ],
+     "evidence/at": "2026-11-08T01:18:46Z",
+     "evidence/type": "lu-situation",
+     "evidence/subject": {
+      "ref/type": "pattern",
+      "ref/id": "ukrns/reader-as-participant"
+     },
+     "evidence/author": "lu-memory",
+     "evidence/claim-type": "observation",
+     "evidence/id": "e-lu-1266be63ea77c9945717"
+    }
+   },
+   {
+    "score": -98.05568377162206,
+    "entry": {
+     "evidence/body": {
+      "text": "s2 and s3 are good; s1 is plausible, but \ud83c\ude32 (constrain) would probably be better, because \ud83c\ude38 is typically used for informational requests, where is this \"please\" isn't really an ask but a boundary",
+      "text-source": "operator-source-text",
+      "record": "claude-13-turn-35",
+      "agent": "claude-13",
+      "session": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+      "created-at": "2026-11-08T01:18:46Z",
+      "pattern": "musn/read-aif-plus-one"
+     },
+     "evidence/session-id": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+     "evidence/tags": [
+      "lu",
+      "lu/occurrence",
+      "xiang"
+     ],
+     "evidence/at": "2026-11-08T01:18:46Z",
+     "evidence/type": "lu-situation",
+     "evidence/subject": {
+      "ref/type": "pattern",
+      "ref/id": "musn/read-aif-plus-one"
+     },
+     "evidence/author": "lu-memory",
+     "evidence/claim-type": "observation",
+     "evidence/id": "e-lu-a7dc5a0905991cd5b44e"
+    }
+   },
+   {
+    "score": -97.98058196750037,
+    "entry": {
+     "evidence/body": {
+      "text": "s2 and s3 are good; s1 is plausible, but \ud83c\ude32 (constrain) would probably be better, because \ud83c\ude38 is typically used for informational requests, where is this \"please\" isn't really an ask but a boundary",
+      "text-source": "operator-source-text",
+      "record": "claude-13-turn-35",
+      "agent": "claude-13",
+      "session": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+      "created-at": "2026-11-08T01:18:46Z",
+      "pattern": "pattern-interpretation/cite-the-source-bytes"
+     },
+     "evidence/session-id": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+     "evidence/tags": [
+      "lu",
+      "lu/occurrence",
+      "xiang"
+     ],
+     "evidence/at": "2026-11-08T01:18:46Z",
+     "evidence/type": "lu-situation",
+     "evidence/subject": {
+      "ref/type": "pattern",
+      "ref/id": "pattern-interpretation/cite-the-source-bytes"
+     },
+     "evidence/author": "lu-memory",
+     "evidence/claim-type": "observation",
+     "evidence/id": "e-lu-3bd80c2ed1877e828179"
+    }
+   }
+  ],
+  "ids": [
+   "e-lu-1266be63ea77c9945717",
+   "e-lu-a7dc5a0905991cd5b44e",
+   "e-lu-3bd80c2ed1877e828179"
+  ],
+  "count": 3,
+  "checked": 3,
+  "index-as-of": "2026-11-11T18:26:13Z",
+  "index-basis": {
+   "checkpoint": [
+    "2026-11-11T18:26:13Z",
+    "e-lu-d517cef31b1dcb416a6d"
+   ],
+   "basis-tx": "{:latest-completed-txs {\"xtdb\" [#xt/tx-key {:tx-id 2508308910, :system-time #xt/zdt \"2026-11-11T18:27:45.194973Z[UTC]\"}]}, :latest-submitted-msg-ids {\"xtdb\" [2508308910]}, :latest-processed-msg-ids {\"xtdb\" [2508308910]}}",
+   "basis-captured-at": "2026-11-11T18:31:42.580289069Z"
+  },
+  "ok": true
+ }
+}

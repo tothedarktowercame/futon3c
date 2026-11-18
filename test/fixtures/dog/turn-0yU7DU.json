@@ -1,0 +1,112 @@
+{
+ "turn-record": "turn-0yU7DU",
+ "query": "Sure, please write up a TN-wm-tokens-and-sessionista-terms.md and we'll have that on the record",
+ "response": {
+  "results": [
+   {
+    "score": -37.4750464153646,
+    "entry": {
+     "evidence/body": {
+      "text": "Sure, please write up a TN-wm-tokens-and-sessionista-terms.md and we'll have that on the record",
+      "text-source": "operator-source-text",
+      "record": "claude-13-turn-142",
+      "agent": "claude-13",
+      "session": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+      "created-at": "2026-11-09T17:33:09Z",
+      "pattern": "pattern-interpretation/cite-the-source-bytes"
+     },
+     "evidence/session-id": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+     "evidence/tags": [
+      "lu",
+      "lu/occurrence",
+      "xiang"
+     ],
+     "evidence/at": "2026-11-09T17:33:09Z",
+     "evidence/type": "lu-situation",
+     "evidence/subject": {
+      "ref/type": "pattern",
+      "ref/id": "pattern-interpretation/cite-the-source-bytes"
+     },
+     "evidence/author": "lu-memory",
+     "evidence/claim-type": "observation",
+     "evidence/id": "e-lu-eaeea9515b292ac7d0b4"
+    }
+   },
+   {
+    "score": -37.38676081066038,
+    "entry": {
+     "evidence/body": {
+      "text": "Sure, please write up a TN-wm-tokens-and-sessionista-terms.md and we'll have that on the record",
+      "text-source": "operator-source-text",
+      "record": "claude-13-turn-142",
+      "agent": "claude-13",
+      "session": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+      "created-at": "2026-11-09T17:33:09Z",
+      "pattern": "forward-model/the-forward-model-is-a-pattern-cascade"
+     },
+     "evidence/session-id": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+     "evidence/tags": [
+      "lu",
+      "lu/occurrence",
+      "xiang"
+     ],
+     "evidence/at": "2026-11-09T17:33:09Z",
+     "evidence/type": "lu-situation",
+     "evidence/subject": {
+      "ref/type": "pattern",
+      "ref/id": "forward-model/the-forward-model-is-a-pattern-cascade"
+     },
+     "evidence/author": "lu-memory",
+     "evidence/claim-type": "observation",
+     "evidence/id": "e-lu-6e7f61bed5c4c4cade62"
+    }
+   },
+   {
+    "score": -37.29888946332934,
+    "entry": {
+     "evidence/body": {
+      "text": "Sure, please write up a TN-wm-tokens-and-sessionista-terms.md and we'll have that on the record",
+      "text-source": "operator-source-text",
+      "record": "claude-13-turn-142",
+      "agent": "claude-13",
+      "session": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+      "created-at": "2026-11-09T17:33:09Z",
+      "pattern": "war-room/wr-16-operationalised-exploit-loops-are-first-class-observation-channels"
+     },
+     "evidence/session-id": "ed69fb38-e76d-4009-8bc7-880ea8a99bf8",
+     "evidence/tags": [
+      "lu",
+      "lu/occurrence",
+      "xiang"
+     ],
+     "evidence/at": "2026-11-09T17:33:09Z",
+     "evidence/type": "lu-situation",
+     "evidence/subject": {
+      "ref/type": "pattern",
+      "ref/id": "war-room/wr-16-operationalised-exploit-loops-are-first-class-observation-channels"
+     },
+     "evidence/author": "lu-memory",
+     "evidence/claim-type": "observation",
+     "evidence/id": "e-lu-b5d8850a131cc14c6acc"
+    }
+   }
+  ],
+  "ids": [
+   "e-lu-eaeea9515b292ac7d0b4",
+   "e-lu-6e7f61bed5c4c4cade62",
+   "e-lu-b5d8850a131cc14c6acc"
+  ],
+  "count": 3,
+  "checked": 3,
+  "index-as-of": "2026-11-11T18:26:13Z",
+  "index-basis": {
+   "checkpoint": [
+    "2026-11-11T18:26:13Z",
+    "e-lu-d517cef31b1dcb416a6d"
+   ],
+   "basis-tx": "{:latest-completed-txs {\"xtdb\" [#xt/tx-key {:tx-id 2508308910, :system-time #xt/zdt \"2026-11-11T18:27:45.194973Z[UTC]\"}]}, :latest-submitted-msg-ids {\"xtdb\" [2508308910]}, :latest-processed-msg-ids {\"xtdb\" [2508308910]}}",
+   "basis-captured-at": "2026-11-11T18:31:42.580289069Z"
+  },
+  "ok": true
+ }
+}
