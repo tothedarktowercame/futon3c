@@ -269,3 +269,137 @@ loaded. A live reload would not take effect anyway: Futon1bBackend instances
 already held by the running stores keep their old class's -append, so it needs
 the next Agency restart (Joe's). Next: step 3, ingress waits out a futon1b
 restart instead of answering 503.
+
+## Step 3 survey: ingress during a futon1b restart
+
+2026-11-18. Read-only source survey at master
+`799162e0cd8ae460312a6c49323acfd975cf728c`; line numbers below refer to that
+revision. No live requests, reloads, or outage experiments were made. The
+42–61 second restart duration is supplied operational evidence, not a new
+measurement. The SQLite spool does not make reads succeed, and its successful
+append still means remote persistence. The clock's older local outbox is a
+separate mechanism.
+
+### Shared operations and failure distinctions
+
+For the path table, **I** means caller inheritance in
+`agency/clock_decision.clj:231`: for a registered caller, except surface
+`auto-bellback`, use its session's RAM clock; if absent, `restore!` at :183
+uses `count*` and bounded `query*` (`recovery-rows`, :158). It returns a
+mission/clock and caller decision identity, not a job ID. Unknown callers,
+auto-bellbacks and warm RAM clocks do not require this remote recovery.
+
+**C** means recipient admission in `registry.clj:1248`, before the provider's
+invoke function: `clock-decision/start!` (:647) calls the recording path
+(:563, :584, :640). It restores a cold recipient, gets the stable decision ID
+from the store, replays the clock outbox, appends the admission decision
+through the evidence boundary (including verification), and reads an own-ID
+duplicate if necessary. It updates RAM, and can project a clock lineage graph
+(:625). Thus moving I does not remove C. With a retained recipient RAM clock,
+`record!` can fall back to the **clock outbox** on classified store-down errors;
+without that state it cannot safely invent a clock. Admission emits a waiting
+activity before its first read (:670). The ordinary shared retry pauses are
+2, 5, 10, 20, 30, then nine 60-second waits (607 seconds of sleeps, plus work,
+subject to an enclosing deadline); nested reads share the allowance (:98–156).
+
+| Layer / file:line | Refused connection versus busy response today | Consequence for a restart-specific policy |
+|---|---|---|
+| `evidence/futon1b_backend.clj:226–269`, `raw-get-edn` | Transport exception becomes `:futon1b-unreachable`, with `:timeout` or `:unavailable`; exception retained as cause. HTTP 429/502/503/504 becomes `:futon1b-read-unavailable`, retains `:http/status`; 504 outcome is `:timeout`, the others `:unavailable`. Promise deadline gives `:futon1b-read-timeout`. | This is where information exists to distinguish a refused connection from an HTTP response. Non-timeout transport exceptions are not all necessarily connection refusal. A futon1b permit timeout is visible here as its response/status or request timeout, not a separate Agency permit type. |
+| `agency/clock_decision.clj:56–86`, :109 | All three read codes share `:clock/store-busy` and the retry budget. `store-down?` tests acquired outcome `:unavailable`, **not** specifically the unreachable code or ConnectException: HTTP 429/502/503 can also satisfy it. Busy-write receipts and nested verification errors are included. | Do not treat `:clock/store-down?` as a precise restart detector. Preserve status/cause and tighten that distinction before giving only restarts a different wait. |
+| `transport/http.clj:2364–2378` | I is wrapped in `{:waits [] :timeout-ms 5000}`: one bounded operation, no retry sleeps. Rethrown data has only `:clock/store-busy` and `:dispatch/not-created? true`; original cause retained. | The request-level data loses the down/status distinction. Any ingress policy needs to carry or inspect the cause rather than key solely on the resulting HTTP status. |
+| `transport/http.clj:14083` | Synchronous uncaught not-created clock failures become HTTP 503, `error=clock-store-busy`, `dispatch/not-created?=true`, `Retry-After: 2`. | This handler does **not** cover exceptions caught inside asynchronous route callbacks. A 503 can also mean executor/other ingress refusal. |
+
+### Inbound paths (before creation, before execution, observable failure)
+
+Paths are grouped by their actual execution boundary, not just their URL.
+“Job” below means the invoke ledger, not the separate durable turn queue.
+
+| Inbound path / file:line | Before job creation and before provider execution | Result during refusal; retry owner today |
+|---|---|---|
+| `POST /api/alpha/bell`, `transport/http.clj:6640`, job call :6759 | I before local ledger creation. Then coordination edge recording at :2410 (caught failures, but synchronous call can delay return), async artifact activation :2395, local queue :6814 or inbox delivery. Execution through `run-invoke-job!` :6036/:6158 invokes C. | Cold I: dedicated outer 503, no job. Warm I: job can be accepted (202); C may wait/outbox or later fail the job. Executor rejection has its own 503. No automatic resubmission in this handler. Inbox delivery does not itself launch a provider in this process. |
+| `POST /api/alpha/invoke`, `http.clj:6180`, `build-invoke-response` :5900/:5921 | I, local job, then execution/C. | **Not uniformly 503**: local sync catch :6250 or async executor catch :6234 returns HTTP 500 `invoke-error` if creation throws. After creation, admission/provider failure is a job failure/result. Executor submission failure is 503 `invoke-submit-failed`. |
+| `POST /api/alpha/whistle`, `http.clj:7472/:7520` | Creation/I happens inside executor after channel opens; then queue :7537 and C. | Creation exception caught at :7599: HTTP 500 `whistle-error`, no job; does not reach outer clock-503 handler. An existing job can time out with 504 or finish failed. No clock retry at this route boundary. |
+| Whistle stream, `http.clj:7310/:7347` | I and job creation before channel setup; queued execution subsequently runs C. | Pre-channel I exception can reach outer 503. Later failures are streamed/job results, not an ingress refusal. |
+| Invoke announce/activate, `http.clj:6845/:6905`, :6937/:6986 | Announce does I and persists queued job; activation reuses that identity/inheritance and queues execution/C. | Announce can refuse before creation; activation cannot resolve a missed inheritance by itself. Existing queued identity must not be duplicated on retry. |
+| Emacs `/api/alpha/invoke-stream`, `http.clj:7087`, :7148–7235 | **No invoke-ledger job and no I call.** Sends HTTP 200 `started`, accepts local queue entry :7196 (default queued route), then calls registry/C :7209. Legacy queue-disabled path invokes registry directly. Prompt wrapping also precedes queueing. Terminal invoke evidence is emitted after execution :7158. | Already accept-then-start in this limited sense: admission waits inside turn processor. Registry returns clock error as failed result; stream emits `done`, `ok=false` with error/message. Queue/execution exceptions become terminal error events. No outer 503 after stream starts. |
+| Auto-bellback, `http.clj:1764/:1766/:1798`; completion hook :2745–2759 | Local job creation skips I because surface is `auto-bellback`; coordination edge still attempted. Queued run has C. | No inheritance refusal; recipient cold-start can still wait/fail. Completion marks bellback sent **before** enqueue, catches/logs enqueue exception; that block has no retry and does not undo sent flag. A failed queued processor is not retried automatically. |
+| Work-order notification :1828/:1832, headless park resume :1991/:2018 | Same create-job/I wrapper; usual synthetic caller has no registered clock to inherit. Then local queue and C. Buffer park resume instead writes durable ready inbox and sends WS poke (:2004); buffer later submits a turn. | Headless execution has ordinary job failure. Buffer inbox redelivery is a different mechanism, not a retry of clock inheritance. No restart retry loop in these enqueue functions. |
+| Routed blocker :10982/:10996, disclosure withdrawal :11082/:11094, negation :11470/:11492 | Deterministic job identity with existing-job check, then create-job/I and execution/C. The containing endpoints also do domain evidence operations before routing; these remain separate possible refusals (see existing side-door/append survey). | Route helpers propagate creation failures to their callers; no internal clock retry. Blocker/disclosure handlers have local error responses (including store-failure), so do not promise the dedicated clock 503 for every route. Retrying must retain domain act and job IDs. |
+| Turn queue, `agency/turn_queue.clj:1003`, :817–875 | Local queue persistence, no futon1b read prerequisite of its own. Per-entry processor performs the path's C (and any deferred work). | Waiting processor occupies that agent's single lane. Exception/failed result becomes terminal `:failed` (:858–867), finalizer runs, next entry proceeds; **not** an automatic retry queue for clock failures. |
+| WS coordination, `transport/ws.clj:278–286`; `social/dispatch.clj:238`; `social/coordination_ledger.clj:174–204` | No invoke job. Records coordination edge **before** I (:185), then registry/C; I uses ordinary shared budget rather than ingress's five-second/no-waits wrapper. | Registry error becomes social `invoke-failed` frame. An I exception propagates out of `invoke-with-edge!` (its catch records edge then rethrows); normal message dispatch has no local clock-error frame conversion at :285. Thus no guaranteed dedicated busy frame for that exception. No caller replay schedule here. |
+| Federated WS invoke, `transport/ws.clj:504–529` | Direct registry/C, no create-job/I wrapper. | Returned or caught error carried in `fed-invoke-result`; no HTTP status or automatic replay. |
+| Raw IRC, `transport/irc.clj:341`, :502 | IRC relay forwards to registered WS send functions; it is not itself a registry turn-start. A downstream agent/bridge invoking HTTP or WS uses the respective path above. | Relay timeout/error emits evidence (:513–518); there is no IRC-specific clock inheritance retry here. `/api/alpha/irc/send` :7609 is sending text, not creating a turn. |
+
+Common ancillary operations: `create-invoke-job-ledger!` (`http.clj:2275`)
+is a local durable ledger operation and records the resolved inherited clock;
+artifact activation is submitted asynchronously after it. The coordination
+edge write is caught but can still consume append wait time. Clock graph
+projection is not the authoritative admission record. Handler construction
+also calls clock restore for registered agents (`http.clj:13726`), a boot
+concern distinct from a request to an already-running Agency. This survey
+follows turn-dispatch entry points; arbitrary agent tool work after admission
+is not another ingress gate.
+
+### Caller retries
+
+| Caller / file:line | What is retried, schedule and limit | Restart consequence |
+|---|---|---|
+| `scripts/agency_send.py:254`, :301 | One `urlopen` POST, no retry or Retry-After handling. Payload timeout is invocation timeout, not a retry budget. | 503/500 raises HTTP error; caller must resend. |
+| `scripts/bell-file.sh:73` | Pipes files to agency_send under `set -euo pipefail`; no retry loop. | Inherits sender failure. |
+| `emacs/agent-chat.el:3413`, :3465, :3805 | Local turn queue/send callback; no generic clock-503 resubmission loop. | Queuing text locally does not mean a failed transport is replayed after store recovery. |
+| `emacs/agent-chat.el:4146–4173`, :4305, :4431 | **Evidence outbox only:** status 0/408/429/503/5xx retry. Default poll 15s, request timeout 75s; persisted delay 30,60,120,240 seconds then 240 repeatedly (formula caps exponent at 4). No overall cap on those transport retries. Reply-not-found has separate eight-attempt limit. | The cited :4165 503 retry does not retry bell/invoke or preserve an uncreated job. |
+| `emacs/codex-repl.el:3927/:3933`, :3759/:3851 | invoke-stream; one immediate retry only for `agent-not-found`, after successful re-registration, retry-attempt 0 -> 1. No clock-busy retry or curl retry schedule. | Stream admission error is shown/completed, not automatically resubmitted as a new turn. |
+| Internal auto-bellback `http.clj:2756`; queue :858 | Enqueue exception logged; sent flag already set. Queue failure terminal. | Neither is a bounded restart retry loop. |
+| Clock recording `clock_decision.clj:98/:640`; direct coordination I :191 | Shared 607s sleep schedule described above, deadline bounded where supplied; recording publishes waiting activity. Ingress create-job explicitly overrides with no sleeps. | There is server-side waiting for execution, but not the same wait at cold HTTP inheritance. |
+
+### Is inheritance required to create the job? Options, not a decision
+
+Mechanically **no**: the job ID, prompt and local durable ledger do not require
+futon1b. Semantically the current job records a **resolved dispatch-time
+inheritance** (`http.clj:2336`), and execution reuses that snapshot (:5964,
+:6088), rather than looking up whatever clock the caller has later. Accepting
+first would need a durable unresolved-inheritance state, caller/session and
+causal identity, restart-safe resolution, and a distinction between “resolved
+unclocked” and “not resolved”. Looking up the caller's latest clock at execution
+can inherit a later mission/decision. C must still finish before provider work;
+a failed read must never silently mean “no inherited clock”. Cancellation,
+deduplication, deadlines, queue ownership and terminal failure need explicit
+semantics, particularly for streaming calls and auto-bellback sent flags.
+
+`be20c7d09` is titled “Bound clock-store reads and refuse busy ingress before
+job creation”; its trailers identify codex-11 / claude-11. Its executable
+rationale is in `test/futon3c/agency/clock_busy_ingress_test.clj`: :39 asserts
+one read, 503 and **zero jobs**; :57 asserts recovered inheritance retained and
+one job; :108 prevents a late job after a slow read passes the deadline; :119
+and :140 prevent renewed/nested budgets. Accept-then-wait deliberately changes
+those guarantees/tests, not just a timeout constant. No tests were run for this
+doc-only survey.
+
+| Wait placement | Benefit | Cost / required semantics |
+|---|---|---|
+| Caller retry | Keeps current no-job-on-refusal guarantee and releases server request resources quickly. | Every caller must actually implement retries, honor stable identities, distinguish ambiguous delivery, and show waiting. Current Python and Emacs turn submitters do not. 503 alone is not a precise restart signal. |
+| Server waits before refusing | Can preserve dispatch-time resolution-before-creation and shield simple callers from a 42–61s restart. | Longer request/channel/executor occupancy, bounded shared deadline and cancellation needed; proxy/client timeouts can make delivery ambiguous. Must not allow a late job after deadline. Responses currently differ by route. |
+| Accept queued, then wait | Durable acceptance independent of remote read availability; explicit queued/waiting status is possible. | Requires unresolved inheritance and causal snapshot semantics, restart-safe processors, failure/cancellation policy; waiting blocks that agent's lane unless scheduling changes. Existing turn queue terminalizes failed processors. Must adapt be20c7d09 guarantees, callers and status/timeout expectations. |
+
+No option is selected here.
+
+### Reproduction / xref commands
+
+Run from `/home/joe/code/futon3c` (read-only). These searches located the
+boundaries; `sed -n '<start>,<end>p' FILE` inspected their bodies and catches.
+
+```sh
+git rev-parse HEAD
+git show --no-patch --format=full be20c7d09
+rg -n 'create-invoke-job!|clock-store-busy|Retry-After|enqueue-auto-bellback!' src/futon3c/transport/http.clj
+rg -n 'defn.*build-invoke-response|defn.*handle-|defn.*route-' src/futon3c/transport/http.clj
+rg -n 'dispatch-inheritance|with-store-busy-budget|store-down\?|start!|record-durably!|recovery-rows' src/futon3c/agency/clock_decision.clj
+rg -n 'invoke-with-edge|invoke-agent!' src/futon3c/social/dispatch.clj src/futon3c/social/coordination_ledger.clj src/futon3c/transport/ws.clj src/futon3c/transport/irc.clj
+rg -n 'clock-decision/start!|invoke-agent!' src/futon3c/agency/registry.clj
+rg -n 'defn.*drain|process-fn|catch Throwable' src/futon3c/agency/turn_queue.clj
+rg -n 'retry|Retry|sleep|--retry' scripts/agency_send.py scripts/bell-file.sh emacs/codex-repl.el
+rg -n '503|schedule-retry|retry-seconds|queue-turn|start-turn|send-input' emacs/agent-chat.el
+rg -n 'permit|acquire|futon1b-unreachable|read-unavailable' src/futon3c/evidence/futon1b_backend.clj src/futon3c/agency/clock_decision.clj
+rg -n 'deftest' test/futon3c/agency/clock_busy_ingress_test.clj
+sed -n '1,165p' test/futon3c/agency/clock_busy_ingress_test.clj
+```
