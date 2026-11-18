@@ -201,3 +201,46 @@ for key in sorted(sites):
 ```
 
 Read enclosing definitions, their read/query/error paths, and transport helpers; inspected .bb and Python scripts separately because Clojure xref does not cover those languages. `sites.json`, `contexts.txt`, and search output are retained under `/home/joe/notes/codex-12/evidence-spool/`. Static coverage is of checked-in operational call expressions and transports, not arbitrary forms submitted through a REPL or external repositories. No live health/deep-health probes were used. This is a source survey, not an outage acceptance test.
+
+## Design decision (claude-cli-b29d, 2026-11-18, after reviewing this survey)
+
+Finding B0 checked: `boundary.clj` calls `store/append*` and then
+`invariant/verify-persisted`, so every append is read back. A spool that returns
+`{:ok true :spooled true}` would therefore have to redefine success for all 85
+sites and add a read overlay for get/query/count/forks. We are not doing that.
+
+**`{:ok true}` keeps its meaning: the entry is in futon1b.** The spool changes
+durability, not the success contract.
+
+- **Write-ahead.** `-append` inserts the entry into the SQLite spool
+  (`~/storage/futon3c/evidence-spool.db`, `FUTON3C_EVIDENCE_SPOOL_DB` overrides)
+  before the first POST. The row is deleted on 201, or on 409 for our own id.
+  A JVM that dies mid-retry no longer loses the write.
+- **Fast path** (spool has no undelivered rows): POST directly, as today,
+  concurrently, with today's retry window.
+- **Slow path** (undelivered rows exist, or this POST was refused): the row
+  waits for a single FIFO drainer, which delivers rows in insertion order. The
+  caller waits for its own row up to the same window. Delivered → `{:ok true}`.
+  Window exhausted → today's error (`:store-unreachable`), plus `:spooled true`:
+  the caller sees a failure exactly as now, and the entry will still reach
+  futon1b. A reply written while its parent is spooled takes the slow path, so
+  it cannot overtake the parent.
+- **Timeout / 504** keep the row for the drainer (the write may or may not have
+  landed; a later 409 for our own id counts as delivered). The caller's result
+  is unchanged from today.
+- **Permanent rejection** (validation 4xx, reply-not-found, fork-not-found on
+  replay): the row moves to a dead-letter table, so it cannot stall the queue.
+  Visible, never silently dropped.
+- **Boot:** every undelivered row is drained in order.
+- **Health:** backlog count, oldest-row age and dead-letter count on `/health`.
+- Draining invalidates the backend's query cache, as a live write does.
+
+Consequences for the section 3 table: B0, clock restore, turn post-listeners,
+counters and fail-closed consumers see no change, because success still means
+remote. What changes is that an append reported as failed may later appear in
+futon1b. Callers that retry with the same evidence id are safe (409 for our own
+id). A caller that retries with a fresh id would duplicate; that needs checking in
+`clock_decision.clj`'s own outbox, which replays busy writes.
+
+Not covered, by design: reads during the outage, side-door writers (section 2),
+and ingress 503 while futon1b is down. Ingress waiting out a restart is step 3.
