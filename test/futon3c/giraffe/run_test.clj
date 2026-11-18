@@ -608,6 +608,16 @@
       (spit manifest-file (run-data/canonical-edn (-> m (assoc :files files)
                                                            (dissoc :content-addressed)))))
     (is (= :would-migrate (:status (gr/migrate-cas-run! dir))))
+    (testing "a reconstruction that differs refuses and leaves the run untouched"
+      (let [before (slurp (io/file dir "input.edn"))
+            real run-data/read-run-file]
+        (with-redefs [run-data/read-run-file
+                      (fn [d f] (cond-> (real d f)
+                                  (= "probe" (.getName (io/file d))) (assoc :drift true)))]
+          (is (= :logical-mismatch
+                 (:status (gr/migrate-cas-run! dir {:write? true :root root})))))
+        (is (= before (slurp (io/file dir "input.edn"))))
+        (is (.exists (io/file dir "work-clusters.json")))))
     (is (= :migrated (:status (gr/migrate-cas-run! dir {:write? true :root root}))))
     (is (= input (run-data/read-run-file dir "input.edn")))
     (is (= pass-output (run-data/read-run-file dir "pass.edn")))

@@ -556,12 +556,13 @@
                      pass-text (run-data/canonical-edn (:pass-index indexes))
                      _ (spit (io/file temp-run "input.edn") input-text)
                      _ (spit (io/file temp-run "pass.edn") pass-text)
-                     equal? (and (= (run-data/canonical-edn logical-input)
-                                    (run-data/canonical-edn
-                                     (run-data/read-run-file temp-run "input.edn")))
-                                 (= (run-data/canonical-edn logical-pass)
-                                    (run-data/canonical-edn
-                                     (run-data/read-run-file temp-run "pass.edn"))))
+                     ;; Value equality of the parsed data, not of two
+                     ;; pretty-printed strings: pprint of a multi-MB run took
+                     ;; minutes, so the all-run forecast never finished.
+                     equal? (and (= logical-input
+                                    (run-data/read-run-file temp-run "input.edn"))
+                                 (= logical-pass
+                                    (run-data/read-run-file temp-run "pass.edn")))
                      existing (set (filter #(or (contains? (or known-shas #{}) %)
                                                 (.isFile (run-data/object-file root %)))
                                            (:object-shas indexes)))
@@ -665,10 +666,11 @@
   {:run-id ... :input-sha256 ...} for the first run that verifies
   under verify-run, or nil when none does.  Read-only."
   [root]
-  (->> (io/file root)
-       (file-seq)
+  ;; Top-level run directories only: file-seq walked objects/ (tens of
+  ;; thousands of shared run-data files) on every mint.
+  (->> (or (.listFiles (io/file root)) [])
        (filter #(.isDirectory ^java.io.File %))
-       (remove #(= (io/file root) %))
+       (remove #(= "objects" (.getName ^java.io.File %)))
        (sort-by #(.getName ^java.io.File %) #(compare %2 %1))
        (some (fn [dir]
                (try
