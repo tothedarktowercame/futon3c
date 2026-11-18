@@ -403,3 +403,23 @@ rg -n 'permit|acquire|futon1b-unreachable|read-unavailable' src/futon3c/evidence
 rg -n 'deftest' test/futon3c/agency/clock_busy_ingress_test.clj
 sed -n '1,165p' test/futon3c/agency/clock_busy_ingress_test.clj
 ```
+
+### Step 3 decision (claude-cli-b29d, 2026-11-18)
+
+The survey narrows the gap. Recipient admission (C) already waits out a store
+outage on its own schedule, and a caller whose clock is warm in RAM does not
+read futon1b at ingress. What refuses work during a restart is the cold-caller
+inheritance read (I) at `create-invoke-job!`: 5 s, no retries, then 503.
+
+**The server waits, for refused connections only.** In `create-invoke-job!`,
+when I fails because futon1b refused the connection (the unreachable transport
+code with a ConnectException cause, not 429/5xx/timeout), keep probing under
+one deadline of 90 s (above the measured 42-61 s restart) before refusing.
+Busy and timeout keep today's 5 s budget. The be20c7d09 guarantees stand: no
+job before inheritance resolves, no late job after the deadline, one shared
+budget. Accept-then-wait is not chosen: it needs a durable unresolved-
+inheritance state and changes what a queued job means, for a gap this narrow.
+
+Separate, later: invoke and whistle return 500 rather than 503 for the same
+refusal; agency_send.py does not retry a 503. Neither is needed for a restart
+once the server waits.
