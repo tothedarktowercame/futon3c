@@ -72,3 +72,12 @@
     (is (:error (service/dispatch cfg (assoc request :body {}))))
     (is (:error (service/dispatch cfg (assoc-in request [:body :valid-time] "not-a-time"))))
     (is (= before (count @calls)))))
+
+(deftest stale-index-is-retried-then-reported
+  (let [calls (atom 0)
+        stale (reify futon3c.arxana.store/ArxanaGraphStore
+                (bounded-query! [_ _] (swap! calls inc) {:ok {:status :stale-index}}))]
+    (let [r (futon3c.arxana.catalogue-view/read-catalogue stale "2026-11-18T00:00:00.000Z")]
+      (is (= :inconclusive (:status r)))
+      (is (= :stale-index (:reason r)))
+      (is (= 3 (:attempts r))))))

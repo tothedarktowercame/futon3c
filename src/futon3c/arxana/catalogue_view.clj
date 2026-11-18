@@ -69,7 +69,7 @@
         (sort-by (juxt #(get-in % [:asserted-content :choice/key]) :id)
                  (filter #(typed? % :design/choice) rs)))})))
 
-(defn read-catalogue
+(defn- read-catalogue-once
   "Acquire all five catalogue type sets, each check's run history, and linked
   external references by ID at AT. Any refusal/truncation prevents a partial
   view. Bounded to 200 per query; no pagination or external-byte dereferencing."
@@ -116,3 +116,16 @@
                    (if (:catalogue/refusal detail)
                      (dissoc detail :catalogue/refusal)
                      {:message (.getMessage e)}))))))))
+
+(defn read-catalogue
+  "As read-catalogue-once, retried up to three times when the only refusal is
+  :stale-index. The sidecar lags briefly while other writers append; a stale
+  answer is transient by definition, and a view of about twenty queries met it
+  on most live reads (2026-11-18). Any other refusal or truncation is returned
+  at once. When retried, the count is reported in :attempts."
+  [graph-store at]
+  (loop [n 1]
+    (let [r (read-catalogue-once graph-store at)]
+      (if (and (= :inconclusive (:status r)) (= :stale-index (:reason r)) (< n 3))
+        (do (Thread/sleep 500) (recur (inc n)))
+        (if (> n 1) (assoc r :attempts n) r)))))
