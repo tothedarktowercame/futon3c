@@ -1,0 +1,10 @@
+{:view :cascade/benefit-filings
+ :reads [{:read :benefit-list :feature :records-by-type :use :implemented}
+         {:read :reverse-serving-and-names :feature :dependence :use :implemented}
+         {:read :as-of-record-hydration :feature :dependence :use :implemented}
+         {:read :source-evidence :feature :attestations :use :implemented}
+         {:read :benefit-operation :feature :cascade/benefit-filings :use :implemented}
+         {:read :inventory-counts :feature :type-census :use :planned}
+         {:read :benefit-code-search :feature :records-by-field :use :planned}
+         {:read :joined-filing-cross-check :feature :edge-join :use :planned}
+         {:read :feature-documentation :feature :catalogue/view :use :planned}]}

@@ -9,6 +9,7 @@
   callers and answers :unsupported for increment-6 operations."
   (:require [futon3c.arxana.artifact :as artifact]
             [futon3c.arxana.catalogue-view :as catalogue-view]
+            [futon3c.arxana.benefit-filings :as benefit-filings]
             [futon3c.arxana.codedocs-view :as codedocs-view]
             [futon3c.arxana.compile.compiler :as compiler]
             [futon3c.arxana.correspond :as corr]
@@ -365,6 +366,9 @@
                                         :body read-body}))]
              (env/response ok (with-semantic-digest op
                                 (f6/argument-view read! (:argument/id body)))))
+
+           (= op :cascade/benefit-filings)
+           (env/response ok (with-semantic-digest op (benefit-filings/read-filings graph-store body)))
 
            (= op :catalogue/view)
            (if-not (catalogue-view/valid-time? (:valid-time body))
