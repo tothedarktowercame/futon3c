@@ -159,6 +159,10 @@
     :projection [:operation :result/status :support/id :supersession/id
                  :created? :current/support-id]}
 
+   :incubator/proposals
+   {:schema-version 1 :required #{} :allowed #{}
+    :projection [:operation :status :authority :stored? [:slots] [:segments] [:placements] [:acts] [:claims] [:relations] [:challenges] :reason]}
+
    :draft/edition
    {:schema-version 1 :required #{} :allowed #{}
     :projection [:operation :status :authority :stored? [:segments] :reason]}

@@ -12,6 +12,7 @@
             [futon3c.arxana.demo-b-tracker :as demo-b-tracker]
             [futon3c.arxana.benefit-filings :as benefit-filings]
             [futon3c.arxana.draft-edition :as draft-edition]
+            [futon3c.arxana.incubator-slots :as slots]
             [futon3c.arxana.codedocs-view :as codedocs-view]
             [futon3c.arxana.compile.compiler :as compiler]
             [futon3c.arxana.correspond :as corr]
@@ -368,6 +369,10 @@
                                         :body read-body}))]
              (env/response ok (with-semantic-digest op
                                 (f6/argument-view read! (:argument/id body)))))
+
+           (= op :incubator/proposals)
+           (env/response ok (with-semantic-digest op
+                             (slots/read-proposals (or (:incubator cfg) (slots/default-config)))))
 
            (= op :draft/edition)
            (env/response ok (with-semantic-digest op
