@@ -196,6 +196,11 @@
             :prev_operator_turn_id (:prev_operator_turn_id turn)
             :next_operator_turn_id (:next_operator_turn_id turn)}
      :ma-connection (get-in turn [:pattern_verdicts :connection])
+     ;; Route consumers derive the compact strand view from the same durable
+     ;; turn read as the GCC.  Keeping these source fields here avoids a
+     ;; second turn-store read on the request path.
+     :pattern-verdicts (:pattern_verdicts turn)
+     :still-open (get-in turn [:ports :still_open])
      :gcc gcc
      :items items
      :item-links links

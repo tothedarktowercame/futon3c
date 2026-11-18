@@ -171,7 +171,53 @@
                          (assoc :reason (:reason reading)))])
              gcc)))
 
-(defn- turn-edges [{:keys [turn gcc item-links]}]
+(def ^:private ma-parts [:I1 :I2 :G :B])
+
+(defn- mapped-part [part]
+  (when (and (map? part) (some? (:element part)) (some? (:turn part)))
+    part))
+
+(defn- ma-thread [row]
+  (let [parts (into {}
+                    (keep (fn [part]
+                            ;; Prefer the chain reading when both windows map
+                            ;; the same role: that is the longer-reach strand.
+                            (when-let [[window reading]
+                                       (or (when-let [v (mapped-part (get-in row [:chain part]))]
+                                             [:chain v])
+                                           (when-let [v (mapped-part (get-in row [:turn part]))]
+                                             [:turn v]))]
+                              [part {:window window :from (:turn reading)}])))
+                    ma-parts)]
+    (when (and (contains? #{:partial :occurrence "partial" "occurrence"}
+                          (:status row))
+               (seq parts))
+      {:pattern (:pattern row) :status (:status row) :parts parts})))
+
+(defn- ma-projection [verdict]
+  (let [rows (vec (:patterns verdict))]
+    {:status (or (:state verdict) :read)
+     :window (vec (:window verdict))
+     :threads (into [] (keep ma-thread) rows)
+     :void-count (count (filter #(contains? #{:void "void"} (:status %)) rows))}))
+
+(defn- ma-quote-edges [turn-id verdict]
+  (->> (:patterns verdict)
+       (mapcat (fn [row]
+                 (for [window [:turn :chain]
+                       part ma-parts
+                       :let [reading (mapped-part (get-in row [window part]))
+                             from (:turn reading)]
+                       :when (and reading (not= (str turn-id) (str from)))]
+                   {:from turn-id :to from :kind :quotes
+                    :pattern (:pattern row) :part part})))
+       distinct
+       vec))
+
+(defn- open-acts [rows]
+  (mapv #(select-keys % [:act :author :kind]) (or rows [])))
+
+(defn- turn-edges [{:keys [turn gcc item-links pattern-verdicts]}]
   (let [id (:id turn)
         prev (:prev_operator_turn_id turn)]
     (vec
@@ -181,8 +227,10 @@
              {:from id :to item-id :kind kind}) item-links)
       (map (fn [pattern-id] {:from id :to pattern-id :kind :proposed})
            (get-in gcc [:驴 :clusion-ids]))
-      (map (fn [pattern-id] {:from id :to pattern-id :kind :occurs})
-           (get-in gcc [:馬 :clusion-ids]))))))
+      (map (fn [{:keys [pattern status]}]
+             {:from id :to pattern :kind status})
+           (:threads (ma-projection pattern-verdicts)))
+      (ma-quote-edges id pattern-verdicts)))))
 
 (defn- compute-turn [cfg turn-id]
   (let [gcc-fn (or (:turn-gcc-fn cfg) chain/turn-gcc)
@@ -194,6 +242,8 @@
      :prev_operator_turn_id (get-in light [:turn :prev_operator_turn_id])
      :next_operator_turn_id (get-in light [:turn :next_operator_turn_id])
      :ma_connection (:ma-connection light)
+     :ma (ma-projection (:pattern-verdicts light))
+     :open_acts (open-acts (:still-open light))
      :gcc (gcc-counts (:gcc light))
      :items (:items light)
      :item_absence (:item-absence light)

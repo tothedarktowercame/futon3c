@@ -164,6 +164,24 @@
                                    {:status :session-start}
                                    {:status :linked :turn/id (get prev turn-id)
                                     :sha256 (str "sha-" (get prev turn-id))})
+                  :pattern-verdicts
+                  {:window ["turn-one" turn-id]
+                   :patterns
+                   (if (= turn-id "turn-four")
+                     [{:pattern "pattern-void" :status :void
+                       :turn {:I1 {:why "model/budget"}}
+                       :chain {:I1 {:why "model/budget"}}}
+                      {:pattern "pattern-partial" :status :partial
+                       :turn {:I1 {:element "intent" :turn turn-id}}
+                       :chain {:G {:element "gap" :turn "turn-one"}}}
+                      {:pattern "pattern-occurrence" :status :occurrence
+                       :turn {:B {:element "bridge" :turn "turn-three"}}
+                       :chain {}}]
+                     [])}
+                  :still-open (when (= turn-id "turn-four")
+                                [{:act "act-one" :author "operator"
+                                  :kind "ask-action" :text "not exposed"
+                                  :since "turn-one"}])
                   :gcc {:驴 {:status :present :clusion-ids [(str "proposal-" turn-id)]}
                         :馬 {:status :absent :reason :no-clusions}
                         :狗 {:status :absent :reason :no-clusions}}
@@ -191,6 +209,34 @@
            (get-in limited [:body "turns" 0 "gcc" "馬"])))
     (is (some #(= "strand" (get % "kind")) (get-in limited [:body "edges"])))
     (is (some #(= "proposed" (get % "kind")) (get-in limited [:body "edges"])))))
+
+(deftest strand-projects-ma-threads-quotes-and-open-acts
+  (let [{:keys [cfg]} (strand-fixture)
+        response (routes/strand-response cfg {"session" "session-one" "n" "1"})
+        turn (get-in response [:body "turns" 0])
+        edges (get-in response [:body "edges"])]
+    (is (= "read" (get-in turn ["ma" "status"])))
+    (is (= 1 (get-in turn ["ma" "void-count"])))
+    (is (= #{"pattern-partial" "pattern-occurrence"}
+           (set (map #(get % "pattern") (get-in turn ["ma" "threads"])))))
+    (is (= {"window" "chain" "from" "turn-one"}
+           (get-in turn ["ma" "threads" 0 "parts" "G"])))
+    (is (= [{"act" "act-one" "author" "operator" "kind" "ask-action"}]
+           (get turn "open_acts")))
+    (is (some #(= {"from" "turn-four" "to" "turn-one" "kind" "quotes"
+                   "pattern" "pattern-partial" "part" "G"}
+                 %)
+              edges))
+    (is (some #(= {"from" "turn-four" "to" "turn-three" "kind" "quotes"
+                   "pattern" "pattern-occurrence" "part" "B"}
+                 %)
+              edges))
+    (is (not-any? #(and (= "quotes" (get % "kind"))
+                        (= "turn-four" (get % "to")))
+                  edges))
+    (is (some #(= "partial" (get % "kind")) edges))
+    (is (some #(= "occurrence" (get % "kind")) edges))
+    (is (not-any? #(= "pattern-void" (get % "to")) edges))))
 
 (deftest stable-cached-turn-is-requeried-only-after-event
   (let [{:keys [cfg calls]} (strand-fixture)
