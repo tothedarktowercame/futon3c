@@ -249,20 +249,40 @@
      :item_absence (:item-absence light)
      :edges (turn-edges light)}))
 
+(defn- unavailable-turn
+  "One turn the graph cannot answer for now (futon1b's index lagging,
+  :stale-index, seen live 2026-11-18 during a backfill) is a typed row that
+  keeps the walk going, not a failed strand or herd response."
+  [cfg turn-id e]
+  (let [d (ex-data e)
+        record (turns/read-record (:turn-store cfg) turn-id)]
+    (when-not record (throw e))
+    {:id turn-id :created_at (:created_at record)
+     :prev_operator_turn_id (:prev_operator_turn_id record)
+     :next_operator_turn_id (:next_operator_turn_id record)
+     :unavailable (or (get-in d [:answer :ok :status]) (:reason d) :graph-read-failed)
+     :edges (if-let [p (:prev_operator_turn_id record)]
+              [{:from turn-id :to p :kind :strand}]
+              [])}))
+
 (defn- cached-turn [cfg turn-id force?]
   (let [cache (or (:strand-cache cfg) default-strand-cache)
         dirty-version (get @(:dirty cache) turn-id)
         dirty? (some? dirty-version)]
     (if (and (not force?) (not dirty?) (contains? @(:entries cache) turn-id))
       (get @(:entries cache) turn-id)
-      (let [result (compute-turn cfg turn-id)]
-        (swap! (:entries cache) assoc turn-id result)
-        ;; Do not consume an event that arrived while the projection ran.
-        (swap! (:dirty cache)
-               (fn [dirty]
-                 (if (= dirty-version (get dirty turn-id))
-                   (dissoc dirty turn-id)
-                   dirty)))
+      (let [result (try (compute-turn cfg turn-id)
+                        (catch clojure.lang.ExceptionInfo e
+                          (unavailable-turn cfg turn-id e)))]
+        ;; A typed unavailable row is not cached: the next poll retries it.
+        (when-not (:unavailable result)
+          (swap! (:entries cache) assoc turn-id result)
+          ;; Do not consume an event that arrived while the projection ran.
+          (swap! (:dirty cache)
+                 (fn [dirty]
+                   (if (= dirty-version (get dirty turn-id))
+                     (dissoc dirty turn-id)
+                     dirty))))
         result))))
 
 (defn- parse-n [s]

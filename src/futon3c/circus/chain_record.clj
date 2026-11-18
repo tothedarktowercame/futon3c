@@ -31,7 +31,14 @@
   (with-out-str (pp/pprint (sorted-value x))))
 
 (defn- query! [cfg query]
-  (let [answer ((or (:query-fn cfg) store/bounded-query!) (:graph-store cfg) query)
+  ;; A lagging index answers :stale-index; retry briefly before refusing
+  ;; (same bound as operator_focus graph-query!, b4e2be3ef).
+  (let [run #((or (:query-fn cfg) store/bounded-query!) (:graph-store cfg) query)
+        answer (loop [tries 0]
+                 (let [a (run)]
+                   (if (and (= :stale-index (get-in a [:ok :status])) (< tries 3))
+                     (do (Thread/sleep 50) (recur (inc tries)))
+                     a)))
         value (:ok answer)]
     (when-not (and (= :ok (:status value)) (not (:truncated? value)))
       (throw (ex-info "Chain graph query refused" {:query query :answer answer})))

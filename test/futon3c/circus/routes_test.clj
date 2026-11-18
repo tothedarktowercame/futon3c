@@ -7,7 +7,8 @@
             [futon3c.circus.chain-certificate :as certificate]
             [futon3c.circus.chain-record :as chain]
             [futon3c.circus.routes :as routes]
-            [futon3c.giraffe.run :as giraffe]))
+            [futon3c.giraffe.run :as giraffe]
+            [futon3c.xiang.turn-store :as turn-store]))
 
 (defn- temp-dir [tag]
   (.toFile (java.nio.file.Files/createTempDirectory
@@ -265,3 +266,28 @@
     (is (= {"status" "error" "reason" "session-not-found"
             "session" "missing"}
            (:body response)))))
+
+(deftest a-lagging-graph-turn-is-a-typed-uncached-row-not-a-failed-strand
+  ;; 2026-11-18: one :stale-index answer made /circus/herd return 503.
+  (let [{:keys [cfg calls]} (strand-fixture)
+        lagging (atom true)
+        real-gcc (:turn-gcc-fn cfg)
+        cfg (assoc cfg :turn-gcc-fn
+                   (fn [{:keys [turn-id] :as opts}]
+                     (if (and @lagging (= turn-id "turn-two"))
+                       (throw (ex-info "Chain graph query refused"
+                                       {:answer {:ok {:status :stale-index}}}))
+                       (real-gcc opts))))
+        params {"session" "session-one" "n" "4"}]
+    (with-redefs [turn-store/read-record
+                  (fn [_ id] {:created_at (str "at-" id)
+                              :prev_operator_turn_id ({"turn-two" "turn-one"} id)})]
+      (let [r (routes/strand-response cfg params)
+            two (some #(when (= "turn-two" (get % "id")) %) (get-in r [:body "turns"]))]
+        (is (= 200 (:status r)))
+        (is (= ["turn-four" "turn-three" "turn-two" "turn-one"]
+               (mapv #(get % "id") (get-in r [:body "turns"]))) "the walk continues past it")
+        (is (= "stale-index" (get two "unavailable"))))
+      (reset! lagging false)
+      (routes/strand-response cfg params)
+      (is (= 1 (get @calls "turn-two")) "not cached while unavailable; read once it answers"))))
