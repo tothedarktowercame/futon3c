@@ -7,6 +7,7 @@
 
 (def failure-kinds
   #{"model/quota" "model/timeout" "model/http" "model/parse"
+    "model/budget" "model/empty-response" "model/truncated-reply"
     "model/error" "model/no-reader" "model/unparsed-reply"})
 
 (def ^:dynamic *whistle-url* "http://127.0.0.1:7070/api/alpha/whistle")
@@ -17,7 +18,9 @@
    {:failure_kind (if (contains? failure-kinds kind) kind "model/error")})
   ([kind http-status error]
    {:failure_kind (if (contains? failure-kinds kind) kind "model/error")
-    :http_status http-status :error error}))
+    :http_status http-status :error error})
+  ([kind http-status error details]
+   (merge (model-failure kind http-status error) details)))
 
 (defn ask
   "Ask one Agency whistle. Returns its response string or a typed failure map."
@@ -57,14 +60,20 @@
           (let [typed (some-> (or (:failure-kind body) (:failure_kind body)) str
                               (str/replace-first #"^:" ""))
                 error (some-> (or (:error body) (:message body)) str)
+                error-data (or (:error-data body) (:error_data body))
                 kind (cond
+                       (contains? #{"model/budget" "model/empty-response"} typed) typed
                        (= typed "provider/quota") "model/quota"
                        (contains? #{"timeout" "provider/timeout"} typed) "model/timeout"
                        (= "timeout" error) "model/timeout"
                        ;; Whistle currently exposes provider quota only as prose.
                        (re-find #"(?i)quota|rate[ ._-]?limit|HTTP 429" (or error "")) "model/quota"
                        :else "model/http")]
-            (model-failure kind status error)))))
+            (model-failure kind status error
+                           (when (map? error-data)
+                             {:diagnostics (select-keys error-data
+                                                        [:http_status :stop_reason :content_block_types
+                                                         :usage :bound-usd :max-usd])}))))))
     (catch SocketTimeoutException e
       (model-failure "model/timeout" nil (.getMessage e)))
     (catch Throwable e

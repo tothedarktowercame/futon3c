@@ -45,6 +45,7 @@
         result (invoke "a request" nil)]
     (is (nil? (:result result)))
     (is (= "Claude Platform request exceeds per-call budget" (:error result)))
+    (is (= "model/budget" (:failure-kind result)))
     (is (false? @called?))))
 
 (deftest the-shared-monthly-ledger-stops-a-new-constructor-before-network-access
@@ -68,11 +69,20 @@
                                           (make-array FileAttribute 0)))
         invoke (platform/make-invoke-fn
                 {:key-file key :ledger ledger :max-usd 1.0
-                 :call-fn (constantly {:text "" :usage {:input_tokens 1
-                                                          :output_tokens 0}})})
+                 :call-fn (constantly {:text "" :http-status 200
+                                       :stop-reason "max_tokens"
+                                       :content-block-types ["thinking"]
+                                       :usage {:input_tokens 1 :output_tokens 0}})})
         result (invoke "x" nil)]
     (is (nil? (:result result)))
     (is (= "Claude Platform response contained no text" (:error result)))
+    (is (= "model/empty-response" (:failure-kind result)))
+    (is (= {:failure-kind "model/empty-response"
+            :http_status 200
+            :stop_reason "max_tokens"
+            :content_block_types ["thinking"]
+            :usage {:input_tokens 1 :output_tokens 0}}
+           (:error-data result)))
     (is (= "" (slurp ledger)))))
 
 (deftest an-exposed-key-file-is-refused

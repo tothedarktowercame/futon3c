@@ -267,11 +267,12 @@
     (let [v (verdicts store "turn-new")]
       (is (map? v) "the record is still written")
       (is (= "none" (:reader v)))
-      (is (= {:failure_kind "model/no-reader"} (:model_outcome v)))
+      (is (= "model/no-reader" (get-in v [:model_outcome :failure_kind])))
+      (is (= 1 (count (get-in v [:model_outcome :batches]))))
       (is (= "no reader" (get-in v [:patterns 0 :chain :I1 :why])))
       (is (= 0 (get-in v [:patterns 0 :chain_mapped])))
       (is (= "void" (get-in v [:patterns 0 :status])))
-      (is (= ["turn-old1" "turn-old2" "turn-old3" "turn-old4" "turn-new"] (:window v))
+      (is (= ["turn-old2" "turn-old3" "turn-old4" "turn-new"] (:window v))
           "the stored window is the chain, oldest first"))
     ))
 
@@ -285,7 +286,7 @@
                  "turn-new")
     (let [v (verdicts store "turn-new")]
       (is (= {:failure_kind "model/quota" :http_status 429 :error "invented quota"}
-             (:model_outcome v)))
+             (select-keys (:model_outcome v) [:failure_kind :http_status :error])))
       (is (= "model/quota" (get-in v [:patterns 0 :chain :I1 :why])))
       (is (= "void" (get-in v [:patterns 0 :status]))))))
 
@@ -297,7 +298,8 @@
                   :ask (fn [_] (throw (ex-info "invented whistle failure" {})))}
                  "turn-throw")
     (is (= {:failure_kind "model/error" :http_status nil :error "invented whistle failure"}
-           (:model_outcome (verdicts store "turn-throw"))))))
+           (select-keys (:model_outcome (verdicts store "turn-throw"))
+                        [:failure_kind :http_status :error])))))
 
 (deftest unexpected-listener-exception-stores-a-retry-receipt
   (let [store (temp-store)]
@@ -372,6 +374,76 @@
       (mo/verdict! {:store store :library (temp-library)
                     :proposal-reader fixture-proposals :ask ask} id)
       (is (= kind (get-in (verdicts store id) [:model_outcome :failure_kind]))))))
+
+(deftest truncated-array-has-its-own-outcome
+  ;; Planted check: changing reply-result to classify this as ordinary
+  ;; model/unparsed-reply makes this fail.
+  (let [store (base-records (temp-store))]
+    (record! store "turn-truncated"
+             {:created_at "2026-10-24T00:05:00Z"
+              :proposed_patterns [{:patterns [pid]}]})
+    (mo/verdict! {:store store :library (temp-library)
+                  :proposal-reader fixture-proposals
+                  :ask (constantly "[{\"pattern\":\"unfinished\"")}
+                 "turn-truncated")
+    (is (= "model/truncated-reply"
+           (get-in (verdicts store "turn-truncated")
+                   [:model_outcome :failure_kind])))))
+
+(deftest nine-patterns-are-three-independent-batches
+  ;; Planted check: restoring a batch size of 9 reduces calls to one and fails.
+  (let [store (base-records (temp-store))
+        ids (mapv #(str "p" %) (range 9))
+        calls (atom [])
+        ask (fn [{:keys [prompt]}]
+              (let [batch (mapv second (re-seq #"(?m)^\[(p\d+)\]$" prompt))]
+                (swap! calls conj batch)
+                (ask-reply (mapv (fn [id]
+                                   {:pattern id
+                                    :turn {:I1 {:element nil :why "invented void"}}
+                                    :chain {:I1 {:element nil :why "invented void"}}})
+                                 batch))))]
+    (record! store "turn-nine"
+             {:created_at "2026-10-24T00:05:00Z"
+              :proposed_patterns [{:patterns (subvec ids 0 3)}]
+              :m40_ranked {:ranked (mapv #(hash-map :id %) (subvec ids 3 6))}
+              :lu_ranked {:ranked (mapv #(hash-map :id %) (subvec ids 6 9))}})
+    (with-redefs [mo/read-pattern (fn [_ id] {:id id :sha256 "fixture" :parts {}})]
+      (mo/verdict! {:store store :proposal-reader fixture-proposals :ask ask}
+                   "turn-nine"))
+    (is (= [3 3 3] (mapv count @calls)))
+    (is (= ids (mapv :pattern (:patterns (verdicts store "turn-nine")))))
+    (is (= 3 (count (get-in (verdicts store "turn-nine")
+                            [:model_outcome :batches]))))))
+
+(deftest one-failed-batch-voids-only-that-batch
+  (let [store (base-records (temp-store))
+        ids (mapv #(str "p" %) (range 7))
+        call (atom 0)
+        ask (fn [{:keys [prompt]}]
+              (let [n (swap! call inc)
+                    batch (mapv second (re-seq #"(?m)^\[(p\d+)\]$" prompt))]
+                (if (= n 2)
+                  {:failure_kind "model/budget" :error "invented budget"}
+                  (ask-reply (mapv (fn [id]
+                                     {:pattern id :turn {} :chain {}})
+                                   batch)))))]
+    (record! store "turn-partial-batch"
+             {:created_at "2026-10-24T00:05:00Z"
+              :proposed_patterns [{:patterns (subvec ids 0 3)}]
+              :m40_ranked {:ranked (mapv #(hash-map :id %) (subvec ids 3 6))}
+              :lu_ranked {:ranked (mapv #(hash-map :id %) (subvec ids 6 7))}})
+    (with-redefs [mo/read-pattern (fn [_ id] {:id id :sha256 "fixture" :parts {}})]
+      (mo/verdict! {:store store :proposal-reader fixture-proposals :ask ask}
+                   "turn-partial-batch"))
+    (let [v (verdicts store "turn-partial-batch")
+          by-id (into {} (map (juxt :pattern identity)) (:patterns v))]
+      (is (= 3 @call))
+      (is (= "model/budget" (get-in v [:model_outcome :failure_kind])))
+      (is (= ["model/budget" "model/budget" "model/budget"]
+             (mapv #(get-in by-id [% :chain :I1 :why]) (subvec ids 3 6))))
+      (is (= "map-missing" (get-in by-id ["p0" :chain :I1 :why])))
+      (is (= "map-missing" (get-in by-id ["p6" :chain :I1 :why]))))))
 
 (deftest retryable-quota-is-replaced-by-success-on-the-next-aligned-event
   (let [store (base-records (temp-store))

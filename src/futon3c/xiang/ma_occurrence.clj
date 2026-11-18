@@ -3,7 +3,8 @@
 
   For one operator turn record, each pattern in its :proposed_patterns is
   mapped part by part (IF=I1, HOWEVER=I2, BECAUSE=G, THEN=B,
-  CASCADE-SPEC-v3 §2) by one bounded whistle to 馬-sonnet, in two windows:
+  CASCADE-SPEC-v3 §2) by bounded batches of at most three patterns to
+  馬-sonnet, in two windows:
   the proposal turn alone, and the chain of turns (this record plus up to
   n-1 earlier operator records of the session).  A map stands only when its
   quote occurs verbatim in the named record's source_text (who=operator) or
@@ -42,7 +43,11 @@
   {:seat "馬-sonnet"
    :ask nil
    :timeout-ms 120000
-   :window-n 8})
+   :window-n 4})
+
+(def batch-size
+  "Maximum patterns in one occurrence-reader call."
+  3)
 
 (def pattern-library
   "Root of the .flexiarg pattern library (scripts/occurrence_square.py's LIB)."
@@ -70,7 +75,7 @@
   "The record plus up to N-1 earlier operator-origin records of the same
   session, oldest first, ending at the record: [{:id :record}].  Records
   of any other origin (session-end \"system\", bell \"agent\") are excluded,
-  as are records of other sessions.  Pure over the store.  Default N is 8."
+  as are records of other sessions.  Pure over the store.  Default N is 4."
   ([store record-id] (chain-window store record-id (:window-n defaults)))
   ([store record-id n]
    (when-let [record (and (ts/record-id? record-id) (ts/read-record store record-id))]
@@ -266,49 +271,33 @@
         :else "void"))
 
 (defn- prompt-for
-  "The whistle prompt: the packet wording of the 2026-10-24 experiment over
-  the computed window and patterns."
+  "Compact whistle prompt. Turn texts remain byte-for-byte present because
+  returned evidence quotes are checked against those exact strings."
   [window record-id patterns]
   (str
-   "From claude-11 to 馬-sonnet. A bounded reading task. You write one JSON reply; nothing else.\n\n"
-   "Rule (CASCADE-SPEC-v3 §2): an occurrence of a pattern maps each of its four parts "
-   "(IF -> I1, HOWEVER -> I2, THEN -> B, BECAUSE -> G) to one situation element, meaning "
-   "something the turns actually contain that the part's text names. A part with no such "
-   "element is void. The test is strict: the element must be what the part describes, not "
-   "merely something on the same topic.\n\n"
-   "The turns below are the chain window, oldest first; the proposal turn is \""
-   record-id "\".\n\n"
-   "Turns:\n"
-   (str/join "\n\n"
+   "JSON only. Map IF=I1, HOWEVER=I2, BECAUSE=G, THEN=B to elements actually "
+   "named by the turns; topic similarity is insufficient. proposal=" record-id "\nTURNS\n"
+   (str/join "\n"
              (for [{id :id r :record} window]
-               (format "--- turn %s (%s)\noperator:\n%s\n\nreply:\n%s"
+               (format "[%s %s]\nO:%s\nR:%s"
                        id (str (or (:created_at r) ""))
                        (str (or (:source_text r) ""))
                        (str (or (:reply_text r) "")))))
-   "\n\nProposed patterns, with each pattern's four parts:\n"
-   (str/join "\n\n"
+   "\nPATTERNS\n"
+   (str/join "\n"
              (for [p patterns]
-               (format "--- pattern %s\nIF: %s\nHOWEVER: %s\nTHEN: %s\nBECAUSE: %s"
+               (format "[%s]\nI1:%s\nI2:%s\nB:%s\nG:%s"
                        (:id p)
                        (str/replace (or (get (:parts p) "IF") "MISSING") #"\s+" " ")
                        (str/replace (or (get (:parts p) "HOWEVER") "MISSING") #"\s+" " ")
                        (str/replace (or (get (:parts p) "THEN") "MISSING") #"\s+" " ")
                        (str/replace (or (get (:parts p) "BECAUSE") "MISSING") #"\s+" " "))))
-   "\n\nFor every pattern above, produce two readings:\n"
-   "- \"turn\": map each part using only the proposal turn (its operator text and its reply).\n"
-   "- \"chain\": map each part using any turn in the window, earlier or later.\n\n"
-   "For every map that is not void, give:\n"
-   "- \"element\": a short name you choose for the situation element;\n"
-   "- \"turn\": the turn id where it is found (the proposal turn's id for the turn window);\n"
-   "- \"quote\": a verbatim excerpt from that turn's operator or reply text, at least 5 words, "
-   "copied exactly (it will be checked by string match);\n"
-   "- \"who\": \"operator\" or \"reply\".\n\n"
-   "For a void, give \"element\": null and a one-line \"why\".\n\n"
-   "Reply with strict JSON only, an array with one object per pattern:\n"
+   "\nFor each pattern return turn (proposal only) and chain (any listed turn). "
+   "Each non-null role needs element, turn, an exact >=5-word quote, and who "
+   "(operator|reply). Null roles need element:null and why. Schema:\n"
    "[{\"pattern\": \"family/name\",\n"
    "  \"turn\":  {\"I1\": {..}, \"I2\": {..}, \"G\": {..}, \"B\": {..}},\n"
-   "  \"chain\": {\"I1\": {..}, \"I2\": {..}, \"G\": {..}, \"B\": {..}}}]\n"
-   "Do not summarise or judge the work in the turns. Only map the parts."))
+   "  \"chain\": {\"I1\": {..}, \"I2\": {..}, \"G\": {..}, \"B\": {..}}}]"))
 
 (defn- no-reader-pattern [sources shown p why]
   (let [void {:element nil :why why}]
@@ -318,6 +307,36 @@
      :turn {:I1 void :I2 void :G void :B void}
      :chain {:I1 void :I2 void :G void :B void}
      :turn_mapped 0 :chain_mapped 0 :status "void"}))
+
+(defn- reply-result
+  "Parse one batch reply, distinguishing a cut-off JSON array from other
+  malformed output."
+  [reply]
+  (let [s (str reply)
+        lo (.indexOf ^String s "[")
+        hi (.lastIndexOf ^String s "]")]
+    (cond
+      (and (not (neg? lo)) (< hi lo))
+      {:failure_kind "model/truncated-reply"}
+
+      :else
+      (let [parsed (extract-json-array s)]
+        (if (seq (filter :pattern (or parsed [])))
+          {:failure_kind nil :parsed parsed}
+          {:failure_kind "model/unparsed-reply"})))))
+
+(defn- pattern-row
+  [p row sources shown texts record-id window-ids]
+  (let [turn-m (normalize-window (:turn row) texts #{record-id})
+        chain-m (normalize-window (:chain row) texts window-ids)
+        chain-n (stored-count chain-m)]
+    {:pattern (:id p) :sha256 (:sha256 p)
+     :sources (vec (or (get sources (:id p)) []))
+     :shown (boolean (get shown (:id p)))
+     :turn turn-m :chain chain-m
+     :turn_mapped (stored-count turn-m)
+     :chain_mapped chain-n
+     :status (status-of chain-n)}))
 
 (defn- verdict-map
   "The version-1 :pattern_verdicts map for RECORD under OPTS.  Pure apart
@@ -338,61 +357,58 @@
         proposed (patterns-of record)
         sources (into {} (map (juxt :id :sources)) proposed)
         shown (into {} (map (juxt :id :shown)) proposed)
-        patterns (mapv #(read-pattern (or library pattern-library) (:id %))
-                       proposed)
-        reply (cond
-                (not ask) (model-failure "model/no-reader")
-                (seq patterns)
-                (try (let [result (ask {:seat seat
-                                        :prompt (prompt-for window record-id patterns)
-                                        :timeout-ms timeout-ms})]
-                       (cond
-                         (string? result) result
-                         (map? result) (model-failure (:failure_kind result)
-                                                      (:http_status result) (:error result))
-                         :else (model-failure "model/error" nil "ask returned nil")))
-                     (catch Exception e
-                       (model-failure "model/error" nil (.getMessage e))))
-                :else (model-failure "model/no-reader"))
-        failure (when (map? reply) reply)
-        rows (if failure
-               ;; typed absence: no reader (not wired, off, or failed) is
-               ;; recorded, not defaulted to success.
-               (mapv #(no-reader-pattern sources shown %
-                                         (if (= "model/no-reader" (:failure_kind failure))
-                                           "no reader" (:failure_kind failure)))
-                     patterns)
-               (let [parsed (extract-json-array reply)
-                     by-pattern (into {}
-                                      (comp (filter map?)
-                                            (keep (fn [row]
-                                                    (when-let [p (:pattern row)]
-                                                      [(str/replace-first (str p) #"^~" "")
-                                                       row]))))
-                                      parsed)]
-                 (mapv (fn [p]
-                         (let [row (get by-pattern (:id p) {})
-                               turn-m (normalize-window (:turn row) texts #{record-id})
-                               chain-m (normalize-window (:chain row) texts window-ids)
-                               chain-n (stored-count chain-m)]
-                           {:pattern (:id p) :sha256 (:sha256 p)
-                            :sources (vec (or (get sources (:id p)) []))
-                            :shown (boolean (get shown (:id p)))
-                            :turn turn-m :chain chain-m
-                            :turn_mapped (stored-count turn-m)
-                            :chain_mapped chain-n
-                            :status (status-of chain-n)}))
-                       patterns)))
-        usable-reply? (and (string? reply)
-                           (seq (filter :pattern (or (extract-json-array reply) []))))
-        model-outcome (cond
-                        failure failure
-                        usable-reply? {:failure_kind nil}
-                        :else {:failure_kind "model/unparsed-reply"})]
+        patterns (mapv #(read-pattern (or library pattern-library) (:id %)) proposed)
+        batches
+        (mapv
+         (fn [batch-index batch]
+           (let [reply (cond
+                         (not ask) (model-failure "model/no-reader")
+                         (seq batch)
+                         (try
+                           (let [result (ask {:seat seat
+                                              :prompt (prompt-for window record-id batch)
+                                              :timeout-ms timeout-ms})]
+                             (cond
+                               (string? result) result
+                               (and (map? result) (:failure_kind result)) result
+                               :else (model-failure "model/error" nil "ask returned nil")))
+                           (catch Exception e
+                             (model-failure "model/error" nil (.getMessage e))))
+                         :else (model-failure "model/no-reader"))
+                 result (if (string? reply) (reply-result reply) reply)
+                 failure-kind (:failure_kind result)
+                 outcome (-> (dissoc result :parsed)
+                             (assoc :batch batch-index
+                                    :patterns (mapv :id batch)))
+                 rows (if failure-kind
+                        (mapv #(no-reader-pattern
+                                sources shown %
+                                (if (= "model/no-reader" failure-kind)
+                                  "no reader" failure-kind))
+                              batch)
+                        (let [by-pattern
+                              (into {}
+                                    (comp (filter map?)
+                                          (keep (fn [row]
+                                                  (when-let [p (:pattern row)]
+                                                    [(str/replace-first (str p) #"^~" "")
+                                                     row]))))
+                                    (:parsed result))]
+                          (mapv #(pattern-row % (get by-pattern (:id %) {})
+                                              sources shown texts record-id window-ids)
+                                batch)))]
+             {:outcome outcome :rows rows}))
+         (range)
+         (partition-all batch-size patterns))
+        outcomes (mapv :outcome batches)
+        rows (into [] (mapcat :rows) batches)
+        first-failure (some #(when (:failure_kind %) %) outcomes)
+        model-outcome (assoc (or first-failure {:failure_kind nil})
+                             :batches outcomes)]
     {:version 1
      :at (str (java.time.Instant/now))
      :window (mapv :id window)
-     :reader (if (string? reply) (str (or seat "unknown")) "none")
+     :reader (if ask (str (or seat "unknown")) "none")
      :model_outcome model-outcome
      :patterns (vec rows)}))
 

@@ -7589,6 +7589,8 @@
                                                 {:ok false
                                                  :job-id job-id
                                                  :error msg
+                                                 :failure-kind (:failure-kind result)
+                                                 :error-data (:error-data result)
                                                  :agent-id (str agent-id)})))))))
                            (catch Throwable t
                              (println (str "[whistle] async error: " (.getMessage t)))

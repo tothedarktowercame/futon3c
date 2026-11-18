@@ -87,6 +87,9 @@
                 (filter #(= "text" (:type %)))
                 (map :text)
                 (apply str))
+     :stop-reason (:stop_reason parsed)
+     :content-block-types (mapv :type (:content parsed))
+     :http-status (.statusCode response)
      :usage (:usage parsed)
      :model (:model parsed)
      :request-id (some-> response .headers (.firstValue "request-id") (.orElse nil))}))
@@ -133,7 +136,8 @@
           (let [bound (conservative-cost model prompt max-tokens)]
         (when (> bound max-usd)
           (throw (ex-info "Claude Platform request exceeds per-call budget"
-                          {:bound-usd bound :max-usd max-usd})))
+                          {:failure-kind "model/budget"
+                           :bound-usd bound :max-usd max-usd})))
         (let [new-total (swap! month-spend + bound)]
           (reset! reserved bound)
           (when (> new-total monthly-limit-usd)
@@ -153,7 +157,12 @@
                        :usage (:usage response) :cost-usd cost
                        :elapsed-ms (long (/ (- (System/nanoTime) started) 1000000))}]
           (when (str/blank? text)
-            (throw (ex-info "Claude Platform response contained no text" {})))
+            (throw (ex-info "Claude Platform response contained no text"
+                            {:failure-kind "model/empty-response"
+                             :http_status (:http-status response)
+                             :stop_reason (:stop-reason response)
+                             :content_block_types (:content-block-types response)
+                             :usage (:usage response)})))
           (swap! month-spend + (- cost bound))
           (reset! reserved 0.0)
           (record-receipt! ledger receipt)
@@ -163,6 +172,7 @@
             (when (pos? @reserved)
               (swap! month-spend - @reserved))
             {:result nil :session-id nil :error (.getMessage t)
+             :failure-kind (:failure-kind (ex-data t))
              :error-data (ex-data t)}))))))
 
 (defn make-reader-invoke-fn

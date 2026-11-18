@@ -36,7 +36,12 @@
     (is (= "answer" (call 200 "{\"ok\":true,\"response\":\"answer\"}")))
     (is (= "model/timeout" (:failure_kind (call 504 "{\"ok\":false,\"error\":\"timeout\"}"))))
     (is (= "model/quota" (:failure_kind
-                            (call 502 "{\"ok\":false,\"error\":\"invented rate limit hit\"}")))))
+                            (call 502 "{\"ok\":false,\"error\":\"invented rate limit hit\"}"))))
+    (is (= "model/budget" (:failure_kind
+                            (call 502 "{\"ok\":false,\"error\":\"too large\",\"failure-kind\":\"model/budget\",\"error-data\":{\"bound-usd\":0.09,\"max-usd\":0.08}}"))))
+    (let [out (call 502 "{\"ok\":false,\"error\":\"empty\",\"failure-kind\":\"model/empty-response\",\"error-data\":{\"stop_reason\":\"max_tokens\",\"content_block_types\":[\"thinking\"],\"usage\":{\"output_tokens\":0}}}")]
+      (is (= "model/empty-response" (:failure_kind out)))
+      (is (= "max_tokens" (get-in out [:diagnostics :stop_reason])))))
   (let [out (with-http-response
               200 "{\"ok\":true,\"response\":\"late\"}" 100
               (fn [url]
