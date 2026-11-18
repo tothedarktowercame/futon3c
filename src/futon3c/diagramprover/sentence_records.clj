@@ -1,6 +1,8 @@
 (ns futon3c.diagramprover.sentence-records
   "Source-role sentences and bounded, temporal reverse-index readers. No writes."
   (:require [cheshire.core :as json] [clojure.edn :as edn]
+            [clojure.string :as str] [clojure.java.io :as io]
+            [futon3c.arxana.digest :as digest]
             [futon3c.arxana.records :as records] [futon3c.arxana.store :as store]
             [futon3c.arxana.store-http :as http]
             [futon3c.diagramprover.arxana-records :as ar]))
@@ -134,3 +136,71 @@
                    (into out (map #(hash-map :record % :scope (if (= rev 1) :role (get-in % [:asserted-content :scope])))
                                   (:records r))))))
       {:status :ok :manifestations (vec (sort-by #(get-in % [:record :id]) out))})))
+
+(def attestation-inputs
+  {:switch-off "/home/joe/storage/arxana/sentences/a97J08-switch-off.json"
+   :history "/home/joe/storage/arxana/sentences/a97J08-closer-history.json"
+   :runners "/home/joe/storage/arxana/sentences/runners"
+   :live-logs ["/home/joe/storage/arxana/diagramprover/sentence-records-a97J08-2026-11-18.edn"
+               "/home/joe/storage/arxana/diagramprover/sentence-manifestation-scope-2026-11-18.edn"]})
+(defn- file-pin [path]
+  {:path (str path) :sha256 (digest/sha256-hex (java.nio.file.Files/readAllBytes (.toPath (io/file path))))})
+(defn- runner-provenance [root stage]
+  (let [entries (mapv #(let [[sha path] (str/split % #"\s+" 2)] [path sha])
+                      (remove str/blank? (str/split-lines (slurp (io/file root "SHA256SUMS")))))
+        selected (filter #(str/starts-with? (first %) (str stage "/")) entries)
+        actual (into (sorted-map) (for [[path sha] selected
+                                       :let [pin (file-pin (io/file root path))]]
+                                   (do (when-not (= sha (:sha256 pin))
+                                         (throw (ex-info "Runner checksum mismatch" {:error :sentence/runner-checksum :path path})))
+                                       [path sha])))
+        report (str stage "/" (if (= stage "8A") "REPORT.md" "REPORT-r2.md"))]
+    (when-not (and (seq actual) (contains? actual report))
+      (throw (ex-info "Runner provenance absent" {:error :sentence/runner-missing :stage stage})))
+    {:producer {:agent "codex-12" :stage stage :runner-files (mapv (fn [[file sha]] {:file file :sha256 sha}) actual) :report (str (io/file root report))}
+     :refs (mapv (fn [[path sha]] {:path (str (io/file root path)) :sha256 sha}) actual)}))
+(defn sentence-attestations
+  "Build evidence without writing. Defaults use full captures and published logs;
+  overrides allow offline fixtures. Exact subject-set equality is mandatory.
+  The shared head outer manifestation uses 8B evidence, explicitly noted."
+  ([] (sentence-attestations attestation-inputs))
+  ([{:keys [switch-off history runners live-logs live-subject-ids publication]}]
+   (let [x (json/parse-string (slurp switch-off) true)
+         inventory (filterv #(not= "source" (:form %)) (:rows x))
+         tested (filterv #(and (= "rendered" (:status %)) (#{"a" "b" "c"} (:form %))) inventory)
+         untested (remove (set tested) inventory)
+         b (if publication (records-from-switch-off switch-off publication) (records-from-switch-off switch-off))
+         hist (history-records history)
+         heads (set (map :id (:manifestations b)))
+         manifestations (vals (into (sorted-map) (map (juxt :id identity) (concat hist (:manifestations b)))))
+         subjects (vec (concat (:applications b) manifestations))
+         allowed (or live-subject-ids
+                     (set (for [path live-logs row (get-in (edn/read-string (slurp path)) [:plan :rows])
+                                :let [r (:record row)]
+                                :when (#{[:rule/application 1] [:sentence/manifestation 1] [:sentence/manifestation 2]} (:type-revision r))]
+                            (:id r))))
+         _ (when-not (= (set (map :id subjects)) (set allowed))
+             (throw (ex-info "Sentence subjects differ from live set" {:error :sentence/subject-set-mismatch})))
+         a (runner-provenance runners "8A") z (runner-provenance runners "8B")
+         loc (:locator (first (:roles (first tested))))
+         method {:procedure :single-function-switch-off :head (:head x)
+                 :module (:module loc) :declaration (:declaration loc) :compared :case-conclusion-roles
+                 :inventory-entries (count inventory) :inventory-functions (count (set (map :qualname inventory)))
+                 :interventions-tested (count tested) :functions-tested (count (set (map :qualname tested)))
+                 :untested (mapv (fn [[status n]] {:status status :count n}) (sort-by key (frequencies (map :status untested))))
+                 :untested-rows (mapv #(select-keys % [:id :qualname :unit :status :reason]) untested)
+                 :forms {:a :pass :b :added :c :parent-body}}
+         sp (file-pin switch-off) hp (file-pin history)]
+     (mapv (fn [r]
+             (let [app? (= [:rule/application 1] (:type-revision r))
+                   head? (contains? heads (:id r))
+                   source (if (or app? head?) z a)
+                   scope (if (= [:sentence/manifestation 1] (:type-revision r)) :role (get-in r [:asserted-content :scope]))
+                   m (if app? method
+                         (cond-> {:procedure :render-at-commit :commit (get-in r [:asserted-content :renderer-commit]) :scope scope}
+                           (and head? (some #(= (:id r) (:id %)) hist)) (assoc :also-in-history true :selected-capture :switch-off)))]
+               (records/make-attestation
+                {:subject-clusion-id (:id r) :producer (:producer source) :basis :exact :standing :verified
+                 :coverage (if (or app? (= :declaration scope)) :partial :complete)
+                 :method m :content {} :source-refs (into [(if (or app? head?) sp hp)] (:refs source))})))
+           subjects))))
