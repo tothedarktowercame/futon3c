@@ -149,6 +149,25 @@
       (is (= linked (:connection (verdicts store "turn-next")))
           "a late repair cannot overwrite an established link"))))
 
+(deftest a-placeholder-or-retryable-predecessor-is-pending-not-linked
+  ;; claude-13 review of CL-63: N-1's lu-pending placeholder and a retryable
+  ;; model failure are rewritten later, so N must not link to their digest.
+  (let [store (temp-store)]
+    (record! store "turn-prev" {:created_at "2026-10-24T00:00:00Z"
+                                 :proposed_patterns [{:patterns [pid]}]})
+    (record! store "turn-next" {:created_at "2026-10-24T00:01:00Z"
+                                 :proposed_patterns [{:patterns [pid]}]})
+    (doseq [placeholder [{:version 1 :state "lu-proposals-pending" :patterns []}
+                         {:version 1 :model_attempts 1 :patterns []
+                          :model_outcome {:failure_kind "model/timeout"}}]]
+      (ts/update-record! store "turn-prev" #(assoc % :pattern_verdicts placeholder))
+      (is (= {:status :prev-pending :turn/id "turn-prev"}
+             (mo/connection-for store "turn-next"))))
+    (ts/update-record! store "turn-prev"
+                       #(assoc-in % [:pattern_verdicts :model_attempts] 3))
+    (is (= :linked (:status (mo/connection-for store "turn-next")))
+        "an exhausted retry is final and linkable")))
+
 (deftest no-reply-predecessor-is-typed-absent-and-never-skipped
   (let [store (temp-store)]
     (record! store "turn-no-reply" {:created_at "2026-10-24T00:00:00Z"

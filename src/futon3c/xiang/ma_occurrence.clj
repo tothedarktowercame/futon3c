@@ -56,7 +56,7 @@
 
 (def model-failure-kinds wa/failure-kinds)
 
-(declare sha256-hex)
+(declare sha256-hex retryable-verdict?)
 
 (def retryable-model-failure-kinds
   #{"model/quota" "model/timeout"})
@@ -161,6 +161,18 @@
   #_{:clj-kondo/ignore [:locking-suspicious-lock]}
   (locking (session-lock store id) (f)))
 
+(defn- final-verdict
+  "PREV's verdict when it will not be replaced, else nil. The lu-pending
+  placeholder and a retryable model failure with attempts left are both
+  rewritten later; linking to them would pin a digest that no longer exists."
+  [prev]
+  (let [v (:pattern_verdicts prev)]
+    (when (and (map? v)
+               (not= "lu-proposals-pending" (some-> (:state v) name))
+               (not (and (retryable-verdict? v)
+                         (< (long (or (:model_attempts v) 1)) 3))))
+      v)))
+
 (defn connection-for
   "Compute ID's connection from durable same-session records. Never skips an
   immediate operator predecessor. A durable void verdict is still linked."
@@ -168,7 +180,7 @@
   (if-let [{prev-id :id prev :record} (adjacent-turn store id -1)]
     (if-let [reason (absent-reason prev)]
       {:status :prev-absent :turn/id prev-id :reason reason}
-      (if-let [verdict (:pattern_verdicts prev)]
+      (if-let [verdict (final-verdict prev)]
         {:status :linked :turn/id prev-id :sha256 (verdict-digest verdict)}
         {:status :prev-pending :turn/id prev-id}))
     {:status :session-start}))
@@ -182,7 +194,7 @@
     store id
     #(when-let [{prev-id :id prev :record} (adjacent-turn store id -1)]
        (when-let [previous-verdict (when-not (absent-reason prev)
-                                    (:pattern_verdicts prev))]
+                                    (final-verdict prev))]
          (let [linked {:status :linked :turn/id prev-id
                        :sha256 (verdict-digest previous-verdict)}]
            (:pattern_verdicts
