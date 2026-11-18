@@ -1,0 +1,35 @@
+(ns futon3c.arxana.namespace-types-test
+  (:require [clojure.test :refer [deftest is]]
+            [org.httpkit.client :as http]
+            [futon3c.arxana.namespace-types :as nt]))
+
+(deftest namespace-type-coverage
+  (let [source "(ns invented.strand (:require [futon3c.arxana.records :as r] [futon3c.arxana.store :as s] [futon3c.arxana.store-http :as h]))\n(defn plan [] [(r/make-clusion {:type-revision [:ma/strand 1]}) (r/make-clusion {:type-revision [:ma/quote 1]})])\n(defn publish [store] (h/append-batch! store \"message\" (plan)))\n(s/bounded-query! store {:query/type :role-reverse :edge-type [:ma/strand 1]})\n'(r/make-clusion {:type-revision [:fake/quoted 1]})\n(comment (r/make-clusion {:type-revision [:fake/comment 1]}))"
+        scan (nt/extract source)
+        index [{:hx/id "namespace:invented" :prop/source-file "/invented/strand.clj" :prop/repo "futon3c"}
+               {:hx/id "namespace:empty" :prop/source-file "/invented/empty.clj" :prop/repo "futon3c"}]]
+    (is (= :ok (:status scan)))
+    (is (= #{[:ma/strand 1] [:ma/quote 1]} (set (map :type-revision (filter #(and (= :writes (:direction %)) (:type-revision %)) (:uses scan))))))
+    (is (= [[:ma/strand 1]] (mapv :type-revision (filter #(= :reads (:direction %)) (:uses scan)))))
+    (is (= [2 2 4] (mapv :line (filter :type-revision (:uses scan)))))
+    (is (= [:made/direct 1] (-> (nt/extract "(futon3c.arxana.store-http/append-batch! store id [{:record {:type-revision [:made/direct 1]}}])") :uses first :type-revision)))
+    (is (= [:made/referred 1] (-> (nt/extract "(ns example (:require [futon3c.arxana.records :refer [make-clusion]])) (make-clusion {:type-revision [:made/referred 1]})") :uses first :type-revision)))
+    (is (= 1 (count (:publication-sites scan))))
+    (is (= :dynamic (-> (nt/extract "(futon3c.arxana.records/make-clusion {:type-revision t})") :uses first :status)))
+    (with-redefs [slurp (fn [file] (if (= file "/invented/strand.clj") source "(ns invented.empty)"))]
+      (is (= :yes (:answer (nt/built-on? index ["/invented/strand.clj"] "ma/"))))
+      (is (= :unknown (:answer (nt/built-on? index ["/invented/nip_merge.py"] "ma/"))))
+      (is (= :not-yet (:answer (nt/built-on? index ["/invented/empty.clj"] "ma/"))))
+      (is (= :unknown (:answer (nt/built-on? index ["/invented/strand.clj" "/invented/nip_merge.py"] "ma/"))))
+      (let [calls (atom [])]
+        (with-redefs [nt/indexed-namespaces (fn [_] index)
+                      http/request (fn [req] (swap! calls conj req) (delay {:status 200 :body "{:ok true}"}))]
+          (is (= :dry-run (:mode (nt/backfill! {}))))
+          (is (empty? @calls))
+          (is (= :write (:mode (nt/backfill! {:write? true}))))
+          (is (= 1 (count @calls)))
+          (is (= :post (:method (first @calls))))))
+      (let [a (nt/edges (nt/inspect (first index)))]
+        (is (= a (nt/edges (nt/inspect (first index)))))
+        (is (= 3 (count a)))
+        (is (= ["namespace:invented" "arxana-type:ma/strand@1"] (:hx/endpoints (first a))))))))
