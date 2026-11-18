@@ -329,12 +329,16 @@
                               (delay {:error (java.net.ConnectException.
                                                "connection refused")}))]
       (let [result (backend/-append store entry)
+            at-return @attempts
             wall-ms (quot (- (System/nanoTime) started) 1000000)]
         (is (= :store-unreachable (:error/code result)))
         ;; The invariant that matters is the wall-clock bound below, not
-        ;; the attempt count. One probe AT the deadline is required: a
-        ;; restart completing during the final sleep must still be caught.
-        (is (= 2 @attempts) "one final probe at the deadline, then stop")
+        ;; the attempt count. Since the evidence spool (2936ef10e) the
+        ;; drainer keeps probing after the caller has its answer, so the
+        ;; count is read at return and only bounded below: the store was
+        ;; retried at least once inside the window.
+        (is (<= 2 at-return) "retried inside the window, not probed once")
+        (is (:spooled result) "the write stays durable past the caller's window")
         (is (<= wall-ms (+ retry-window 100))
             "the retry loop stays within the configured window plus scheduler tolerance")))))
 

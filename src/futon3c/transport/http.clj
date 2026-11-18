@@ -492,8 +492,12 @@
 
 (defn- invoke-jobs-store-path
   []
-  (or (System/getenv "FUTON3C_INVOKE_JOBS_FILE")
-      (test-run-store-path "invoke-jobs.edn")
+  ;; Under the test runner the per-JVM temp path wins over the env var: Codex
+  ;; seats inherit the live Agency's environment, so an inherited path is the
+  ;; live store (2026-11-18: test runs from codex-12 wrote over the live turn
+  ;; queue via FUTON3C_DURABLE_QUEUE_PATH).
+  (or (test-run-store-path "invoke-jobs.edn")
+      (System/getenv "FUTON3C_INVOKE_JOBS_FILE")
       "/tmp/futon3c-invoke-jobs.edn"))
 
 (defn- default-invoke-jobs-ledger

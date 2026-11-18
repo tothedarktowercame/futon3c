@@ -19,9 +19,11 @@
 (def waiter-poll-ms 100)
 
 (defn db-path []
-  (or *db-path* (System/getenv "FUTON3C_EVIDENCE_SPOOL_DB")
+  ;; Test-run beats the env var: Codex seats inherit the live Agency's env.
+  (or *db-path*
       (when (= "true" (System/getProperty "futon3c.test-run"))
         (str @test-dir "/evidence-spool.db"))
+      (System/getenv "FUTON3C_EVIDENCE_SPOOL_DB")
       (str (System/getProperty "user.home") "/storage/futon3c/evidence-spool.db")))
 (defonce ^:private managers (atom {}))
 

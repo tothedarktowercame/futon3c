@@ -157,11 +157,11 @@
     (try
       (System/setProperty "futon3c.test-run" "true")
       (binding [spool/*db-path* nil]
-        (if-let [explicit (System/getenv "FUTON3C_EVIDENCE_SPOOL_DB")]
-          (is (= explicit (spool/db-path)))
-          (do (is (not (.startsWith (spool/db-path)
-                                    (str (System/getProperty "user.home") "/storage/"))))
-              (is (= (spool/db-path) (spool/db-path))))))
+        (is (not (.startsWith (spool/db-path)
+                              (str (System/getProperty "user.home") "/storage/"))))
+        (when-let [inherited (System/getenv "FUTON3C_EVIDENCE_SPOOL_DB")]
+          (is (not= inherited (spool/db-path))))
+        (is (= (spool/db-path) (spool/db-path))))
       (finally (if old (System/setProperty "futon3c.test-run" old)
                        (System/clearProperty "futon3c.test-run"))))))
 

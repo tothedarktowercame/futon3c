@@ -43,8 +43,12 @@
     (str @!test-run-store-dir "/" file-name)))
 
 (defn queue-store-path []
-  (or (config/env "FUTON3C_DURABLE_QUEUE_PATH")
-      (test-run-store-path "durable-turn-queue.edn")
+  ;; Under the test runner the per-JVM temp path wins over the env var: Codex
+  ;; seats inherit the live Agency's environment, so an inherited path is the
+  ;; live store (2026-11-18: test runs from codex-12 wrote over the live turn
+  ;; queue via FUTON3C_DURABLE_QUEUE_PATH).
+  (or (test-run-store-path "durable-turn-queue.edn")
+      (config/env "FUTON3C_DURABLE_QUEUE_PATH")
       "/tmp/futon3c-durable-turn-queue.edn"))
 
 (defn- empty-state []
