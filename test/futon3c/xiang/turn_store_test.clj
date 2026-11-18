@@ -118,3 +118,20 @@
         (is (not= a (:prev_operator_turn_id (ts/read-record s e))))
         (is (= (:next_operator_turn_id (ts/read-record s c))
                (:prev_operator_turn_id (ts/read-record s e))))))))
+
+(deftest backfill-links-legacy-turns-once-and-keeps-existing-links
+  (let [s (temp-store)
+        legacy (fn [id at] (ts/write-record-id! s id (assoc (record "sess" id) :created_at at)))]
+    (legacy "turn-old002" "2026-10-01T00:00:02Z")
+    (legacy "turn-old001" "2026-10-01T00:00:01Z")
+    (ts/write-record-id! s "turn-elsewh" (assoc (record "sess-2" "x") :created_at "2026-10-01T00:00:00Z"))
+    (is (= {:sessions 2 :prev 3 :next 1 :heads 2 :mode :dry-run} (ts/backfill-strand! s)))
+    (is (not (contains? (ts/read-record s "turn-old001") :prev_operator_turn_id)) "dry run writes nothing")
+    (ts/backfill-strand! s :write? true)
+    (is (nil? (:prev_operator_turn_id (ts/read-record s "turn-old001"))))
+    (is (= "turn-old001" (:prev_operator_turn_id (ts/read-record s "turn-old002"))))
+    (is (= "turn-old002" (:next_operator_turn_id (ts/read-record s "turn-old001"))))
+    (let [new (:id (ts/write-record! s (assoc (record "sess" "new") :created_at "2026-10-01T00:00:03Z")))]
+      (is (= "turn-old002" (:prev_operator_turn_id (ts/read-record s new))) "head file names the tail"))
+    (is (= {:sessions 2 :prev 0 :next 0 :heads 0 :mode :dry-run} (ts/backfill-strand! s))
+        "idempotent")))

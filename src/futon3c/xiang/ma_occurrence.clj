@@ -245,6 +245,30 @@
        (repair-successor! store id)
        (:pattern_verdicts (ts/read-record store id)))))
 
+(defn backfill-connections!
+  "Give every stored 馬 verdict without a :connection one, from the strand
+  links (run turn-store/backfill-strand! first). WRITE? false counts only."
+  [store & {:keys [write?]}]
+  (let [ids (->> (ts/list-records store :limit Long/MAX_VALUE)
+                 (filter #(and (map? (get-in % [:record :pattern_verdicts]))
+                               (nil? (get-in % [:record :pattern_verdicts :connection]))))
+                 (map :id))
+        by-status (frequencies
+                   (for [id ids]
+                     (let [connection (connection-for store id)]
+                       (when write?
+                         (with-session-lock
+                           store id
+                           #(ts/update-record!
+                             store id
+                             (fn [record]
+                               (if (and (map? (:pattern_verdicts record))
+                                        (nil? (get-in record [:pattern_verdicts :connection])))
+                                 (assoc-in record [:pattern_verdicts :connection] connection)
+                                 record)))))
+                       (:status connection))))]
+    {:mode (if write? :write :dry-run) :verdicts (count ids) :by-status by-status}))
+
 ;; ------------------------------------------------------------- pattern parts
 
 (defn- parse-pattern-file

@@ -168,6 +168,47 @@
             (write-json! head {:head (:id written)}))
           written)))))
 
+;; Joe 2026-11-18: backfill the links for turns written before them.
+(defn backfill-strand!
+  "Link every session's existing operator turns (oldest first by created_at,
+  then id) and write its head file. Never replaces a link already present.
+  WRITE? false counts only. Holds each session's lock while writing, so a
+  live write-record! cannot interleave."
+  [store & {:keys [write?]}]
+  (let [ops (->> (list-records store :limit Long/MAX_VALUE)
+                 (filter #(operator-record? (:record %))))
+        sessions (group-by #(get-in % [:record :session_id]) ops)
+        counts (atom {:sessions (count sessions) :prev 0 :next 0 :heads 0})]
+    (doseq [[session-id turns] sessions]
+      (let [ordered (vec (sort-by (juxt #(str (get-in % [:record :created_at])) :id) turns))
+            link! (fn []
+                    (doseq [[i {:keys [id record]}] (map-indexed vector ordered)]
+                      (let [prev (when (pos? i) (:id (nth ordered (dec i))))
+                            nxt (when (< (inc i) (count ordered)) (:id (nth ordered (inc i))))
+                            add-prev? (not (contains? record :prev_operator_turn_id))
+                            add-next? (and nxt (not (contains? record :next_operator_turn_id)))]
+                        (when add-prev? (swap! counts update :prev inc))
+                        (when add-next? (swap! counts update :next inc))
+                        (when (and write? (or add-prev? add-next?))
+                          (update-record! store id
+                                          (fn [r]
+                                            (cond-> r
+                                              (not (contains? r :prev_operator_turn_id))
+                                              (assoc :prev_operator_turn_id prev)
+                                              (and nxt (not (contains? r :next_operator_turn_id)))
+                                              (assoc :next_operator_turn_id nxt)))))))
+                    (let [head (io/file (session-head-path store session-id))]
+                      (when-not (.isFile head)
+                        (swap! counts update :heads inc)
+                        (when write?
+                          (.mkdirs (.getParentFile head))
+                          (write-json! (str head) {:head (:id (peek ordered))})))))]
+        (if write?
+          #_{:clj-kondo/ignore [:locking-suspicious-lock]}
+          (locking (session-lock store session-id) (link!))
+          (link!))))
+    (assoc @counts :mode (if write? :write :dry-run))))
+
 (defn write-record-id!
   "Create RECORD at deterministic ID. Returns {:created? false ...} when ID
    already exists; never replaces an existing record."
