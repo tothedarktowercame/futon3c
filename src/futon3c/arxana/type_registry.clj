@@ -96,7 +96,13 @@
    :recursion/cycle-policy cycle})
 
 (def declarations-v1
-  [(assoc (clusion-type :design/choice 1 []
+  [(assoc (clusion-type :annotation/support 1
+                        [{:role :draft :endpoint/kinds #{:external-ref}}
+                         {:role :source :endpoint/kinds #{:external-ref}}]
+                        [:relation/kind])
+          :content/enums {:relation/kind #{:lexical-correspondence :support-proposal}})
+   (clusion-type :annotation/edition 1 [] [:draft/digest :scope/digest :segmentation :input/pins])
+   (assoc (clusion-type :design/choice 1 []
                         [:choice/key :statement :kind :sources :lifecycle :applies-to :rationale :alternatives])
           :content/enums {:kind #{:constraint :ruling :decision}
                           :lifecycle #{:proposed :accepted :superseded}})

@@ -1,0 +1,4 @@
+{:view :draft/edition :stage :in-memory
+ :reads [{:read :pinned-file-spans-and-edition :feature :draft/edition :use :implemented}]
+ :authority :external-files
+ :next-stage "Store-backed annotation queries and their citations follow approval; this slice does not query stored annotations."}

@@ -159,6 +159,10 @@
     :projection [:operation :result/status :support/id :supersession/id
                  :created? :current/support-id]}
 
+   :draft/edition
+   {:schema-version 1 :required #{} :allowed #{}
+    :projection [:operation :status :authority :stored? [:segments] :reason]}
+
    :cascade/benefit-filings
    {:schema-version 1 :required #{:valid-time} :allowed #{:valid-time :benefit-id}
     :projection [:operation :status :mode :valid-time [:benefit] [:items] [:substrate] [:benefits] :reason]}

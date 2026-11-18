@@ -11,6 +11,7 @@
             [futon3c.arxana.catalogue-view :as catalogue-view]
             [futon3c.arxana.demo-b-tracker :as demo-b-tracker]
             [futon3c.arxana.benefit-filings :as benefit-filings]
+            [futon3c.arxana.draft-edition :as draft-edition]
             [futon3c.arxana.codedocs-view :as codedocs-view]
             [futon3c.arxana.compile.compiler :as compiler]
             [futon3c.arxana.correspond :as corr]
@@ -367,6 +368,10 @@
                                         :body read-body}))]
              (env/response ok (with-semantic-digest op
                                 (f6/argument-view read! (:argument/id body)))))
+
+           (= op :draft/edition)
+           (env/response ok (with-semantic-digest op
+                             (draft-edition/read-edition (or (:draft-edition cfg) (draft-edition/default-config)))))
 
            (= op :cascade/benefit-filings)
            (env/response ok (with-semantic-digest op (benefit-filings/read-filings graph-store body)))
