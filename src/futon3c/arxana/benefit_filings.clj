@@ -29,6 +29,19 @@
               :named-items (count (filter #(seq (:names %)) items))
               :entities (count (set (map #(get-in % [:entity :record :id]) (mapcat :names items))))}}))
 
+(defn- stored-label
+  "A benefit line's name from a parser attestation on the record itself, when
+  one is in the store (written 2026-11-18 from the source files); otherwise nil
+  and the caller falls back to the source files, labelled as such."
+  [b evidence]
+  (when-let [a (->> evidence
+                    (filter #(and (= (:id b) (:subject-clusion-id %)) (= :parser (:basis %))
+                                  (= (get-in b [:asserted-content :benefit/line])
+                                     (get-in % [:content :benefit/line]))))
+                    (sort-by :event-time) last)]
+    (assoc (select-keys (:content a) [:trunk :trunk-name :name :pattern :gloss])
+           :status :record :attestation (:id a) :notice "From the store (parser attestation)")))
+
 (defn read-filings
   "Acquire each dependency level in batches; any incomplete set refuses the page."
   [store {:keys [benefit-id valid-time]}]
@@ -56,11 +69,13 @@
           (assoc (benefit-view records benefit-id valid-time) :queries @batch/*receipts*)
           {:status :ok :mode :list :valid-time valid-time :interpretation :historical-filings
            :queries @batch/*receipts*
-           :benefits (mapv (fn [b] {:label (names/label (get-in b [:asserted-content :benefit/line]))
-                                   :cluster (or (:trunk (names/label (get-in b [:asserted-content :benefit/line]))) "unnamed")
+           :benefits (mapv (fn [b] (let [label (or (stored-label b evidence)
+                                                   (names/label (get-in b [:asserted-content :benefit/line])))]
+                                    {:label label
+                                     :cluster (or (:trunk label) "unnamed")
                                    :benefit b :evidence-completeness :complete
                                    :evidence (filterv #(= (:id b) (:subject-clusion-id %)) evidence)
                                    :serves-v1 (count (filter #(= (:id b) (endpoint % :benefit-line)) old))
-                                   :serves-v2 (count (filter #(= (:id b) (endpoint % :benefit-line)) substrate))})
+                                   :serves-v2 (count (filter #(= (:id b) (endpoint % :benefit-line)) substrate))}))
                            (sort-by #(get-in % [:asserted-content :benefit/line]) benefits))}))
       (catch Exception e (merge {:status :inconclusive :reason :query-error} (ex-data e)))))))
