@@ -47,6 +47,16 @@
     (when-not (vector? content-fields)
       (throw (ex-info "identity content fields must be an ordered vector"
                       {:identity/content-fields content-fields})))
+    (when (contains? declaration :content/enums)
+      (let [enums (:content/enums declaration)]
+        (when-not (and (map? enums)
+                       (every? (fn [[field allowed]]
+                                 (and (keyword? field) (some #{field} content-fields)
+                                      (set? allowed) (seq allowed)))
+                               enums))
+          (throw (ex-info "Invalid content enum declaration"
+                          {:error :arxana.type/invalid-content-enums
+                           :type-revision [id revision] :content/enums enums})))))
     (when-not (convergence-policies policy)
       (throw (ex-info "resolved convergence policy required" {:policy policy})))
     (when-not (cycle-policies cycle-policy)
@@ -101,6 +111,9 @@
                  [:renderer-commit :corpus-sha256 :wordings :count])
    (clusion-type :sentence/manifestation 2 [{:role :role :endpoint/kinds #{:clusion}}]
                  [:renderer-commit :renderer-commit-time :corpus-sha256 :wordings :count :scope])
+   (assoc (clusion-type :sentence/manifestation 3 [{:role :role :endpoint/kinds #{:clusion}}]
+                        [:renderer-commit :renderer-commit-time :corpus-sha256 :wordings :count :scope])
+          :content/enums {:scope #{:role :declaration}})
    (clusion-type :rule/application 1
                  [{:role :sentence :endpoint/kinds #{:clusion}} {:role :rule :endpoint/kinds #{:clusion}}]
                  [:method :renderer-commit :corpus-sha256 :tested-rules :interventions])

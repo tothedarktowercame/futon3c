@@ -62,7 +62,9 @@
       :omitted-other-reason :no-established-source-role-locator})))
 (defn scoped-manifestation
   "Build revision 2. Registry declarations select identity fields but do not
-  validate content enums, so scope is checked here. Commit time is UTC millis."
+  validate content enums for revision 2, so scope is checked here.
+  Its eight live records were builder-checked at write time; new writes should
+  use scoped-manifestation-v3. Commit time is UTC millis."
   [role commit commit-time sha words scope]
   (when-not (#{:role :declaration} scope)
     (throw (ex-info "Invalid manifestation scope" {:error :sentence/invalid-scope :scope scope})))
@@ -72,6 +74,15 @@
      {:type-revision [:sentence/manifestation 2] :endpoints [(endpoint :role (:id role))]
       :asserted-content {:renderer-commit commit :renderer-commit-time time
                          :corpus-sha256 sha :wordings (vec words) :count (count words) :scope scope}})))
+(defn scoped-manifestation-v3
+  "Build a manifestation whose scope enum is also enforced by the write authority.
+  Historical builders retain revision 2 to preserve published identities."
+  [role commit commit-time sha words scope]
+  (records/make-clusion
+   (-> (scoped-manifestation role commit commit-time sha words scope)
+       (dissoc :id)
+       (assoc :type-revision [:sentence/manifestation 3]))))
+
 (defn history-records
   "Untyped historical counts are explicitly declaration-scoped revision 2.
   Explicit outer wordings retain the exact revision-1 record and event-time."

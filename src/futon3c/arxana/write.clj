@@ -9,6 +9,13 @@
   {:error (env/error category code detail nil)})
 
 (defn- checked-clusion [record]
+  (doseq [[field allowed] (:content/enums (types/declaration (:type-revision record)))
+          :let [value (get (:asserted-content record) field)]]
+    (when-not (contains? allowed value)
+      (throw (ex-info "Clusion content value is outside its declared enum"
+                      {:error :arxana.clusion/invalid-content-enum
+                       :type-revision (:type-revision record)
+                       :field field :value value :allowed allowed}))))
   (let [computed (records/make-clusion record)]
     (when (and (:id record) (not= (:id record) (:id computed)))
       (throw (ex-info "clusion id does not match semantic digest"
