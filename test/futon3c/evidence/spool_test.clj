@@ -92,7 +92,10 @@
         (is (until #(zero? (:pending (spool/spool-status)))))
         (is (= 1 (:dead-letter (spool/spool-status))))
         (is (= #{"good"} @seen))
-        (is (= ["bad" "good"] (mapv :id @requests)))
+        ;; Unrelated rows carry no order: only a parent before its child is
+        ;; kept, so each row's own backoff decides which is retried first.
+        (is (= ["bad" "good"] (sort (mapv :id @requests)))
+            "each row sent exactly once once the store answers")
         (finally (stop))))))
 
 (deftest own-id-409-on-replay-settles-the-row

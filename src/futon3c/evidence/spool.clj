@@ -11,6 +11,12 @@
   (delay (str (java.nio.file.Files/createTempDirectory
                "futon3c-spool-test-" (make-array java.nio.file.attribute.FileAttribute 0)))))
 (def response-retry-limit 5)
+;; Each poll opens a SQLite connection. A fixed 10 ms poll meant ~100 opens/s
+;; from an idle drainer, forever. The drainer now sleeps until the next row is
+;; due (capped here) and is woken by append!/finish!, so retries keep their
+;; backoff cadence without the idle cost.
+(def idle-poll-ms 250)
+(def waiter-poll-ms 100)
 
 (defn db-path []
   (or *db-path* (System/getenv "FUTON3C_EVIDENCE_SPOOL_DB")
@@ -83,14 +89,31 @@
          {:pending n :oldest-age-ms (when oldest (max 0 (- (System/currentTimeMillis) oldest)))
           :dead-letter (:n (first (rows c "SELECT count(*) AS n FROM dead_letter" [])))})))))
 
-(defn- head-row [m]
+(defn- ready-rows
+  "Pending rows whose dependencies are delivered and that no caller is sending,
+  oldest first."
+  [m]
   (with-open [c (connect (:path m))]
-    (first
-     (remove #(contains? @(:active m) (:seq %))
-             (rows c "SELECT p.* FROM pending p WHERE p.next_attempt_ms<=?
-               AND NOT EXISTS (SELECT 1 FROM pending d WHERE d.endpoint=p.endpoint
+    (remove #(contains? @(:active m) (:seq %))
+            (rows c "SELECT p.* FROM pending p WHERE NOT EXISTS
+               (SELECT 1 FROM pending d WHERE d.endpoint=p.endpoint
                  AND (d.evidence_id=p.dep_a OR d.evidence_id=p.dep_b))
-               ORDER BY p.seq ASC" [(System/currentTimeMillis)])))))
+               ORDER BY p.seq ASC" []))))
+
+(defn- head-row [m]
+  (let [now (System/currentTimeMillis)]
+    (first (filter #(<= (long (:next_attempt_ms %)) now) (ready-rows m)))))
+
+(defn- idle-wait-ms
+  "How long the drainer may sleep: until the next ready row is due, at most
+  idle-poll-ms. Rows blocked on a dependency or in flight are not counted;
+  finish! and append! wake the drainer when those change."
+  [m]
+  (if-let [due (some->> (seq (ready-rows m)) (map :next_attempt_ms) (apply min))]
+    (max 0 (min idle-poll-ms (- (long due) (System/currentTimeMillis))))
+    idle-poll-ms))
+
+(defn- signal! [m] (deliver @(:wake m) true))
 
 (defn- finish! [{:keys [lock] :as m} row outcome]
   (locking lock
@@ -116,6 +139,7 @@
         (when-let [p (get @(:waiters m) (:seq row))] (deliver p (:result outcome)))
         (swap! (:waiters m) dissoc (:seq row)))
       (swap! (:active m) disj (:seq row))
+      (signal! m)
       outcome)))
 
 (defn- attempt! [m row replay?]
@@ -138,7 +162,9 @@
                     (swap! (:active m) conj (:seq row)) row))]
         (if row
           (attempt! m row true)
-          (Thread/sleep 10)))
+          (let [w @(:wake m)]
+            (when-not (realized? w) (deref w (idle-wait-ms m) nil))
+            (compare-and-set! (:wake m) w (promise)))))
       (catch InterruptedException _ nil)
       (catch Throwable t
         ;; SQLite failure leaves the durable row in place. Surface on stderr;
@@ -156,7 +182,8 @@
           (do
             (initialize! path)
             (let [m {:path path :send send :backoff backoff :lock (Object.)
-                     :active (atom #{}) :waiters (atom {}) :stopped (atom false)}
+                     :active (atom #{}) :waiters (atom {}) :stopped (atom false)
+                     :wake (atom (promise))}
                   t (Thread. ^Runnable #(drain-loop m) "evidence-spool-drainer")
                   m (assoc m :thread t)]
               (.setDaemon t true)
@@ -200,12 +227,13 @@
                     fast? (and (nil? prior) (not parent-pending?))]
                 (swap! (:waiters m) assoc (:seq row) p)
                 (when fast? (swap! (:active m) conj (:seq row)))
+                (when-not fast? (signal! m))
                 [row p fast?]))))
         first-out (when fast? (attempt! m row false))]
     (if (and first-out (:return-now? first-out))
       (assoc (:result first-out) :spooled true)
       (loop []
-        (let [result (deref p 10 ::pending)]
+        (let [result (deref p waiter-poll-ms ::pending)]
           (if (not= ::pending result)
             result
             (let [answer
