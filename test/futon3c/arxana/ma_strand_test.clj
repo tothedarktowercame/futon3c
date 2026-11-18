@@ -54,6 +54,31 @@
                      (mapv :role (:endpoints (:strand (sut/plan {:turn-store store}
                                                                  (assoc (turns/read-record store id) :id id)))))))))))
 
+(deftest no-ma-record-uses-the-durable-turn-link-with-a-typed-session-start
+  (let [store (temp-store)]
+    (record! store "turn-old" {:prev_operator_turn_id nil})
+    (record! store "turn-new" {:prev_operator_turn_id "turn-old"})
+    (seams
+     #(let [cfg {:turn-store store}
+            start (sut/plan cfg (assoc (turns/read-record store "turn-old") :id "turn-old"))
+            linked (sut/plan cfg (assoc (turns/read-record store "turn-new") :id "turn-new"))]
+        (is (= :no-ma-record-session-start
+               (get-in start [:strand :asserted-content :connection/status])))
+        (is (= [:turn] (mapv :role (get-in start [:strand :endpoints]))))
+        (is (= :no-ma-record
+               (get-in linked [:strand :asserted-content :connection/status])))
+        (is (= [:turn :prev] (mapv :role (get-in linked [:strand :endpoints]))))))))
+
+(deftest no-ma-record-republish-is-idempotent
+  (let [store (temp-store) messages (atom [])]
+    (record! store "turn-start" {:prev_operator_turn_id nil})
+    (seams
+     #(with-redefs [http/append-batch! (fn [_ id _] (swap! messages conj id) {:ok {}})]
+        (let [turn (assoc (turns/read-record store "turn-start") :id "turn-start")]
+          (sut/write! {:turn-store store :graph-store :fixture} turn)
+          (sut/write! {:turn-store store :graph-store :fixture} turn))))
+    (is (= 1 (count (distinct @messages))))))
+
 (deftest idempotent-replay-and-repair-have-stable-distinct-message-ids
   (let [store (temp-store) messages (atom [])]
     (record! store "turn-t0" {})
@@ -73,13 +98,13 @@
     (is (not= (second @messages) (nth @messages 2)))))
 
 (deftest predecessor-reader-prefers-repaired-linked-edge
-  (let [claims {"pending" {:asserted-content {:connection/status :prev-pending}
+  (let [claims {"no-ma" {:asserted-content {:connection/status :no-ma-record}
                             :endpoints [{:role :turn :target {:ref/id "t1"}}]}
                 "linked" {:asserted-content {:connection/status :linked}
                            :endpoints [{:role :turn :target {:ref/id "t1"}}
                                        {:role :prev :target {:ref/id "t0"}}]}}]
     (with-redefs [mentions/field-evidence (fn [& _] {:reference (fixture-ref :evidence-text "t1")})
-                  store/bounded-query! (fn [_ _] {:ok {:edge-ids ["linked" "pending"]}})
+                  store/bounded-query! (fn [_ _] {:ok {:edge-ids ["linked" "no-ma"]}})
                   store/get-entity (fn [_ id] {:ok (claims id)})]
       (is (= {:status :linked :predecessor-reference-id "t0"}
              (sut/read-predecessor {:graph-store :fixture} {:id "t1"}))))))
@@ -88,11 +113,13 @@
   (let [store (temp-store) writes (atom 0)]
     (record! store "turn-t" {:pattern_verdicts {:window ["turn-t"] :patterns []
                                             :connection {:status :session-start}}})
+    (record! store "turn-legacy" {:prev_operator_turn_id "turn-t"})
     (seams
      #(with-redefs [sut/write! (fn [& _] (swap! writes inc) {:written 1})]
         (let [dry (sut/backfill! {:turn-store store} {})
               write (sut/backfill! {:turn-store store} {:write? true :pause-ms 0})]
-          (is (= 1 (:turns dry) (:turns write)))
-          (is (= 1 (get-in dry [:outcomes :would-write])))
-          (is (= 1 (get-in write [:outcomes :written]))))
-        (is (= 1 @writes))))))
+          (is (= 2 (:turns dry) (:turns write)))
+          (is (= {:session-start 1 :no-ma-record 1} (:by-status dry) (:by-status write)))
+          (is (= 2 (get-in dry [:outcomes :would-write])))
+          (is (= 2 (get-in write [:outcomes :written]))))
+        (is (= 2 @writes))))))

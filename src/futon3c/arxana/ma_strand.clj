@@ -20,31 +20,39 @@
          (contains? positions quoted)
          (< (positions quoted) (positions current)))))
 
-(defn- message-id [turn]
-  (let [c (get-in turn [:pattern_verdicts :connection])]
+(defn- connection-for-turn [turn]
+  (or (get-in turn [:pattern_verdicts :connection])
+      (when (and (nil? (:pattern_verdicts turn))
+                 (contains? turn :prev_operator_turn_id))
+        (if-let [prev-id (:prev_operator_turn_id turn)]
+          {:status :no-ma-record :turn/id prev-id}
+          {:status :no-ma-record-session-start}))))
+
+(defn- message-id [turn connection]
+  (let [c connection]
     (str "ma-strand/" (:id turn) "/"
          (digest/canonical-digest
           (select-keys c [:status :turn/id :sha256 :reason])))))
 
 (defn plan [cfg turn]
   (let [verdict (:pattern_verdicts turn)
-        connection (:connection verdict)
+        connection (connection-for-turn turn)
         status (some-> (:status connection) keyword)
+        prev-endpoint? (contains? #{:linked :no-ma-record} status)
         turn-ref (turn-reference cfg turn)]
     (cond
-      (nil? verdict) {:failed :ma-verdict-unavailable}
       (nil? connection) {:failed :ma-connection-unavailable}
       (nil? turn-ref) {:failed :operator-evidence-unavailable}
-      (and (= :linked status)
+      (and prev-endpoint?
            (nil? (turns/read-record (:turn-store cfg) (:turn/id connection))))
       {:failed :predecessor-turn-unavailable}
-      (and (= :linked status)
+      (and prev-endpoint?
            (nil? (turn-reference
                   cfg (assoc (turns/read-record (:turn-store cfg) (:turn/id connection))
                              :id (:turn/id connection)))))
       {:failed :predecessor-evidence-unavailable}
       :else
-      (let [prev-turn (when (= :linked status)
+      (let [prev-turn (when prev-endpoint?
                         (some-> (turns/read-record (:turn-store cfg) (:turn/id connection))
                                 (assoc :id (:turn/id connection))))
             prev-ref (when prev-turn (turn-reference cfg prev-turn))
@@ -93,7 +101,7 @@
     (if failed p
         (let [result (http/append-batch!
                       (:graph-store cfg)
-                      (message-id turn)
+                      (message-id turn (connection-for-turn turn))
                       rows)]
           (if (:ok result) {:written 1 :quotes quotes}
               {:failed :ma-strand-write-refused})))))
@@ -110,8 +118,13 @@
                                         :limit 20 :order :asc}))
           claims (keep #(-> (store/get-entity (:graph-store cfg) %) :ok)
                        (:edge-ids q))
-          latest (or (some #(when (= :linked (get-in % [:asserted-content :connection/status])) %) claims)
-                     (last claims))]
+          priority (fn [claim]
+                     (case (get-in claim [:asserted-content :connection/status])
+                       :linked 3
+                       :no-ma-record 1
+                       :no-ma-record-session-start 1
+                       2))
+          latest (last (sort-by priority claims))]
       {:status (get-in latest [:asserted-content :connection/status])
        :predecessor-reference-id (some #(when (= :prev (:role %))
                                           (get-in % [:target :ref/id]))
@@ -123,8 +136,11 @@
   (let [candidates (->> (turns/list-records (:turn-store cfg) :limit Long/MAX_VALUE)
                         (keep (fn [{:keys [id record]}]
                                 (when (and (= "operator" (:origin record))
-                                           (get-in record [:pattern_verdicts :connection]))
+                                           (or (get-in record [:pattern_verdicts :connection])
+                                               (and (nil? (:pattern_verdicts record))
+                                                    (contains? record :prev_operator_turn_id))))
                                   (assoc record :id id)))))
+        by-status (frequencies (map #(some-> (connection-for-turn %) :status keyword) candidates))
         outcomes (mapv (fn [turn]
                          (let [p (plan cfg turn)]
                            (if (:failed p) (:failed p)
@@ -135,4 +151,5 @@
                        candidates)]
     {:mode (if write? :write :dry-run)
      :turns (count candidates)
+     :by-status by-status
      :outcomes (frequencies outcomes)}))
