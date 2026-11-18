@@ -39,3 +39,18 @@
         (is (= a (nt/edges (nt/inspect (first index)))))
         (is (= 3 (count a)))
         (is (= ["namespace:invented" "arxana-type:ma/strand@1"] (:hx/endpoints (first a))))))))
+
+(deftest built-on-arxana-means-any-registered-type
+  (let [index [{:hx/id "namespace:writer" :prop/source-file "/invented/writer.clj" :prop/repo "futon3c"}
+               {:hx/id "namespace:empty" :prop/source-file "/invented/empty.clj" :prop/repo "futon3c"}
+               {:hx/id "namespace:fake" :prop/source-file "/invented/fake.clj" :prop/repo "futon3c"}]]
+    (with-redefs [slurp (fn [file]
+                          (case file
+                            "/invented/writer.clj" "(ns invented.writer (:require [futon3c.arxana.records :as r]))\n(r/make-clusion {:type-revision [:ma/strand 1]})"
+                            "/invented/fake.clj" "(ns invented.fake (:require [futon3c.arxana.records :as r]))\n(r/make-clusion {:type-revision [:not-arxana/thing 1]})"
+                            "(ns invented.empty)"))]
+      (is (= :yes (:answer (nt/built-on? index ["/invented/writer.clj"] :arxana))))
+      (is (= :not-yet (:answer (nt/built-on? index ["/invented/empty.clj"] :arxana))))
+      (is (= :not-yet (:answer (nt/built-on? index ["/invented/fake.clj"] :arxana)))
+          "a literal type not in Arxana's registry is not evidence"))))
+

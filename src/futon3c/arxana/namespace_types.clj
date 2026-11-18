@@ -146,7 +146,9 @@
                            [{:status :unknown :reason :unindexed :source-file file}])) subject-files)
          unknown (filter #(not= :ok (:status %)) scans)
          dynamic (mapcat #(filter (comp #{:dynamic} :status) (:uses %)) scans)
-         prefix (str/replace (str type-prefix) #"^:" "")
+         ;; :arxana = any type in Arxana's registry ("built on Arxana" is not
+         ;; a name prefix); otherwise a name prefix such as "ma/".
+         prefix (if (#{:arxana "arxana"} type-prefix) "" (str/replace (str type-prefix) #"^:" ""))
          registered (set (filter #(str/starts-with? (subs (str (first %)) 1) prefix)
                                  (keys registry/registry-v1)))
          writer (when (seq registered)
@@ -158,7 +160,7 @@
          target-reason (cond (empty? registered) :unregistered-target
                              (nil? writer) :no-indexed-target-writer)
          evidence (vec (for [scan scans use (:uses scan) :when (:type-revision use)
-                            :when (str/starts-with? (subs (str (first (:type-revision use))) 1) prefix)]
+                            :when (registered (:type-revision use))]
                         (merge (select-keys scan [:namespace-id :source-file :source-sha256]) use)))]
      {:answer (cond (or target-reason (empty? subject-files) (seq unknown)) :unknown
                     (seq evidence) :yes (seq dynamic) :unknown :else :not-yet)
