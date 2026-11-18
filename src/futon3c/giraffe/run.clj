@@ -446,7 +446,10 @@
         notes (cond-> (if focus-version-record [] [{:reason :focus-version-absent}])
                 (:focus/retained-from manifest)
                 (conj {:reason :focus-input-retained
-                       :from (:focus/retained-from manifest)}))
+                       :from (:focus/retained-from manifest)})
+                (:migrated manifest)
+                (conj {:reason :priority-pin-migrated
+                       :migration (:migrated manifest)}))
         mismatches (into (into unlisted focus-version-mismatches)
                          (for [{:keys [file] :as entry} (:files manifest)
                               :let [f (io/file dir file)
@@ -456,6 +459,80 @@
                            :manifest-sha256 (:sha256 entry)
                            :actual-sha256 actual}))]
     {:ok? (empty? mismatches) :mismatches (vec mismatches) :notes notes}))
+
+;; ------------------------------------------- priority pin migration (read-only by default)
+
+(defn migrate-priority-run!
+  "Remove a repeated per-row focus pin from one sealed priority.edn. Dry-run
+  unless :write? is true. A row set is eligible only when every row carries
+  exactly the manifest pin."
+  ([dir] (migrate-priority-run! dir {}))
+  ([dir {:keys [write? at] :or {write? false}}]
+   (let [dir (io/file dir)
+         manifest-file (io/file dir "manifest.edn")
+         priority-file (io/file dir "priority.edn")]
+     (cond
+       (not (.isFile manifest-file)) {:run-id (.getName dir) :status :no-manifest}
+       (not (.isFile priority-file)) {:run-id (.getName dir) :status :no-priority}
+       :else
+       (let [manifest (edn/read-string (slurp manifest-file))
+             rows (edn/read-string (slurp priority-file))
+             manifest-pin (get-in manifest [:focus-relation-input :evidence-pin])
+             pinned (filter #(contains? % :evidence-pin) rows)
+             before (.length priority-file)]
+         (cond
+           (empty? pinned)
+           {:run-id (.getName dir) :status :unchanged
+            :before-bytes before :after-bytes before :saved-bytes 0}
+
+           (or (not= (count pinned) (count rows))
+               (some #(not= manifest-pin (:evidence-pin %)) pinned))
+           {:run-id (.getName dir) :status :pin-mismatch
+            :before-bytes before :after-bytes before :saved-bytes 0}
+
+           :else
+           (let [new-rows (mapv #(dissoc % :evidence-pin) rows)
+                 text (print-edn new-rows)
+                 after (alength (.getBytes text "UTF-8"))
+                 old-sha (sha256 priority-file)
+                 new-sha (sha256 (.getBytes text "UTF-8"))
+                 migration {:from-sha old-sha
+                            :at (or at (str (java.time.Instant/now)))
+                            :reason :pin-once}
+                 new-manifest (-> manifest
+                                  (update :files
+                                          (fn [files]
+                                            (mapv #(if (= "priority.edn" (:file %))
+                                                     (assoc % :sha256 new-sha) %)
+                                                  files)))
+                                  (assoc-in [:priority-projection :sha256] new-sha)
+                                  (assoc :migrated migration))]
+             (when write?
+               (spit priority-file text)
+               (spit manifest-file (print-edn new-manifest)))
+             {:run-id (.getName dir)
+              :status (if write? :migrated :would-migrate)
+              :before-bytes before :after-bytes after
+              :saved-bytes (- before after)
+              :from-sha old-sha :to-sha new-sha})))))))
+
+(defn migrate-priority-pins!
+  "Plan or perform the pin-once migration for every run directory under ROOT.
+  Dry-run is the default. Directories without a completed manifest are listed
+  and never touched."
+  ([root] (migrate-priority-pins! root {}))
+  ([root opts]
+   (let [dirs (->> (.listFiles (io/file root))
+                   (filter #(.isDirectory ^java.io.File %))
+                   (sort-by #(.getName ^java.io.File %)))
+         runs (mapv #(migrate-priority-run! % opts) dirs)]
+     {:root (str root)
+      :write? (boolean (:write? opts))
+      :runs runs
+      :outcomes (frequencies (map :status runs))
+      :before-bytes (reduce + 0 (keep :before-bytes runs))
+      :after-bytes (reduce + 0 (keep :after-bytes runs))
+      :saved-bytes (reduce + 0 (keep :saved-bytes runs))})))
 
 ;; -------------------------------------------------- freshness (no write)
 

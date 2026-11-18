@@ -1,7 +1,8 @@
 (ns futon3c.circus.chain-record-test
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
-            [futon3c.circus.chain-record :as chain]))
+            [futon3c.circus.chain-record :as chain]
+            [futon3c.giraffe.run :as giraffe]))
 
 (defn- fixture-run [pins]
   (let [dir (.toFile (java.nio.file.Files/createTempDirectory
@@ -72,6 +73,18 @@
   (let [a {:turn {:id "t" :origin "operator"} :items ["M-one"]}
         b (array-map :items ["M-one"] :turn (array-map :origin "operator" :id "t"))]
     (is (= (chain/canonical-edn a) (chain/canonical-edn b)))))
+
+(deftest priority-pin-migration-does-not-change-chain-record
+  (let [dir (fixture-run [["hou-1" "sha"]])
+        manifest (read-string (slurp (io/file dir "manifest.edn")))
+        pin (get-in manifest [:focus-relation-input :evidence-pin])
+        priority-file (io/file dir "priority.edn")
+        rows (mapv #(assoc % :evidence-pin pin) (read-string (slurp priority-file)))
+        _ (spit priority-file (pr-str rows))
+        before (chain/chain-record (fixture-config dir nil))]
+    (is (= :migrated (:status (giraffe/migrate-priority-run!
+                               dir {:write? true :at "2026-11-18T00:00:00Z"}))))
+    (is (= before (chain/chain-record (fixture-config dir nil))))))
 
 (deftest turn-item-missing-from-priority-is-typed-not-dropped
   (let [cfg (fixture-config (fixture-run []) nil)

@@ -2,7 +2,8 @@
   (:require [clojure.java.io :as io]
             [clojure.test :refer [deftest is]]
             [futon3c.circus.hou :as hou]
-            [futon3c.circus.qa :as qa]))
+            [futon3c.circus.qa :as qa]
+            [futon3c.giraffe.run :as giraffe]))
 
 (defn- run-dir []
   (let [dir (.toFile (java.nio.file.Files/createTempDirectory
@@ -67,6 +68,21 @@
     (is (= :ranked (:stage result)))
     (is (= 1 (get-in result [:evidence :rank])))
     (is (= :present (:focus-status result)))))
+
+(deftest priority-pin-migration-does-not-change-qa
+  (let [dir (run-dir)
+        pin (get-in (read-string (slurp (io/file dir "manifest.edn")))
+                    [:focus-relation-input :evidence-pin])
+        priority-file (io/file dir "priority.edn")
+        rows (mapv #(assoc % :evidence-pin pin) (read-string (slurp priority-file)))
+        _ (spit priority-file (pr-str rows))
+        before {:top (qa/top-items (assoc (opts dir) :n 2))
+                :why (qa/why-not (assoc (opts dir) :item "M-ranked"))}]
+    (is (= :migrated (:status (giraffe/migrate-priority-run!
+                               dir {:write? true :at "2026-11-18T00:00:00Z"}))))
+    (is (= before
+           {:top (qa/top-items (assoc (opts dir) :n 2))
+            :why (qa/why-not (assoc (opts dir) :item "M-ranked"))}))))
 
 (deftest rejected-third-party-edge-does-not-reject-its-from-item
   (let [dir (run-dir)]

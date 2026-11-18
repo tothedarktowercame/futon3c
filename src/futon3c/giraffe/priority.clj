@@ -13,11 +13,11 @@
 (defn priority-projection
   "Return every pass row, grouped by received relation then by pass rank.
   CUTOFF is a declared row-count boundary; rows are marked, never discarded.
-  FOCUS-INPUT is {:relations {target relation} :evidence-pin pin}."
+  FOCUS-INPUT is {:relations {target relation} :evidence-pin pin}. The pin is
+  sealed once in manifest.edn; rows contain only their derived ranking."
   [pass-output focus-input cutoff]
   {:pre [(nat-int? cutoff)]}
-  (let [relations (:relations focus-input)
-        evidence-pin (:evidence-pin focus-input)]
+  (let [relations (:relations focus-input)]
     (->> (:order pass-output)
          (map-indexed
           (fn [index item]
@@ -27,8 +27,7 @@
               (cond-> {:target target
                        :pass-rank (or (:rank item) (inc index))
                        :relation relation
-                       :priority-band band
-                       :evidence-pin evidence-pin}
+                       :priority-band band}
                 (= band :unknown) (assoc :reason :focus-relation-missing)))))
          (sort-by (juxt (comp band-order :priority-band) :pass-rank))
          (map-indexed (fn [index row]

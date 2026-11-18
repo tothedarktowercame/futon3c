@@ -154,12 +154,81 @@
     (is (= (gr/sha256 priority-file)
            (get-in (:manifest focused) [:priority-projection :sha256])))
     (is (= :present (get-in (:manifest focused) [:priority-projection :status])))
+    (is (not-any? #(contains? % :evidence-pin)
+                  (edn/read-string (slurp priority-file))))
     (is (= {:status :absent :reason :focus-relation-input-absent}
            (get-in (:manifest baseline) [:focus-relation-input])))
     (is (not (.exists (io/file baseline-dir "priority.edn"))))
     (is (= (slurp (io/file baseline-dir "pass.edn"))
            (slurp (io/file focused-dir "pass.edn")))
         "the optional projection does not alter pass.edn bytes")))
+
+(defn- make-legacy-priority-pin! [written]
+  (let [dir (io/file (:dir written))
+        priority-file (io/file dir "priority.edn")
+        manifest-file (io/file dir "manifest.edn")
+        manifest (edn/read-string (slurp manifest-file))
+        pin (get-in manifest [:focus-relation-input :evidence-pin])
+        rows (mapv #(assoc % :evidence-pin pin)
+                   (edn/read-string (slurp priority-file)))]
+    (spit priority-file (pr-str rows))
+    (let [old-sha (gr/sha256 priority-file)
+          manifest (-> manifest
+                       (update :files (fn [files]
+                                        (mapv #(if (= "priority.edn" (:file %))
+                                                 (assoc % :sha256 old-sha) %) files)))
+                       (assoc-in [:priority-projection :sha256] old-sha))]
+      (spit manifest-file (pr-str manifest))
+      {:dir dir :old-sha old-sha :pin pin})))
+
+(deftest priority-pin-migration-is-verified-idempotent-and-fails-closed
+  (let [root (temp-root "priority-migration")
+        pass-output (:pass-output (pilot-run (temp-root "priority-migration-source")))
+        relations (into {} (map (fn [{:keys [id]}] [id :associated]) (:order pass-output)))
+        written (:written (pilot-run root {:run-id "legacy-pin"
+                                           :focus-relation-input
+                                           {:relations relations
+                                            :evidence-pin {:fixture "pin"}}}))
+        focus-version (get-in written [:manifest :focus/version])
+        {:keys [dir old-sha]} (make-legacy-priority-pin! written)
+        before (slurp (io/file dir "priority.edn"))
+        dry (gr/migrate-priority-pins! root)]
+    (is (= :would-migrate (get-in dry [:runs 0 :status])))
+    (is (= before (slurp (io/file dir "priority.edn"))) "dry-run writes nothing")
+    (let [migrated (gr/migrate-priority-pins!
+                    root {:write? true :at "2026-11-18T00:00:00Z"})]
+      (is (pos? (:saved-bytes migrated)))
+      (is (:ok? (gr/verify-run dir)))
+      (is (= focus-version
+             (:focus/version (edn/read-string (slurp (io/file dir "manifest.edn"))))))
+      (is (= {:from-sha old-sha :at "2026-11-18T00:00:00Z" :reason :pin-once}
+             (:migrated (edn/read-string (slurp (io/file dir "manifest.edn"))))))
+      (is (some #(= :priority-pin-migrated (:reason %)) (:notes (gr/verify-run dir))))
+      (is (= :unchanged (get-in (gr/migrate-priority-pins! root {:write? true})
+                                [:runs 0 :status])))
+      (let [manifest-file (io/file dir "manifest.edn")
+            manifest (edn/read-string (slurp manifest-file))]
+        ;; Planted check: this is the manifest a broken migration would leave.
+        (spit manifest-file
+              (pr-str (update manifest :files
+                              (fn [files]
+                                (mapv #(if (= "priority.edn" (:file %))
+                                         (assoc % :sha256 old-sha) %) files)))))
+        (is (not (:ok? (gr/verify-run dir)))
+            "forgetting the migrated priority sha must fail verification")))))
+
+(deftest priority-pin-migration-skips-differing-row-pin
+  (let [root (temp-root "priority-mismatch")
+        pass-output (:pass-output (pilot-run (temp-root "priority-mismatch-source")))
+        relations (into {} (map (fn [{:keys [id]}] [id :associated]) (:order pass-output)))
+        written (:written (pilot-run root {:run-id "mismatch"
+                                           :focus-relation-input
+                                           {:relations relations :evidence-pin {:fixture "pin"}}}))
+        {:keys [dir]} (make-legacy-priority-pin! written)
+        priority-file (io/file dir "priority.edn")
+        rows (edn/read-string (slurp priority-file))]
+    (spit priority-file (pr-str (assoc-in rows [0 :evidence-pin] {:different true})))
+    (is (= :pin-mismatch (get-in (gr/migrate-priority-pins! root) [:runs 0 :status])))))
 
 (deftest focus-version-digest-is-order-stable-and-verified
   (let [pins-a {:producer :hou

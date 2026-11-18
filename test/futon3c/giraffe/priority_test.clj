@@ -20,7 +20,7 @@
     (is (= [:within-cutoff :within-cutoff :beyond-cutoff]
            (mapv :cutoff-status rows)))
     (is (every? #(= 2 (:cutoff %)) rows))
-    (is (every? #(= pin (:evidence-pin %)) rows))))
+    (is (not-any? #(contains? % :evidence-pin) rows))))
 
 (deftest missing-relation-is-unknown-with-reason
   (let [row (first (priority/priority-projection
