@@ -82,6 +82,14 @@
     (is (= {:status :absent :reason :no-clusions}
            (get-in record [:gcc :狗])))))
 
+(deftest light-turn-gcc-never-reads-or-verifies-a-giraffe-run
+  (let [cfg (fixture-config "/path/that/must/not/be-read" :狗)
+        light (chain/turn-gcc (dissoc cfg :run-dir :verify-run-fn))]
+    (is (= "turn-fixture" (get-in light [:turn :id])))
+    (is (= {:status :absent :reason :no-clusions} (get-in light [:gcc :狗])))
+    (is (= ["M-one"] (:items light)))
+    (is (= #{:mention :focus} (set (map :kind (:item-links light)))))))
+
 (deftest focus-link-excludes-unpinned-clusion
   (let [record (chain/chain-record
                 (fixture-config (fixture-run [["ma-1" "sha"]]) nil))]

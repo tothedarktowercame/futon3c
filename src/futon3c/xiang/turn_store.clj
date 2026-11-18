@@ -99,6 +99,14 @@
   (str (io/file dir "session-heads"
                 (str (java.net.URLEncoder/encode (str session-id) "UTF-8") ".json"))))
 
+(defn session-head
+  "Newest linked operator turn for SESSION-ID, or nil. This reads only the
+  durable per-session head receipt; it never falls back to listing the store."
+  [store session-id]
+  (let [f (io/file (session-head-path store session-id))]
+    (when (.isFile f)
+      (:head (json/parse-string (slurp f :encoding "UTF-8") true)))))
+
 (defonce ^:private ^java.util.concurrent.ConcurrentHashMap session-locks
   (java.util.concurrent.ConcurrentHashMap.))
 

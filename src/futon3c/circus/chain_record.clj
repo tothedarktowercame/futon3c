@@ -150,6 +150,59 @@
   (when (and (empty? items) (empty? mention-ids) (empty? focus-link-ids))
     :no-item-evidence))
 
+(defn- item-links [cfg relation-ids kind]
+  (->> relation-ids
+       (keep (fn [relation-id]
+               (when-let [clusion-id (some-> (entity cfg relation-id)
+                                              row-item-clusion)]
+                 (when-let [id (item-id cfg clusion-id)]
+                   {:item-id id :kind kind
+                    :relation-id relation-id
+                    :clusion-id clusion-id}))))
+       distinct
+       (sort-by (juxt :item-id :relation-id))
+       vec))
+
+(defn turn-gcc
+  "Light, read-only projection of one turn's Circus graph. Unlike
+  `chain-record`, this reads no Giraffe run and performs no verification.
+  Optional query/read/entity seams are the same as `chain-record`."
+  [{:keys [turn-id] :as opts}]
+  (let [cfg (merge (mentions/default-config) opts)
+        turn ((or (:read-turn-fn cfg) turns/read-record) (:turn-store cfg) turn-id)
+        _ (when-not turn (throw (ex-info "Turn not found" {:reason :turn-not-found
+                                                            :turn-id turn-id})))
+        turn (assoc turn :id turn-id)
+        turn-ref-id (or (:turn-reference-id cfg)
+                        (get-in (mentions/field-evidence cfg turn :source_text)
+                                [:reference :id]))
+        _ (when-not turn-ref-id
+            (throw (ex-info "Turn evidence reference unavailable"
+                            {:reason :turn-reference-unavailable :turn-id turn-id})))
+        ordinary (into {}
+                       (for [[animal type role] animal-specs]
+                         [animal (reverse-ids cfg type role turn-ref-id)]))
+        header-ids (:猴 ordinary)
+        focus-link-ids (vec (mapcat #(reverse-ids cfg [:hou/focus-relation 1]
+                                                  :focus %) header-ids))
+        gcc (-> ordinary
+                (assoc :猴 (vec (concat header-ids focus-link-ids)))
+                (update-vals present-or-absent))
+        links (vec (concat (item-links cfg (:mentions ordinary) :mention)
+                           (item-links cfg focus-link-ids :focus)))
+        items (->> links (map :item-id) distinct sort vec)]
+    {:turn {:id turn-id :evidence-ref turn-ref-id
+            :created_at (:created_at turn) :origin (:origin turn)
+            :prev_operator_turn_id (:prev_operator_turn_id turn)
+            :next_operator_turn_id (:next_operator_turn_id turn)}
+     :ma-connection (get-in turn [:pattern_verdicts :connection])
+     :gcc gcc
+     :items items
+     :item-links links
+     :item-evidence {:mention-relation-ids (vec (:mentions ordinary))
+                     :focus-relation-ids focus-link-ids}
+     :item-absence (item-absence items (:mentions ordinary) focus-link-ids)}))
+
 (defn chain-record
   "Collect one turn's recorded chain. Optional injected :query-fn,
   :get-entity-fn, :read-turn-fn and :turn-reference-id make proof evaluation
@@ -165,19 +218,11 @@
                                 [:reference :id]))
         _ (when-not turn-ref-id
             (throw (ex-info "Turn evidence reference unavailable" {:turn-id turn-id})))
-        ordinary (into {}
-                       (for [[animal type role] animal-specs]
-                         [animal (reverse-ids cfg type role turn-ref-id)]))
-        header-ids (:猴 ordinary)
-        focus-link-ids (vec (mapcat #(reverse-ids cfg [:hou/focus-relation 1]
-                                                  :focus %) header-ids))
-        gcc (-> ordinary
-                (assoc :猴 (vec (concat header-ids focus-link-ids)))
-                (update-vals present-or-absent))
-        item-clusion-ids (->> (concat (:mentions ordinary) focus-link-ids)
-                              (keep #(some-> (entity cfg %) row-item-clusion))
-                              distinct)
-        items (->> item-clusion-ids (keep #(item-id cfg %)) distinct sort vec)
+        light (turn-gcc (assoc cfg :turn-id turn-id :turn-reference-id turn-ref-id))
+        gcc (:gcc light)
+        items (:items light)
+        focus-link-ids (get-in light [:item-evidence :focus-relation-ids])
+        mention-ids (get-in light [:item-evidence :mention-relation-ids])
         manifest (edn/read-string (slurp (io/file run-dir "manifest.edn")))
         priority-file (io/file run-dir "priority.edn")
         priority (if (.isFile priority-file) (edn/read-string (slurp priority-file)) [])
@@ -190,7 +235,7 @@
               :ma-reading (ma-reading turn)
               :gcc gcc
               :items items
-              :item-absence (item-absence items (:mentions ordinary) focus-link-ids)
+              :item-absence (item-absence items mention-ids focus-link-ids)
               :run {:run-id (:run-id manifest)
                     :producer-git-sha (:git-sha manifest)
                     :readings-generation (:readings-generation manifest)

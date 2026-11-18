@@ -12979,6 +12979,12 @@
              (:circus-routes config) (parse-query-params request))]
         (json-response status body))
 
+      (and (= :get method) (= "/api/alpha/circus/strand" uri))
+      (let [{:keys [status body]}
+            (circus-routes/strand-response
+             (:circus-routes config) (parse-query-params request))]
+        (json-response status body))
+
       ;; Not under /api/alpha/xiang/: handle-xiang only sees that prefix.
       (and (= :get method) (= "/api/alpha/diagram/dispatch" uri))
       (handle-diagram-dispatch request config)

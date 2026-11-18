@@ -150,3 +150,72 @@
     (routes/top-items-response cfg {"run" (.getName run)})
     (routes/top-items-response cfg {"run" (.getName run)})
     (is (= 2 @calls))))
+
+(defn- strand-fixture []
+  (let [prev {"turn-four" "turn-three" "turn-three" "turn-two"
+              "turn-two" "turn-one" "turn-one" nil}
+        calls (atom {})
+        gcc-fn (fn [{:keys [turn-id]}]
+                 (swap! calls update turn-id (fnil inc 0))
+                 {:turn {:id turn-id :created_at (str "at-" turn-id)
+                         :prev_operator_turn_id (get prev turn-id)
+                         :next_operator_turn_id nil}
+                  :ma-connection (if (= turn-id "turn-one")
+                                   {:status :session-start}
+                                   {:status :linked :turn/id (get prev turn-id)
+                                    :sha256 (str "sha-" (get prev turn-id))})
+                  :gcc {:驴 {:status :present :clusion-ids [(str "proposal-" turn-id)]}
+                        :馬 {:status :absent :reason :no-clusions}
+                        :狗 {:status :absent :reason :no-clusions}}
+                  :items [(str "M-" turn-id)]
+                  :item-links [{:item-id (str "M-" turn-id) :kind :mention}]
+                  :item-absence nil})]
+    {:cfg {:turn-store ::store :session-head-fn (fn [_ session]
+                                                  (when (= session "session-one")
+                                                    "turn-four"))
+           :turn-gcc-fn gcc-fn :strand-cache (routes/strand-cache)}
+     :calls calls}))
+
+(deftest strand-walks-backpointers-honors-n-and-since-and-preserves-absence
+  (let [{:keys [cfg]} (strand-fixture)
+        limited (routes/strand-response cfg {"session" "session-one" "n" "2"})
+        incremental (routes/strand-response cfg {"session" "session-one"
+                                                 "since" "turn-two" "n" "20"})]
+    (is (= 200 (:status limited)))
+    (is (= ["turn-four" "turn-three"]
+           (mapv #(get % "id") (get-in limited [:body "turns"]))))
+    (is (= ["turn-four" "turn-three"]
+           (mapv #(get % "id") (get-in incremental [:body "turns"]))))
+    (is (= "turn-four" (get-in incremental [:body "cursor"])))
+    (is (= {"status" "absent" "reason" "no-clusions"}
+           (get-in limited [:body "turns" 0 "gcc" "馬"])))
+    (is (some #(= "strand" (get % "kind")) (get-in limited [:body "edges"])))
+    (is (some #(= "proposed" (get % "kind")) (get-in limited [:body "edges"])))))
+
+(deftest stable-cached-turn-is-requeried-only-after-event
+  (let [{:keys [cfg calls]} (strand-fixture)
+        params {"session" "session-one" "n" "4"}]
+    (routes/strand-response cfg params)
+    (routes/strand-response cfg params)
+    ;; Newest two remain live; older turns are reused.
+    (is (= 2 (get @calls "turn-four")))
+    (is (= 2 (get @calls "turn-three")))
+    (is (= 1 (get @calls "turn-two")))
+    (routes/mark-strand-dirty! (:strand-cache cfg) "turn-two")
+    (routes/strand-response cfg params)
+    (is (= 2 (get @calls "turn-two")))))
+
+(deftest cursor-poll-returns-only-turns-newer-than-cursor
+  (let [{:keys [cfg]} (strand-fixture)
+        response (routes/strand-response cfg {"session" "session-one"
+                                              "since" "turn-three"})]
+    (is (= ["turn-four"]
+           (mapv #(get % "id") (get-in response [:body "turns"]))))))
+
+(deftest unknown-strand-session-is-typed-404
+  (let [{:keys [cfg]} (strand-fixture)
+        response (routes/strand-response cfg {"session" "missing"})]
+    (is (= 404 (:status response)))
+    (is (= {"status" "error" "reason" "session-not-found"
+            "session" "missing"}
+           (:body response)))))
