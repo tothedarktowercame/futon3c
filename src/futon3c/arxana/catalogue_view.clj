@@ -33,8 +33,8 @@
 
 (defn debt-summary
   "Derived from the displayed enforcement states. Reasons can overlap when a
-  choice has several checks. No Demo B citations are available yet; absence of
-  that input is not evidence of complete coverage. Immutable check records do
+  choice has several checks. Coverage is read from the coverage check's latest run (Demo B's citation
+  manifest against the catalogue); without a run it is :not-assessed, never clean. Immutable check records do
   not provide a dated implementation-change history, so stale-run is not inferred."
   [choices]
   {:by-reason
@@ -48,8 +48,14 @@
                            (map :choice/key) distinct sort vec)]
              {:reason reason :count (count keys) :choice-keys keys}))
          [:no-check :no-run :violated])
-   :coverage {:status :not-assessed :reason :demo-b-citations-not-available
-              :undocumented-features []}
+   :coverage (let [run (some (fn [choice]
+                               (when (some #{:demo-coverage} (:applies-to choice))
+                                 (some :latest-run (:checks choice))))
+                             choices)]
+               (if run
+                 {:status :assessed :result (:result run) :run-id (:id run) :event-time (:event-time run)
+                  :undocumented-features (vec (:violations run))}
+                 {:status :not-assessed :reason :no-coverage-run :undocumented-features []}))
    :limitations [:stale-run-requires-dated-implementation-change-history]})
 
 (defn catalogue-view

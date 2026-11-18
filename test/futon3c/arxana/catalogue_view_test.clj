@@ -103,3 +103,18 @@
                               #(when (= "future-run" (:record-id %)) {:ok {:status :missing}})) at)]
       (is (= (view/catalogue-view rs at) (dissoc result :queries)))
       (is (not-any? #(= :records-by-field (:query/type %)) @calls)))))
+
+(deftest coverage-debt-reads-the-coverage-run
+  (let [rs (fixture-records)
+        cov-choice (first (filter #(= :coverage (get-in % [:asserted-content :choice/key])) rs))
+        cov-check-id (some #(when (and (= [:design/checked-by 1] (:type-revision %))
+                                       (= (:id cov-choice) (get-in % [:endpoints 0 :target :clusion/id])))
+                              (get-in % [:endpoints 1 :target :clusion/id])) rs)
+        run {:id "arxana:attestation:sha256:coverage-run" :subject-clusion-id (:id cov-choice)
+             :event-time at :basis :exact :standing :verified :coverage :partial
+             :method {:check/key :coverage :check/id cov-check-id}
+             :content {:result :violation :violations [:cascade/benefit-filings]}}
+        debt (:debt (view/catalogue-view (conj rs run) at))]
+    (is (= :assessed (get-in debt [:coverage :status])))
+    (is (= :violation (get-in debt [:coverage :result])))
+    (is (= [:cascade/benefit-filings] (get-in debt [:coverage :undocumented-features])))))
