@@ -1,7 +1,8 @@
 (ns futon3c.circus.routes
   "Read-only HTTP-facing adapter for Circus QA. Maps and keyword values are
   normalized here so transport/http remains a thin Ring adapter."
-  (:require [cheshire.core :as json]
+  (:require [futon3c.scripts.mission-scope-view :as scope-view]
+            [cheshire.core :as json]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
@@ -513,3 +514,26 @@
           {:status 200 :body (json-ready {:mission mission :turns_read (count rows)
                                          :patterns ordered :unindexed (nil? index)})})
         (catch Exception e (error-response 503 "mission-session-patterns-unavailable" {:message (.getMessage e)}))))))
+
+
+(def ^:private pattern-binders ["pattern" "psr" "pur"])
+
+(defn mission-pattern-scopes-response
+  "The mission's own patterns: the pattern/psr/pur scopes mission-mode finds in
+  the mission document (ingested into substrate-2), each with its anchored
+  passage. Joe 2026-11-18: these are the \"mission patterns\"; the turn-side
+  join is mission-session-patterns. One substrate read per binder type."
+  ([params] (mission-pattern-scopes-response params scope-view/fetch-view))
+  ([params fetch]
+   (let [mission (get params "mission")]
+     (if (str/blank? mission)
+       (error-response 400 "mission-required")
+       (try
+         (let [view (fetch mission (scope-view/substrate-url) pattern-binders)
+               scopes (->> (:scopes view)
+                           (filter #(some #{(:type %)} pattern-binders))
+                           (mapv #(-> (select-keys % [:id :type :title :passage :anchor_state :hx_id])
+                                      (update :passage (fn [p] (when p (subs p 0 (min 200 (count p)))))))))]
+           {:status 200 :body (json-ready {:mission mission :scopes scopes})})
+         (catch Exception e
+           (error-response 503 "mission-pattern-scopes-unavailable" {:message (.getMessage e)})))))))

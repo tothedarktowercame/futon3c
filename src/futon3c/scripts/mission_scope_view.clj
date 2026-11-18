@@ -114,10 +114,11 @@
 (defn fetch-view
   "Fetch a complete mission projection; shared by Drawbridge and the CLI."
   ([mission] (fetch-view mission (substrate-url)))
-  ([mission base-url]
+  ([mission base-url] (fetch-view mission base-url structural-binders))
+  ([mission base-url binders]
    (let [client (HttpClient/newHttpClient)
          hyperedges (mapcat #(hyperedges-by-type client base-url % mission)
-                            structural-binders)]
+                            binders)]
      (assoc (project-hyperedges mission hyperedges) :base_url base-url))))
 
 (defn- usage []
