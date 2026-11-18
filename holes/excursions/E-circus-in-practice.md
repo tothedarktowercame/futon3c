@@ -69,4 +69,8 @@ Carried items, to take up when practice shows a need:
    `:prev-pending`) when it does not; never silently nothing. Test: on one real
    session, every 馬 record has exactly one of a `:prev` link or a typed
    no-connection, and the `:prev` links form one chain without gaps or forks.
+   *Window, Joe 2026-11-18:* "We could also go down to 3 turns if it ends up
+   helping, I don't think I personally would refer back to anything further
+   back than N-2." CL-53 sets 4; drop to 3 (N, N-1, N-2) if 馬's calls still
+   overrun or come back all-void at 4.
 
