@@ -1,0 +1,196 @@
+{
+  "format" : "design-catalogue-ground-fixtures-v1",
+  "cases" : [ {
+    "id" : "coverage-pass",
+    "check" : "coverage",
+    "facts" : {
+      "documented" : [ "feature-a" ],
+      "citations" : [ "feature-a" ]
+    },
+    "expected" : {
+      "result" : "pass",
+      "violations" : [ ]
+    }
+  }, {
+    "id" : "coverage-empty",
+    "check" : "coverage",
+    "facts" : {
+      "documented" : [ ],
+      "citations" : [ ]
+    },
+    "expected" : {
+      "result" : "pass",
+      "violations" : [ ]
+    }
+  }, {
+    "id" : "coverage-missing",
+    "check" : "coverage",
+    "facts" : {
+      "documented" : [ "feature-a" ],
+      "citations" : [ "feature-a", "feature-b", "feature-b" ]
+    },
+    "expected" : {
+      "result" : "violation",
+      "violations" : [ "feature-b" ]
+    }
+  }, {
+    "id" : "function-pass",
+    "check" : "rule-function",
+    "facts" : {
+      "rules" : [ [ "rule-a", "module.a" ], [ "rule-b", "module.b" ] ]
+    },
+    "expected" : {
+      "result" : "pass",
+      "violations" : [ ]
+    }
+  }, {
+    "id" : "function-duplicate",
+    "check" : "rule-function",
+    "facts" : {
+      "rules" : [ [ "rule-a", "module.a" ], [ "rule-b", "module.a" ] ]
+    },
+    "expected" : {
+      "result" : "violation",
+      "violations" : [ {
+        "rule-a" : "rule-a",
+        "rule-b" : "rule-b",
+        "qualname" : "module.a"
+      }, {
+        "rule-a" : "rule-b",
+        "rule-b" : "rule-a",
+        "qualname" : "module.a"
+      } ]
+    }
+  }, {
+    "id" : "function-missing",
+    "check" : "rule-function",
+    "facts" : {
+      "rules" : [ [ "rule-a", null ], [ "rule-b", "" ], [ "rule-c", 7 ] ]
+    },
+    "expected" : {
+      "result" : "violation",
+      "violations" : [ {
+        "rule" : "rule-a",
+        "reason" : "missing-qualname"
+      }, {
+        "rule" : "rule-b",
+        "reason" : "missing-qualname"
+      }, {
+        "rule" : "rule-c",
+        "reason" : "missing-qualname"
+      } ]
+    }
+  }, {
+    "id" : "function-null-duplicate",
+    "check" : "rule-function",
+    "facts" : {
+      "rules" : [ [ "rule-a", null ], [ "rule-b", null ] ]
+    },
+    "expected" : {
+      "result" : "violation",
+      "violations" : [ {
+        "rule" : "rule-a",
+        "reason" : "missing-qualname"
+      }, {
+        "rule" : "rule-b",
+        "reason" : "missing-qualname"
+      }, {
+        "rule-a" : "rule-a",
+        "rule-b" : "rule-b",
+        "qualname" : null
+      }, {
+        "rule-a" : "rule-b",
+        "rule-b" : "rule-a",
+        "qualname" : null
+      } ]
+    }
+  }, {
+    "id" : "function-empty-array-distinct-from-null",
+    "check" : "rule-function",
+    "facts" : {
+      "rules" : [ [ "rule-a", null ], [ "rule-b", [ ] ] ]
+    },
+    "expected" : {
+      "result" : "violation",
+      "violations" : [ {
+        "rule" : "rule-a",
+        "reason" : "missing-qualname"
+      }, {
+        "rule" : "rule-b",
+        "reason" : "missing-qualname"
+      } ]
+    }
+  }, {
+    "id" : "links-pass",
+    "check" : "links",
+    "facts" : {
+      "choices" : [ "choice-a", "ruling-a" ],
+      "checks" : [ "check-a" ],
+      "rulings" : [ "ruling-a" ],
+      "refs" : [ "arxana:record:sha256:4f1966376e42881ab4e3c3904964ec2026024defeef7484e98d5ef59f5552cd5" ],
+      "links" : [ [ "link-a", "design/checked-by", "choice-a", "check-a" ], [ "link-b", "design/shaped-by", "choice-a", "ruling-a" ], [ "link-c", "design/constrains", "choice-a", "arxana:record:sha256:4f1966376e42881ab4e3c3904964ec2026024defeef7484e98d5ef59f5552cd5" ] ]
+    },
+    "expected" : {
+      "result" : "pass",
+      "violations" : [ ]
+    }
+  }, {
+    "id" : "links-wrong-check",
+    "check" : "links",
+    "facts" : {
+      "choices" : [ "choice-a", "ruling-a" ],
+      "checks" : [ "check-a" ],
+      "rulings" : [ "ruling-a" ],
+      "refs" : [ "arxana:record:sha256:4f1966376e42881ab4e3c3904964ec2026024defeef7484e98d5ef59f5552cd5" ],
+      "links" : [ [ "link-a", "design/checked-by", "choice-a", "choice-a" ] ]
+    },
+    "expected" : {
+      "result" : "violation",
+      "violations" : [ {
+        "link" : "link-a",
+        "role" : "check",
+        "target" : "choice-a"
+      } ]
+    }
+  }, {
+    "id" : "links-wrong-ruling",
+    "check" : "links",
+    "facts" : {
+      "choices" : [ "choice-a", "ruling-a" ],
+      "checks" : [ "check-a" ],
+      "rulings" : [ "ruling-a" ],
+      "refs" : [ "arxana:record:sha256:4f1966376e42881ab4e3c3904964ec2026024defeef7484e98d5ef59f5552cd5" ],
+      "links" : [ [ "link-b", "design/shaped-by", "choice-a", "choice-a" ] ]
+    },
+    "expected" : {
+      "result" : "violation",
+      "violations" : [ {
+        "link" : "link-b",
+        "role" : "ruling",
+        "target" : "choice-a"
+      } ]
+    }
+  }, {
+    "id" : "links-missing-reference-and-choice",
+    "check" : "links",
+    "facts" : {
+      "choices" : [ "choice-a", "ruling-a" ],
+      "checks" : [ "check-a" ],
+      "rulings" : [ "ruling-a" ],
+      "refs" : [ "arxana:record:sha256:4f1966376e42881ab4e3c3904964ec2026024defeef7484e98d5ef59f5552cd5" ],
+      "links" : [ [ "link-c", "design/constrains", "absent", "absent-ref" ] ]
+    },
+    "expected" : {
+      "result" : "violation",
+      "violations" : [ {
+        "link" : "link-c",
+        "role" : "choice",
+        "target" : "absent"
+      }, {
+        "link" : "link-c",
+        "role" : "target",
+        "target" : "absent-ref"
+      } ]
+    }
+  } ]
+}

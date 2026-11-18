@@ -1,6 +1,7 @@
 (ns futon3c.arxana.design-catalogue-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.edn :as edn]
+            [cheshire.core :as json]
             [futon3c.arxana.design-catalogue :as d]
             [futon3c.arxana.digest :as digest]
             [futon3c.arxana.external-ref :as external]
@@ -111,3 +112,65 @@
             linked (d/link :design/checked-by c extra)]
         (is (= {:status :unknown :reasons [:no-run]}
                (d/enforcement-status (conj records extra linked) (:id c))))))))
+
+(def shared-fixture-path "test/resources/arxana/design-catalogue-checks.json")
+(defn shared-fixtures
+  "Invented, ground facts plus outcomes from the actual record-based core.logic
+  checks. No second implementation computes expected results."
+  []
+  (let [coverage (fn [id documented citations]
+                   {:id id :check :coverage :facts {:documented documented :citations citations}
+                    :expected (d/coverage-check
+                               [{:id "choice-a" :type-revision [:design/choice 1]
+                                 :asserted-content {:applies-to documented}}] citations)})
+        functions (fn [id facts]
+                    {:id id :check :rule-function :facts {:rules facts}
+                     :expected (d/rule-function-check
+                                (mapv (fn [[rid qualname]]
+                                        {:id rid :type-revision [:rule/content 1]
+                                         :asserted-content {:rule/rewrite {:python/qualname qualname}}}) facts))})
+        ref (r/make-external-reference {:ref/kind :file :store/id "invented"
+                                       :store/endpoint "invented.edn" :record/id "coordinate"
+                                       :schema/authority :file/sha256 :valid-time at :revision/digest "invented"})
+        base [{:id "choice-a" :type-revision [:design/choice 1] :asserted-content {:kind :constraint}}
+              {:id "ruling-a" :type-revision [:design/choice 1] :asserted-content {:kind :ruling}}
+              {:id "check-a" :type-revision [:design/check 1]} ref]
+        links (fn [id facts]
+                (let [rs (mapv (fn [[lid type from to]]
+                                 (let [[role kind key] (case type
+                                                         :design/checked-by [:check :clusion :clusion/id]
+                                                         :design/shaped-by [:ruling :clusion :clusion/id]
+                                                         :design/constrains [:target :external-ref :ref/id])]
+                                   {:id lid :type-revision [type 1]
+                                    :endpoints [{:role :choice :kind :clusion :target {:clusion/id from}}
+                                                {:role role :kind kind :target {key to}}]})) facts)]
+                  {:id id :check :links
+                   :facts {:choices ["choice-a" "ruling-a"] :checks ["check-a"]
+                           :rulings ["ruling-a"] :refs [(:id ref)] :links facts}
+                   :expected (d/link-check (into base rs))}))]
+    {:format "design-catalogue-ground-fixtures-v1"
+     :cases [(coverage "coverage-pass" [:feature-a] [:feature-a])
+             (coverage "coverage-empty" [] [])
+             (coverage "coverage-missing" [:feature-a] [:feature-a :feature-b :feature-b])
+             (functions "function-pass" [["rule-a" "module.a"] ["rule-b" "module.b"]])
+             (functions "function-duplicate" [["rule-a" "module.a"] ["rule-b" "module.a"]])
+             (functions "function-missing" [["rule-a" nil] ["rule-b" ""] ["rule-c" 7]])
+             (functions "function-null-duplicate" [["rule-a" nil] ["rule-b" nil]])
+             (functions "function-empty-array-distinct-from-null" [["rule-a" nil] ["rule-b" []]])
+             (links "links-pass" [["link-a" :design/checked-by "choice-a" "check-a"]
+                                  ["link-b" :design/shaped-by "choice-a" "ruling-a"]
+                                  ["link-c" :design/constrains "choice-a" (:id ref)]])
+             (links "links-wrong-check" [["link-a" :design/checked-by "choice-a" "choice-a"]])
+             (links "links-wrong-ruling" [["link-b" :design/shaped-by "choice-a" "choice-a"]])
+             (links "links-missing-reference-and-choice" [["link-c" :design/constrains "absent" "absent-ref"]])]}))
+(defn export-shared-fixtures!
+  "Reproduce the committed JSON with the command recorded in the delivery notes."
+  ([] (export-shared-fixtures! shared-fixture-path))
+  ([path] (spit path (str (json/generate-string (shared-fixtures) {:pretty true}) "\n"))))
+(deftest shared-fixtures-match-current-core-logic
+  (doseq [case (:cases (shared-fixtures))]
+    (is (= (if (#{"coverage-pass" "coverage-empty" "function-pass" "links-pass"} (:id case))
+             :pass :violation)
+           (get-in case [:expected :result])) (:id case)))
+  (is (= (json/parse-string (json/generate-string (shared-fixtures)) true)
+         (json/parse-string (slurp shared-fixture-path) true))))
