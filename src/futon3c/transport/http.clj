@@ -11771,9 +11771,7 @@
               _ (when-not (and (string? eid) (promise-history/await-writes! 5000))
                   (throw (ex-info "Promise release write was not acknowledged"
                                   {:reason :store-failure})))
-              stored (rule-record-store/request!
-                      base "GET" (str "/api/alpha/evidence/"
-                                      (java.net.URLEncoder/encode eid "UTF-8")) nil)
+              stored (promise-log/get-entry eid)
               body (:evidence/body stored)]
           (when-not (and (= eid (:evidence/id stored))
                          (= :promise/released (:evidence/type stored))

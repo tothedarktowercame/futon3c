@@ -129,6 +129,11 @@
                       (some? (:history/predecessor props))
                       (assoc :history/predecessor (:history/predecessor props))))}))
 
+(defn get-entry
+  "Read an operational history row by its original transition identity."
+  [id]
+  (some-> (*get-fn* (hyperedge-id id)) hyperedge->entry))
+
 (defn read-history
   "Read the complete bounded operational promise-history population. OPTIONS
    accepts {:mode :current}, or {:mode :as-of :at <ISO instant>}. The latter

@@ -3,7 +3,9 @@
             [clojure.test :refer [deftest is]]
             [futon3c.agency.obligations-reader :as reader]
             [futon3c.agency.promise-history :as history]
-            [futon3c.agency.rule-record :as store]
+            [futon3c.agency.promise-log :as promise-log]
+            [futon3c.agency.promise-outcome :as outcome]
+            [futon3c.evidence.boundary :as boundary]
             [futon3c.social.test-fixtures :as fix]
             [futon3c.transport.http :as http]))
 
@@ -41,7 +43,7 @@
        #'history/record! (fn [type record _ details]
                            (reset! submitted [type record details]) eid)
        #'history/await-writes! (constantly true)
-       #'store/request! (fn [_ _ _ _]
+       #'promise-log/get-entry (fn [_]
                           (let [[type _ details] @submitted]
                             {:evidence/id eid :evidence/type type
                              :evidence/body details}))}
@@ -111,3 +113,22 @@
          (is (= 400 (:status r)))
          (is (= "caller-supplied-at" (:reason (body r))))))
     (is (zero? @writes))))
+
+(deftest release-round-trips-through-operational-log
+  (let [edges (atom {}) reads (atom [])]
+    (binding [history/*heads* (atom {}) history/*backend* (atom {:entries {} :order []})
+              promise-log/*post-fn* (fn [edge] (swap! edges assoc (:hx/id edge) edge) {:ok true})
+              promise-log/*get-fn* (fn [id] (swap! reads conj id) (get @edges id))]
+      (with-redefs-fn
+        {#'reader/read-inputs (fn [& _] (inputs))
+         #'http/promise-release-grant-id (constantly "act:grant")
+         #'outcome/evaluate! (fn [& _] nil)
+         #'boundary/append! (fn [& _] (is false "release must not append evidence")
+                              (throw (ex-info "forbidden" {})))}
+        (fn []
+          (let [response ((handler) (request "debtor" "debtor"))
+                eid (:evidence-id (body response))]
+            (is (= 200 (:status response)))
+            (is (= "abandoned" (:status (body response))))
+            (is (<= 2 (count (filter #{(promise-log/hyperedge-id eid)} @reads))))
+            (is (= :promise/released (:evidence/type (promise-log/get-entry eid))))))))))

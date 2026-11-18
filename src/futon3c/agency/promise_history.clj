@@ -6,8 +6,6 @@
             [futon3c.agency.promise-log :as promise-log]
             [futon3c.agency.promise-outcome :as outcome]
             [futon3c.agency.promise-state :as promise-state]
-            [futon3c.evidence.boundary :as boundary]
-            [futon3c.evidence.store :as estore]
             [futon3c.evidence.futon1b-backend :as f1b])
   (:import [java.time Instant]
            [java.nio.file Files StandardCopyOption CopyOption]
@@ -28,7 +26,8 @@
                          (newThread [_ task]
                            (doto (Thread. task "promise-history") (.setDaemon true))))))
 
-(defn stats [] (assoc @!counts :outcomes (outcome/stats)))
+(defn stats [] (assoc (dissoc @!counts :shadow-ok :shadow-mismatch :shadow-failed)
+                      :outcomes (outcome/stats)))
 (defn- failed! [type detail]
   (swap! !counts update :failed inc)
   (binding [*out* *err*] (println "promise-history write failed:" type (str detail))))
@@ -113,23 +112,21 @@
      "futon3c.agency.promise-history")))
 
 (defn record!
-  "Submit one old-path transition through the ordered background writer."
+  "Submit one transition to the operational log/state via the ordered writer."
   ([type rec now-ms] (record! type rec now-ms {}))
   ([type rec now-ms details]
    (try
      (let [entry (prepare-entry! type rec now-ms details true)
-           eid (:evidence/id entry)
-           ]
+           eid (:evidence/id entry)]
        (.execute writer
                  ^Runnable
                  (bound-fn []
                    (try
-                     (let [result (boundary/append! (backend) entry)]
-                       (if (:ok result)
-                         (do (swap! !counts update :written inc)
-                             (try (outcome/evaluate! (backend) eid rec (System/currentTimeMillis))
-                                  (catch Throwable e (outcome/failed! e))))
-                         (failed! type (:error/code result))))
+                     (promise-log/write! entry)
+                     (promise-state/write! entry)
+                     (swap! !counts update :written inc)
+                     (try (outcome/evaluate! (backend) eid rec (System/currentTimeMillis))
+                          (catch Throwable e (outcome/failed! e)))
                      (catch Throwable e (failed! type (.getMessage e))))))
        eid)
      (catch Throwable e (failed! type (.getMessage e))))))
@@ -163,51 +160,13 @@
 (defn allocator-snapshot [] @(heads!))
 (defn restore-allocator! [snapshot]
   (locking !chain-cache (reset! (heads!) snapshot)))
-(defn- present-keys
-  "SELECT-KEYS without nil values. futon1b does not store a nil-valued key, so
-   a first-in-chain row (:history/predecessor nil) reads back without the key;
-   comparing raw select-keys made every such row a permanent conflict
-   (2026-11-05: 13 rows stuck in the outbox since 10-28, 16,249 conflicts)."
-  [m ks]
-  (into {} (remove (comp nil? val)) (select-keys m ks)))
-
-(defn- same-history-row? [a b]
-  (and (= (present-keys a [:evidence/id :evidence/type :evidence/at :evidence/author
-                           :evidence/session-id])
-          (present-keys b [:evidence/id :evidence/type :evidence/at :evidence/author
-                           :evidence/session-id]))
-       (= (present-keys (:evidence/body a)
-                        [:history/promise-id :history/promise-sequence
-                         :history/predecessor :history/payload-edn])
-          (present-keys (:evidence/body b)
-                        [:history/promise-id :history/promise-sequence
-                         :history/predecessor :history/payload-edn]))))
-
-(defn- shadow-write!
-  "Attempt the legacy evidence copy and classify its exact readback. This is
-   observability only: operational log/state durability controls outbox ack."
-  [entry]
-  (let [eid (:evidence/id entry)]
-    (try
-      (let [result (boundary/append! (backend) entry)
-            existing (when (or (:ok result)
-                               (= :duplicate-id (:error/code result)))
-                       (estore/get-entry* (backend) eid))]
-        (cond
-          (and existing (same-history-row? entry existing)) :shadow-ok
-          (or (:ok result) (= :duplicate-id (:error/code result))) :shadow-mismatch
-          :else :shadow-failed))
-      (catch Throwable _ :shadow-failed))))
-
 (defn drain-now! [state persist!]
   (register-pending! (vals (:history-outbox @state)))
   (doseq [[eid entry] (sort-by #(get-in (val %) [:evidence/body :history/promise-sequence])
                                (:history-outbox @state))]
-    (let [shadow-result (shadow-write! entry)]
-      (swap! !counts update shadow-result (fnil inc 0))
-      (try
+    (try
         ;; The operational history readback and state projection are the
-        ;; acknowledgement authority. The evidence append above is a shadow.
+        ;; acknowledgement authority.
         (promise-log/write! entry)
         (promise-state/write! entry)
         (swap! !counts update :written inc)
@@ -225,7 +184,7 @@
           (catch Throwable e (outcome/failed! e)))
         (catch Throwable error
           (outbox-failed! eid (:evidence/type entry)
-                          (or (:reason (ex-data error)) (.getMessage error))))))))
+                          (or (:reason (ex-data error)) (.getMessage error)))))))
 ;; State atoms with a drain already queued. Every park/followup mutation calls
 ;; drain!, and each drain walks the whole outbox; with futon1b slow the queue
 ;; filled with redundant drains of the same entries (2026-10-28: 1,024 queued,

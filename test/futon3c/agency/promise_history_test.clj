@@ -11,14 +11,22 @@
             [futon3c.evidence.store :as estore]
             [futon3c.evidence.futon1b-backend :as f1b]))
 
+;; Captures successful operational log submissions, not evidence-store writes.
 (def ^:dynamic *evidence* nil)
 (def ^:dynamic *hyperedges* nil)
 (use-fixtures :each spool-fixture/isolated
   (fn [f]
     (let [p (java.io.File/createTempFile "p2a-park" ".edn")
           q (java.io.File/createTempFile "p2a-followup" ".edn")
-          store (atom {:entries {} :order []})]
-      (with-redefs-fn {#'park/store-path (constantly (str p))
+          store (atom {:entries {} :order []})
+          write-log! promise-log/write!]
+      (with-redefs-fn {#'promise-log/write! (fn [entry]
+                                             (let [result (write-log! entry)]
+                                               (swap! store (fn [s] (-> s
+                                                                 (assoc-in [:entries (:evidence/id entry)] entry)
+                                                                 (update :order #(vec (distinct (conj % (:evidence/id entry))))))))
+                                               result))
+                       #'park/store-path (constantly (str p))
                        #'outcome/evaluate! (fn [& _] nil)
                        #'outcome/sweep! (fn [& _] nil)}
         #(binding [queue/*path-override* (str q) history/*backend* store history/*heads* (atom {})
@@ -30,6 +38,7 @@
            (try (park/clear!) (queue/clear!)
                 (history/await-writes! 5000)
                 (reset! store {:entries {} :order []})
+                (reset! *hyperedges* {})
                 (f)
                 (finally (history/await-writes! 5000)
                          (.delete p) (.delete q)
@@ -106,7 +115,6 @@
       (with-redefs [f1b/append-retry-ms 0]
         (binding [history/*backend* (f1b/make-futon1b-backend (str "http://127.0.0.1:" port))]
           (let [failed (:failed (history/stats))
-                shadow-failed (:shadow-failed (history/stats) 0)
                 woke (atom false)
                 result (park/park! request {})]
             (is (= :parked (:status result)))
@@ -114,7 +122,7 @@
             (is @woke)
             (is (history/await-writes! 5000))
             (is (= failed (:failed (history/stats))))
-            (is (= 4 (- (:shadow-failed (history/stats) 0) shadow-failed)))
+            (is (not (contains? (history/stats) :shadow-failed)))
             (is (empty? (:records (park/snapshot))))))))))
 
 (deftest followup-cancel-revalidate-and-expired-lease
@@ -167,7 +175,6 @@
   (let [state (atom {:history-outbox {}})
         persisted (atom nil)
         persist! #(reset! persisted %)
-        shadow-ok-before (:shadow-ok (history/stats) 0)
         rec {:id "park:allocator" :agent "agent" :session "session"
              :awaiting #{"job"} :arrived {}}]
     (history/stage! state :promise/park-made rec 1000)
@@ -185,7 +192,7 @@
       (is (= 2 (count (set (map :evidence/id entries)))))
       (is (empty? (:history-outbox @state)))
       (is (empty? (:history-outbox @persisted)))
-      (is (= 1 (- (:shadow-ok (history/stats) 0) shadow-ok-before))))))
+      (is (not (contains? (history/stats) :shadow-ok))))))
 
 (deftest outbox-waits-for-hyperedge-and-retries-without-losing-evidence
   (let [state (atom {:history-outbox {}})
@@ -201,8 +208,8 @@
               promise-log/*get-fn* (fn [_]
                                      (throw (ex-info "store unavailable" {})))]
       (history/drain-now! state persist!))
-    (is (some? (get-in @*evidence* [:entries eid]))
-        "the evidence shadow is durable before operational recovery")
+    (is (nil? (get-in @*evidence* [:entries eid]))
+        "no successful operational write before recovery")
     (is (contains? (:history-outbox @state) eid))
     (is (= 1 (- (:failed (history/stats)) failed-before)))
     (history/drain-now! state persist!)
@@ -229,8 +236,7 @@
     (is (empty? (:history-outbox @persisted)))
     (is (some? (get @*hyperedges* (promise-log/hyperedge-id eid))))
     (is (some? (get @*hyperedges* "promise-state:park:shadow-down")))
-    (is (= 1 (- (:shadow-failed (history/stats) 0)
-                (:shadow-failed before 0))))
+    (is (not (contains? (history/stats) :shadow-failed)))
     (is (= (:failed before) (:failed (history/stats))))
     (is (not (contains? @@#'history/!failed-outbox-ids eid)))))
 
@@ -250,8 +256,7 @@
     (is (empty? (:history-outbox @persisted)))
     (is (some? (get @*hyperedges* (promise-log/hyperedge-id eid))))
     (is (some? (get @*hyperedges* "promise-state:park:shadow-conflict")))
-    (is (= 1 (- (:shadow-mismatch (history/stats) 0)
-                (:shadow-mismatch before 0))))
+    (is (not (contains? (history/stats) :shadow-mismatch)))
     (is (= (:failed before) (:failed (history/stats))))
     (is (not (contains? @@#'history/!failed-outbox-ids eid)))))
 
@@ -343,9 +348,27 @@
                        #(into {} (remove (comp nil? val)) %))]
     (is (contains? (:evidence/body entry) :history/predecessor))
     (is (nil? (get-in entry [:evidence/body :history/predecessor])))
-    (swap! *evidence* #(-> % (assoc-in [:entries eid] stored)
-                           (update :order conj eid)))
+    (swap! *hyperedges* assoc (promise-log/hyperedge-id eid)
+           (promise-log/entry->hyperedge stored))
     (history/drain-now! state (fn [_]))
     (is (empty? (:history-outbox @state))
         "the stored copy without the nil key is the same row")
     (is (= conflicts-before (or (:conflict (history/stats)) 0)))))
+
+(deftest record-and-drain-use-operational-storage-only
+  (let [appends (atom 0)
+        state (atom {:history-outbox {}})
+        rec {:id "park:operational" :agent "agent" :awaiting #{} :arrived {}}]
+    (with-redefs [boundary/append! (fn [& _]
+                                    (swap! appends inc)
+                                    (is false "promise history must never append evidence")
+                                    (throw (ex-info "forbidden evidence append" {})))]
+      (let [first-id (history/record! :promise/park-made rec 1000)]
+        (is (history/await-writes! 5000))
+        (is (= :promise/park-made (:evidence/type (promise-log/get-entry first-id))))
+        (let [second-id (history/stage! state :promise/released rec 2000)]
+          (history/drain-now! state (fn [_]))
+          (is (= :promise/released (:evidence/type (promise-log/get-entry second-id))))))
+    (is (zero? @appends))
+    (is (empty? (:history-outbox @state)))
+    (is (some? (get @*hyperedges* "promise-state:park:operational"))))))
