@@ -17,7 +17,8 @@
       (or (override query)
           {:ok (case (:query/type query)
                  :records-by-type {:status :ok :records (filterv #(= (:type-revision query) (:type-revision %)) rs)}
-                 :records-by-field {:status :ok :records (filterv #(= (:value query) (get-in % [:method :check/id])) rs)}
+                 :attestations {:status :ok :total (count (filter #(= (:subject-clusion-id query) (:subject-clusion-id %)) rs))
+                                :truncated? false :attestation-ids (mapv :id (filter #(= (:subject-clusion-id query) (:subject-clusion-id %)) rs))}
                  :record-by-id (if-let [r (first (filter #(= (:record-id query) (:id %)) rs))]
                                  {:status :ok :record r} {:status :missing}))}))
     (conditional-write! [_ _] (throw (ex-info "view wrote to store" {})))))
@@ -38,7 +39,7 @@
     (is (= v (dissoc queried :queries)))
     (is (seq (:constrains (choices :scope))))
     (is (= (:record/id (fixtures/reference)) (get-in (choices :scope) [:constrains 0 :coordinate :record/id])))
-    (is (= #{:records-by-type :records-by-field :record-by-id} (set (map :query/type @calls))))))
+    (is (= #{:records-by-type :attestations :record-by-id} (set (map :query/type @calls))))))
 
 (deftest incomplete-never-partial
   (let [rs (fixture-records)]
@@ -50,13 +51,13 @@
         (is (= :inconclusive (:status v)))
         (is (not (contains? v :choices)))))
     (let [v (view/read-catalogue
-             (fake-store rs (atom []) #(when (= :records-by-field (:query/type %))
-                                        {:ok {:status :ok :records [] :truncated? true}})) at)]
+             (fake-store rs (atom []) #(when (= :attestations (:query/type %))
+                                        {:ok {:status :ok :attestation-ids [] :truncated? true}})) at)]
       (is (= :inconclusive (:status v)))
       (is (= :truncated (:reason v))))
     (is (= :reference-unavailable
            (:reason (view/read-catalogue
-                     (fake-store rs (atom []) #(when (= :record-by-id (:query/type %))
+                     (fake-store rs (atom []) #(when (= (:id (fixtures/reference)) (:record-id %))
                                                 {:ok {:status :missing}})) at))))))
 
 (deftest dispatch-and-validation
@@ -76,8 +77,29 @@
 (deftest stale-index-is-retried-then-reported
   (let [calls (atom 0)
         stale (reify futon3c.arxana.store/ArxanaGraphStore
-                (bounded-query! [_ _] (swap! calls inc) {:ok {:status :stale-index}}))]
-    (let [r (futon3c.arxana.catalogue-view/read-catalogue stale "2026-11-18T00:00:00.000Z")]
+                (bounded-query! [_ _] (swap! calls inc) {:ok {:status :stale-index}}))
+        r (futon3c.arxana.catalogue-view/read-catalogue stale "2026-11-18T00:00:00.000Z")]
       (is (= :inconclusive (:status r)))
       (is (= :stale-index (:reason r)))
-      (is (= 3 (:attempts r))))))
+      (is (= 3 (:attempts r)))))
+
+(deftest debt-and-linked-visible-runs
+  (let [rs (fixture-records)
+        debt (:debt (view/catalogue-view rs at))
+        groups (into {} (map (juxt :reason identity) (:by-reason debt)))
+        bad (mapv #(if (= :pass (get-in % [:content :result]))
+                     (assoc-in % [:content :result] :violation) %) rs)]
+    (is (= [:fibres] (:choice-keys (groups :no-check))))
+    (is (= [:coverage] (:choice-keys (groups :no-run))))
+    (is (= [1 1 0] (mapv :count (:by-reason debt))))
+    (is (= :not-assessed (get-in debt [:coverage :status])))
+    (is (= 3 (get-in (view/catalogue-view bad at) [:debt :by-reason 2 :count])))
+    (let [run (first (filter :subject-clusion-id rs))
+          unrelated (assoc run :id "unrelated-run" :method {:check/id "unlinked"})
+          future (assoc run :id "future-run")
+          calls (atom [])
+          result (view/read-catalogue
+                  (fake-store (conj rs unrelated future) calls
+                              #(when (= "future-run" (:record-id %)) {:ok {:status :missing}})) at)]
+      (is (= (view/catalogue-view rs at) (dissoc result :queries)))
+      (is (not-any? #(= :records-by-field (:query/type %)) @calls)))))

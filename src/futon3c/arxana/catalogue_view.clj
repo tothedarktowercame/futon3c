@@ -31,6 +31,27 @@
               {:status :tied :runs (mapv run-view latest)}))
         (catch Exception _ {:status :invalid-run :record-ids (vec (sort (map :id runs)))})))))
 
+(defn debt-summary
+  "Derived from the displayed enforcement states. Reasons can overlap when a
+  choice has several checks. No Demo B citations are available yet; absence of
+  that input is not evidence of complete coverage. Immutable check records do
+  not provide a dated implementation-change history, so stale-run is not inferred."
+  [choices]
+  {:by-reason
+   (mapv (fn [reason]
+           (let [keys (->> choices
+                           (filter (fn [choice]
+                                     (let [state (:enforcement-status choice)]
+                                       (if (= reason :violated) (= :violated (:status state))
+                                           (or (= reason (:reason state))
+                                               (some #{reason} (:reasons state)))))))
+                           (map :choice/key) distinct sort vec)]
+             {:reason reason :count (count keys) :choice-keys keys}))
+         [:no-check :no-run :violated])
+   :coverage {:status :not-assessed :reason :demo-b-citations-not-available
+              :undocumented-features []}
+   :limitations [:stale-run-requires-dated-implementation-change-history]})
+
 (defn catalogue-view
   "Pure snapshot view at AT. Future dated records are excluded. Malformed run
   times remain visible as invalid rather than silently passing. Equal-time runs
@@ -43,9 +64,8 @@
                            (try (not (.isAfter (Instant/parse (:event-time %)) instant))
                                 (catch Exception _ true))) records)
           index (into {} (map (juxt :id identity) rs))
-          links (fn [type id] (sort-by :id (filter #(and (typed? % type) (= id (target % :choice))) rs)))]
-      {:status :ok :valid-time at
-       :choices
+          links (fn [type id] (sort-by :id (filter #(and (typed? % type) (= id (target % :choice))) rs)))
+          choices
        (mapv
         (fn [choice]
           (let [id (:id choice)]
@@ -67,10 +87,11 @@
                                      (links :design/constrains id))
                    :enforcement-status (catalogue/enforcement-status rs id))))
         (sort-by (juxt #(get-in % [:asserted-content :choice/key]) :id)
-                 (filter #(typed? % :design/choice) rs)))})))
+                 (filter #(typed? % :design/choice) rs)))]
+        {:status :ok :valid-time at :choices choices :debt (debt-summary choices)})))
 
 (defn- read-catalogue-once
-  "Acquire all five catalogue type sets, each check's run history, and linked
+  "Acquire all five catalogue type sets, each linked choice's subject history, and linked
   external references by ID at AT. Any refusal/truncation prevents a partial
   view. Bounded to 200 per query; no pagination or external-byte dereferencing."
   [graph-store at]
@@ -78,34 +99,44 @@
     {:status :inconclusive :reason :invalid-valid-time}
     (let [receipts (atom [])]
       (try
-        (letfn [(read! [query f]
+        (letfn [(read! [query field f]
                   (let [r (f)]
                     (swap! receipts conj {:query query :response (select-keys r [:status :truncated? :watermark :total])})
-                    (when (or (not= :ok (:status r)) (:truncated? r) (not (sequential? (:records r))))
+                    (when (or (not= :ok (:status r)) (:truncated? r) (not (sequential? (get r field))))
                       (throw (ex-info "catalogue query incomplete"
                                       {:catalogue/refusal true :reason (cond (:truncated? r) :truncated
                                                      (not= :ok (:status r)) (or (:status r) :query-error)
                                                      :else :invalid-response)
                                        :query query :response r})))
-                    (:records r)))]
+                    (get r field)))
+                (hydrate! [id optional?]
+                  (let [r (http/get-entity-as-of graph-store id at)]
+                    (cond
+                      (and optional? (= :arxana.store/record-not-found (get-in r [:error :error/code]))) nil
+                      (or (:error r) (nil? (:ok r)))
+                      (throw (ex-info "catalogue record unavailable"
+                                      {:catalogue/refusal true :reason (if optional? :run-unavailable :reference-unavailable)
+                                       :record-id id :response r}))
+                      :else (:ok r))))]
           (let [by-type (into {} (for [type [:design/choice :design/check :design/checked-by
                                             :design/shaped-by :design/constrains]
                                       :let [q {:type-revision [type 1] :valid-time at :limit 200}]]
-                                  [type (read! (assoc q :query/type :records-by-type)
+                                  [type (read! (assoc q :query/type :records-by-type) :records
                                                #(queries/records-by-type graph-store q))]))
-                runs (mapcat (fn [check]
-                               (let [q {:record-kind :attestation :field [:method :check/id]
-                                        :value (:id check) :valid-time at :limit 200}]
-                                 (read! (assoc q :query/type :records-by-field)
-                                        #(queries/records-by-field graph-store q))))
-                             (by-type :design/check))
-                refs (mapv (fn [id]
-                             (let [r (http/get-entity-as-of graph-store id at)]
-                               (when (or (:error r) (nil? (:ok r)))
-                                 (throw (ex-info "catalogue reference unavailable"
-                                                 {:catalogue/refusal true :reason :reference-unavailable
-                                                  :record-id id :response r})))
-                               (:ok r)))
+                runs (mapcat
+                      (fn [choice]
+                        (let [id (:id choice)
+                              checks (set (keep #(when (= id (target % :choice)) (target % :check))
+                                                (by-type :design/checked-by)))]
+                          (when (seq checks)
+                            (let [q {:subject-clusion-id id :limit 200}
+                                  ids (read! (assoc q :query/type :attestations) :attestation-ids
+                                             #(queries/attestations graph-store q))]
+                              (filter #(and (= id (:subject-clusion-id %))
+                                            (checks (get-in % [:method :check/id])))
+                                      (keep #(hydrate! % true) (distinct ids)))))))
+                      (by-type :design/choice))
+                refs (mapv #(hydrate! % false)
                            (sort (distinct (map #(target % :target) (by-type :design/constrains)))))
                 records (vec (vals (into {} (map (juxt :id identity)
                                                  (concat (mapcat val by-type) runs refs)))))]
