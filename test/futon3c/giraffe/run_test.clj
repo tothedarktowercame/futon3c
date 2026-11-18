@@ -10,6 +10,7 @@
             [futon3c.giraffe.pass :as gp]
             [futon3c.giraffe.run :as gr]
             [futon3c.giraffe.run-data :as run-data]
+            [futon3c.arxana.giraffe-needs :as giraffe-needs]
             [futon3c.circus.operator-focus :as operator-focus]
             [futon3c.giraffe.tickets :as gt]))
 
@@ -598,6 +599,16 @@
            (get-in index-pass [:content :reading-evidence])))
     (pilot-run root {:run-id "run-b"})
     (is (= before (object-files)) "identical run creates no new objects")))
+
+(deftest giraffe-needs-reads-a-content-addressed-run-logically
+  ;; CL-54 review: a needs reader that slurped input.edn directly passed every
+  ;; test, though on a new run it would get the small index, not the input.
+  (let [root (temp-root "cas-needs")
+        {:keys [written adapter-result]} (pilot-run root {:run-id "run-n"})
+        ctx (giraffe-needs/current-run {:giraffe-run "run-n" :runs-dir root})]
+    (is (run-data/index? (edn/read-string (slurp (io/file (:dir written) "input.edn")))))
+    (is (= (run-data/canonical-edn (:input adapter-result))
+           (run-data/canonical-edn (:input ctx))))))
 
 (deftest verify-run-checks-referenced-objects
   (doseq [mode [:corrupt :missing]]
