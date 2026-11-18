@@ -96,7 +96,26 @@
    :recursion/cycle-policy cycle})
 
 (def declarations-v1
-  [(clusion-type :rule/content 1 []
+  [(assoc (clusion-type :design/choice 1 []
+                        [:choice/key :statement :kind :sources :lifecycle :applies-to :rationale :alternatives])
+          :content/enums {:kind #{:constraint :ruling :decision}
+                          :lifecycle #{:proposed :accepted :superseded}})
+   (assoc (clusion-type :design/check 1 []
+                        [:check/key :entry-point :runtime :input-contract :output-contract
+                         :implementation-digest :fixtures])
+          :content/enums {:runtime #{:core.logic :reazon :ramo :clojure}})
+   ;; Catalogue links are not compositions. Port revisions document the contract;
+   ;; design-catalogue builders/checks enforce it, not write/validate-composite!.
+   (clusion-type :design/checked-by 1
+                 [{:role :choice :endpoint/kinds #{:clusion} :endpoint/type-revisions #{[:design/choice 1]}}
+                  {:role :check :endpoint/kinds #{:clusion} :endpoint/type-revisions #{[:design/check 1]}}] [])
+   (clusion-type :design/shaped-by 1
+                 [{:role :choice :endpoint/kinds #{:clusion} :endpoint/type-revisions #{[:design/choice 1]}}
+                  {:role :ruling :endpoint/kinds #{:clusion} :endpoint/type-revisions #{[:design/choice 1]}}] [])
+   (clusion-type :design/constrains 1
+                 [{:role :choice :endpoint/kinds #{:clusion} :endpoint/type-revisions #{[:design/choice 1]}}
+                  {:role :target :endpoint/kinds #{:external-ref}}] [])
+   (clusion-type :rule/content 1 []
                  [:rule/system :rule/name :rule/pattern :rule/guards
                   :rule/domain-guards :rule/rewrite :rule/priority])
    (clusion-type :conflict/finding 1
