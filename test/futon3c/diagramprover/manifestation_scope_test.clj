@@ -35,3 +35,17 @@
                         (store/bounded-query! st q))))]
         (is (= :inconclusive (:status (s/role-manifestations bad outer fixture/at))))))
     (is (empty? (:manifestations (s/role-manifestations st outer "2026-01-01T00:00:00.000Z"))))))
+(deftest revision-3-is-read
+  (let [b @fixture/built inner (second (:roles b))
+        v3 (assoc (s/scoped-manifestation-v3 inner "9756e848" "2026-11-18T06:15:39Z" "sha" ["w"] :role)
+                  :event-time "2026-11-18T06:15:39.000Z")
+        rs (vals (into {} (map (juxt :id identity) (concat @history (:manifestations b) [v3]))))
+        st (fake/fake-store rs nil (atom []) false)
+        got (:manifestations (s/role-manifestations st (:id inner) "2026-11-19T00:00:00.000Z"))]
+    (is (= 2 (count got)))
+    (is (some #(and (= (:id v3) (get-in % [:record :id])) (= :role (:scope %))) got))
+    (let [bad (reify store/ArxanaGraphStore
+                (bounded-query! [_ q]
+                  (if (= [:sentence/manifestation 3] (:edge-type q)) {:ok {:status :stale-index}}
+                      (store/bounded-query! st q))))]
+      (is (= :inconclusive (:status (s/role-manifestations bad (:id inner) "2026-11-19T00:00:00.000Z")))))))

@@ -104,10 +104,12 @@
       result)))
 
 (defn role-manifestations
-  "Read both revision indexes completely before returning scoped records. The
-  stored revision-1 bytes are preserved; scope is carried alongside each record."
+  "Read every revision index (1, 2 and 3) completely before returning scoped
+  records. The stored revision-1 bytes are preserved; scope is carried alongside
+  each record. Revision 3 was written live for Q88 on 2026-11-18 and was missed
+  while this read only 1 and 2."
   [s role-id at]
-  (loop [revisions [1 2] out []]
+  (loop [revisions [1 2 3] out []]
     (if-let [rev (first revisions)]
       (let [r (dependence/reverse-records s [:sentence/manifestation rev] :role role-id at)]
         (if (not= :ok (:status r)) r
