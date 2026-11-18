@@ -1810,3 +1810,14 @@
        (:svc h) {:id "turn-exhausted" :origin "operator" :analysis_status "analyzed"
                  :source_text "M-toy" :reply_text "done"} :reply_text)
       (is (= [["turn-exhausted" :readerFailedAfterRetries :failed]] @receipts)))))
+
+(deftest a-bell-turn-records-the-sender-session-it-was-rung-from
+  ;; Joe 2026-11-18: a bell names its sender's nick; the herd needs the
+  ;; session that nick was in when it rang.
+  (let [h (harness)
+        {:keys [id]} (turn! h {:origin "agent" :caller "claude-x" :caller-session "sess-x"
+                               :dispatch :none})
+        stored (ts/read-record (get-in (:svc h) [:config :store]) id)]
+    (is (= "claude-x" (:caller stored)))
+    (is (= "sess-x" (:caller_session stored)))))
+

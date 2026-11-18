@@ -1237,15 +1237,18 @@
    小象's draft was written before this call returned (inline drafts are
    bounded at `inline-draft-timeout-ms`; a slow one continues off-path).
    A turn addressed to the analysis seat itself is recorded, never dispatched."
-  [svc {:keys [dispatch agent-id caller] :or {dispatch :later} :as opts}]
+  [svc {:keys [dispatch agent-id caller caller-session] :or {dispatch :later} :as opts}]
   (let [{:keys [record redacted quotes]} (tr/make-record (merge {:vocabulary (cfg svc :vocabulary)
                                                           :now-ms (now-ms svc)}
-                                                         (dissoc opts :dispatch :caller)))
+                                                         (dissoc opts :dispatch :caller :caller-session)))
         ;; A bell turn (origin "agent") names who sent it; make-record has no
         ;; :caller opt, so it rides here (E-agency-work-orders W1).
         mission-id (agent-mission-id svc agent-id)
         record (cond-> record
                  caller (assoc :caller (str caller))
+                 ;; The sender's session when the bell rang (Joe 2026-11-18:
+                 ;; trace a bell from the nick to the session active then).
+                 caller-session (assoc :caller_session (str caller-session))
                  mission-id (assoc :mission_id mission-id))
         {:keys [id path]} (ts/write-record! (cfg svc :store) record)
         _ (notify-turn! svc {:event :recorded :id id :how nil})

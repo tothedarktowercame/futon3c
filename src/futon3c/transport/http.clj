@@ -13662,7 +13662,11 @@
                                  :session-id "pending"
                                  :turn-id (str job-id)
                                  :text (str (:prompt request))
-                                 :caller (str (:caller request))})]
+                                 :caller (str (:caller request))
+                                 ;; Resolved now, as the job context does: the
+                                 ;; sender's registered session at ring time.
+                                 :caller-session (some-> (reg/get-agent (str (:caller request)))
+                                                         :agent/session-id str)})]
               (swap! !bell-turn-ids assoc (str job-id) id)))
           (catch Throwable t
             (try
