@@ -94,6 +94,13 @@
                   {:role :rule-b :endpoint/kinds #{:clusion}}]
                  [:overlap :status :kinds :settled-by :evaluation :checker-sha
                   :schema-digest :mode :max-states :host/locator])
+   (clusion-type :sentence/role 1 []
+                 [:module :declaration :corpus-sha256 :split-expression-key :role])
+   (clusion-type :sentence/manifestation 1 [{:role :role :endpoint/kinds #{:clusion}}]
+                 [:renderer-commit :corpus-sha256 :wordings :count])
+   (clusion-type :rule/application 1
+                 [{:role :sentence :endpoint/kinds #{:clusion}} {:role :rule :endpoint/kinds #{:clusion}}]
+                 [:method :renderer-commit :corpus-sha256 :tested-rules :interventions])
    (clusion-type :rule-set/diff 1
                  [{:role :supersession :endpoint/kinds #{:clusion}}]
                  [:host/locator :version-a :version-b :comparison
