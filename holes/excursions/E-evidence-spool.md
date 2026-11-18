@@ -1,6 +1,7 @@
 # E-evidence-spool: survey of append callers and side-door writers
 
 Date: 2026-11-18
+**Status:** COMPLETE (2026-11-18; Joe: "E-evidence-spool has just wrapped")
 
 Proposed: commit refused evidence appends to `~/storage/futon3c/evidence-spool.db`, then return `{:ok true :spooled true ...}`.
 A single FIFO drainer replays them; while pending rows exist, new appends queue behind them so replies/forks cannot overtake parents.
