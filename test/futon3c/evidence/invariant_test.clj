@@ -1,12 +1,15 @@
 (ns futon3c.evidence.invariant-test
   "I-evidence-per-turn tests against the authoritative Futon1b HTTP backend."
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [futon3c.evidence.spool-fixture :as spool-fixture]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.evidence.backend :as backend]
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.evidence.invariant :as inv]
             [futon3c.evidence.store :as store]
             [futon3c.social.test-fixtures :as fix]
             [org.httpkit.client :as http]))
+
+(clojure.test/use-fixtures :each spool-fixture/isolated)
 
 (defn- remote-store [] (f1b/make-futon1b-backend "http://store.test"))
 

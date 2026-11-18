@@ -1,5 +1,6 @@
 (ns futon3c.agency.promise-history-test
-  (:require [clojure.test :refer [deftest is use-fixtures]]
+  (:require [futon3c.evidence.spool-fixture :as spool-fixture]
+            [clojure.test :refer [deftest is use-fixtures]]
             [futon3c.agency.promise-history :as history]
             [futon3c.agency.promise-log :as promise-log]
             [futon3c.agency.atomic-file :as atomic-file]
@@ -12,7 +13,7 @@
 
 (def ^:dynamic *evidence* nil)
 (def ^:dynamic *hyperedges* nil)
-(use-fixtures :each
+(use-fixtures :each spool-fixture/isolated
   (fn [f]
     (let [p (java.io.File/createTempFile "p2a-park" ".edn")
           q (java.io.File/createTempFile "p2a-followup" ".edn")

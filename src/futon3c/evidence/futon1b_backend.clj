@@ -450,6 +450,10 @@
                  caller-bound-ms)]
     (when (= 200 status) body)))
 
+(defn- connection-refused? [error]
+  (boolean (some #(instance? java.net.ConnectException %)
+                 (take-while some? (iterate #(.getCause ^Throwable %) error)))))
+
 (defn- send-spooled! [row replay?]
   (let [validated (edn/read-string (:body row))
         eid (:evidence/id validated)
@@ -494,7 +498,12 @@
         ;; durable row is settled: the remote ID already exists.
         delivered? (or (:ok result) (= :duplicate-id (:error/code result)))]
     (when delivered? (invalidate-query-cache!))
-    {:disposition (cond delivered? :delivered transient? :retry :else :dead)
+    {:failure-kind (cond (and error (connection-refused? error)) :connection
+                         (and error (timeout-error? error)) :timeout
+                         error :transport status :response)
+     :bounded-response? (and (not error) status (<= 500 status)
+                             (not (contains? #{502 503 504} status)))
+     :disposition (cond delivered? :delivered transient? :retry :else :dead)
      :return-now? (or (and error (timeout-error? error))
                       (and transient? (not error)))
      :result result}))
@@ -524,7 +533,7 @@
           (spool/append! (spool-manager) base-url eid (:body serialized)
                          (set (remove nil? [(:evidence/in-reply-to validated)
                                             (:evidence/fork-of validated)]))
-                         append-retry-ms
+                         append-retry-ms (min append-timeout-ms 5000)
                          (fn [error attempts elapsed]
                            (social-error :store-unreachable "futon1b server unreachable"
                                          :evidence-id eid :trace-id trace-id

@@ -1,5 +1,6 @@
 (ns futon3c.evidence.harness-test
-  (:require [clojure.edn :as edn]
+  (:require [futon3c.evidence.spool-fixture :as spool-fixture]
+            [clojure.edn :as edn]
             [cheshire.core :as json]
             [futon3c.evidence.backend :as backend]
             [futon3c.evidence.http-backend :as legacy]
@@ -9,6 +10,8 @@
             [futon3c.evidence.futon1b-backend :as f1b]
             [futon3c.transport.http :as ingress]
             [org.httpkit.client :as http]))
+
+(clojure.test/use-fixtures :each spool-fixture/isolated)
 
 (def origin {:kind :agent :actor "codex-5" :writer "harness-test"
              :attributed-author "codex-5" :authorization :unknown

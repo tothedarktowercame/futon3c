@@ -244,3 +244,19 @@ id). A caller that retries with a fresh id would duplicate; that needs checking 
 
 Not covered, by design: reads during the outage, side-door writers (section 2),
 and ingress 503 while futon1b is down. Ingress waiting out a restart is step 3.
+
+## Review fixes (2026-11-18)
+
+The spool now preserves **causal order rather than global FIFO**: only a pending
+`in-reply-to`/`fork-of` on the same endpoint blocks the fast path. Dependency IDs
+are stored in columns, and replay selects the oldest due dependency-ready row,
+excluding in-flight rows; per-row `next_attempt_ms` replaces worker-wide backoff.
+Five consecutive non-load 5xx responses move a row to dead-letter; refused
+connections and 429/502/503/504 remain retryable. A caller blocked by a refused
+connection retains the restart window; other pending dependencies get at most
+`min(append-timeout-ms, 5000)` before a spooled error. The test-run JVM property
+now defaults the database to a per-JVM temporary directory (explicit environment
+or dynamic paths still win), and backend-using test namespaces stop their own
+workers between tests. SQLite failure remains an open design question: there is
+no fallback, so an unavailable/broken spool still makes appends fail with
+“spool unavailable.” No live reload accompanied these review fixes.

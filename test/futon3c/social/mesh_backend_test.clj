@@ -1,5 +1,6 @@
 (ns futon3c.social.mesh-backend-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.evidence.spool-fixture :as spool-fixture]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing]]
             [futon3c.blackboard :as bb]
@@ -10,6 +11,8 @@
             [futon3c.transport.http :as http])
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
+
+(clojure.test/use-fixtures :each spool-fixture/isolated)
 
 (defn- failure-data [f]
   (try (f) nil (catch clojure.lang.ExceptionInfo e (ex-data e))))

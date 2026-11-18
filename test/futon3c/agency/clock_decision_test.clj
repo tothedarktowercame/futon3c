@@ -1,5 +1,6 @@
 (ns futon3c.agency.clock-decision-test
-  (:require [cheshire.core :as json]
+  (:require [futon3c.evidence.spool-fixture :as spool-fixture]
+            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [futon3c.agency.clock-decision :as decision]
@@ -17,7 +18,7 @@
   (:import [java.nio.file Files]
            [java.nio.file.attribute FileAttribute]))
 
-(use-fixtures :each
+(use-fixtures :each spool-fixture/isolated
   (fn [f]
     (clock/reset-store!)
     (decision/reset-supersession-cache!)

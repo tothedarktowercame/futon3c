@@ -148,3 +148,80 @@
         (is (until #(zero? (:pending (spool/spool-status)))))
         (is (= ["slow" "unrelated" "child"] @requests)))
       (finally (deliver release true) (stop)))))
+
+(deftest test-run-default-never-selects-production-storage
+  (let [old (System/getProperty "futon3c.test-run")]
+    (try
+      (System/setProperty "futon3c.test-run" "true")
+      (binding [spool/*db-path* nil]
+        (if-let [explicit (System/getenv "FUTON3C_EVIDENCE_SPOOL_DB")]
+          (is (= explicit (spool/db-path)))
+          (do (is (not (.startsWith (spool/db-path)
+                                    (str (System/getProperty "user.home") "/storage/"))))
+              (is (= (spool/db-path) (spool/db-path))))))
+      (finally (if old (System/setProperty "futon3c.test-run" old)
+                       (System/clearProperty "futon3c.test-run"))))))
+
+(deftest dead-endpoint-does-not-block-live-fast-path
+  (let [dead (backend-at (port)) p (port) seen (atom #{}) requests (atom [])
+        stop (stub! p seen requests #{})]
+    (try
+      (is (:spooled (backend/-append dead (entry "dead-endpoint"))))
+      (let [started (System/nanoTime)
+            r (backend/-append (backend-at p) (entry "live"))
+            elapsed (/ (- (System/nanoTime) started) 1e6)]
+        (is (:ok r)) (is (not (:spooled r)))
+        (is (< elapsed 900))
+        (is (= #{"live"} @seen))
+        (is (= 1 (:pending (spool/spool-status)))))
+      (finally (stop)))))
+
+(deftest repeated-500-is-bounded-and-unrelated-row-delivers
+  (let [p (port) calls (atom {})
+        stop (server/run-server
+              (fn [req]
+                (let [e (edn/read-string (slurp (:body req))) id (:evidence/id e)]
+                  (swap! calls update id (fnil inc 0))
+                  (if (= "poison" id) {:status 500 :body "{}"}
+                      {:status 201 :body (pr-str {:entry e})})))
+              {:ip "127.0.0.1" :port p})
+        b (backend-at p)]
+    (try
+      (is (:spooled (backend/-append b (entry "poison"))))
+      (is (:ok (backend/-append b (entry "later"))))
+      (is (until #(= 1 (:dead-letter (spool/spool-status)))))
+      (is (= spool/response-retry-limit (get @calls "poison")))
+      (is (= 1 (get @calls "later")))
+      (is (zero? (:pending (spool/spool-status))))
+      (finally (stop)))))
+
+(deftest load-backoff-is-per-row-and-child-wait-is-short
+  (let [p (port) busy (atom true) delivered (atom [])
+        stop (server/run-server
+              (fn [req]
+                (let [e (edn/read-string (slurp (:body req))) id (:evidence/id e)]
+                  (cond
+                    (and (= "X" id) @busy) {:status 504 :body "{}"}
+                    (and (= "child-X" id) (not (some #{"X"} @delivered)))
+                    {:status 409 :body "{:error :reply-not-found}"}
+                    :else (do (swap! delivered conj id)
+                              {:status 201 :body (pr-str {:entry e})}))))
+              {:ip "127.0.0.1" :port p})
+        b (backend-at p)]
+    (try
+      (with-redefs [sut/append-retry-ms 10000 sut/append-timeout-ms 10000]
+        (is (:spooled (backend/-append b (entry "X"))))
+        (let [start (System/nanoTime) r (backend/-append b (entry "Y"))]
+          (is (:ok r)) (is (not (:spooled r)))
+          (is (< (/ (- (System/nanoTime) start) 1e6) 900)))
+        (let [start (System/nanoTime) r (backend/-append b (entry "child-X" "X"))]
+          (is (:spooled r)) (is (= :store-unavailable (:error/code r)))
+          (let [elapsed (/ (- (System/nanoTime) start) 1e6)]
+            (is (<= 4900 elapsed))
+            (is (< elapsed 6000))))
+        (is (= ["Y"] @delivered))
+        (reset! busy false)
+        (is (until #(zero? (:pending (spool/spool-status)))))
+        (is (= ["Y" "X" "child-X"] @delivered))
+        (is (zero? (:dead-letter (spool/spool-status)))) )
+      (finally (stop)))))

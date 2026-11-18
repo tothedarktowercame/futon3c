@@ -176,7 +176,7 @@
                               (delay {:error (java.net.ConnectException.
                                                "connection refused")}))]
       (is (= :store-unreachable
-             (:error/code (backend/-append store entry)))))))
+             (:error/code (backend/-append store (assoc entry :evidence/id "e-unreachable"))))))))
 
 (deftest busy-store-is-not-reported-as-a-refusal
   ;; futon1b answers 504 when a request waited 5 s for a query permit. That is
