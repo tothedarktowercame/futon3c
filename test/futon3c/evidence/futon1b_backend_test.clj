@@ -1,10 +1,19 @@
 (ns futon3c.evidence.futon1b-backend-test
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
-            [clojure.test :refer [deftest is testing]]
+            [clojure.test :refer [deftest is testing use-fixtures]]
+            [futon3c.evidence.spool :as spool]
             [futon3c.evidence.backend :as backend]
             [futon3c.evidence.futon1b-backend :as sut]
             [org.httpkit.client :as http]))
+
+(use-fixtures :each
+  (fn [f]
+    (let [dir (.toFile (java.nio.file.Files/createTempDirectory
+                        "evidence-backend-test" (make-array java.nio.file.attribute.FileAttribute 0)))
+          path (str dir "/spool.db")]
+      (binding [spool/*db-path* path]
+        (try (f) (finally (spool/stop! path)))))))
 
 (deftest post-filters-retain-the-bounded-server-window
   (testing "the server fills an exact bounded window and the client rechecks membership"

@@ -29,7 +29,8 @@
 
    Reads throw on transport errors (R4 loud failure); -append returns a
    SocialError so the invoke path can surface it as data."
-  (:require [futon3c.evidence.backend :as backend]
+  (:require [futon3c.evidence.spool :as spool]
+            [futon3c.evidence.backend :as backend]
             [futon3c.substrate.read-health :as read-health]
             [futon3c.evidence.subject :as subject]
             [clojure.edn :as edn]
@@ -449,6 +450,63 @@
                  caller-bound-ms)]
     (when (= 200 status) body)))
 
+(defn- send-spooled! [row replay?]
+  (let [validated (edn/read-string (:body row))
+        eid (:evidence/id validated)
+        trace-id (append-trace-id eid)
+        {:keys [status body error]}
+        (try
+          @(http/post (api-url (:endpoint row) "/api/alpha/evidence")
+                      {:timeout append-timeout-ms :as :text
+                       :headers {"content-type" "application/edn"
+                                 "x-penholder" (penholder) "x-trace-id" trace-id}
+                       :body (:body row)})
+          (catch Exception e {:error e}))
+        parsed (try (read-edn body)
+                    (catch Exception _ {:unparsed-body (str body)}))
+        receipt (fn [code message & context]
+                  (apply social-error code message
+                         :evidence-id eid :trace-id trace-id context))
+        result
+        (cond
+          error (receipt (if (timeout-error? error) :store-timeout :store-unreachable)
+                         (if (timeout-error? error) "futon1b persistence timed out"
+                             "futon1b server unreachable") :detail (str error))
+          (= 201 status) {:ok true :entry (or (:entry parsed) validated) :trace-id trace-id}
+          (and (= 409 status) (= :reply-not-found (:error parsed)))
+          (receipt :reply-not-found "in-reply-to references missing entry"
+                   :in-reply-to (:evidence/in-reply-to validated))
+          (and (= 409 status) (= :fork-not-found (:error parsed)))
+          (receipt :fork-not-found "fork-of references missing entry"
+                   :fork-of (:evidence/fork-of validated))
+          (and (= 409 status) replay? (pos? (long (:attempts row))))
+          {:ok true :entry (or (:entry parsed) validated) :trace-id trace-id
+           :recovered-after-retry true}
+          (= 409 status) (receipt :duplicate-id "Evidence id already exists")
+          (contains? #{429 502 503 504} status)
+          (receipt :store-unavailable
+                   (format "futon1b busy (HTTP %d): delivery is unconfirmed" status)
+                   :status status :body parsed)
+          :else (receipt :store-rejected "futon1b rejected the append"
+                         :status status :body parsed))
+        transient? (or error (nil? status) (<= 500 (long (or status 0))) (= 429 status))
+        ;; A first-attempt duplicate keeps its existing error receipt, but the
+        ;; durable row is settled: the remote ID already exists.
+        delivered? (or (:ok result) (= :duplicate-id (:error/code result)))]
+    (when delivered? (invalidate-query-cache!))
+    {:disposition (cond delivered? :delivered transient? :retry :else :dead)
+     :return-now? (or (and error (timeout-error? error))
+                      (and transient? (not error)))
+     :result result}))
+
+(defn- spool-manager []
+  (spool/start! (spool/db-path) send-spooled!
+                (fn [attempt]
+                  (min (* 100 (bit-shift-left 1 (min (max 0 (dec (long attempt))) 16)))
+                       (long append-retry-max-backoff-ms)))))
+
+(defn spool-status [] (spool/spool-status))
+
 (defrecord Futon1bBackend [base-url]
   backend/EvidenceBackend
 
@@ -459,98 +517,21 @@
       (if-let [serialization-error (:error serialized)]
         (social-error :store-serialization
                       "evidence payload is not EDN-wire-readable"
-                      :evidence-id eid
-                      :trace-id trace-id
+                      :evidence-id eid :trace-id trace-id
                       :detail (.getMessage ^Exception serialization-error)
                       :invalid-edn (:invalid-edn serialized))
-        (let [url (api-url base-url "/api/alpha/evidence")
-              options {:timeout append-timeout-ms
-                       :as :text
-                       :headers {"content-type" "application/edn"
-                                 "x-penholder" (penholder)
-                                 "x-trace-id" trace-id}
-                       :body (:body serialized)}
-              started-ns (System/nanoTime)
-              elapsed-ms (fn []
-                           (quot (- (System/nanoTime) started-ns) 1000000))
-              unreachable-error
-              (fn [error attempts elapsed]
-                (social-error :store-unreachable
-                              "futon1b server unreachable"
-                              :evidence-id eid :trace-id trace-id
-                              :detail (str error)
-                              :attempts attempts :elapsed-ms elapsed))]
-          (loop [attempt 0]
-            (let [{:keys [status body error]} @(http/post url options)
-                  parsed (read-edn body)
-                  attempts (inc attempt)]
-              (cond
-                (and error (timeout-error? error))
-                (social-error :store-timeout
-                              "futon1b persistence timed out"
-                              :evidence-id eid :trace-id trace-id
-                              :detail (str error))
-
-                error
-                (let [elapsed (elapsed-ms)
-                      remaining (- (max 0 (long append-retry-ms)) elapsed)]
-                  (if (pos? remaining)
-                    ;; Sleep to the window edge at most, then ALWAYS attempt
-                    ;; again: giving up part-way through a sleep discards
-                    ;; window that is still usable, and the previous shape
-                    ;; could sleep through the store coming back.
-                    (let [backoff (min (* 100 (bit-shift-left 1 (min attempt 16)))
-                                       (long append-retry-max-backoff-ms))
-                          sleep-ms (min backoff remaining)]
-                      (Thread/sleep sleep-ms)
-                      (recur (inc attempt)))
-                    (unreachable-error error attempts elapsed)))
-
-                (= 201 status)
-                {:ok true
-                 :entry (or (:entry parsed) validated)
-                 :trace-id trace-id}
-
-                (and (= 409 status) (= :reply-not-found (:error parsed)))
-                (social-error :reply-not-found
-                              "in-reply-to references missing entry"
-                              :in-reply-to (:evidence/in-reply-to validated)
-                              :evidence-id eid :trace-id trace-id)
-
-                (and (= 409 status) (= :fork-not-found (:error parsed)))
-                (social-error :fork-not-found "fork-of references missing entry"
-                              :fork-of (:evidence/fork-of validated)
-                              :evidence-id eid :trace-id trace-id)
-
-                ;; A bare 409 on a RETRY is our own earlier attempt having
-                ;; landed. Evidence ids are client-minted, so a duplicate of
-                ;; this exact payload can only be us; reporting failure here
-                ;; would mask a write that actually succeeded -- the same
-                ;; class of lie as losing it silently, with the sign flipped.
-                (and (= 409 status) (pos? attempt))
-                {:ok true
-                 :entry (or (:entry parsed) validated)
-                 :trace-id trace-id
-                 :recovered-after-retry true}
-
-                (= 409 status)
-                (social-error :duplicate-id "Evidence id already exists"
-                              :evidence-id eid :trace-id trace-id)
-
-                ;; Load, not refusal: futon1b answers 504 when the write waited
-                ;; 5 s for a query permit. Reported as "futon1b rejected the
-                ;; append" until 2026-09-28, which read as a verdict on the entry.
-                (contains? #{429 502 503 504} status)
-                (social-error :store-unavailable
-                              (format "futon1b busy (HTTP %d): the write was not served and nothing was written"
-                                      status)
-                              :evidence-id eid :trace-id trace-id
-                              :status status :body parsed)
-
-                :else
-                (social-error :store-rejected "futon1b rejected the append"
-                              :evidence-id eid :trace-id trace-id
-                              :status status :body parsed))))))))
+        (try
+          (spool/append! (spool-manager) base-url eid (:body serialized)
+                         (set (remove nil? [(:evidence/in-reply-to validated)
+                                            (:evidence/fork-of validated)]))
+                         append-retry-ms
+                         (fn [error attempts elapsed]
+                           (social-error :store-unreachable "futon1b server unreachable"
+                                         :evidence-id eid :trace-id trace-id
+                                         :detail (str error) :attempts attempts :elapsed-ms elapsed)))
+          (catch Exception e
+            (social-error :store-unreachable "Evidence write-ahead spool unavailable"
+                          :evidence-id eid :trace-id trace-id :detail (.getMessage e)))))))
 
   (-get [_ evidence-id]
     (let [{:keys [status body]}
@@ -645,7 +626,9 @@
   "Construct the backend. base-url default: FUTON1B_URL env, then
    http://localhost:7074 (lucy's port — nginx owns :7073 there)."
   ([] (make-futon1b-backend (or (System/getenv "FUTON1B_URL") default-url)))
-  ([base-url] (->Futon1bBackend base-url)))
+  ([base-url]
+   (spool-manager)
+   (->Futon1bBackend base-url)))
 
 (defn futon1b-backend?
   "True when X is a Futon1bBackend, compared by class NAME. Reloading this
