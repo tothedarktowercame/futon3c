@@ -54,3 +54,26 @@
       (is (= :not-yet (:answer (nt/built-on? index ["/invented/fake.clj"] :arxana)))
           "a literal type not in Arxana's registry is not evidence"))))
 
+(deftest indirect-use-is-unknown-not-not-yet
+  ;; claude-cs review of CL-76: a namespace that uses Arxana only through an
+  ;; Arxana namespace's functions has no literal site, but it is not a
+  ;; visible "no use" either.
+  (let [index [{:hx/id "namespace:writer" :prop/source-file "/invented/writer.clj" :prop/repo "futon3c"}
+               {:hx/id "namespace:indirect" :prop/source-file "/invented/indirect.clj" :prop/repo "futon3c"}
+               {:hx/id "namespace:bare" :prop/source-file "/invented/bare.clj" :prop/repo "futon3c"}
+               {:hx/id "namespace:plain" :prop/source-file "/invented/plain.clj" :prop/repo "futon3c"}]]
+    (with-redefs [slurp (fn [file]
+                          (case file
+                            "/invented/writer.clj" "(ns invented.writer (:require [futon3c.arxana.records :as r]))\n(r/make-clusion {:type-revision [:ma/strand 1]})"
+                            "/invented/indirect.clj" "(ns invented.indirect (:require [clojure.string :as str] [futon3c.arxana.invented-helper :as h]))\n(defn go [x] (h/append! x))"
+                            "/invented/bare.clj" "(ns invented.bare (:require futon3c.arxana.invented-helper))\n(defn go [x] (futon3c.arxana.invented-helper/append! x))"
+                            "/invented/plain.clj" "(ns invented.plain (:require [clojure.string :as str]))\n(defn go [x] (str/trim x))"))]
+      (let [r (nt/built-on? index ["/invented/indirect.clj"] :arxana)]
+        (is (= :unknown (:answer r)))
+        (is (= :indirect-use (:reason r)))
+        (is (= ["futon3c.arxana.invented-helper"] (mapv :requires (:indirect r)))))
+      (is (= :unknown (:answer (nt/built-on? index ["/invented/bare.clj"] :arxana))) "a bare lib symbol in :require counts too")
+      (is (= :not-yet (:answer (nt/built-on? index ["/invented/plain.clj"] :arxana))) "no Arxana require: still :not-yet")
+      (let [r (nt/built-on? index ["/invented/writer.clj"] :arxana)]
+        (is (= :yes (:answer r)) "a literal site still answers :yes")
+        (is (nil? (:reason r)))))))

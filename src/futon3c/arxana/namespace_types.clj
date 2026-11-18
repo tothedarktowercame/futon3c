@@ -30,6 +30,20 @@
             (for [f forms :when (and (seq? f) (= 'ns (first f)))
                   clause (drop 2 f) :when (and (seq? clause) (= :require (first clause)))
                   spec (rest clause) :when (vector? spec)] spec))))
+;; Every lib a namespace form requires, as strings: [lib ...] specs and bare
+;; lib symbols.
+(defn- required-libs [forms]
+  (vec (for [f forms :when (and (seq? f) (= 'ns (first f)))
+             clause (drop 2 f) :when (and (seq? clause) (= :require (first clause)))
+             spec (rest clause)
+             :let [lib (cond (vector? spec) (first spec) (symbol? spec) spec)]
+             :when (symbol? lib)]
+         (str lib))))
+;; The Arxana namespaces whose calls `extract` reads directly. Requiring one
+;; of these hides nothing; requiring any other Arxana namespace may.
+(def ^:private followed-libs
+  #{"futon3c.arxana.records" "futon3c.arxana.store" "futon3c.arxana.store-http"
+    "futon3c.arxana.write" "futon3c.arxana.queries" "futon3c.arxana.dependence"})
 (defn- resolve-call [aliases s]
   (when (symbol? s)
     (if (namespace s)
@@ -48,7 +62,8 @@
   (try
     (let [root (z/of-string source {:track-position? true})
           locs (vec (mapcat locations (take-while some? (iterate z/right root))))
-          as (aliases (map sexpr locs))
+          forms (map sexpr locs)
+          as (aliases forms)
           calls (for [loc locs :let [form (sexpr loc)] :when (seq? form)
                       :let [call (resolve-call as (first form))] :when call]
                   {:call call :args (rest form) :line (first (z/position loc))})
@@ -66,7 +81,7 @@
                             row {:direction (if write? :writes :reads) :call call :line line}]
                         (if (literal-type? t) (assoc row :type-revision t)
                             (assoc row :status :dynamic :expression (pr-str (or t args)))))))) calls)]
-      {:status :ok :uses (vec (concat uses
+      {:status :ok :requires (required-libs forms) :uses (vec (concat uses
                                       (mapcat (fn [{:keys [args call line]}]
                                                 (let [maps (filter #(and (map? %) (contains? % :type-revision))
                                                                    (mapcat #(tree-seq (fn [x] (or (vector? x) (map? x))) seq %) args))]
@@ -161,9 +176,21 @@
                              (nil? writer) :no-indexed-target-writer)
          evidence (vec (for [scan scans use (:uses scan) :when (:type-revision use)
                             :when (registered (:type-revision use))]
-                        (merge (select-keys scan [:namespace-id :source-file :source-sha256]) use)))]
+                        (merge (select-keys scan [:namespace-id :source-file :source-sha256]) use)))
+         ;; A subject that requires an Arxana namespace but has no literal
+         ;; site may use Arxana through that namespace's functions, which this
+         ;; extractor does not follow: not visible, so not :not-yet (and a
+         ;; require alone is not a use, so not :yes). claude-cs review of
+         ;; CL-76: xiang/ma_occurrence.clj answered :not-yet.
+         indirect (vec (for [scan scans :when (= :ok (:status scan))
+                             lib (:requires scan) :when (str/starts-with? lib "futon3c.arxana.")
+                             :when (not (followed-libs lib))]
+                         {:source-file (:source-file scan) :requires lib}))]
      {:answer (cond (or target-reason (empty? subject-files) (seq unknown)) :unknown
-                    (seq evidence) :yes (seq dynamic) :unknown :else :not-yet)
+                    (seq evidence) :yes (seq dynamic) :unknown (seq indirect) :unknown :else :not-yet)
+      :reason (when (and (empty? evidence) (empty? dynamic) (empty? unknown) (not target-reason) (seq indirect))
+                :indirect-use)
+      :indirect indirect
       :evidence evidence :coverage (vec scans)
       :target-coverage {:type-revisions (vec (sort-by pr-str registered))
                         :writer writer :reason target-reason}})))
