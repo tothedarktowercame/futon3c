@@ -6,7 +6,7 @@
 (defn missing? [r]
   (= :arxana.store/record-not-found (get-in r [:error :error/code])))
 (defn reverse-query [type role id]
-  {:query/type :role-reverse :edge-type type :endpoint-role role :endpoint-id id})
+  {:query/type :role-reverse :edge-type type :endpoint-role role :endpoint-id id :limit 200})
 (defn target-id
   "Clusion endpoint identity used by application and supersession relations."
   [record role]
