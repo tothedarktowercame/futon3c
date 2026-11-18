@@ -159,7 +159,7 @@
     (is (not-any? #(contains? % :evidence-pin)
                   (edn/read-string (slurp priority-file))))
     (is (= {:status :absent :reason :focus-relation-input-absent}
-           (get-in (:manifest baseline) [:focus-relation-input])))
+           (dissoc (get-in (:manifest baseline) [:focus-relation-input]) :content-sha256)))
     (is (not (.exists (io/file baseline-dir "priority.edn"))))
     (is (= (slurp (io/file baseline-dir "pass.edn"))
            (slurp (io/file focused-dir "pass.edn")))
@@ -706,3 +706,49 @@
       (let [freshness (gr/current-missions-freshness root)]
         (is (:fresh? freshness))
         (is (= (:run-id written) (:run-id freshness)))))))
+
+(deftest cl60-mint-skips-identical-content-and-honors-changes-and-force
+  (let [root (temp-root "cl60")
+        input (atom {:items [{:id :invented-a :state-group :open
+                             :source-order 0 :title "Invented item"}]
+                     :edges []})
+        focus (atom {:relations {:invented-a :focus}
+                     :evidence-pin {:evidence-pin [["invented-evidence" "digest-a"]]
+                                    :window {:until "2026-01-01T00:00:00Z" :window-hours 6}}
+                     :focus/completeness {:status :complete :expected 1 :observed 1}})
+        ticks (atom 0)
+        run-count #(count (filter (fn [f] (.isFile (io/file f "manifest.edn")))
+                                  (.listFiles (io/file root))))
+        snapshot #(into {} (for [f (file-seq (io/file root)) :when (.isFile f)]
+                             [(str f) (slurp f)]))]
+    (with-redefs [gr/build-adapter-result (fn [_] {:input @input :rejected []})
+                  gr/retained-focus-input (fn [_ _] @focus)
+                  gr/git-head-sha (constantly "e90fe14bb3c181964f8d8b239e5bff16225dff37")]
+      ;; Deterministic distinct clock ticks avoid timing sleeps/collisions.
+      (with-redefs-fn {(ns-resolve 'futon3c.giraffe.run 'timestamp)
+                      #(format "20260101T000000.%03dZ" (swap! ticks inc))}
+        (fn []
+          (let [first-run (gr/mint! {:root root})
+                before (snapshot)]
+            (is (= :minted (:status first-run)))
+            (swap! focus assoc-in [:evidence-pin :window :until] "2026-01-01T00:02:00Z")
+            (let [same (gr/mint! {:root root})]
+              (is (= :unchanged (:status same)))
+              (is (= (:run-id first-run) (:run-id same)))
+              (is (= (run-data/logical-sha @input) (:input-sha256 same)))
+              (is (= (gr/focus-content-sha @focus) (:focus-sha256 same)))
+            (is (= before (snapshot)) "unchanged writes no files")
+            (is (= 1 (run-count))))
+          (swap! input assoc-in [:items 0 :title] "Changed invented item")
+          (is (= :minted (:status (gr/mint! {:root root}))))
+          (is (= 2 (run-count)))
+          (swap! focus assoc-in [:evidence-pin :evidence-pin] [["invented-evidence" "digest-b"]])
+          (is (= :minted (:status (gr/mint! {:root root}))))
+          (is (= 3 (run-count)))
+          (is (= :minted (:status (gr/mint! {:root root :force? true}))))
+          (is (= 4 (run-count)))
+          (swap! focus assoc-in [:relations :invented-a] :associated)
+          (is (= :minted (:status (gr/mint! {:root root}))))
+          (swap! focus assoc-in [:focus/completeness :observed] 0)
+          (is (= :minted (:status (gr/mint! {:root root}))))
+          (is (= 6 (run-count)))))))))

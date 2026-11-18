@@ -197,7 +197,8 @@
   (let [written (atom nil)]
     (with-redefs [run/build-adapter-result (fn [_] {:input {}})
                   excursions/combined-pass (fn [_] {:order []})
-                  run/retained-focus-input (fn [_] {:fixture :focus})
+                  run/retained-focus-input (fn [_ _] {:fixture :focus})
+                  run/newest-field-run (constantly nil)
                   run/write-run! (fn [args] (reset! written args) {:run-id "fixture-run"})
                   shell/sh (fn [& args] (is (= ["git" "rev-parse" "HEAD"] (take 3 args)))
                              {:exit 0 :out "fixture-sha\n"})]
@@ -1042,3 +1043,14 @@
         (Thread/sleep 250)
         (is (= (if (= :stop action) 1 2) @calls))
         (service/stop!) (join!)))))
+
+(deftest cl60-unchanged-mint-does-not-publish-a-new-run
+  (let [published (atom [])
+        after-mint (ns-resolve 'futon3c.giraffe.reread-service 'after-mint!)
+        schedule (ns-resolve 'futon3c.giraffe.reread-service 'schedule-preview-refresh!)]
+    (with-redefs-fn {schedule (fn [token run-id] (swap! published conj [token run-id]))}
+      #(do
+         (after-mint :invented-token {:status :unchanged :last-result {:run-id "same"}})
+         (is (empty? @published))
+         (after-mint :invented-token {:status :minted :last-result {:run-id "new"}})
+         (is (= [[:invented-token "new"]] @published))))))

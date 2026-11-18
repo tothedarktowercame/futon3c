@@ -92,6 +92,25 @@
   {:schema focus-schema
    :digest (sha256 (print-edn (canonical-focus-pins evidence-pin)))})
 
+(defn focus-content-sha
+  "Change digest for focus evidence, relations/weights and completeness.
+   Delivery/window clock fields are not evidence of a logical change. The
+   manifest stores only this digest, not another copy of the relations."
+  [focus-input]
+  (letfn [(without-clocks [x]
+            (cond
+              (map? x) (into {} (for [[k v] x
+                                     :when (not (#{:until :generated-at :observed-at} k))]
+                                 [k (without-clocks v)]))
+              (sequential? x) (mapv without-clocks x)
+              (set? x) (set (map without-clocks x))
+              :else x))]
+    (run-data/logical-sha
+     (canonical-focus-pins
+      (without-clocks
+       (select-keys focus-input [:status :reason :missing-count :missing-ids
+                                :evidence-pin :relations :weights :focus/completeness]))))))
+
 ;; ------------------------------------------------------------- run id
 
 (defn- timestamp []
@@ -311,13 +330,14 @@
                                    excluded-entry (conj excluded-entry)
                                    priority-entry (conj priority-entry))
                           :focus-relation-input
-                          (if usable-focus?
+                          (assoc (if usable-focus?
                             {:status :present
                              :evidence-pin (:evidence-pin focus-relation-input)}
                             (if (= :refused (:status focus-relation-input))
                               (select-keys focus-relation-input
                                            [:status :reason :missing-count :missing-ids])
                               {:status :absent :reason :focus-relation-input-absent}))
+                            :content-sha256 (focus-content-sha focus-relation-input))
                           :focus/version
                           (focus-version (:evidence-pin focus-relation-input))
                           :priority-projection
@@ -572,6 +592,7 @@
                    (when (and (field-run? manifest)
                               (:ok? (verify-run dir)))
                      {:run-id (.getName ^java.io.File dir)
+                      :focus-sha256 (get-in manifest [:focus-relation-input :content-sha256])
                       :input-sha256 (run-data/logical-sha
                                      (run-data/read-run-file dir "input.edn"))}))
                  (catch Exception _ nil))))))
@@ -767,21 +788,31 @@
                                  :observed observed})})))))
 
 (defn mint!
-  "In-process equivalent of the supported missions/excursions CLI mint.
-   Reads Hou operator attention; never exits the JVM or publishes focus records."
-  [{:keys [edges readings-root root repos]}]
-  (let [invocation {:source "missions-excursions" :edges edges
+  "Mint only changed logical input/focus content. :force? bypasses the check
+   for explicit producer-code refreshes. Retained focus currently needs the
+   pass's open-target set, so the pass still runs before this write decision."
+  [{:keys [edges readings-root root repos force?]}]
+  (let [root (or root default-root)
+        invocation {:source "missions-excursions" :edges edges
                     :repos (or repos gm/default-repos) :readings-root readings-root
                     :with-retained-focus? true}
         adapter (build-adapter-result invocation)
         output (excursions/combined-pass (:input adapter))
-        result (write-run! {:root (or root default-root) :adapter-result adapter
-                           :pass-output output
-                           :focus-relation-input (retained-focus-input
-                                                  output {:input (:input adapter)
-                                                          :root (or root default-root)})
-                           :invocation invocation :git-sha (git-head-sha) :edges-file edges})]
-    {:status :minted :run-id (:run-id result)}))
+        focus-input (retained-focus-input output {:input (:input adapter) :root root})
+        input-sha (run-data/logical-sha (:input adapter))
+        focus-sha (focus-content-sha focus-input)
+        newest (newest-field-run root)]
+    ;; Older manifests without the full focus-content digest cannot establish
+    ;; equality of every supplied focus field. Mint once safely.
+    (if (and (not force?) newest
+             (= input-sha (:input-sha256 newest))
+             (= focus-sha (:focus-sha256 newest)))
+      {:status :unchanged :run-id (:run-id newest)
+       :input-sha256 input-sha :focus-sha256 focus-sha}
+      (let [result (write-run! {:root root :adapter-result adapter
+                               :pass-output output :focus-relation-input focus-input
+                               :invocation invocation :git-sha (git-head-sha) :edges-file edges})]
+        {:status :minted :run-id (:run-id result)}))))
 
 (defn -main
   "clojure -M -m futon3c.giraffe.run --edges <file> [--only <ids-file>]

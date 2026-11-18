@@ -59,3 +59,14 @@
             (finally (deliver release true)))))
       (is (= (if due? 1 0) @mints))
       (is (= (if due? 0 2) (:pending-landings (original-read path)))))))
+
+(deftest cl60-unchanged-is-a-successful-batch
+  (let [path (state-file)
+        result (batch/step! {:path path :window-ms 100 :now-ms 500
+                             :landed-count 3 :queue-idle? true
+                             :mint-fn (constantly {:status :unchanged :run-id "invented-existing"})})]
+    (is (= :unchanged (:status result)))
+    (is (= 0 (:pending-landings result)))
+    (is (= 500 (:last-mint-at-ms result)))
+    (is (= {:status :unchanged :run-id "invented-existing"} (:last-result result)))
+    (is (= 0 (:pending-landings (batch/read-state path))))))

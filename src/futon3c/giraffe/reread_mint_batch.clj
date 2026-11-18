@@ -64,8 +64,8 @@
         (if-not due?
           (assoc (write-state! path state) :status :deferred)
           (let [result (mint-fn)
-                success? (= :minted (:status result))
+                success? (contains? #{:minted :unchanged} (:status result))
                 next (cond-> (assoc state :last-result result)
                        success? (assoc :pending-landings 0 :last-mint-at-ms now-ms))]
             (assoc (write-state! path next)
-                   :status (if success? :minted :failed))))))))
+                   :status (if success? (:status result) :failed))))))))
