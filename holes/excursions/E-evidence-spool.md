@@ -260,3 +260,12 @@ or dynamic paths still win), and backend-using test namespaces stop their own
 workers between tests. SQLite failure remains an open design question: there is
 no fallback, so an unavailable/broken spool still makes appends fail with
 “spool unavailable.” No live reload accompanied these review fixes.
+
+Second review (claude-cli-b29d, 331ff6667): the idle drainer polled SQLite every
+10 ms; it now sleeps until the next ready row is due (cap 250 ms) and is woken by
+append!/finish!. One test asserted a send order between unrelated rows, which the
+causal scheduler does not promise; relaxed. Status: reviewed on master, not
+loaded. A live reload would not take effect anyway: Futon1bBackend instances
+already held by the running stores keep their old class's -append, so it needs
+the next Agency restart (Joe's). Next: step 3, ingress waits out a futon1b
+restart instead of answering 503.
