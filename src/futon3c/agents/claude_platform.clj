@@ -30,7 +30,12 @@
   ;; {:type "between_tools"} is Sonnet 5.5's thinking-off setting
   ;; ({:type "disabled"} is a 400); probe: end_turn, 0 thinking tokens,
   ;; complete array.
-  {"馬-sonnet" {:model "claude-sonnet-5-5" :max-tokens 2048 :max-usd 0.08
+;; 2026-11-18 03:19: with thinking off, 8 of 79 馬 batch replies still
+  ;; hit 2,048 output tokens (three patterns x two windows x four parts with
+  ;; quotes; median 836) and were cut off. 4,096 holds them; the per-call
+  ;; preflight bound (UTF-8 bytes + max output) rises to fit, actual worst
+  ;; case ~7k in + 4k out = $0.054.
+  {"馬-sonnet" {:model "claude-sonnet-5-5" :max-tokens 4096 :max-usd 0.12
                :thinking {:type "between_tools"}}
    "驴-haiku" {:model "claude-haiku-5-5" :max-tokens 4096 :max-usd 0.02}})
 
