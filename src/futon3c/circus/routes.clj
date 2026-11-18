@@ -262,6 +262,7 @@
                              {:turn-store (:turn-store cfg) :turn-id turn-id}))]
     {:id turn-id
      :evidence_ref (get-in light [:turn :evidence-ref])
+     :session_id (get-in light [:turn :session_id])
      :mission_id (get-in light [:turn :mission_id])
      :patterns (turn-patterns (:lu-ranked light) (:pattern-verdicts light))
      :created_at (get-in light [:turn :created_at])
@@ -286,6 +287,7 @@
         record (turns/read-record (:turn-store cfg) turn-id)]
     (when-not record (throw e))
     {:id turn-id :created_at (:created_at record)
+     :session_id (:session_id record)
      :mission_id (:mission_id record)
      :patterns (turn-patterns (:lu_ranked record) (:pattern_verdicts record))
      :prev_operator_turn_id (:prev_operator_turn_id record)
@@ -303,7 +305,7 @@
     (if (and (not force?) (not dirty?)
              ;; Refresh a pre-common-ground row once after a code reload.
              (contains? cached :mission_id) (contains? cached :patterns)
-             (contains? cached :acts))
+             (contains? cached :acts) (contains? cached :session_id))
       cached
       (let [result (try (compute-turn cfg turn-id)
                         (catch clojure.lang.ExceptionInfo e
@@ -475,3 +477,36 @@
                                           :common_ground (common-ground lanes)})})))
     (catch java.time.format.DateTimeParseException _ (error-response 400 "invalid-time"))
     (catch Exception e (error-response 503 "herd-unavailable" {:message (.getMessage e)}))))
+
+
+(defn mission-patterns-response
+  "Newest bounded mission receipts, projected through the shared strand cache.
+  Missing indexes are explicit; there is no scan fallback."
+  [cfg params]
+  (let [mission (get params "mission")]
+    (if (str/blank? mission)
+      (error-response 400 "mission-required")
+      (try
+        (let [store (or (:turn-store cfg) (turns/store))
+              index (turns/mission-index store mission)
+              receipts (->> (:turns index) (sort-by (juxt #(str (:created_at %)) :id)) reverse
+                            (take (parse-n (or (get params "n") 200))))
+              rows (mapv #(cached-turn (assoc cfg :turn-store store) (:id %) false) receipts)
+              patterns (reduce
+                         (fn [acc row]
+                           ;; A turn may have subsequently moved to another mission.
+                           (if (not= mission (:mission_id row)) acc
+                             (reduce (fn [a [via id]]
+                                       (let [old (get a id {:id id :proposed 0 :occurs 0 :sessions []})
+                                             newer? (>= (compare (str (:created_at row)) (str (:latest_at old))) 0)]
+                                         (assoc a id (cond-> (update old via inc)
+                                                       (:session_id row) (update :sessions #(vec (distinct (conj % (:session_id row)))))
+                                                       newer? (assoc :latest_at (:created_at row) :latest_turn (:id row))))))
+                                     acc (for [via [:proposed :occurs] id (distinct (get-in row [:patterns via]))] [via id]))))
+                         {} rows)
+              ordered (->> (vals patterns)
+                           (sort-by (juxt :occurs :proposed #(str (:latest_at %)) :id)) reverse
+                           (take 100) vec)]
+          {:status 200 :body (json-ready {:mission mission :turns_read (count rows)
+                                         :patterns ordered :unindexed (nil? index)})})
+        (catch Exception e (error-response 503 "mission-patterns-unavailable" {:message (.getMessage e)}))))))

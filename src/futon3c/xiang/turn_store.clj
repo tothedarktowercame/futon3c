@@ -156,6 +156,50 @@
         (filter #(and (.isFile %) (str/ends-with? (.getName %) ".json"))
                 (or (.listFiles (io/file (:dir store) "bell-index")) []))))
 
+(defn- mission-index-path [store mission]
+  (str (io/file (:dir store) "mission-index"
+               (str (java.net.URLEncoder/encode (str mission) "UTF-8") ".json"))))
+
+(defn mission-index
+  "Mission receipt, or nil when not indexed. Never scans record files."
+  [store mission]
+  (read-json (mission-index-path store mission)))
+
+(defn- index-mission! [store {:keys [id record] :as written}]
+  (when-let [mission (not-empty (:mission_id record))]
+    (let [path (mission-index-path store mission)]
+      #_{:clj-kondo/ignore [:locking-suspicious-lock]}
+      (locking (session-lock store (str "mission-index:" mission))
+        (.mkdirs (.getParentFile (io/file path)))
+        (with-open [channel (java.nio.channels.FileChannel/open
+                              (.toPath (io/file (str path ".lock")))
+                              (into-array StandardOpenOption [StandardOpenOption/CREATE StandardOpenOption/WRITE]))
+                    _file-lock (.lock channel)]
+          (let [index (or (mission-index store mission) {:turns []})]
+            (when-not (some #(= id (:id %)) (:turns index))
+              (write-json! path (update index :turns conj
+                                       {:id id :created_at (:created_at record)}))))))))
+  written)
+
+(declare read-record)
+
+(defn backfill-mission-index!
+  "Walk linked operator strands only. Dry-run by default; :write? true adds
+  missing receipts. Repeated runs leave existing index files untouched."
+  [store & {:keys [write?]}]
+  (let [counts (atom {:visited 0 :missing 0})]
+    (doseq [{:keys [head]} (active-session-heads store 0)]
+      (loop [id head seen #{}]
+        (when (and id (not (seen id)))
+          (when-let [record (read-record store id)]
+            (swap! counts update :visited inc)
+            (when-let [mission (not-empty (:mission_id record))]
+              (when-not (some #(= id (:id %)) (:turns (mission-index store mission)))
+                (swap! counts update :missing inc)
+                (when write? (index-mission! store {:id id :record record}))))
+            (recur (:prev_operator_turn_id record) (conj seen id))))))
+    (assoc @counts :mode (if write? :write :dry-run))))
+
 (defn backfill-bells!
   "One-off scan of agent-origin records. Dry-run by default; write is idempotent.
   Uses the same per-recipient file lock as live append, including across JVMs."
@@ -202,7 +246,7 @@
       (if (try (Files/createFile p (make-array java.nio.file.attribute.FileAttribute 0)) true
                (catch java.nio.file.FileAlreadyExistsException _ false))
         (do (write-json! path record)
-            {:id id :path path :record record})
+            (index-mission! store {:id id :path path :record record}))
         (if (< attempt 20)
           (recur (inc attempt))
           (throw (ex-info "Could not allocate a record id" {:reason :store-failure})))))))
@@ -281,8 +325,8 @@
           true
           (catch java.nio.file.FileAlreadyExistsException _ false))
       (do (write-json! path record)
-          (index-bell! store {:id id :path path :record record :created? true}))
-      (index-bell! store {:id id :path path :record (read-json path) :created? false}))))
+          (index-mission! store (index-bell! store {:id id :path path :record record :created? true})))
+      (index-mission! store (index-bell! store {:id id :path path :record (read-json path) :created? false})))))
 
 (defn read-record
   "The record for ID, or nil."
@@ -314,6 +358,7 @@
                        (throw (ex-info "Record not found" {:reason :record-not-found :id id})))
             updated (f record)]
         (write-json! path updated)
+        (index-mission! store {:id id :record updated})
         updated))))
 
 (defn read-analysis

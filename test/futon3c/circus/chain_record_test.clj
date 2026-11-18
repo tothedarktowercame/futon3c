@@ -166,12 +166,13 @@
         cfg (assoc (fixture-config "/not-read" nil)
                    :read-turn-fn (fn [_ _]
                                    (swap! reads inc)
-                                   {:mission_id "M-invented"
+                                   {:session_id "invented-session" :mission_id "M-invented"
                                     :lu_ranked {:ranked [{:id "p-invented" :rank 1}]}
                                     :pattern_verdicts {:patterns [{:pattern "p-invented"
                                                                   :status :occurrence}]}}))
         light (chain/turn-gcc cfg)]
     (is (= 1 @reads))
+    (is (= "invented-session" (get-in light [:turn :session_id])))
     (is (= "M-invented" (get-in light [:turn :mission_id])))
     (is (= [{:id "p-invented" :rank 1}] (get-in light [:lu-ranked :ranked])))
     (is (= :occurrence (get-in light [:pattern-verdicts :patterns 0 :status])))))

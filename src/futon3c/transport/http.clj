@@ -12980,6 +12980,12 @@
              (:circus-routes config) (parse-query-params request))]
         (json-response status body))
 
+      (and (= :get method) (= "/api/alpha/circus/mission-patterns" uri))
+      (let [{:keys [status body]}
+            (circus-routes/mission-patterns-response
+             (:circus-routes config) (parse-query-params request))]
+        (json-response status body))
+
       (and (= :get method) (= "/api/alpha/circus/herd" uri))
       (let [{:keys [status body]}
             (circus-routes/herd-response

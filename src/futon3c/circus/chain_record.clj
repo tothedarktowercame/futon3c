@@ -200,6 +200,7 @@
         items (->> links (map :item-id) distinct sort vec)]
     {:turn {:id turn-id :evidence-ref turn-ref-id
             :created_at (:created_at turn) :origin (:origin turn)
+            :session_id (:session_id turn)
             :mission_id (:mission_id turn)
             :prev_operator_turn_id (:prev_operator_turn_id turn)
             :next_operator_turn_id (:next_operator_turn_id turn)}
