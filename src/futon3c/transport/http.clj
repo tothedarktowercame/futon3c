@@ -155,6 +155,7 @@
             [futon3c.transport.peripheral-events :as peripheral-events]
             [futon3c.transport.ws.invoke :as ws-invoke]
             [futon3c.circus.routes :as circus-routes]
+            [futon3c.circus.navigability :as circus-navigability]
             [futon3c.blackboard :as bb]
             [futon3c.mfuton-mode :as mfuton-mode]
             [futon3c.wm.run4-attempt-admission :as run4-admission]
@@ -13001,6 +13002,10 @@
       (let [{:keys [status body]}
             (circus-routes/strand-response
              (:circus-routes config) (parse-query-params request))]
+        (json-response status body))
+
+      (and (= :get method) (= "/api/alpha/circus/navigability" uri))
+      (let [{:keys [status body]} (circus-navigability/response)]
         (json-response status body))
 
       ;; Not under /api/alpha/xiang/: handle-xiang only sees that prefix.
