@@ -17,7 +17,6 @@
   part and produce byte-identical pass.edn (maps are normalized to
   sorted maps before printing)."
   (:require [clojure.edn :as edn]
-            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.pprint :as pp]
@@ -309,16 +308,6 @@
                                   (priority/priority-projection
                                    pass-output focus-relation-input
                                    (or priority-cutoff 20)))))
-        clusters-entry (write! "work-clusters.json"
-                               (json/generate-string
-                                {:run_id run-id
-                                 :clusters (:work-clusters pass-output)
-                                 :by_item (:work-cluster-by-item pass-output)
-                                 :interpretation
-                                 (:work-cluster-interpretation pass-output)
-                                 :ticket_provenance
-                                 (:ticket-provenance pass-output)}
-                                {:pretty true}))
         report-entry (write! "report.md"
                              (report {:input input
                                       :adapter-rejected rejected
@@ -326,7 +315,7 @@
         manifest (cond-> {:run-id run-id
                           :git-sha (or git-sha (git-head-sha))
                           :files (cond-> [(dissoc input-entry :bytes)
-                                          rejected-entry pass-entry clusters-entry report-entry]
+                                          rejected-entry pass-entry report-entry]
                                    excluded-entry (conj excluded-entry)
                                    priority-entry (conj priority-entry))
                           :focus-relation-input
@@ -373,61 +362,7 @@
     {:run-id run-id :dir (str dir) :manifest manifest}))
 
 (def ^:private run-files
-  ["input.edn" "rejected.edn" "pass.edn" "work-clusters.json" "report.md"])
-
-(def ^:private legacy-run-files
-  "Baseline for run directories written before work-clusters.json joined
-  the sealed file set.  The first code that wrote work-clusters.json is
-  commit e90fe14bb; run manifests record the git sha of the code that
-  wrote them, so the manifest's own :git-sha is the format witness."
   ["input.edn" "rejected.edn" "pass.edn" "report.md"])
-
-(def ^:private work-clusters-sha
-  "e90fe14bb3c181964f8d8b239e5bff16225dff37")
-
-(defn- source-repo-dir
-  "Return the checkout containing this namespace when it was loaded from
-  `<checkout>/src/futon3c/giraffe/run.clj`.  Packaged resources (for example
-  jar: URLs) and file resources outside a src tree have no checkout."
-  []
-  (try
-    ;; Ask the loader that defined this namespace's own classes first: a
-    ;; caller that pulled this file in through an added source root (the
-    ;; futon2 tests do) has it on that loader, not on the thread's context
-    ;; loader, which is all io/resource consults by default.
-    (when-let [resource (or (.getResource (.getClassLoader (class source-repo-dir))
-                                          "futon3c/giraffe/run.clj")
-                            (io/resource "futon3c/giraffe/run.clj"))]
-      (when (= "file" (.getProtocol resource))
-        (loop [dir (.getParentFile (io/file (.toURI resource)))]
-          (cond
-            (nil? dir) nil
-            (= "src" (.getName dir)) (.getParentFile dir)
-            :else (recur (.getParentFile dir))))))
-    (catch Exception _ nil)))
-
-(defn- verification-repo-dir []
-  (or (source-repo-dir) (System/getProperty "user.dir")))
-
-(defn- git-descends-from-work-clusters?
-  "Decide a run manifest's format from its recorded :git-sha by asking
-  the repository at REPO-DIR.  Returns true (sha resolves and
-  work-clusters-sha is an ancestor: current format), false (sha
-  resolves, not an ancestor: legacy format) or nil (sha missing,
-  malformed, unresolvable, or git unavailable: format undecidable —
-  callers fail closed)."
-  [repo-dir sha]
-  (when (and (string? sha) (re-matches #"[0-9a-f]{40}" sha))
-    (try
-      (let [resolved (shell/sh "git" "rev-parse" "--verify" "--quiet"
-                               (str sha "^{commit}") :dir repo-dir)]
-        (when (zero? (:exit resolved))
-          (let [anc (shell/sh "git" "merge-base" "--is-ancestor"
-                              work-clusters-sha sha :dir repo-dir)]
-            (cond (zero? (:exit anc)) true
-                  (= 1 (:exit anc)) false
-                  :else nil))))
-      (catch Exception _ nil))))
 
 (defn verify-run
   "Recompute the sha256 of every file the manifest recorded in this run
@@ -435,28 +370,16 @@
   bytes no longer match.  A file planted or edited after the write is
   reported, never silently re-sealed.
 
-  Format rule: the manifest's own :git-sha decides which baseline file
-  set the manifest must list.  A run whose git-sha resolves in the repo
-  and does NOT descend from e90fe14bb predates work-clusters.json and
-  verifies its ORIGINAL sealed list (legacy baseline); a run at or after
-  e90fe14bb must list work-clusters.json (current baseline).  A missing
-  or unresolvable git-sha is undecidable and fails closed to the current
-  baseline — a stripped current manifest is never accepted as legacy on
-  the mere absence of the artifact.  Whatever the format, every file the
-  manifest lists is sha-verified, so a legacy run that happens to list
-  extra files still has them verified."
+  work-clusters.json is not required, but older manifests that list it still
+  pin and verify it like every other listed artifact."
   [dir]
   (let [manifest (with-open [r (java.io.PushbackReader.
                                 (io/reader (io/file dir "manifest.edn")))]
                    (edn/read r))
         listed (set (map :file (:files manifest)))
-        format (git-descends-from-work-clusters?
-                (verification-repo-dir) (:git-sha manifest))
-        legacy? (false? format)
-        required (if legacy? legacy-run-files run-files)
+        required run-files
         unlisted (vec (for [f required :when (not (listed f))]
-                        (cond-> {:file f :missing-from-manifest true}
-                          (nil? format) (assoc :format-undecidable true))))
+                        {:file f :missing-from-manifest true}))
         focus-version-record (:focus/version manifest)
         actual-focus-version (focus-version
                               (get-in manifest [:focus-relation-input :evidence-pin]))
@@ -473,7 +396,10 @@
                        :from (:focus/retained-from manifest)})
                 (:migrated manifest)
                 (conj {:reason :priority-pin-migrated
-                       :migration (:migrated manifest)}))
+                       :migration (:migrated manifest)})
+                (:migrated-cas manifest)
+                (conj {:reason :content-addressed-migration
+                       :migration (:migrated-cas manifest)}))
         object-mismatches (mapcat :mismatches
                                   [(run-data/verify-index dir "input.edn")
                                    (run-data/verify-index dir "pass.edn")])
@@ -561,6 +487,165 @@
       :before-bytes (reduce + 0 (keep :before-bytes runs))
       :after-bytes (reduce + 0 (keep :after-bytes runs))
       :saved-bytes (reduce + 0 (keep :saved-bytes runs))})))
+
+;; ----------------------------------------- content-addressed run migration
+
+(defn- delete-temp-tree! [root]
+  (doseq [f (reverse (file-seq (io/file root)))]
+    (when-not (.delete ^java.io.File f)
+      (throw (ex-info "Could not remove migration temp file" {:path (str f)})))))
+
+(defn- replace-file! [file text]
+  (let [file (io/file file)
+        tmp (io/file (.getParentFile file)
+                     (str "." (.getName file) "." (java.util.UUID/randomUUID) ".tmp"))]
+    (spit tmp text)
+    (try
+      (java.nio.file.Files/move
+       (.toPath tmp) (.toPath file)
+       (into-array java.nio.file.CopyOption
+                   [java.nio.file.StandardCopyOption/ATOMIC_MOVE
+                    java.nio.file.StandardCopyOption/REPLACE_EXISTING]))
+      (catch java.nio.file.AtomicMoveNotSupportedException _
+        (java.nio.file.Files/move
+         (.toPath tmp) (.toPath file)
+         (into-array java.nio.file.CopyOption
+                     [java.nio.file.StandardCopyOption/REPLACE_EXISTING]))))))
+
+(defn migrate-cas-run!
+  "Plan or migrate one sealed legacy run. Dry-run unless :write? is true."
+  ([dir] (migrate-cas-run! dir {}))
+  ([dir {:keys [write? at root known-shas probe-root] :or {write? false}}]
+   (let [dir (io/file dir)
+         root (io/file (or root (.getParentFile dir)))
+         manifest-file (io/file dir "manifest.edn")
+         input-file (io/file dir "input.edn")
+         pass-file (io/file dir "pass.edn")
+         cluster-file (io/file dir "work-clusters.json")]
+     (cond
+       (not (.isFile manifest-file)) {:run-id (.getName dir) :status :no-manifest}
+       (or (not (.isFile input-file)) (not (.isFile pass-file)))
+       {:run-id (.getName dir) :status :missing-run-data}
+       :else
+       (let [raw-input (edn/read-string (slurp input-file))
+             raw-pass (edn/read-string (slurp pass-file))]
+         (if (and (run-data/index? raw-input) (run-data/index? raw-pass)
+                  (not (.isFile cluster-file)))
+           (let [mismatches (mapcat :mismatches
+                                    [(run-data/verify-index dir "input.edn")
+                                     (run-data/verify-index dir "pass.edn")])]
+             (if (seq mismatches)
+               {:run-id (.getName dir) :status :object-invalid
+                :mismatches (vec mismatches)}
+               {:run-id (.getName dir) :status :unchanged
+                :before-bytes (+ (.length input-file) (.length pass-file))
+                :after-bytes (+ (.length input-file) (.length pass-file))
+                :objects-added 0}))
+           (let [logical-input (run-data/read-run-file dir "input.edn")
+                 logical-pass (run-data/read-run-file dir "pass.edn")
+                 own-temp? (nil? probe-root)
+                 temp-root (or (some-> probe-root io/file)
+                               (.toFile (java.nio.file.Files/createTempDirectory
+                                         "giraffe-cas-migration-"
+                                         (make-array java.nio.file.attribute.FileAttribute 0))))]
+             (try
+               (let [indexes (run-data/make-indexes! temp-root logical-input logical-pass)
+                     temp-run (io/file temp-root "probe")
+                     _ (.mkdirs temp-run)
+                     input-text (run-data/canonical-edn (:input-index indexes))
+                     pass-text (run-data/canonical-edn (:pass-index indexes))
+                     _ (spit (io/file temp-run "input.edn") input-text)
+                     _ (spit (io/file temp-run "pass.edn") pass-text)
+                     equal? (and (= (run-data/canonical-edn logical-input)
+                                    (run-data/canonical-edn
+                                     (run-data/read-run-file temp-run "input.edn")))
+                                 (= (run-data/canonical-edn logical-pass)
+                                    (run-data/canonical-edn
+                                     (run-data/read-run-file temp-run "pass.edn"))))
+                     existing (set (filter #(or (contains? (or known-shas #{}) %)
+                                                (.isFile (run-data/object-file root %)))
+                                           (:object-shas indexes)))
+                     added (remove existing (:object-shas indexes))
+                     new-objects (into {} (map (fn [sha]
+                                                 [sha (.length (run-data/object-file temp-root sha))]))
+                                       added)
+                     added-bytes (reduce + 0 (vals new-objects))
+                     before (+ (.length input-file) (.length pass-file)
+                               (if (.isFile cluster-file) (.length cluster-file) 0))
+                     after (+ (alength (.getBytes input-text "UTF-8"))
+                              (alength (.getBytes pass-text "UTF-8")) added-bytes)]
+                 (if-not equal?
+                   {:run-id (.getName dir) :status :logical-mismatch
+                    :before-bytes before :after-bytes before :objects-added 0}
+                   (let [manifest (edn/read-string (slurp manifest-file))
+                         old-files (into {} (map (juxt :file :sha256)) (:files manifest))
+                         migration {:from (select-keys old-files
+                                                       ["input.edn" "pass.edn" "work-clusters.json"])
+                                    :at (or at (str (java.time.Instant/now))) :reason :cas}
+                         new-manifest (-> manifest
+                                          (update :files
+                                                  (fn [files]
+                                                    (->> files
+                                                         (remove #(= "work-clusters.json" (:file %)))
+                                                         (mapv #(case (:file %)
+                                                                  "input.edn" (assoc % :sha256 (sha256 (.getBytes input-text "UTF-8")))
+                                                                  "pass.edn" (assoc % :sha256 (sha256 (.getBytes pass-text "UTF-8")))
+                                                                  %)))))
+                                          (assoc :migrated-cas migration
+                                                 :content-addressed
+                                                 {:schema run-data/index-schema
+                                                  :object-count (count (:object-shas indexes))}))]
+                     (when write?
+                       (run-data/make-indexes! root logical-input logical-pass)
+                       (replace-file! input-file input-text)
+                       (replace-file! pass-file pass-text)
+                       (replace-file! manifest-file (print-edn new-manifest))
+                       (when (.isFile cluster-file) (.delete cluster-file)))
+                     {:run-id (.getName dir)
+                      :status (if write? :migrated :would-migrate)
+                      :before-bytes before :after-bytes after
+                      :saved-bytes (- before after)
+                      :objects-added (count added) :object-bytes-added added-bytes
+                      :new-objects new-objects})))
+               (finally (when own-temp? (delete-temp-tree! temp-root)))))))))))
+
+(defn migrate-cas-runs!
+  "Dry-run or migrate sealed runs older than ten minutes under ROOT."
+  ([root] (migrate-cas-runs! root {}))
+  ([root opts]
+   (let [now (System/currentTimeMillis)
+         probe-root (.toFile (java.nio.file.Files/createTempDirectory
+                              "giraffe-cas-forecast-"
+                              (make-array java.nio.file.attribute.FileAttribute 0)))
+         dirs (->> (.listFiles (io/file root))
+                   (filter #(.isDirectory ^java.io.File %))
+                   (sort-by #(.getName ^java.io.File %)))
+         known (atom #{})
+         runs (mapv (fn [dir]
+                      (let [result
+                            (if (or (not (.isFile (io/file dir "manifest.edn")))
+                                    (< (- now (.lastModified ^java.io.File dir)) 600000))
+                              {:run-id (.getName ^java.io.File dir) :status :active-or-unsealed}
+                              (migrate-cas-run! dir (assoc opts :root root
+                                                          :known-shas @known
+                                                          :probe-root probe-root)))]
+                        (swap! known into (keys (:new-objects result)))
+                        result))
+                    dirs)
+         all-new (apply merge (keep :new-objects runs))
+         public-runs (mapv #(dissoc % :new-objects) runs)
+         result {:root (str root) :write? (boolean (:write? opts)) :runs public-runs
+      :outcomes (frequencies (map :status public-runs))
+      :before-bytes (reduce + 0 (keep :before-bytes public-runs))
+      :after-bytes (+ (reduce + 0 (keep #(when (:after-bytes %) (- (:after-bytes %) (:object-bytes-added % 0))) public-runs))
+                      (reduce + 0 (vals all-new)))
+      :saved-bytes (- (reduce + 0 (keep :before-bytes public-runs))
+                      (+ (reduce + 0 (keep #(when (:after-bytes %) (- (:after-bytes %) (:object-bytes-added % 0))) public-runs))
+                         (reduce + 0 (vals all-new))))
+      :objects-added (count all-new)
+                 :object-bytes-added (reduce + 0 (vals all-new))}]
+     (delete-temp-tree! probe-root)
+     result)))
 
 ;; -------------------------------------------------- freshness (no write)
 

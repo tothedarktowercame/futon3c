@@ -2,7 +2,6 @@
   "M-giraffe stage 1 packet 3 acceptance tests: the run writer.  All
   writes go to a temp root, never the real storage root."
   (:require [clojure.edn :as edn]
-            [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
@@ -55,28 +54,14 @@
         {:keys [adapter-result pass-output written]} (pilot-run root)
         dir (io/file (:dir written))]
     (testing "every file exists"
-      (doseq [f ["input.edn" "rejected.edn" "pass.edn" "report.md"
-                 "work-clusters.json" "manifest.edn"]]
+      (doseq [f ["input.edn" "rejected.edn" "pass.edn" "report.md" "manifest.edn"]]
         (is (.isFile (io/file dir f)) (str f " missing"))))
+    (is (not (.exists (io/file dir "work-clusters.json"))))
     (testing "every manifest sha matches the file on disk"
       (is (:ok? (gr/verify-run (str dir))))
       (is (= [] (:mismatches (gr/verify-run (str dir))))))
     (testing "pass.edn round-trips to a value equal to the pass output"
       (is (= pass-output (run-data/read-run-file dir "pass.edn"))))
-    (testing "the browser projection carries the same cluster membership"
-      (let [projection (json/parse-string
-                        (slurp (io/file dir "work-clusters.json")) true)]
-        (is (= (count (:work-clusters pass-output))
-               (count (:clusters projection))))
-        (is (= (:work-cluster-by-item pass-output)
-               (:by_item projection)))
-        (is (= (get-in pass-output
-                       [:work-cluster-interpretation :tickets :analyzed])
-               (get-in projection [:interpretation :tickets :analyzed])))
-        (is (= (mapv name
-                     (get-in pass-output
-                             [:work-cluster-interpretation :tickets :unlinked]))
-               (get-in projection [:interpretation :tickets :unlinked])))))
     (testing "input.edn round-trips to the adapter's pass input"
       (is (= (:input adapter-result)
              (run-data/read-run-file dir "input.edn"))))
@@ -459,10 +444,7 @@
       (is (= {:ok? true :mismatches []
               :notes [{:reason :focus-version-absent}]}
              (gr/verify-run legacy-dir)))
-      (is (= {:ok? false
-              :mismatches [{:file "work-clusters.json"
-                            :missing-from-manifest true
-                            :format-undecidable true}]
+      (is (= {:ok? true :mismatches []
               :notes [{:reason :focus-version-absent}]}
              (gr/verify-run nonsense-dir)))
       (finally
@@ -516,10 +498,7 @@
       (is (not ok?))
       (is (= ["work-clusters.json"] (map :file mismatches))))))
 
-(deftest current-manifest-stripped-of-work-clusters-row-is-not-legacy
-  ;; a current-format manifest (git-sha descends from e90fe14bb) with the
-  ;; work-clusters.json row removed must fail: format is decided by the
-  ;; git-sha, not by the artifact's absence
+(deftest manifest-without-work-clusters-row-verifies
   (when-let [copy (and (run-dir-exists? current-run-id)
                        (copy-run current-run-id "current-stripped"))]
     (let [mf (io/file copy "manifest.edn")
@@ -530,24 +509,8 @@
                                  (vec (remove #(= "work-clusters.json" (:file %))
                                               fs))))))
       (let [{:keys [ok? mismatches]} (gr/verify-run copy)]
-        (is (not ok?))
-        (is (= [{:file "work-clusters.json" :missing-from-manifest true}]
-               mismatches)))))
-
-  ;; an unresolvable git-sha is undecidable and fails closed to the
-  ;; current baseline
-  (when-let [copy (and (run-dir-exists? (first legacy-run-ids))
-                       (copy-run (first legacy-run-ids) "undecidable"))]
-    (let [mf (io/file copy "manifest.edn")
-          m (edn/read-string (slurp mf))]
-      (spit mf (pr-str (assoc m :git-sha
-                              (apply str (repeat 40 \a)))))
-      (let [{:keys [ok? mismatches]} (gr/verify-run copy)]
-        (is (not ok?))
-        (is (= [{:file "work-clusters.json"
-                 :missing-from-manifest true
-                 :format-undecidable true}]
-               mismatches))))))
+        (is ok?)
+        (is (empty? mismatches))))))
 
 ;; ---------------------------------------------------------- freshness
 
@@ -623,6 +586,49 @@
       (is (some #(= (if (= :corrupt mode) :object-sha-mismatch :object-missing)
                     (:reason %))
                 (:mismatches (gr/verify-run dir)))))))
+
+(deftest migrate-legacy-run-to-content-addressed-data
+  (let [root (temp-root "cas-migrate")
+        {:keys [adapter-result pass-output written]} (pilot-run root {:run-id "legacy"})
+        dir (io/file (:dir written))
+        input (:input adapter-result)
+        manifest-file (io/file dir "manifest.edn")]
+    ;; Recreate the pre-CAS on-disk shape using invented fixture data.
+    (spit (io/file dir "input.edn") (run-data/canonical-edn input))
+    (spit (io/file dir "pass.edn") (run-data/canonical-edn pass-output))
+    (spit (io/file dir "work-clusters.json") "{}")
+    (let [m (edn/read-string (slurp manifest-file))
+          files (->> (:files m)
+                     (mapv #(case (:file %)
+                              "input.edn" (assoc % :sha256 (gr/sha256 (io/file dir "input.edn")))
+                              "pass.edn" (assoc % :sha256 (gr/sha256 (io/file dir "pass.edn")))
+                              %)))
+          files (conj files {:file "work-clusters.json"
+                             :sha256 (gr/sha256 (io/file dir "work-clusters.json"))})]
+      (spit manifest-file (run-data/canonical-edn (-> m (assoc :files files)
+                                                           (dissoc :content-addressed)))))
+    (is (= :would-migrate (:status (gr/migrate-cas-run! dir))))
+    (is (= :migrated (:status (gr/migrate-cas-run! dir {:write? true :root root}))))
+    (is (= input (run-data/read-run-file dir "input.edn")))
+    (is (= pass-output (run-data/read-run-file dir "pass.edn")))
+    (is (not (.exists (io/file dir "work-clusters.json"))))
+    (is (:ok? (gr/verify-run dir)))
+    (is (= :unchanged (:status (gr/migrate-cas-run! dir {:write? true :root root}))))
+    (let [index (edn/read-string (slurp (io/file dir "input.edn")))
+          sha (first (run-data/referenced-shas index))
+          object (run-data/object-file root sha)
+          original (slurp object)]
+      (spit object "{:corrupt true}\n")
+      (is (= :object-invalid
+             (:status (gr/migrate-cas-run! dir {:write? true :root root}))))
+      (spit object original))
+    ;; Planted manifest check: stale index sha must be rejected.
+    (let [m (edn/read-string (slurp manifest-file))]
+      (spit manifest-file (run-data/canonical-edn
+                           (update m :files
+                                   (fn [fs] (mapv #(if (= "input.edn" (:file %))
+                                                     (assoc % :sha256 "bad") %) fs)))))
+      (is (false? (:ok? (gr/verify-run dir)))))))
 
 (deftest check-freshness-different-input-is-stale
   (let [root (temp-root "stale")]
