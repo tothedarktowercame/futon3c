@@ -609,10 +609,20 @@
       (is (true? (:model_retry_exhausted v)))
       (is (= "model/quota" (get-in v [:model_outcome :failure_kind]))))))
 
-(deftest a-record-without-proposals-or-not-operator-is-left-alone
-  (let [store (temp-store)]
+(deftest an-operator-turn-without-proposals-gets-a-typed-record-an-agent-turn-none
+  ;; Joe 2026-11-18: one connected component. Before, nothing was stored and
+  ;; the next turn's link stayed :prev-pending for ever.
+  (let [store (temp-store)
+        calls (atom 0)]
     (record! store "turn-plain" {})
-    (is (nil? (run-with store "turn-plain" (constantly "[]"))))
+    (let [v (run-with store "turn-plain" (fn [_] (swap! calls inc) "[]"))]
+      (is (= "no-proposed-patterns" (some-> (:state v) name)))
+      (is (= 0 @calls) "no model call")
+      (is (= "session-start" (some-> v :connection :status name))))
+    (record! store "turn-after" {:created_at "2026-10-24T00:01:00Z"
+                                  :proposed_patterns [{:patterns [pid]}]})
+    (store-strand-verdict! store "turn-after")
+    (is (= "linked" (some-> (verdicts store "turn-after") :connection :status name)))
     (record! store "turn-agent" {:origin "agent"
                                  :proposed_patterns [{:patterns [pid]}]})
     (is (nil? (run-with store "turn-agent" (constantly "[]"))))

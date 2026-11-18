@@ -650,6 +650,20 @@
                                       (dissoc :ma_listener_failure))
                                   %)))
           (ensure-connection! store id))
+        (if (and record (= "operator" (:origin record)) (empty? proposed))
+          ;; Joe 2026-11-18: every Circus animal writes into one connected
+          ;; component. A turn with nothing to read still gets a typed 馬
+          ;; record, so its successor links to it instead of waiting forever.
+          (do (ts/update-record! store id
+                                 #(let [v (:pattern_verdicts %)]
+                                    (if (or (nil? v) (= "lu-proposals-pending" (some-> v :state name)))
+                                      (assoc % :pattern_verdicts
+                                             {:version 1 :at (str (java.time.Instant/now))
+                                              :reader "none" :state :no-proposed-patterns
+                                              :why "no proposed patterns" :patterns []
+                                              :connection (connection-for store id)})
+                                      %)))
+              (ensure-connection! store id))
         (when (and record
                  (= "operator" (:origin record))
                  (seq proposed))
@@ -692,7 +706,7 @@
                      ;; is durable. lu-memory remains a field consumer.
                      (when notify! (notify! {:event :pattern-verdicts :id id})))))
                 (when notify! (notify! {:event :pattern-verdicts :id id})))
-              (ensure-connection! store id)))))))
+              (ensure-connection! store id))))))))
     (catch Exception e
       (record-listener-failure! store id e)
       nil)))
