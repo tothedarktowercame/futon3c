@@ -1,6 +1,6 @@
 (ns futon3c.circus.chain-record-test
   (:require [clojure.java.io :as io]
-            [clojure.test :refer [deftest is]]
+            [clojure.test :refer [deftest is testing]]
             [futon3c.circus.chain-record :as chain]
             [futon3c.giraffe.run :as giraffe]))
 
@@ -141,3 +141,11 @@
     (is (= ["legacy-unknown" "legacy-unknown"]
            (mapv :batch/failure-kind (:patterns reading))))
     (is (false? (:obligation-met? reading)))))
+
+(deftest item-absence-is-typed-only-without-item-evidence
+  ;; CL-62: turn-Y9sLUY's 猴 header had :hou/relations [] and no mention edges.
+  (is (= :no-item-evidence (chain/item-absence [] [] [])))
+  (testing "mention or focus-relation edges that resolve to no item are not absence"
+    (is (nil? (chain/item-absence [] ["mention-1"] [])))
+    (is (nil? (chain/item-absence [] [] ["focus-relation-1"]))))
+  (is (nil? (chain/item-absence ["M-one"] ["mention-1"] []))))

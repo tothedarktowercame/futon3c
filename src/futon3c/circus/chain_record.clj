@@ -140,6 +140,15 @@
      :obligation-met? (or (some? absence)
                           (every? #(= :completed (:status %)) pattern-rows))}))
 
+(defn item-absence
+  "Typed reason a turn has no items, or nil. Legitimate only when the turn
+  has no mention clusions AND no 猴 focus-relation edges (a 猴 header with
+  :hou/relations [] is an empty focus reading, CL-62). Items that exist in
+  evidence but fail to resolve are not absent; they fail the ranking theorem."
+  [items mention-ids focus-link-ids]
+  (when (and (empty? items) (empty? mention-ids) (empty? focus-link-ids))
+    :no-item-evidence))
+
 (defn chain-record
   "Collect one turn's recorded chain. Optional injected :query-fn,
   :get-entity-fn, :read-turn-fn and :turn-reference-id make proof evaluation
@@ -180,6 +189,7 @@
               :ma-reading (ma-reading turn)
               :gcc gcc
               :items items
+              :item-absence (item-absence items (:mentions ordinary) focus-link-ids)
               :run {:run-id (:run-id manifest)
                     :producer-git-sha (:git-sha manifest)
                     :readings-generation (:readings-generation manifest)

@@ -51,6 +51,14 @@
       (is (not (zero? (check "no-focus" (assoc good :focus-link []) ["gcc-0"])))))
     (testing "a turn with no items cannot pass vacuously"
       (is (not (zero? (check "no-items" (assoc good :items []) ["gcc-0"])))))
+    (testing "no items with a typed item absence passes (CL-62: 猴 header with no relations)"
+      (is (zero? (check "typed-no-items"
+                        (assoc good :items [] :item-absence :no-item-evidence)
+                        ["gcc-0"]))))
+    (testing "items present cannot also claim item absence"
+      (is (not (zero? (check "items-and-absence"
+                             (assoc good :item-absence :no-item-evidence)
+                             ["gcc-0"])))))
     (testing "failed run verification fails the fixed run theorem"
       (is (not (zero? (check "unverified"
                              (assoc-in good [:run :verification :ok?] false)
