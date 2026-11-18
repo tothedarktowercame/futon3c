@@ -98,3 +98,7 @@ holes/labs/M-diagramprover/apm-driver/.bridge-lane.lock
 holes/labs/**/apm-driver/*-audit.jsonl
 holes/labs/**/apm-driver/*-ledger.jsonl
 holes/labs/**/apm-driver/*-manifest.jsonl
+
+# Run output written into the repo root by a launched process (48 MB of .npy,
+# 2026-11-11); not source. Inbox-zero check 2026-11-18.
+/0.actor-weights/
