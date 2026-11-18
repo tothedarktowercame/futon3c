@@ -8,6 +8,7 @@
   projection. The 3-arity dispatch (store provider msg) remains for pre-6
   callers and answers :unsupported for increment-6 operations."
   (:require [futon3c.arxana.artifact :as artifact]
+            [futon3c.arxana.catalogue-view :as catalogue-view]
             [futon3c.arxana.codedocs-view :as codedocs-view]
             [futon3c.arxana.compile.compiler :as compiler]
             [futon3c.arxana.correspond :as corr]
@@ -364,6 +365,13 @@
                                         :body read-body}))]
              (env/response ok (with-semantic-digest op
                                 (f6/argument-view read! (:argument/id body)))))
+
+           (= op :catalogue/view)
+           (if-not (catalogue-view/valid-time? (:valid-time body))
+             (env/response ok (env/error :invalid :arxana.catalogue/invalid-valid-time
+                                        {:valid-time (:valid-time body)} nil))
+             (env/response ok (with-semantic-digest op
+                               (catalogue-view/read-catalogue graph-store (:valid-time body)))))
 
            (= op :codedocs/view)
            (let [cache (atom {})

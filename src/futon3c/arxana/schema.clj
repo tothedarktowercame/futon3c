@@ -159,6 +159,12 @@
     :projection [:operation :result/status :support/id :supersession/id
                  :created? :current/support-id]}
 
+   :catalogue/view
+   {:schema-version 1
+    :required #{:valid-time}
+    :allowed #{:valid-time}
+    :projection [:operation :status :valid-time [:choices] :reason]}
+
    :codedocs/view
    {:schema-version 1
     :required #{:artifact/revision-id}
