@@ -131,14 +131,31 @@
            (sort-by (juxt #(str (get-in % [:record :created_at])) :id))
            vec))))
 
+(defn- adjacent-turn-by-scan
+  "Legacy path for records written before the turn store kept strand links."
+  [store id record direction]
+  (let [turns (operator-turns store record)
+        index (first (keep-indexed #(when (= id (:id %2)) %1) turns))
+        target (when (some? index) (+ index direction))]
+    ;; Re-read the neighbour: list-records serves a cached copy keyed on
+    ;; mtime+length, which misses a same-length rewrite in the same tick.
+    (when (and target (<= 0 target) (< target (count turns)))
+      (let [tid (:id (nth turns target))]
+        (when-let [r (ts/read-record store tid)] {:id tid :record r})))))
+
 (defn- adjacent-turn
+  "ID's operator-turn neighbour in its session (DIRECTION -1 or +1), from the
+  turn store's strand links (turn_store write-record!). Records written
+  before the links existed fall back to a session scan."
   [store id direction]
   (when-let [record (ts/read-record store id)]
-    (let [turns (operator-turns store record)
-          index (first (keep-indexed #(when (= id (:id %2)) %1) turns))
-          target (when (some? index) (+ index direction))]
-      (when (and target (<= 0 target) (< target (count turns)))
-        (nth turns target)))))
+    (let [linked? (contains? record :prev_operator_turn_id)
+          k (if (neg? direction) :prev_operator_turn_id :next_operator_turn_id)
+          target (get record k)]
+      (cond
+        target (when-let [r (ts/read-record store target)] {:id target :record r})
+        (or linked? (and (pos? direction) (contains? record k))) nil
+        :else (adjacent-turn-by-scan store id record direction)))))
 
 (defn- absent-reason [record]
   (cond

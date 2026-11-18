@@ -81,11 +81,60 @@
   (when (.exists (io/file path))
     (json/parse-string (slurp path :encoding "UTF-8") true)))
 
-(defn write-record!
-  "Create a new record file for RECORD and return {:id :path :record}.
-   Exclusive creation: a colliding id is retried, never overwritten."
-  [store record]
-  (ensure-dir! store)
+(declare list-records)
+
+;; ------------------------------------------------- operator-turn strand links
+;; Joe 2026-11-18: "shouldn't sessions simply maintain a linked-list of
+;; backpointers?" Finding a turn's predecessor used to list the whole store
+;; (51,703 files, ~0.3 s per call). Each new operator turn now carries
+;; :prev_operator_turn_id (key present, nil = first in its session) and its
+;; predecessor gets :next_operator_turn_id; a per-session head file names the
+;; newest. A record without the key predates this and is read by scan.
+
+(defn- operator-record? [record]
+  (and (some? (:session_id record))
+       (= "operator" (or (:origin record) "operator"))))
+
+(defn- session-head-path ^String [{:keys [dir]} session-id]
+  (str (io/file dir "session-heads"
+                (str (java.net.URLEncoder/encode (str session-id) "UTF-8") ".json"))))
+
+(defonce ^:private ^java.util.concurrent.ConcurrentHashMap session-locks
+  (java.util.concurrent.ConcurrentHashMap.))
+
+(defn- session-lock [store session-id]
+  (.computeIfAbsent session-locks (str (:dir store) "\u0000" session-id)
+                    (reify java.util.function.Function (apply [_ _] (Object.)))))
+
+(defn- scan-session-tail
+  "Newest operator turn of SESSION-ID by scan: only when no head file exists
+   (the first new turn of a session that began before the links)."
+  [store session-id]
+  (->> (list-records store :session-id session-id :limit Long/MAX_VALUE)
+       (filter #(operator-record? (:record %)))
+       (sort-by (juxt #(str (get-in % [:record :created_at])) :id))
+       last :id))
+
+(defn- session-tail
+  "The session's newest operator turn: the head file, advanced along any
+   :next_operator_turn_id a crash left unrecorded there."
+  [store session-id]
+  (loop [id (let [f (io/file (session-head-path store session-id))]
+              (if (.isFile f)
+                (:head (json/parse-string (slurp f :encoding "UTF-8") true))
+                (scan-session-tail store session-id)))
+         seen #{}]
+    (let [next-id (when id (:next_operator_turn_id
+                           (json/parse-string
+                            (or (try (slurp (record-path store id) :encoding "UTF-8")
+                                     (catch Exception _ nil)) "null") true)))]
+      (if (and next-id (not (seen next-id)))
+        (recur next-id (conj seen id))
+        id))))
+
+(declare update-record!)
+
+(defn- create-record! [store record]
   (loop [attempt 0]
     (let [id (fresh-id)
           path (record-path store id)
@@ -97,6 +146,27 @@
         (if (< attempt 20)
           (recur (inc attempt))
           (throw (ex-info "Could not allocate a record id" {:reason :store-failure})))))))
+
+(defn write-record!
+  "Create a new record file for RECORD and return {:id :path :record}.
+   Exclusive creation: a colliding id is retried, never overwritten.
+   An operator turn is linked into its session's strand (see above)."
+  [store record]
+  (ensure-dir! store)
+  (if-not (operator-record? record)
+    (create-record! store record)
+    (let [session-id (:session_id record)]
+      #_{:clj-kondo/ignore [:locking-suspicious-lock]}
+      (locking (session-lock store session-id)
+        (let [prev (session-tail store session-id)
+              written (create-record! store (assoc record :prev_operator_turn_id prev))]
+          (when prev
+            (try (update-record! store prev #(assoc % :next_operator_turn_id (:id written)))
+                 (catch clojure.lang.ExceptionInfo _ nil)))
+          (let [head (session-head-path store session-id)]
+            (.mkdirs (.getParentFile (io/file head)))
+            (write-json! head {:head (:id written)}))
+          written)))))
 
 (defn write-record-id!
   "Create RECORD at deterministic ID. Returns {:created? false ...} when ID

@@ -91,3 +91,30 @@
     (run! deref workers)
     (is (every? true? (map (ts/read-record s id) fields))
         "each concurrent update's field survives the others")))
+
+(deftest operator-turns-form-a-linked-list-per-session
+  ;; Joe 2026-11-18: sessions keep backpointers; finding N-1 must not list
+  ;; the store (51,703 files).
+  (let [s (temp-store)
+        a (:id (ts/write-record! s (record "sess" "one")))
+        other (:id (ts/write-record! s (record "sess-2" "elsewhere")))
+        b (:id (ts/write-record! s (record "sess" "two")))
+        bot (:id (ts/write-record! s (assoc (record "sess" "bell") :origin "agent")))
+        c (:id (ts/write-record! s (record "sess" "three")))]
+    (is (contains? (ts/read-record s a) :prev_operator_turn_id))
+    (is (nil? (:prev_operator_turn_id (ts/read-record s a))) "first in session")
+    (is (= a (:prev_operator_turn_id (ts/read-record s b))))
+    (is (= b (:next_operator_turn_id (ts/read-record s a))))
+    (is (= b (:prev_operator_turn_id (ts/read-record s c))) "agent turns are not in the operator strand")
+    (is (not (contains? (ts/read-record s bot) :prev_operator_turn_id)))
+    (is (nil? (:prev_operator_turn_id (ts/read-record s other))) "sessions never cross")
+    (testing "without a list of the store"
+      (with-redefs [ts/list-records (fn [& _] (throw (ex-info "scanned" {})))]
+        (let [d (:id (ts/write-record! s (record "sess" "four")))]
+          (is (= c (:prev_operator_turn_id (ts/read-record s d)))))))
+    (testing "a head file left behind by a crash is advanced along :next"
+      (spit (str (io/file (:dir s) "session-heads" "sess.json")) (str "{\"head\":\"" a "\"}"))
+      (let [e (:id (ts/write-record! s (record "sess" "five")))]
+        (is (not= a (:prev_operator_turn_id (ts/read-record s e))))
+        (is (= (:next_operator_turn_id (ts/read-record s c))
+               (:prev_operator_turn_id (ts/read-record s e))))))))
