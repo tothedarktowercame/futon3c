@@ -148,3 +148,70 @@
                                               (fn [] (#'http/create-invoke-job! request))))))))
         (is (= 1 @reads))
         (is (zero? @created))))))
+
+(def refused-read
+  (ex-info "unreachable" {:error/code :futon1b-unreachable}
+           (java.net.ConnectException. "Connection refused")))
+
+(deftest precise-refused-read-classifier
+  (is (clock/connection-refused-read? refused-read))
+  (is (clock/connection-refused-read? (ex-info "wrapped" {} refused-read)))
+  (is (not (clock/connection-refused-read? busy)))
+  (is (not (clock/connection-refused-read?
+            (ex-info "busy" {:error/code :futon1b-read-unavailable :http/status 504}
+                     (java.net.ConnectException. "unrelated")))))
+  (is (not (clock/connection-refused-read?
+            (ex-info "timeout" {:error/code :futon1b-unreachable}
+                     (java.net.SocketTimeoutException. "timeout"))))))
+
+(defn restart-ingress [read-fn wait-ms]
+  (let [created (atom []) reads (atom 0) started (System/nanoTime)]
+    (binding [clock/*ingress-restart-wait-ms* wait-ms]
+      (with-redefs-fn
+        {#'store/count* (fn [& _] (swap! reads inc) (read-fn))
+         #'http/create-invoke-job-ledger! (fn [r] (swap! created conj r) "recovered-job")
+         #'http/handle-bell (fn [& _]
+                             {:status 200 :body (#'http/create-invoke-job! request)})}
+        (fn []
+          (let [response ((http/make-handler {}) {:request-method :post :uri "/api/alpha/bell"})]
+            {:response response :created @created :reads @reads
+             :elapsed-ms (/ (- (System/nanoTime) started) 1000000.0)}))))))
+
+(deftest restart-recovers-before-one-job-is-created
+  (let [until (+ (System/nanoTime) 2000000000)
+        r (restart-ingress #(if (< (System/nanoTime) until) (throw refused-read) 1) 6000)]
+    (is (= 200 (get-in r [:response :status])))
+    (is (= 1 (count (:created r))))
+    (is (= "retained-clock" (get-in r [:created 0 :inherited-clock :evidence :caller-decision-id])))
+    (is (<= 2000 (:elapsed-ms r) 5500))))
+
+(deftest restart-deadline-refuses-without-a-job
+  (let [r (restart-ingress #(throw refused-read) 80)]
+    (is (= 503 (get-in r [:response :status])))
+    (is (= "clock-store-busy" (:error (json/parse-string (get-in r [:response :body]) true))))
+    (is (empty? (:created r)))
+    (is (< (:elapsed-ms r) 250))))
+
+(deftest busy-and-timeout-never-enter-restart-wait
+  (doseq [error [(ex-info "504" {:error/code :futon1b-read-unavailable :http/status 504})
+                 (ex-info "deadline" {:error/code :futon1b-read-timeout})]]
+    (let [seen (atom nil)
+          r (restart-ingress #(do (reset! seen (/ (- f1b/*read-deadline-ns* (System/nanoTime)) 1000000.0))
+                                   (throw error)) 6000)]
+      (is (= 503 (get-in r [:response :status])))
+      (is (empty? (:created r)))
+      (is (= 1 (:reads r)))
+      (is (< 4500 @seen 5001))
+      (is (< (:elapsed-ms r) 500)))))
+
+(deftest restart-does-not-renew-an-inherited-deadline
+  (let [created (atom 0)]
+    (with-redefs-fn
+      {#'store/count* (fn [& _] (throw refused-read))
+       #'http/create-invoke-job-ledger! (fn [_] (swap! created inc))}
+      (fn []
+        (let [start (System/nanoTime)]
+          (is (some? (error-of #(budget {:timeout-ms 40}
+                                      (fn [] (#'http/create-invoke-job! request))))))
+          (is (< (/ (- (System/nanoTime) start) 1000000.0) 250))
+          (is (zero? @created)))))))

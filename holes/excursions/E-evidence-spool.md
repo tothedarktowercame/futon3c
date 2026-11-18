@@ -423,3 +423,32 @@ inheritance state and changes what a queued job means, for a gap this narrow.
 Separate, later: invoke and whistle return 500 rather than 503 for the same
 refusal; agency_send.py does not retry a 503. Neither is needed for a restart
 once the server waits.
+
+### Step 3 build (2026-11-18)
+
+Cold-caller inheritance now uses `with-ingress-restart-budget` at the existing
+pre-job boundary. Only `connection-refused-read?` permits another probe: it
+finds a `:futon1b-unreachable` exception with a `java.net.ConnectException`
+below it in the preserved cause chain. It does not use `:clock/store-down?`.
+The single absolute deadline defaults to 90,000 ms, overridden by
+`FUTON3C_INGRESS_RESTART_WAIT_MS`; inherited deadlines can only shorten it.
+Probes wait 1, 2, 4, then at most 5 seconds, clipped to remaining time. Each
+probe retains the five-second read cap and empty nested retry allowance.
+Busy responses/timeouts still refuse without retry; pre/post-read deadline
+checks prevent late job creation. Recipient admission, queue policy and
+route-specific error mapping are unchanged. No live load was performed.
+Regression tests cover two-second recovery, exhausted restart/inherited
+deadlines, precise cause classification, and unchanged busy/timeout behavior.
+The broadened-504 plant failed three assertions; ignoring the shortened
+restart deadline (forcing at least 400 ms) failed the deadline test. Both
+were restored from a saved copy before final gates.
+
+Gate caveat: the requested broad run was not green. Baseline-source checks
+reproduced transport failures (typed-bell routing, ledger-accounting, timeout
+and stream ordering); the unchanged backend exact-attempt-count test also
+varied across runs. Logs and mutation results are in
+`~/notes/codex-12/ingress-restart/REPORT.md`. Test isolation also exposed an
+inherited `FUTON3C_DURABLE_QUEUE_PATH` pointing at the shared Agency queue,
+overriding the test alias's temporary default. Earlier runs may have touched
+that queue; no restoration was attempted. Subsequent checks explicitly set
+both queue and invoke-ledger paths to temporary files.

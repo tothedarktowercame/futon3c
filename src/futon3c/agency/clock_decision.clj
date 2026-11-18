@@ -153,6 +153,45 @@
                  (throw e))
                (:value outcome)))))))))
 
+(defn connection-refused-read?
+  "True only for an unreachable backend read caused by ConnectException.
+   Inspect the original cause chain: store-down? also includes HTTP overload."
+  [error]
+  (boolean
+   (some (fn [cause]
+           (and (= :futon1b-unreachable (:error/code (ex-data cause)))
+                (some #(instance? java.net.ConnectException %)
+                      (take-while some? (iterate ex-cause (ex-cause cause))))))
+         (take-while some? (iterate ex-cause error)))))
+
+(def ^:dynamic *ingress-restart-wait-ms*
+  "Total ingress restart deadline; never renewed by probes."
+  (Long/parseLong (or (System/getenv "FUTON3C_INGRESS_RESTART_WAIT_MS") "90000")))
+
+(defn with-ingress-restart-budget
+  "Keep normal reads at five seconds/no retries. Only connection refusal
+   permits another probe, under one outer deadline (and any inherited deadline).
+   Nested clock operations share an empty retry allowance; this loop alone
+   schedules restart probes. Checks after reads prevent late job creation."
+  [f]
+  (with-store-busy-budget
+    {:waits [] :timeout-ms *ingress-restart-wait-ms*}
+    (fn []
+      (loop [pause-ms 1000]
+        (let [result (try
+                       {:value (with-store-busy-budget {:waits [] :timeout-ms 5000} f)}
+                       (catch clojure.lang.ExceptionInfo e {:error e}))]
+          (if-let [e (:error result)]
+            (if (connection-refused-read? e)
+              (let [remaining-ms (quot (- (:deadline *busy-budget*) (System/nanoTime)) 1000000)]
+                (if (pos? remaining-ms)
+                  (do (Thread/sleep (long (min pause-ms remaining-ms)))
+                      ;; The budget checks before the next read as well as after it.
+                      (recur (min 5000 (* 2 pause-ms))))
+                  (throw e)))
+              (throw e))
+            (:value result)))))))
+
 (defn- busy-read [f] (with-store-busy-budget f))
 
 (defn- recovery-rows

@@ -2366,8 +2366,7 @@
   (let [evidence-store (coordination-ledger/mesh-evidence-store (:evidence-store request))
         request (assoc request :inherited-clock
                        (try
-                         (clock-decision/with-store-busy-budget
-                           {:waits [] :timeout-ms 5000}
+                         (clock-decision/with-ingress-restart-budget
                            #(clock-decision/dispatch-inheritance
                               evidence-store (:caller request) (:surface request)))
                          (catch clojure.lang.ExceptionInfo e
