@@ -261,43 +261,80 @@
   (str/replace (slurp reference)
                #"(?s)\n\(demo\)\s*\n\(run-tests\)\s*$" "\n"))
 
+(def ^:private golden-file
+  "Joe's Common Lisp reference's answers for the seeded differential cases,
+  committed so the comparison reruns anywhere.  The reference itself (Joe's
+  theory text) is not in this public repo; only its outputs are."
+  "test/futon3c/arxana/holes_lisp_golden.txt")
+
+(defn- differential-cases-data []
+  (let [rng (Random. 424242)]
+    (vec (repeatedly differential-cases
+                     #(let [act (random-act rng)] [act (random-model rng)])))))
+
+(defn- cases-lisp [cases]
+  (apply str (map (fn [[act model]]
+                    (format "(emit-case %s %s)\n" (act->lisp act) (model->lisp model)))
+                  cases)))
+
+(defn- sha256 [^String s]
+  (let [d (.digest (java.security.MessageDigest/getInstance "SHA-256") (.getBytes s "UTF-8"))]
+    (apply str (map #(format "%02x" %) d))))
+
+(defn- run-lisp-reference
+  "Run SBCL on REFERENCE (a holes.lisp) over CASES; return [exit output-lines]."
+  [^File sbcl reference cases]
+  (let [script (File/createTempFile "holes-differential-" ".lisp")]
+    (try
+      (spit script (str (reference-without-demo reference) lisp-emitter (cases-lisp cases)))
+      (let [process (-> (ProcessBuilder. [(.getPath sbcl) "--script" (.getPath script)])
+                        (.redirectErrorStream true) .start)
+            output (slurp (.getInputStream process))]
+        [(.waitFor process) (str/split-lines output)])
+      (finally (.delete script)))))
+
+(defn regenerate-golden!
+  "Maintainer step: rerun Joe's Lisp reference at REFERENCE-PATH over the
+  seeded cases and rewrite the golden file.  Line 1 records the sha256 of the
+  cases' Lisp text, so a drift in the generator is caught, not compared."
+  [reference-path]
+  (let [sbcl (some-> (System/getenv "PATH") (str/split #":")
+                     (->> (map #(io/file % "sbcl")) (filter #(.canExecute ^File %)) first))
+        cases (differential-cases-data)
+        [exit lines] (run-lisp-reference sbcl (io/file reference-path) cases)]
+    (when-not (and (zero? exit) (= differential-cases (count lines)))
+      (throw (ex-info "reference run failed" {:exit exit :lines (take 5 lines)})))
+    (spit golden-file (str "cases-sha256 " (sha256 (cases-lisp cases)) "\n"
+                           (str/join "\n" lines) "\n"))))
+
+(defn- first-disagreement [expected actual]
+  (when-let [i (first (keep-indexed #(when (not= %2 (nth actual %1 nil)) %1) expected))]
+    (format "first disagreement case %d\nexpected %s\nactual   %s" i (nth expected i) (nth actual i nil))))
+
 (deftest differential-against-common-lisp
-  (let [reference (io/file (System/getProperty "user.home") "notes/claude-5/holes-mozilla/holes.lisp")
-        sbcl (some-> (System/getenv "PATH")
-                     (str/split #":")
-                     (->> (map #(io/file % "sbcl"))
-                          (filter #(.canExecute ^File %)) first))]
-    (if-not (and sbcl (.isFile reference))
-      (println (format "SKIP differential: %s%s"
-                       (if sbcl "" "sbcl missing ")
-                       (if (.isFile reference) "" "reference missing")))
-      (let [rng (Random. 424242)
-            cases (vec (repeatedly differential-cases
-                                   #(let [act (random-act rng)]
-                                      [act (random-model rng)])))
-            script (File/createTempFile "holes-differential-" ".lisp")]
-        (try
-          (spit script
-                (str (reference-without-demo reference) lisp-emitter
-                     (apply str (map (fn [[act model]]
-                                       (format "(emit-case %s %s)\n"
-                                               (act->lisp act)
-                                               (model->lisp model))) cases))))
-          (let [process (-> (ProcessBuilder. [(.getPath ^File sbcl)
-                                               "--script" (.getPath script)])
-                            (.redirectErrorStream true) .start)
-                output (slurp (.getInputStream process))
-                exit (.waitFor process)
-                actual (str/split-lines output)
-                expected (mapv (fn [[act model]] (expected-line act model)) cases)
-                disagreements (count (remove true? (map = expected actual)))]
-            (is (zero? exit) output)
-            (is (= differential-cases (count actual)) output)
-            (is (= expected actual)
-                (when-let [i (first (keep-indexed #(when (not= %2 (nth actual %1 nil)) %1)
-                                                  expected))]
-                  (format "first disagreement case %d\nexpected %s\nactual   %s"
-                          i (nth expected i) (nth actual i nil))))
-            (println "Differential:" disagreements "disagreements over"
-                     differential-cases "acts"))
-          (finally (.delete script)))))))
+  ;; Against the committed answers of Joe's Lisp reference: runs anywhere.
+  (let [cases (differential-cases-data)
+        [header & actual] (str/split-lines (slurp golden-file))
+        expected (mapv (fn [[act model]] (expected-line act model)) cases)]
+    (is (= (str "cases-sha256 " (sha256 (cases-lisp cases))) header)
+        "the seeded generator changed; regenerate the golden file from the reference")
+    (is (= differential-cases (count actual)))
+    (is (= expected (vec actual)) (first-disagreement expected (vec actual)))
+    (println "Differential (golden):" (count (remove true? (map = expected actual)))
+             "disagreements over" differential-cases "acts")))
+
+(deftest differential-against-live-lisp
+  ;; Optional: set HOLES_LISP_REFERENCE to a holes.lisp to compare against a
+  ;; live SBCL run as well.  Without it this test says it skipped.
+  (let [ref (System/getenv "HOLES_LISP_REFERENCE")
+        sbcl (some-> (System/getenv "PATH") (str/split #":")
+                     (->> (map #(io/file % "sbcl")) (filter #(.canExecute ^File %)) first))]
+    (if-not (and ref sbcl (.isFile (io/file ref)))
+      (println "SKIP live differential: set HOLES_LISP_REFERENCE and install sbcl")
+      (let [cases (differential-cases-data)
+            [exit actual] (run-lisp-reference sbcl (io/file ref) cases)
+            expected (mapv (fn [[act model]] (expected-line act model)) cases)]
+        (is (zero? exit))
+        (is (= expected actual) (first-disagreement expected actual))
+        (println "Differential (live):" (count (remove true? (map = expected actual)))
+                 "disagreements over" differential-cases "acts")))))
