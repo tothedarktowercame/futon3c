@@ -1023,6 +1023,59 @@ scope-tree JSON on disk (the view projection drops concept ends)."
   (setq-local truncate-lines t cursor-in-non-selected-windows nil)
   (add-hook 'post-command-hook #'mission-mode--overview-sync nil t))
 
+(defun mission-mode--overview-pattern-key (scope)
+  "The pattern a SCOPE cites (pattern_id), else its scope id."
+  (let ((pid (mission-mode--string (mission-mode--field scope :pattern_id))))
+    (if (string-empty-p pid)
+        (mission-mode--string (mission-mode--field scope :id))
+      pid)))
+
+(defun mission-mode--overview-insert-grouped (ovs)
+  "Insert OVS one line per pattern, in order of first mention.
+A pattern cited more than once gets a count, and each citation's line
+below it (Joe 2026-11-19: de-duplicate the lavender chips)."
+  (let ((order nil)
+        (groups (make-hash-table :test #'equal)))
+    (dolist (ov ovs)
+      (let ((key (mission-mode--overview-pattern-key
+                  (overlay-get ov 'mission-mode-scope))))
+        (unless (gethash key groups) (push key order))
+        (puthash key (append (gethash key groups) (list ov)) groups)))
+    (dolist (key (nreverse order))
+      (let* ((members (gethash key groups))
+             (first (car members))
+             (scope (overlay-get first 'mission-mode-scope))
+             (type (mission-mode--string (mission-mode--field scope :type)))
+             (n (length members))
+             (start (point)))
+        (insert (propertize (format " %s " type)
+                            'face (mission-mode--badge-face type))
+                " "
+                (propertize key 'face 'mission-mode-depth-1-face))
+        (if (> n 1)
+            (insert (propertize (format "  ×%d" n) 'face 'mission-mode-meta-face))
+          (insert "  " (propertize
+                        (truncate-string-to-width
+                         (mission-mode--overview-title first) 40 nil nil "…")
+                        'face 'mission-mode-meta-face)))
+        (insert "\n")
+        (add-text-properties start (point)
+                             (list 'mission-mode-target (overlay-start first)))
+        (push (cons (overlay-start first) start) mission-mode--overview-index)
+        (when (> n 1)
+          (dolist (ov members)
+            (let ((line (point)))
+              (insert "    ↳ "
+                      (propertize (truncate-string-to-width
+                                   (mission-mode--overview-title ov) 50 nil nil "…")
+                                  'face 'mission-mode-depth-2-face)
+                      "\n")
+              (add-text-properties line (point)
+                                   (list 'mission-mode-target (overlay-start ov)))
+              (unless (eq ov first)
+                (push (cons (overlay-start ov) line)
+                      mission-mode--overview-index)))))))))
+
 (defvar-local mission-mode--overview-downstream-anchor nil
   "Marker where the current overview build inserts its downstream lane.")
 
@@ -1097,120 +1150,131 @@ point; RET jumps to it."
           (mission-mode-overview-mode)
           (setq mission-mode--overview-source src
                 mission-mode--overview-last-line nil)
-          (insert (propertize (format " %s — %d %s\n"
-                                      (or mission "mission") (length ovs)
-                                      (if types (string-join types "/") "scopes"))
+          (insert (propertize (if types
+                                  (format " %s — %d %s · %d citations\n"
+                                          (or mission "mission")
+                                          (length (delete-dups
+                                                   (mapcar (lambda (ov)
+                                                             (mission-mode--overview-pattern-key
+                                                              (overlay-get ov (quote mission-mode-scope))))
+                                                           ovs)))
+                                          (string-join types "/") (length ovs))
+                                (format " %s — %d scopes\n"
+                                        (or mission "mission") (length ovs)))
                               'face 'mission-mode-title-face))
           (insert (propertize
                    " keys: TAB fold/pin · t expand/collapse all · RET visit · g rebuild · q quit\n\n"
                    'face 'mission-mode-meta-face))
           (mission-mode--overview-insert-vitals src)
           (setq mission-mode--overview-index nil)
-          ;; Which canon phases are placed at all (for ghost interleaving).
-          (let* ((placed-phases
-                  (delq nil (mapcar
-                             (lambda (ov)
-                               (let ((s (overlay-get ov 'mission-mode-scope)))
-                                 (when (equal "eightfold-phase"
-                                              (mission-mode--string (mission-mode--field s :type)))
-                                   (mission-mode--scope-canon-phase
-                                    s (mission-mode--overview-title ov)))))
-                             ovs)))
-                 (ghosted nil)
-                 (emit-ghosts-before
-                  (lambda (phase)
-                    ;; Ghost every canon phase that precedes PHASE in the canon,
-                    ;; is absent from the doc, and hasn't been ghosted yet.
-                    (dolist (p (seq-take-while (lambda (p) (not (equal p phase)))
-                                               mission-mode--canon-phases))
-                      (unless (or types (member p placed-phases) (member p ghosted))
-                        (push p ghosted)
-                        (insert (propertize (format " ∅ %s — phase absent\n" (upcase p))
-                                            'face 'mission-mode-ghost-face)))))))
-            (setq mission-mode--overview-blocks nil)
-            (let ((line-entries nil))   ;; (panel-pos depth eightfold?)
-              (dolist (ov ovs)
-                (let* ((scope (overlay-get ov 'mission-mode-scope))
-                       (type (mission-mode--string (mission-mode--field scope :type)))
-                       (depth (if types 1
-                                (max 1 (- (or (overlay-get ov 'priority) 11) 10))))
-                       (indent (make-string (* 2 (1- depth)) ?\s))
-                       (title (mission-mode--overview-title ov))
-                       (chip (mission-mode--badge scope))
-                       (phase (and (equal type "eightfold-phase")
-                                   (mission-mode--scope-canon-phase scope title)))
-                       (start nil))
-                  (when phase (funcall emit-ghosts-before phase))
-                  (setq start (point))
-                  (insert indent chip " "
-                          (propertize (truncate-string-to-width title 46 nil nil "…")
-                                      'face (mission-mode--depth-face depth))
-                          ;; Phase-grain PRESENCE (Joe, spoken, 2026-06-11):
-                          ;; not just "the doc left off here" but "a body is
-                          ;; HERE NOW" — the agent cursor inside this phase
-                          ;; span marks the phase live at a glance.
-                          (or (and phase
-                                   (boundp 'futon-agent-cursor--marker)
-                                   futon-agent-cursor--marker
-                                   (marker-buffer futon-agent-cursor--marker)
-                                   (eq (marker-buffer futon-agent-cursor--marker) src)
-                                   (>= (marker-position futon-agent-cursor--marker)
-                                       (overlay-start ov))
-                                   (< (marker-position futon-agent-cursor--marker)
-                                      (overlay-end ov))
-                                   (propertize
-                                    (format "  ◆ %s is here now"
-                                            (if (boundp 'futon-agent-cursor-id)
-                                                futon-agent-cursor-id
-                                              "agent"))
-                                    'face (if (facep 'futon-agent-cursor-glyph-face)
-                                              'futon-agent-cursor-glyph-face
-                                            'success)))
-                              "")
-                          "\n")
-                  (push (list start depth (and phase t)) line-entries)
-                  (push (cons (overlay-start ov) start) mission-mode--overview-index)
-                  (add-text-properties start (point)
-                                       (list 'mission-mode-target (overlay-start ov)))
-                  ;; HEAD carries its extracted concepts — the seed vocabulary
-                  ;; the mission improvises around.
-                  (when (equal phase "head")
-                    (when-let ((concepts (with-current-buffer src
-                                           (mission-mode--tree-head-concepts
-                                            mission-mode--mission))))
-                      (let ((cstart (point)))
-                        (insert indent "  "
-                                (propertize (concat "⊙ " (string-join concepts " · "))
-                                            'face 'mission-mode-meta-face)
-                                "\n")
-                        (push (list cstart (1+ depth) nil) line-entries))))))
-              ;; Trailing ghosts (canon phases after the last placed one).
-              (dolist (p mission-mode--canon-phases)
-                (unless (or types (member p placed-phases) (member p ghosted))
-                  (push p ghosted)
-                  (insert (propertize (format " ∅ %s — phase absent\n" (upcase p))
-                                      'face 'mission-mode-ghost-face))))
-              ;; Foldable blocks: each eightfold line folds the run of deeper
-              ;; lines that follows it.
-              (let ((entries (nreverse line-entries))
-                    (scope-area-end (point)))
-                (while entries
-                  (let* ((entry (pop entries))
-                         (pos (nth 0 entry))
-                         (depth (nth 1 entry))
-                         (phase? (nth 2 entry)))
-                    (when phase?
-                      (let* ((child-beg (or (caar entries) scope-area-end))
-                             (child-end (or (caar (seq-drop-while
-                                                   (lambda (e) (> (nth 1 e) depth))
-                                                   entries))
-                                            scope-area-end)))
-                        (when (> child-end child-beg)
-                          (push (list :parent pos :beg child-beg :end child-end
-                                      :ov nil :pinned nil)
-                                mission-mode--overview-blocks))))))
-                (setq mission-mode--overview-blocks
-                      (nreverse mission-mode--overview-blocks)))))
+          ;; Filtered (patterns-only): one line per pattern, citations below.
+          (if types
+              (mission-mode--overview-insert-grouped ovs)
+            ;; Which canon phases are placed at all (for ghost interleaving).
+            (let* ((placed-phases
+                    (delq nil (mapcar
+                               (lambda (ov)
+                                 (let ((s (overlay-get ov 'mission-mode-scope)))
+                                   (when (equal "eightfold-phase"
+                                                (mission-mode--string (mission-mode--field s :type)))
+                                     (mission-mode--scope-canon-phase
+                                      s (mission-mode--overview-title ov)))))
+                               ovs)))
+                   (ghosted nil)
+                   (emit-ghosts-before
+                    (lambda (phase)
+                      ;; Ghost every canon phase that precedes PHASE in the canon,
+                      ;; is absent from the doc, and hasn't been ghosted yet.
+                      (dolist (p (seq-take-while (lambda (p) (not (equal p phase)))
+                                                 mission-mode--canon-phases))
+                        (unless (or types (member p placed-phases) (member p ghosted))
+                          (push p ghosted)
+                          (insert (propertize (format " ∅ %s — phase absent\n" (upcase p))
+                                              'face 'mission-mode-ghost-face)))))))
+              (setq mission-mode--overview-blocks nil)
+              (let ((line-entries nil))   ;; (panel-pos depth eightfold?)
+                (dolist (ov ovs)
+                  (let* ((scope (overlay-get ov 'mission-mode-scope))
+                         (type (mission-mode--string (mission-mode--field scope :type)))
+                         (depth (if types 1
+                                  (max 1 (- (or (overlay-get ov 'priority) 11) 10))))
+                         (indent (make-string (* 2 (1- depth)) ?\s))
+                         (title (mission-mode--overview-title ov))
+                         (chip (mission-mode--badge scope))
+                         (phase (and (equal type "eightfold-phase")
+                                     (mission-mode--scope-canon-phase scope title)))
+                         (start nil))
+                    (when phase (funcall emit-ghosts-before phase))
+                    (setq start (point))
+                    (insert indent chip " "
+                            (propertize (truncate-string-to-width title 46 nil nil "…")
+                                        'face (mission-mode--depth-face depth))
+                            ;; Phase-grain PRESENCE (Joe, spoken, 2026-06-11):
+                            ;; not just "the doc left off here" but "a body is
+                            ;; HERE NOW" — the agent cursor inside this phase
+                            ;; span marks the phase live at a glance.
+                            (or (and phase
+                                     (boundp 'futon-agent-cursor--marker)
+                                     futon-agent-cursor--marker
+                                     (marker-buffer futon-agent-cursor--marker)
+                                     (eq (marker-buffer futon-agent-cursor--marker) src)
+                                     (>= (marker-position futon-agent-cursor--marker)
+                                         (overlay-start ov))
+                                     (< (marker-position futon-agent-cursor--marker)
+                                        (overlay-end ov))
+                                     (propertize
+                                      (format "  ◆ %s is here now"
+                                              (if (boundp 'futon-agent-cursor-id)
+                                                  futon-agent-cursor-id
+                                                "agent"))
+                                      'face (if (facep 'futon-agent-cursor-glyph-face)
+                                                'futon-agent-cursor-glyph-face
+                                              'success)))
+                                "")
+                            "\n")
+                    (push (list start depth (and phase t)) line-entries)
+                    (push (cons (overlay-start ov) start) mission-mode--overview-index)
+                    (add-text-properties start (point)
+                                         (list 'mission-mode-target (overlay-start ov)))
+                    ;; HEAD carries its extracted concepts — the seed vocabulary
+                    ;; the mission improvises around.
+                    (when (equal phase "head")
+                      (when-let ((concepts (with-current-buffer src
+                                             (mission-mode--tree-head-concepts
+                                              mission-mode--mission))))
+                        (let ((cstart (point)))
+                          (insert indent "  "
+                                  (propertize (concat "⊙ " (string-join concepts " · "))
+                                              'face 'mission-mode-meta-face)
+                                  "\n")
+                          (push (list cstart (1+ depth) nil) line-entries))))))
+                ;; Trailing ghosts (canon phases after the last placed one).
+                (dolist (p mission-mode--canon-phases)
+                  (unless (or types (member p placed-phases) (member p ghosted))
+                    (push p ghosted)
+                    (insert (propertize (format " ∅ %s — phase absent\n" (upcase p))
+                                        'face 'mission-mode-ghost-face))))
+                ;; Foldable blocks: each eightfold line folds the run of deeper
+                ;; lines that follows it.
+                (let ((entries (nreverse line-entries))
+                      (scope-area-end (point)))
+                  (while entries
+                    (let* ((entry (pop entries))
+                           (pos (nth 0 entry))
+                           (depth (nth 1 entry))
+                           (phase? (nth 2 entry)))
+                      (when phase?
+                        (let* ((child-beg (or (caar entries) scope-area-end))
+                               (child-end (or (caar (seq-drop-while
+                                                     (lambda (e) (> (nth 1 e) depth))
+                                                     entries))
+                                              scope-area-end)))
+                          (when (> child-end child-beg)
+                            (push (list :parent pos :beg child-beg :end child-end
+                                        :ov nil :pinned nil)
+                                  mission-mode--overview-blocks))))))
+                  (setq mission-mode--overview-blocks
+                        (nreverse mission-mode--overview-blocks))))))
           ;; Downstream lane: substrate-2 associations beyond the doc's own
           ;; text -- the code this mission touched, and lateral missions.
           ;; Fetched asynchronously and inserted when it lands; skipped for a

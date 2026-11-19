@@ -179,7 +179,7 @@
             (with-current-buffer src (mission-mode-overview)))
           (with-current-buffer "*mission-overview*"
             (let ((text (buffer-string)))
-              (should (string-match-p "M-invented — 1 pattern" text))
+              (should (string-match-p "M-invented — 1 pattern · 1 citations" text))
               (should-not (string-match-p "absent" text)))))
       (kill-buffer src)
       (when (get-buffer "*mission-overview*") (kill-buffer "*mission-overview*")))))
@@ -201,7 +201,33 @@
                     ((symbol-function 'get-buffer-window) #'ignore))
             (with-current-buffer src (mission-mode-overview)))
           (with-current-buffer "*mission-overview*"
-            (should (string-match-p "M-empty — 0 pattern" (buffer-string)))
+            (should (string-match-p "M-empty — 0 pattern/\?[a-z]* · 0 citations" (buffer-string)))
             (should-not (string-match-p "M-previous" (buffer-string)))))
+      (kill-buffer src)
+      (when (get-buffer "*mission-overview*") (kill-buffer "*mission-overview*")))))
+
+(ert-deftest mission-mode-overview-groups-repeated-patterns ()
+  (let ((src (generate-new-buffer "mm-src")))
+    (unwind-protect
+        (progn
+          (with-current-buffer src
+            (insert "# M-invented\nfirst cites alpha\nsecond cites beta\nthird cites alpha again\n")
+            (setq-local mission-mode-scope-types '("pattern"))
+            (setq mission-mode--mission "M-invented" mission-mode--overlays nil)
+            (dolist (spec '((2 "ns/alpha" "a1") (3 "ns/beta" "b1") (4 "ns/alpha" "a2")))
+              (save-excursion
+                (goto-char (point-min)) (forward-line (1- (nth 0 spec)))
+                (let ((ov (make-overlay (point) (line-end-position))))
+                  (overlay-put ov 'mission-mode-scope
+                               `((id . ,(nth 2 spec)) (pattern_id . ,(nth 1 spec)) (type . "pattern")))
+                  (push ov mission-mode--overlays)))))
+          (cl-letf (((symbol-function 'display-buffer) #'ignore)
+                    ((symbol-function 'select-window) #'ignore)
+                    ((symbol-function 'get-buffer-window) #'ignore))
+            (with-current-buffer src (mission-mode-overview)))
+          (with-current-buffer "*mission-overview*"
+            (let ((text (buffer-string)))
+              (should (= 1 (how-many "ns/alpha" (point-min) (point-max))))
+              (should (string-match-p "ns/alpha  ×2\n    ↳ first cites alpha\n    ↳ third cites alpha again\n pattern  ns/beta  second cites beta" text)))))
       (kill-buffer src)
       (when (get-buffer "*mission-overview*") (kill-buffer "*mission-overview*")))))
