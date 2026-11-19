@@ -231,3 +231,14 @@
               (should (string-match-p "ns/alpha  ×2\n    ↳ first cites alpha\n    ↳ third cites alpha again\n pattern  ns/beta  second cites beta" text)))))
       (kill-buffer src)
       (when (get-buffer "*mission-overview*") (kill-buffer "*mission-overview*")))))
+
+(ert-deftest mission-mode-overview-citation-drops-the-pattern-name ()
+  (with-temp-buffer
+    (insert "- `ns/alpha`: \"what alpha says here\"\n- `ns/beta` and `ns/alpha` — both\n")
+    (goto-char (point-min))
+    (let ((one (make-overlay 1 (line-end-position 1)))
+          (two (make-overlay (line-beginning-position 2) (line-end-position 2))))
+      (should (equal "what alpha says here\"" (mission-mode--overview-citation one "ns/alpha")))
+      ;; Short tail: fall back to the words before the mention.
+      (should (equal "… ns/beta and" (mission-mode--overview-citation two "ns/alpha")))
+      (should (equal "and ns/alpha — both" (mission-mode--overview-citation two "ns/beta"))))))

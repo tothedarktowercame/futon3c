@@ -1030,6 +1030,32 @@ scope-tree JSON on disk (the view projection drops concept ends)."
         (mission-mode--string (mission-mode--field scope :id))
       pid)))
 
+(defun mission-mode--overview-citation (ov key)
+  "What citation OV says about pattern KEY, without repeating KEY.
+The words after KEY's mention on its line (else the words before it);
+the anchor line when KEY is not written in OV.  Several patterns cited in
+one paragraph used to show that paragraph's identical opening."
+  (with-current-buffer (overlay-buffer ov)
+    (save-excursion
+      (goto-char (overlay-start ov))
+      (if (not (search-forward key (overlay-end ov) t))
+          (mission-mode--overview-title ov)
+        (let* ((mention (match-beginning 0))
+               (clean (lambda (text)
+                        (string-trim
+                         (replace-regexp-in-string
+                          "[`*]" ""
+                          (replace-regexp-in-string
+                           "\\`[]`\"':,;.)*—–[:space:]-]+" "" text)))))
+               (after (funcall clean (buffer-substring-no-properties
+                                      (point) (min (line-end-position) (overlay-end ov)))))
+               (before (funcall clean (buffer-substring-no-properties
+                                       (max (line-beginning-position) (overlay-start ov))
+                                       mention))))
+          (cond ((>= (length after) 12) after)
+                ((not (string-empty-p before)) (concat "… " before))
+                (t after)))))))
+
 (defun mission-mode--overview-insert-grouped (ovs)
   "Insert OVS one line per pattern, in order of first mention.
 A pattern cited more than once gets a count, and each citation's line
@@ -1056,7 +1082,7 @@ below it (Joe 2026-11-19: de-duplicate the lavender chips)."
             (insert (propertize (format "  ×%d" n) 'face 'mission-mode-meta-face))
           (insert "  " (propertize
                         (truncate-string-to-width
-                         (mission-mode--overview-title first) 40 nil nil "…")
+                         (mission-mode--overview-citation first key) 40 nil nil "…")
                         'face 'mission-mode-meta-face)))
         (insert "\n")
         (add-text-properties start (point)
@@ -1067,7 +1093,7 @@ below it (Joe 2026-11-19: de-duplicate the lavender chips)."
             (let ((line (point)))
               (insert "    ↳ "
                       (propertize (truncate-string-to-width
-                                   (mission-mode--overview-title ov) 50 nil nil "…")
+                                   (mission-mode--overview-citation ov key) 50 nil nil "…")
                                   'face 'mission-mode-depth-2-face)
                       "\n")
               (add-text-properties line (point)
