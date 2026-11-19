@@ -1,6 +1,7 @@
 (ns futon3c.diagramprover.answer-diagram
   "Turn an answer-holes/v1 answer into an open RM hypergraph."
   (:require [clojure.string :as str]
+            [clojure.walk :as walk]
             [futon3c.diagramprover.rmgraph :as rm]))
 
 (defn- add-v [state payload key]
@@ -11,11 +12,18 @@
   (let [[graph id] (rm/add-edge (:graph state) sources targets payload)]
     (-> state (assoc :graph graph) (update :edges assoc (:id payload) id))))
 
+(defn normalize
+  "Accept the answer-holes/v1 JSON as written: string statuses become keywords
+  (claude-5 review, 2026-11-19: the producer emits strings)."
+  [answer]
+  (walk/postwalk (fn [x] (if (and (map? x) (string? (:status x))) (update x :status keyword) x)) answer))
+
 (defn answer->diagram
   "Build an open graph. Free and offered holes are boundary inputs; question
   parts are boundary outputs. The returned indexes keep contract ids visible."
   [answer]
-  (let [frames (mapcat :frames (:sentences answer))
+  (let [answer (normalize answer)
+        frames (mapcat :frames (:sentences answer))
         holes (mapcat :holes frames)
         initial {:graph (rm/make-graph) :vertices {} :edges {}}
         with-holes
@@ -64,7 +72,8 @@
   "Report open required holes, unreached question parts, and frame boxes that
   contribute to no part. Maps follow DiagramProver's `:finding` convention."
   [answer]
-  (let [frames (mapcat :frames (:sentences answer))
+  (let [answer (normalize answer)
+        frames (mapcat :frames (:sentences answer))
         used (set (mapcat :frames (:fills answer)))
         filled (set (keep #(when (seq (:frames %)) (:part %)) (:fills answer)))]
     (vec
@@ -79,7 +88,8 @@
 (defn render
   "Terminal-readable rendering of an answer diagram."
   [answer]
-  (let [frames (mapcat :frames (:sentences answer))]
+  (let [answer (normalize answer)
+        frames (mapcat :frames (:sentences answer))]
     (str/join
      "\n"
      (concat

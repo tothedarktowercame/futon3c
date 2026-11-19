@@ -1,5 +1,6 @@
 (ns futon3c.diagramprover.answer-diagram-test
   (:require [clojure.test :refer [deftest is]]
+            [clojure.walk]
             [futon3c.diagramprover.answer-diagram :as answer]
             [futon3c.diagramprover.rmgraph :as rm]))
 
@@ -40,3 +41,9 @@
         kinds (set (map :finding (answer/findings unfilled)))]
     (is (contains? kinds :part-never-reached))
     (is (contains? kinds :box-reaches-no-part))))
+
+(deftest reads-the-producer-json-as-written
+  ;; The producer (futon4a scripts/answer_holes.py) writes statuses as strings.
+  (let [stringly (clojure.walk/postwalk (fn [x] (if (and (map? x) (keyword? (:status x))) (update x :status name) x)) thesis)]
+    (is (= 4 (count (filter #(= :read-never-written (:finding %)) (answer/findings stringly)))))
+    (is (rm/rm-valid? (:graph (answer/answer->diagram stringly))))))
