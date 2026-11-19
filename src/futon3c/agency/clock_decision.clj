@@ -351,6 +351,13 @@
                      distinct)]
     (when (= 1 (count targets)) (first targets))))
 
+(defn- requisition-line?
+  "True for the ordinary human-written Requisition line.  This is provenance
+   only; `requisition-target` remains the selection parser for compatibility."
+  [text]
+  (boolean (re-find #"(?m)^Requisition:[ \t]*[MCET]-[A-Za-z0-9][A-Za-z0-9_-]*[ \t]*(?:—|--)[ \t]*\S.*$"
+                    (or text ""))))
+
 (defn- target-sha [target]
   (or (get-in target [:source :sha256])
       (when-let [file (:file target)]
@@ -450,6 +457,7 @@
         ;; headers. Those are context, not words the operator used.
         mentions (mentioned-ids (if operator? (operator-words text) text))
         requisition (requisition-target text)
+        requisition-line (requisition-line? text)
         ;; REPL payloads forward the buffer's OLD clock. A newly named target
         ;; in the operator text must supersede that carried value. For dispatch,
         ;; an explicit requisition names the work before --mission or inheritance.
@@ -458,8 +466,9 @@
         ;; Bells and bellbacks mention mission names in passing, so there a
         ;; mention only fills an empty clock; operator turns (Joe's, and the
         ;; followup reminders posted as Joe) switch it (Joe, 2026-09-24).
-        ids (cond (and operator? (seq mentions)) mentions
-                  requisition [requisition]
+        selection (cond (and operator? (seq mentions))
+                        {:ids mentions :provenance :operator-words}
+                        requisition {:ids [requisition] :provenance :requisition}
                   ;; On a REPL turn mission-id is the buffer's displayed OLD
                   ;; clock: it fills an empty session but cannot re-clock one.
                   ;; On non-operator surfaces it is explicit dispatch metadata
@@ -467,16 +476,26 @@
                   ;; A manual clock-in (C-c C-m) marks its turn :clock-manual,
                   ;; and that turn's forwarded mission does re-clock.
                   (and (seq mission-id)
-                       (or (not operator?) (not clocked?) clock-manual)) [mission-id]
-                  clocked? nil
-                  :else mentions)]
+                       (or (not operator?) (not clocked?) clock-manual))
+                  {:ids [mission-id]
+                   :provenance (cond clock-manual :manual-clock-in
+                                     operator? :forwarded-fill
+                                     :else :dispatch-mission)}
+                  clocked? {:ids nil :provenance :current}
+                  :else {:ids mentions :provenance (if requisition-line
+                                                     :requisition
+                                                     :operator-words)})
+        ids (:ids selection)
+        provenance (:provenance selection)]
     (repoint-superseded
      (cond
       (seq ids)
       (let [targets (filterv #(some #{(:id %)} ids) (catalog))
             decided (if (some #(not-any? #{%} (map :id targets)) ids)
-                      (unclocked :unresolvable-target {:targets (vec ids)})
-                      (choose-target targets 1 {:targets (vec ids)}))]
+                      (unclocked :unresolvable-target {:targets (vec ids)
+                                                       :provenance provenance})
+                      (choose-target targets 1 {:targets (vec ids)
+                                                :provenance provenance}))]
         ;; A name that does not resolve, or several that do, keeps a current
         ;; clock instead of emptying it; the refusal stays in the evidence.
         ;; (claude-8, 2026-09-24: "M-f11" shorthand in a bell wiped a correct
@@ -484,6 +503,7 @@
         (if (and clocked? (= :unclocked (:status decided)))
           {:status :clocked :source 2 :clock current
            :evidence {:session-id session-id
+                      :provenance :current
                       :kept-despite (assoc (:evidence decided)
                                            :reason (:reason decided))}}
           decided))
@@ -491,10 +511,11 @@
       (and inherited-clock (not= :activity phase)
            (not= "auto-bellback" surface))
       {:status :clocked :source :inherited :clock (:clock inherited-clock)
-       :evidence (:evidence inherited-clock)}
+       :evidence (assoc (:evidence inherited-clock) :provenance :inherited)}
 
       (some val current)
-      {:status :clocked :source 2 :clock current :evidence {:session-id session-id}}
+      {:status :clocked :source 2 :clock current
+       :evidence {:session-id session-id :provenance :current}}
 
       edited-path
       (let [path (canonical edited-path)
@@ -510,7 +531,7 @@
                                  (:paths t))))
                      (catalog))]
         (if (seq targets)
-          (choose-target targets 3 {:path path})
+          (choose-target targets 3 {:path path :provenance :edited-path})
           (unclocked :no-source {:path path})))
 
       :else (unclocked :no-source {})))))

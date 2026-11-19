@@ -324,7 +324,8 @@
                     (get-in d [:evidence :supersession-reason])]))))
         (testing "non-superseded target is unchanged"
           (let [d (run (fn [_ _] {:item "M-a" :path ["M-a"]}))]
-            (is (= {:session-id "clock-session"} (:evidence d)))))))))
+            (is (= {:session-id "clock-session" :provenance :current}
+                   (:evidence d)))))))))
 
 (deftest supersession-cache-is-per-file-and-never-holds-a-failed-read
   ;; The production path (no *successor-resolver*): inventory items, the GCC
@@ -872,3 +873,41 @@
                (assoc (operator "manual-clock-in" "Please continue.")
                       :mission-id "M-forwarded" :clock-manual true))]
         (is (= [1 "M-forwarded"] [(:source d) (get-in d [:clock :mission-id])]))))))
+
+(deftest every-clock-source-has-distinct-provenance
+  (with-docs
+    (fn [root source _]
+      (spit (io/file root "holes" "missions" "M-other.md") "# other fixture\n")
+      (let [provenance (fn [ctx]
+                         (clock/reset-store!)
+                         (get-in (decision/decide ctx) [:evidence :provenance]))
+            with-current (fn [ctx]
+                           (clock/reset-store!)
+                           (clock/set-dispatch-mission! "clock-worker" "clock-session"
+                                                        "M-clock-fixture")
+                           (get-in (decision/decide ctx) [:evidence :provenance]))
+            cases
+            {:operator-words
+             (provenance (operator "prov-operator" "Please work on M-clock-fixture."))
+             :requisition
+             (provenance (assoc (context "prov-requisition")
+                                :text "Requisition: M-clock-fixture -- fixture"))
+             :forwarded-fill
+             (provenance (assoc (operator "prov-fill" "Please continue.")
+                                :mission-id "M-clock-fixture"))
+             :manual-clock-in
+             (with-current (assoc (operator "prov-manual" "Please continue.")
+                                  :mission-id "M-other" :clock-manual true))
+             :dispatch-mission
+             (with-current (assoc (context "prov-dispatch") :mission-id "M-other"))
+             :current
+             (with-current (context "prov-current"))
+             :inherited
+             (provenance (assoc (context "prov-inherited")
+                                :inherited-clock {:clock {:mission-id "M-clock-fixture"}
+                                                  :evidence {:caller-id "fixture"}}))
+             :edited-path
+             (provenance (assoc (context "prov-edited") :edited-path (str source))) }]
+        ;; Each expected key is also its value: making any two decision
+        ;; branches report the same provenance breaks this single assertion.
+        (is (= (zipmap (keys cases) (keys cases)) cases))))))
