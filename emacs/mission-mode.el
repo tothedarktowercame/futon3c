@@ -307,21 +307,45 @@ build up live as a greenfield mission grows."
       (mission-mode--mission-from-path)
       (mission-mode--clocked-mission)))
 
-(defun mission-mode--fetch (mission)
-  "Fetch live mission scope JSON for MISSION."
+(defun mission-mode--parse-view (text)
+  "Parse mission scope JSON TEXT."
+  (let ((json-object-type 'alist)
+        (json-array-type 'list)
+        (json-false nil)
+        (json-null nil))
+    (json-read-from-string text)))
+
+(defun mission-mode--fetch-async (mission callback errback)
+  "Fetch live mission scope JSON for MISSION without blocking Emacs.
+Call CALLBACK with the parsed data, or ERRBACK with an error object.
+Stdout and stderr are kept apart: a shell error on stderr used to be
+parsed as JSON (\"JSON readtable error: 115\", 2026-11-19)."
   (let* ((args (append mission-mode-command (list "--mission" mission)))
-         (program (car args))
-         (program-args (cdr args))
-         (default-directory mission-mode-project-dir))
-    (with-temp-buffer
-      (let ((status (apply #'process-file program nil t nil program-args)))
-        (unless (and (integerp status) (= status 0))
-          (error "mission scope fetch failed: %s" (buffer-string))))
-      (let ((json-object-type 'alist)
-            (json-array-type 'list)
-            (json-false nil)
-            (json-null nil))
-        (json-read-from-string (buffer-string))))))
+         (default-directory mission-mode-project-dir)
+         (out (generate-new-buffer " *mission-scope-out*"))
+         (err (generate-new-buffer " *mission-scope-err*")))
+    (make-process
+     :name "mission-scope-view"
+     :buffer out
+     :stderr err
+     :command args
+     :noquery t
+     :connection-type 'pipe
+     :sentinel
+     (lambda (proc _event)
+       (unless (process-live-p proc)
+         (let ((status (process-exit-status proc))
+               (stdout (with-current-buffer out (buffer-string)))
+               (stderr (with-current-buffer err (buffer-string))))
+           (kill-buffer out)
+           (when (buffer-live-p err) (kill-buffer err))
+           (if (/= status 0)
+               (funcall errback
+                        (list 'error (format "mission scope fetch failed: %s"
+                                             (string-trim stderr))))
+             (condition-case e
+                 (funcall callback (mission-mode--parse-view stdout))
+               (error (funcall errback e))))))))))
 
 (defun mission-mode--state-face (state)
   "Return face for anchor or parent STATE."
@@ -1269,26 +1293,40 @@ point; RET jumps to it."
   (interactive)
   (let ((mission (or (mission-mode--current-mission)
                      (mission-mode--read-mission))))
-    (condition-case err
-        (let ((data (mission-mode--fetch mission)))
-          (setq mission-mode--mission mission
-                mission-mode--data data)
-          (if mission-mode-minor-mode
-              (mission-mode--annotate-current-buffer data)
-            (mission-mode--render data))
-          ;; The overview panel renders from the same overlays; a refresh
-          ;; that leaves it stale shows ghost lines for phases that exist
-          ;; (Joe, spoken, 2026-06-11 — caught twice). Rebuild it whenever
-          ;; it is open, without touching the selected window.
-          (when (and mission-mode-minor-mode
-                     (get-buffer "*mission-overview*")
-                     (fboundp 'mission-mode-overview))
-            (save-selected-window
-              (mission-mode-overview))))
-      (error
-       (if mission-mode-minor-mode
-           (mission-mode--show-minor-error mission err)
-         (mission-mode--render-error mission err))))))
+    (let ((buffer (current-buffer)))
+      (message "mission-mode: fetching %s scopes..." mission)
+      (mission-mode--fetch-async
+       mission
+       (lambda (data)
+         (when (buffer-live-p buffer)
+           (with-current-buffer buffer
+             (condition-case err
+                 (progn
+                   (setq mission-mode--mission mission
+                         mission-mode--data data)
+                   (if mission-mode-minor-mode
+                       (mission-mode--annotate-current-buffer data)
+                     (mission-mode--render data))
+                   ;; The overview panel renders from the same overlays; a refresh
+                   ;; that leaves it stale shows ghost lines for phases that exist
+                   ;; (Joe, spoken, 2026-06-11 — caught twice). Rebuild it whenever
+                   ;; it is open, without touching the selected window.
+                   (when (and mission-mode-minor-mode
+                              (get-buffer "*mission-overview*")
+                              (fboundp 'mission-mode-overview))
+                     (save-selected-window
+                       (mission-mode-overview))))
+               (error (mission-mode--refresh-failed mission err))))))
+       (lambda (err)
+         (when (buffer-live-p buffer)
+           (with-current-buffer buffer
+             (mission-mode--refresh-failed mission err))))))))
+
+(defun mission-mode--refresh-failed (mission err)
+  "Show ERR for MISSION in the current buffer."
+  (if mission-mode-minor-mode
+      (mission-mode--show-minor-error mission err)
+    (mission-mode--render-error mission err)))
 
 (defun mission-mode--mission-file-candidates (mission)
   "Return likely markdown files for MISSION."

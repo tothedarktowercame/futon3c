@@ -106,3 +106,28 @@
         (should (equal remaining (list foreign)))))))
 
 ;;; mission-mode-test.el ends here
+
+(defun mission-mode-test--fetch (command)
+  "Run `mission-mode--fetch-async' with COMMAND; return (ok . value)."
+  (let ((mission-mode-command command)
+        (mission-mode-project-dir temporary-file-directory)
+        (result nil))
+    (mission-mode--fetch-async "M-x"
+                               (lambda (data) (setq result (cons 'ok data)))
+                               (lambda (err) (setq result (cons 'err err))))
+    (with-timeout (10 (error "fetch never finished"))
+      (while (null result) (accept-process-output nil 0.05)))
+    result))
+
+(ert-deftest mission-mode-fetch-keeps-stderr-out-of-the-json ()
+  ;; 2026-11-19: a bash error on stderr was parsed as JSON
+  ;; ("JSON readtable error: 115").
+  (let ((r (mission-mode-test--fetch
+            '("sh" "-c" "echo 'script: Argument list too long' >&2; echo '{\"mission\":\"M-x\"}'" "sh"))))
+    (should (eq 'ok (car r)))
+    (should (equal "M-x" (mission-mode--field (cdr r) :mission)))))
+
+(ert-deftest mission-mode-fetch-reports-a-failed-command ()
+  (let ((r (mission-mode-test--fetch '("sh" "-c" "echo boom >&2; exit 3" "sh"))))
+    (should (eq 'err (car r)))
+    (should (string-match-p "boom" (error-message-string (cdr r))))))
