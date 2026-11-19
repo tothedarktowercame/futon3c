@@ -443,7 +443,8 @@
   "Precedence: operator target, dispatched requisition, explicit mission,
    current session, attributed activity, typed absence. Target ambiguity never
    chooses the first filesystem hit."
-  [{:keys [agent-id session-id mission-id text edited-path surface inherited-clock phase]}]
+  [{:keys [agent-id session-id mission-id text edited-path surface inherited-clock phase
+           clock-manual]}]
   (let [operator? (contains? #{"emacs-repl" "emacs-claude-repl" "emacs-codex-repl"} surface)
         ;; The harness enriches an operator turn with retrieval and routing
         ;; headers. Those are context, not words the operator used.
@@ -463,7 +464,10 @@
                   ;; clock: it fills an empty session but cannot re-clock one.
                   ;; On non-operator surfaces it is explicit dispatch metadata
                   ;; (for example --mission), whose override contract remains.
-                  (and (seq mission-id) (or (not operator?) (not clocked?))) [mission-id]
+                  ;; A manual clock-in (C-c C-m) marks its turn :clock-manual,
+                  ;; and that turn's forwarded mission does re-clock.
+                  (and (seq mission-id)
+                       (or (not operator?) (not clocked?) clock-manual)) [mission-id]
                   clocked? nil
                   :else mentions)]
     (repoint-superseded

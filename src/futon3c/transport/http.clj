@@ -4025,6 +4025,8 @@
           :text (field :text)
           :mission-id (or (field :mission-id) (field :clocked-mission)
                           (field :clocked-excursion) (field :clocked-campaign))
+          ;; Set by the REPL on the first user turn after a manual clock-in.
+          :clock-manual (true? (field :clock-manual))
           :evidence-store evidence-store})))))
 
 (defn- handle-evidence-create

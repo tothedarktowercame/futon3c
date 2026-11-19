@@ -861,3 +861,14 @@
           (is (false? @busy-once) "the busy reply was actually served once")
           (is (some #(= :session-resolved (get-in % [:evidence/body :phase]))
                     (store/query* backend {:query/tags [:clock-decision]}))))))))
+
+(deftest manual-clock-in-turn-may-override-the-current-clock
+  ;; C-c C-m only changes the buffer; its next user turn carries :clock-manual.
+  (with-docs
+    (fn [root _ _]
+      (spit (io/file root "holes" "missions" "M-forwarded.md") "# forwarded fixture\n")
+      (clock/set-dispatch-mission! "clock-worker" "clock-session" "M-clock-fixture")
+      (let [d (decision/decide
+               (assoc (operator "manual-clock-in" "Please continue.")
+                      :mission-id "M-forwarded" :clock-manual true))]
+        (is (= [1 "M-forwarded"] [(:source d) (get-in d [:clock :mission-id])]))))))

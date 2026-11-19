@@ -4668,8 +4668,13 @@ character the operator meant to write."
     (agent-chat-sync-evidence-anchor! evidence-url timeout sid session-var last-id-var)
     ;; A user turn carries the buffer clock to the Agency, so a pending manual
     ;; clock-in is now known there and turn-end sync may resume.
-    (when (string= role "user")
-      (setq agent-chat--clock-manual-pending nil))
+    (let ((manual (and (string= role "user") agent-chat--clock-manual-pending)))
+      (when (string= role "user")
+        (setq agent-chat--clock-manual-pending nil))
+      ;; The Agency lets this turn's buffer clock override the session clock
+      ;; only when it is a manual clock-in; otherwise it only fills an empty one.
+      (when manual
+        (setq body-fields (append body-fields '((clock-manual . t))))))
     (let* ((split (agent-chat-split-surface-marker (string-trim text)))
            (surface (car split))
            (trimmed (cdr split))
