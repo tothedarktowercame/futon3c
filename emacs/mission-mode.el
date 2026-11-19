@@ -307,6 +307,10 @@ build up live as a greenfield mission grows."
       (mission-mode--mission-from-path)
       (mission-mode--clocked-mission)))
 
+(defvar-local mission-mode-scope-types nil
+  "When non-nil, the scope types (strings) this buffer fetches, e.g.
+\='(\"pattern\" \"psr\" \"pur\") for ※ m p; nil fetches every type.")
+
 (defun mission-mode--parse-view (text)
   "Parse mission scope JSON TEXT."
   (let ((json-object-type 'alist)
@@ -320,7 +324,9 @@ build up live as a greenfield mission grows."
 Call CALLBACK with the parsed data, or ERRBACK with an error object.
 Stdout and stderr are kept apart: a shell error on stderr used to be
 parsed as JSON (\"JSON readtable error: 115\", 2026-11-19)."
-  (let* ((args (append mission-mode-command (list "--mission" mission)))
+  (let* ((args (append mission-mode-command (list "--mission" mission)
+                       (when mission-mode-scope-types
+                         (list "--types" (string-join mission-mode-scope-types ",")))))
          (default-directory mission-mode-project-dir)
          (out (generate-new-buffer " *mission-scope-out*"))
          (err (generate-new-buffer " *mission-scope-err*")))

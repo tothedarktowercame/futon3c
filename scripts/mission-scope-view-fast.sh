@@ -7,9 +7,11 @@
 set -euo pipefail
 
 mission=""
+types=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --mission) mission="$2"; shift 2 ;;
+    --types) types="$2"; shift 2 ;;
     *) shift ;;
   esac
 done
@@ -17,10 +19,20 @@ done
 
 cd /home/joe/code/futon3c
 
+# --types pattern,psr,pur fetches only those scope types (one substrate read
+# each) -- the ※ m p view needs patterns only.
+if [[ -n "$types" ]]; then
+  [[ "$types" =~ ^[a-z0-9,-]+$ ]] || { echo "bad --types: $types" >&2; exit 2; }
+  binders="[$(sed 's/[^,]*/"&"/g; s/,/ /g' <<<"$types")]"
+  view="(futon3c.scripts.mission-scope-view/fetch-view \"$mission\" (futon3c.scripts.mission-scope-view/substrate-url) $binders)"
+else
+  view="(futon3c.scripts.mission-scope-view/fetch-view \"$mission\")"
+fi
+
 expr="(do (when-not (find-ns 'futon3c.scripts.mission-scope-view)
         (load-file \"src/futon3c/scripts/mission_scope_view.clj\"))
       (cheshire.core/generate-string
-       (futon3c.scripts.mission-scope-view/fetch-view \"$mission\")))"
+       $view))"
 
 if out=$(bash scripts/proof-eval.sh "$expr" 2>/dev/null) && [[ "$out" == *":ok true"* ]]; then
   # The view is passed on stdin, not argv: a large mission's JSON exceeds

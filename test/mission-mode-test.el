@@ -131,3 +131,12 @@
   (let ((r (mission-mode-test--fetch '("sh" "-c" "echo boom >&2; exit 3" "sh"))))
     (should (eq 'err (car r)))
     (should (string-match-p "boom" (error-message-string (cdr r))))))
+
+(ert-deftest mission-mode-fetch-passes-the-scope-type-filter ()
+  (with-temp-buffer
+    (setq-local mission-mode-scope-types '("pattern" "psr"))
+    (let ((r (mission-mode-test--fetch
+              '("sh" "-c" "printf '{\"args\":\"%s\"}' \"$*\"" "sh"))))
+      (should (eq 'ok (car r)))
+      (should (equal "--mission M-x --types pattern,psr"
+                     (mission-mode--field (cdr r) :args))))))
