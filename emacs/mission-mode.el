@@ -636,53 +636,69 @@ lowercased to match the watcher's entity convention."
   "First candidate entity id (back-compat)."
   (car (mission-mode--mission-entity-ids)))
 
-(defun mission-mode--fetch-downstream (entity-id)
-  "Fetch (FILES . MISSIONS) associated with ENTITY-ID from substrate-2.
-FILES are absolute paths under ~/code; MISSIONS are entity ids."
-  (when entity-id
-    (condition-case nil
-        (let* ((url (format "%s/api/futon/hyperedges?end=%s&limit=300"
-                            mission-mode-proxy-url (url-hexify-string entity-id)))
-               (buf (futon-url-retrieve-synchronously url 4))
-               files missions)
-          (when buf
-            (unwind-protect
-		(with-current-buffer buf
-		  (goto-char (point-min))
-		  (when (search-forward "\n\n" nil t)
-                    ;; url-retrieve buffers are raw bytes: decode before parsing,
-                    ;; or the `→' in code/v05/file→mission never matches.
-                    (let* ((json-str (decode-coding-string
-                                      (buffer-substring-no-properties (point) (point-max))
-                                      'utf-8))
-			   ;; json.el: objects → alists with symbol keys (hx/type, hx/ends).
-			   (hxs (append (cdr (assq 'hyperedges
-						   (json-read-from-string json-str)))
-					nil)))
-                      (dolist (hx hxs)
-			(let ((type (format "%s" (or (cdr (assq 'hx/type hx)) "")))
-                              (ends (append (cdr (assq 'hx/ends hx)) nil)))
-			  (cond
-			   ((string-match-p "file→mission\\|file->mission" type)
-                            (dolist (end ends)
-                              (let ((eid (cdr (assq 'entity-id end))))
-				(when (and (stringp eid)
-					   (string-match "\\`\\([a-z0-9]+\\)-[a-z]/file/\\(.+\\)\\'" eid))
-				  (push (format "/home/joe/code/%s/%s"
-						(match-string 1 eid) (match-string 2 eid))
-					files)))))
-			   ((string-match-p "mission-cross-ref" type)
-                            (dolist (end ends)
-                              (let ((eid (cdr (assq 'entity-id end))))
-				(when (and (stringp eid)
-					   (string-match-p "/mission/" eid)
-					   (not (equal eid entity-id)))
-				  (push eid missions)))))))))))
-              ;; A parse error must not strand the response buffer.
-              (kill-buffer buf)))
-          (cons (delete-dups (nreverse files))
-                (delete-dups (nreverse missions))))
-      (error nil))))
+(defun mission-mode--downstream-url (entity-id)
+  "The substrate-2 hyperedge query for ENTITY-ID."
+  (format "%s/api/futon/hyperedges?end=%s&limit=300"
+          mission-mode-proxy-url (url-hexify-string entity-id)))
+
+(defun mission-mode--parse-downstream (entity-id)
+  "Parse (FILES . MISSIONS) for ENTITY-ID from the HTTP response in this buffer."
+  (let (files missions)
+    (goto-char (point-min))
+    (when (search-forward "\n\n" nil t)
+      ;; url-retrieve buffers are raw bytes: decode before parsing,
+      ;; or the `→' in code/v05/file→mission never matches.
+      (let* ((json-str (decode-coding-string
+                        (buffer-substring-no-properties (point) (point-max))
+                        'utf-8))
+             ;; json.el: objects → alists with symbol keys (hx/type, hx/ends).
+             (hxs (append (cdr (assq 'hyperedges
+                                     (json-read-from-string json-str)))
+                          nil)))
+        (dolist (hx hxs)
+          (let ((type (format "%s" (or (cdr (assq 'hx/type hx)) "")))
+                (ends (append (cdr (assq 'hx/ends hx)) nil)))
+            (cond
+             ((string-match-p "file→mission\\|file->mission" type)
+              (dolist (end ends)
+                (let ((eid (cdr (assq 'entity-id end))))
+                  (when (and (stringp eid)
+                             (string-match "\\`\\([a-z0-9]+\\)-[a-z]/file/\\(.+\\)\\'" eid))
+                    (push (format "/home/joe/code/%s/%s"
+                                  (match-string 1 eid) (match-string 2 eid))
+                          files)))))
+             ((string-match-p "mission-cross-ref" type)
+              (dolist (end ends)
+                (let ((eid (cdr (assq 'entity-id end))))
+                  (when (and (stringp eid)
+                             (string-match-p "/mission/" eid)
+                             (not (equal eid entity-id)))
+                    (push eid missions))))))))))
+    (cons (delete-dups (nreverse files))
+          (delete-dups (nreverse missions)))))
+
+(defun mission-mode--fetch-downstream-async (entity-ids callback)
+  "Try ENTITY-IDS in order without blocking Emacs.
+CALLBACK gets the first non-empty (FILES . MISSIONS), or nil when none
+has edges.  The overview used to make these requests synchronously:
+8 candidates, ~0.8 s held on every rebuild (2026-11-19)."
+  (if (null entity-ids)
+      (funcall callback nil)
+    (let ((eid (car entity-ids)))
+      (condition-case nil
+          (url-retrieve
+           (mission-mode--downstream-url eid)
+           (lambda (status)
+             (let ((d (unless (plist-get status :error)
+                        (condition-case nil
+                            (mission-mode--parse-downstream eid)
+                          (error nil)))))
+               (kill-buffer (current-buffer))
+               (if (and d (or (car d) (cdr d)))
+                   (funcall callback d)
+                 (mission-mode--fetch-downstream-async (cdr entity-ids) callback))))
+           nil t t)
+        (error (mission-mode--fetch-downstream-async (cdr entity-ids) callback))))))
 
 (defun mission-mode--mission-entity->file (eid)
   "Best-effort path of the mission doc for entity id EID."
@@ -1007,6 +1023,58 @@ scope-tree JSON on disk (the view projection drops concept ends)."
   (setq-local truncate-lines t cursor-in-non-selected-windows nil)
   (add-hook 'post-command-hook #'mission-mode--overview-sync nil t))
 
+(defvar-local mission-mode--overview-downstream-anchor nil
+  "Marker where the current overview build inserts its downstream lane.")
+
+(defun mission-mode--overview-insert-downstream (src down)
+  "Insert the downstream lane DOWN = (FILES . MISSIONS) for SRC at point."
+  (let ((files (car down))
+        (missions (cdr down)))
+    (when files
+      (insert "\n" (propertize (format " ↓ code (%d files, substrate-2)\n"
+                                       (length files))
+                               'face 'mission-mode-title-face))
+      (dolist (f files)
+        (let* ((start (point))
+               (basename (file-name-nondirectory f))
+               ;; Which scope regions mention this file in the doc?
+               (mentions
+                (with-current-buffer src
+                  (save-excursion
+                    (goto-char (point-min))
+                    (let (refs first-pos)
+                      (while (search-forward basename nil t)
+                        (unless first-pos (setq first-pos (match-beginning 0)))
+                        (dolist (o (overlays-at (match-beginning 0)))
+                          (when (overlay-get o 'mission-mode-scope)
+                            (cl-pushnew (overlay-start o) refs))))
+                      (cons first-pos refs)))))
+               (first-pos (car mentions))
+               (refs (cdr mentions)))
+          (insert "  "
+                  (propertize (string-remove-prefix "/home/joe/code/" f)
+                              'face (if (file-exists-p f)
+                                        'mission-mode-scope-face
+                                      'mission-mode-warning-face))
+                  (if refs (format "  ·%d" (length refs)) "")
+                  "\n")
+          (add-text-properties
+           start (point)
+           (append (list 'mission-mode-file f)
+                   (when first-pos (list 'mission-mode-target first-pos))
+                   (when refs (list 'mission-mode-scope-refs refs)))))))
+    (when missions
+      (insert "\n" (propertize (format " ↔ missions (%d cross-refs)\n"
+                                       (length missions))
+                               'face 'mission-mode-title-face))
+      (dolist (m missions)
+        (let ((start (point))
+              (mf (mission-mode--mission-entity->file m)))
+          (insert "  " (propertize m 'face 'mission-mode-meta-face) "\n")
+          (when mf
+            (add-text-properties start (point)
+                                 (list 'mission-mode-file mf))))))))
+
 (defun mission-mode-overview ()
   "Show the mission's scopes as a nested, colored visual abstract.
 Moving point in the panel scrolls the mission buffer to the scope under
@@ -1017,8 +1085,11 @@ point; RET jumps to it."
                 (current-buffer)))
          (ovs (with-current-buffer src (mission-mode--region-overlays)))
          (mission (with-current-buffer src mission-mode--mission))
+         ;; A type-filtered buffer (※ m p: patterns only) shows just those
+         ;; scopes in document order; phases it never fetched are not "absent".
+         (types (with-current-buffer src mission-mode-scope-types))
          (buf (get-buffer-create "*mission-overview*")))
-    (if (null ovs)
+    (if (and (null ovs) (not types))
         (message "mission-mode: no scopes annotated (run mission-mode first)")
       (with-current-buffer buf
         (let ((inhibit-read-only t))
@@ -1026,8 +1097,9 @@ point; RET jumps to it."
           (mission-mode-overview-mode)
           (setq mission-mode--overview-source src
                 mission-mode--overview-last-line nil)
-          (insert (propertize (format " %s — %d scopes\n"
-                                      (or mission "mission") (length ovs))
+          (insert (propertize (format " %s — %d %s\n"
+                                      (or mission "mission") (length ovs)
+                                      (if types (string-join types "/") "scopes"))
                               'face 'mission-mode-title-face))
           (insert (propertize
                    " keys: TAB fold/pin · t expand/collapse all · RET visit · g rebuild · q quit\n\n"
@@ -1051,7 +1123,7 @@ point; RET jumps to it."
                     ;; is absent from the doc, and hasn't been ghosted yet.
                     (dolist (p (seq-take-while (lambda (p) (not (equal p phase)))
                                                mission-mode--canon-phases))
-                      (unless (or (member p placed-phases) (member p ghosted))
+                      (unless (or types (member p placed-phases) (member p ghosted))
                         (push p ghosted)
                         (insert (propertize (format " ∅ %s — phase absent\n" (upcase p))
                                             'face 'mission-mode-ghost-face)))))))
@@ -1060,7 +1132,8 @@ point; RET jumps to it."
               (dolist (ov ovs)
                 (let* ((scope (overlay-get ov 'mission-mode-scope))
                        (type (mission-mode--string (mission-mode--field scope :type)))
-                       (depth (max 1 (- (or (overlay-get ov 'priority) 11) 10)))
+                       (depth (if types 1
+                                (max 1 (- (or (overlay-get ov 'priority) 11) 10))))
                        (indent (make-string (* 2 (1- depth)) ?\s))
                        (title (mission-mode--overview-title ov))
                        (chip (mission-mode--badge scope))
@@ -1113,7 +1186,7 @@ point; RET jumps to it."
                         (push (list cstart (1+ depth) nil) line-entries))))))
               ;; Trailing ghosts (canon phases after the last placed one).
               (dolist (p mission-mode--canon-phases)
-                (unless (or (member p placed-phases) (member p ghosted))
+                (unless (or types (member p placed-phases) (member p ghosted))
                   (push p ghosted)
                   (insert (propertize (format " ∅ %s — phase absent\n" (upcase p))
                                       'face 'mission-mode-ghost-face))))
@@ -1139,58 +1212,22 @@ point; RET jumps to it."
                 (setq mission-mode--overview-blocks
                       (nreverse mission-mode--overview-blocks)))))
           ;; Downstream lane: substrate-2 associations beyond the doc's own
-          ;; text — the code this mission touched, and lateral missions.
-          (let* ((down (with-current-buffer src
-                         (seq-some (lambda (eid)
-                                     (let ((d (mission-mode--fetch-downstream eid)))
-                                       (and d (or (car d) (cdr d)) d)))
-                                   (mission-mode--mission-entity-ids))))
-                 (files (car down))
-                 (missions (cdr down)))
-            (when files
-              (insert "\n" (propertize (format " ↓ code (%d files, substrate-2)\n"
-                                               (length files))
-                                       'face 'mission-mode-title-face))
-              (dolist (f files)
-                (let* ((start (point))
-                       (basename (file-name-nondirectory f))
-                       ;; Which scope regions mention this file in the doc?
-                       (mentions
-                        (with-current-buffer src
-                          (save-excursion
-                            (goto-char (point-min))
-                            (let (refs first-pos)
-                              (while (search-forward basename nil t)
-                                (unless first-pos (setq first-pos (match-beginning 0)))
-                                (dolist (o (overlays-at (match-beginning 0)))
-                                  (when (overlay-get o 'mission-mode-scope)
-                                    (cl-pushnew (overlay-start o) refs))))
-                              (cons first-pos refs)))))
-                       (first-pos (car mentions))
-                       (refs (cdr mentions)))
-                  (insert "  "
-                          (propertize (string-remove-prefix "/home/joe/code/" f)
-                                      'face (if (file-exists-p f)
-                                                'mission-mode-scope-face
-                                              'mission-mode-warning-face))
-                          (if refs (format "  ·%d" (length refs)) "")
-                          "\n")
-                  (add-text-properties
-                   start (point)
-                   (append (list 'mission-mode-file f)
-                           (when first-pos (list 'mission-mode-target first-pos))
-                           (when refs (list 'mission-mode-scope-refs refs)))))))
-            (when missions
-              (insert "\n" (propertize (format " ↔ missions (%d cross-refs)\n"
-                                               (length missions))
-                                       'face 'mission-mode-title-face))
-              (dolist (m missions)
-                (let ((start (point))
-                      (mf (mission-mode--mission-entity->file m)))
-                  (insert "  " (propertize m 'face 'mission-mode-meta-face) "\n")
-                  (when mf
-                    (add-text-properties start (point)
-                                         (list 'mission-mode-file mf)))))))
+          ;; text -- the code this mission touched, and lateral missions.
+          ;; Fetched asynchronously and inserted when it lands; skipped for a
+          ;; type-filtered (patterns-only) view.
+          (let ((anchor (copy-marker (point))))
+            (setq mission-mode--overview-downstream-anchor anchor)
+            (unless types
+              (mission-mode--fetch-downstream-async
+               (with-current-buffer src (mission-mode--mission-entity-ids))
+               (lambda (down)
+                 (when (and down (buffer-live-p buf))
+                   (with-current-buffer buf
+                     (when (eq anchor mission-mode--overview-downstream-anchor)
+                       (let ((inhibit-read-only t))
+                         (save-excursion
+                           (goto-char anchor)
+                           (mission-mode--overview-insert-downstream src down))))))))))
           ;; Default: subsections folded; point peeks, TAB pins, `t' toggles all.
           (dolist (b mission-mode--overview-blocks)
             (mission-mode--block-fold b))

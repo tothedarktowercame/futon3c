@@ -140,3 +140,68 @@
       (should (eq 'ok (car r)))
       (should (equal "--mission M-x --types pattern,psr"
                      (mission-mode--field (cdr r) :args))))))
+
+(ert-deftest mission-mode-downstream-async-tries-candidates-in-order ()
+  (let ((asked nil) (got 'pending))
+    (cl-letf (((symbol-function 'url-retrieve)
+               (lambda (url cb &rest _)
+                 (push url asked)
+                 (with-temp-buffer
+                   (insert "HTTP/1.1 200 OK\n\n"
+                           (if (string-match-p "second" url)
+                               "{\"hyperedges\":[{\"hx/type\":\"mission-cross-ref\",\"hx/ends\":[{\"entity-id\":\"r-d/mission/M-other\"}]}]}"
+                             "{\"hyperedges\":[]}"))
+                   (funcall cb nil))
+                 nil)))
+      (mission-mode--fetch-downstream-async '("first" "second" "third")
+                                            (lambda (d) (setq got d))))
+    (should (= 2 (length asked)))
+    (should (equal '(nil "r-d/mission/M-other") got))))
+
+(ert-deftest mission-mode-overview-filtered-has-no-absent-phases ()
+  (let ((src (generate-new-buffer "mm-src")))
+    (unwind-protect
+        (progn
+          (with-current-buffer src
+            (insert "# M-invented\n\nSome text.\n\nA pattern passage here.\n")
+            (setq-local mission-mode-scope-types '("pattern"))
+            (setq mission-mode--mission "M-invented")
+            (let ((ov (make-overlay 30 53)))
+              (overlay-put ov 'mission-mode-scope
+                           '((id . "p1") (type . "pattern") (title . "p-invented")))
+              (overlay-put ov 'priority 13)
+              (setq mission-mode--overlays (list ov))))
+          (cl-letf (((symbol-function 'display-buffer) #'ignore)
+                    ((symbol-function 'select-window) #'ignore)
+                    ((symbol-function 'get-buffer-window) #'ignore)
+                    ((symbol-function 'mission-mode--fetch-downstream-async)
+                     (lambda (&rest _) (error "filtered view must not fetch downstream"))))
+            (with-current-buffer src (mission-mode-overview)))
+          (with-current-buffer "*mission-overview*"
+            (let ((text (buffer-string)))
+              (should (string-match-p "M-invented — 1 pattern" text))
+              (should-not (string-match-p "absent" text)))))
+      (kill-buffer src)
+      (when (get-buffer "*mission-overview*") (kill-buffer "*mission-overview*")))))
+
+(ert-deftest mission-mode-overview-filtered-and-empty-replaces-the-panel ()
+  ;; A filtered mission with no matching scopes must not leave the previous
+  ;; mission's panel standing (2026-11-19).
+  (let ((src (generate-new-buffer "mm-src")))
+    (unwind-protect
+        (progn
+          (with-current-buffer (get-buffer-create "*mission-overview*")
+            (insert "M-previous — 9 patterns"))
+          (with-current-buffer src
+            (setq-local mission-mode-scope-types '("pattern"))
+            (setq mission-mode--mission "M-empty"
+                  mission-mode--overlays nil))
+          (cl-letf (((symbol-function 'display-buffer) #'ignore)
+                    ((symbol-function 'select-window) #'ignore)
+                    ((symbol-function 'get-buffer-window) #'ignore))
+            (with-current-buffer src (mission-mode-overview)))
+          (with-current-buffer "*mission-overview*"
+            (should (string-match-p "M-empty — 0 pattern" (buffer-string)))
+            (should-not (string-match-p "M-previous" (buffer-string)))))
+      (kill-buffer src)
+      (when (get-buffer "*mission-overview*") (kill-buffer "*mission-overview*")))))
