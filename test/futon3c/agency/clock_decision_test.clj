@@ -907,7 +907,9 @@
                                 :inherited-clock {:clock {:mission-id "M-clock-fixture"}
                                                   :evidence {:caller-id "fixture"}}))
              :edited-path
-             (provenance (assoc (context "prov-edited") :edited-path (str source))) }]
+             (provenance (assoc (context "prov-edited") :edited-path (str source)))
+             :message-mention
+             (provenance (assoc (context "prov-message") :text "Context: M-clock-fixture."))}]
         ;; Each expected key is also its value: making any two decision
         ;; branches report the same provenance breaks this single assertion.
         (is (= (zipmap (keys cases) (keys cases)) cases))))))

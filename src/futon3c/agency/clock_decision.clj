@@ -482,9 +482,11 @@
                                      operator? :forwarded-fill
                                      :else :dispatch-mission)}
                   clocked? {:ids nil :provenance :current}
+                  ;; A bell or bellback mention filling an empty clock: not
+                  ;; the operator's words (CL-89 review).
                   :else {:ids mentions :provenance (if requisition-line
                                                      :requisition
-                                                     :operator-words)})
+                                                     :message-mention)})
         ids (:ids selection)
         provenance (:provenance selection)]
     (repoint-superseded
