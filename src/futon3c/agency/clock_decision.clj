@@ -335,6 +335,15 @@
 (defn- mentioned-ids [text]
   (distinct (re-seq #"(?<![A-Za-z0-9_-])[MCET]-[A-Za-z0-9][A-Za-z0-9_-]*" (or text ""))))
 
+(defn- operator-words
+  "Return the operator-authored suffix of a harness turn envelope. Older
+   callers pass bare text, so an absent marker deliberately preserves the
+   whole value."
+  [text]
+  (let [text (or text "")]
+    (or (second (re-find #"(?s)(?:^|\r?\n)User message:[ \t]*\r?\n(.*)\z" text))
+        text)))
+
 (defn- requisition-target [text]
   (let [targets (->> (re-seq #"(?m)^Requisition:[ \\t]*([MCET]-[A-Za-z0-9][A-Za-z0-9_-]*)[ \\t]*(?:—|--)[ \\t]*\\S.*$"
                               (or text ""))
@@ -435,12 +444,14 @@
    current session, attributed activity, typed absence. Target ambiguity never
    chooses the first filesystem hit."
   [{:keys [agent-id session-id mission-id text edited-path surface inherited-clock phase]}]
-  (let [mentions (mentioned-ids text)
+  (let [operator? (contains? #{"emacs-repl" "emacs-claude-repl" "emacs-codex-repl"} surface)
+        ;; The harness enriches an operator turn with retrieval and routing
+        ;; headers. Those are context, not words the operator used.
+        mentions (mentioned-ids (if operator? (operator-words text) text))
         requisition (requisition-target text)
         ;; REPL payloads forward the buffer's OLD clock. A newly named target
         ;; in the operator text must supersede that carried value. For dispatch,
         ;; an explicit requisition names the work before --mission or inheritance.
-        operator? (contains? #{"emacs-repl" "emacs-claude-repl" "emacs-codex-repl"} surface)
         current (clock/current-clock agent-id session-id)
         clocked? (some val current)
         ;; Bells and bellbacks mention mission names in passing, so there a
@@ -448,7 +459,11 @@
         ;; followup reminders posted as Joe) switch it (Joe, 2026-09-24).
         ids (cond (and operator? (seq mentions)) mentions
                   requisition [requisition]
-                  (seq mission-id) [mission-id]
+                  ;; On a REPL turn mission-id is the buffer's displayed OLD
+                  ;; clock: it fills an empty session but cannot re-clock one.
+                  ;; On non-operator surfaces it is explicit dispatch metadata
+                  ;; (for example --mission), whose override contract remains.
+                  (and (seq mission-id) (or (not operator?) (not clocked?))) [mission-id]
                   clocked? nil
                   :else mentions)]
     (repoint-superseded

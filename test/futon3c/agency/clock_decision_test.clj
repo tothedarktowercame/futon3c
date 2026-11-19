@@ -211,6 +211,66 @@
                   (decision/record! (assoc (operator "fresh" "M-missing")
                                            :session-id "fresh-session"))))))))))
 
+(deftest operator-envelope-uses-only-operator-words-and-forwarded-clock-fills-only-empty
+  (with-docs
+    (fn [root _ _]
+      (spit (io/file root "holes" "missions" "M-header.md") "# header fixture\n")
+      (spit (io/file root "holes" "missions" "M-forwarded.md") "# forwarded fixture\n")
+      (let [current {:campaign-id nil :mission-id "M-clock-fixture" :excursion-id nil}
+            envelope (fn [message]
+                       (str "--- CURRENT TURN ---\n"
+                            "Surface: emacs-repl\n"
+                            "Prompt: memory ~invented/header (M-header is contextual)\n"
+                            "User message:\n" message))]
+        (clock/set-dispatch-mission! "clock-worker" "clock-session" "M-clock-fixture")
+        (testing "a header mention is not an operator mention"
+          ;; Plant check: scanning the whole envelope again selects M-header
+          ;; and makes this assertion fail.
+          (let [d (decision/decide
+                   (assoc (operator "header-only" (envelope "Please continue."))
+                          :mission-id "M-forwarded"))]
+            (is (= [:clocked 2 current]
+                   [(:status d) (:source d) (:clock d)]))))
+        (testing "the same mission in the operator-authored suffix switches"
+          (let [d (decision/decide
+                   (operator "operator-names" (envelope "Please work on M-header.")))]
+            (is (= [1 "M-header"]
+                   [(:source d) (get-in d [:clock :mission-id])]))))
+        (testing "a forwarded buffer mission cannot override a current clock"
+          (let [d (decision/decide
+                   (assoc (operator "forwarded-current" "Please continue.")
+                          :mission-id "M-forwarded"))]
+            (is (= [2 current] [(:source d) (:clock d)]))))
+        (testing "a forwarded buffer mission fills an empty session clock"
+          (let [d (decision/decide
+                   (assoc (operator "forwarded-empty" "Please continue.")
+                          :session-id "empty-session"
+                          :mission-id "M-forwarded"))]
+            (is (= [1 "M-forwarded"]
+                   [(:source d) (get-in d [:clock :mission-id])]))))))))
+
+(deftest operator-envelope-mention-still-follows-supersession
+  (with-docs
+    (fn [root _ _]
+      (doseq [id ["M-before" "M-after"]]
+        (spit (io/file root "holes" "missions" (str id ".md")) (str "# " id "\n")))
+      (clock/set-dispatch-mission! "clock-worker" "clock-session" "M-clock-fixture")
+      (binding [decision/*successor-resolver*
+                (fn [target _]
+                  (if (= "M-before" (:id target))
+                    {:item "M-after" :path ["M-before" "M-after"]}
+                    {:item (:id target) :path [(:id target)]}))]
+        (let [d (decision/decide
+                 (operator "operator-supersession"
+                           (str "--- CURRENT TURN ---\n"
+                                "Surface: emacs-repl\n"
+                                "Prompt: memory ~invented/header (M-after is contextual)\n"
+                                "User message:\nPlease work on M-before.")))]
+          (is (= "M-after" (get-in d [:clock :mission-id])))
+          (is (= {:superseded-from "M-before"
+                  :supersession-path ["M-before" "M-after"]}
+                 (select-keys (:evidence d) [:superseded-from :supersession-path]))))))))
+
 (deftest requisition-target-is-authoritative-only-when-unambiguous
   (with-docs
     (fn [root _ _]
