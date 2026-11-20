@@ -7,6 +7,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.arxana.together :as t]
+            [futon3c.arxana.together-pdf :as pdf]
             [futon3c.arxana.together-structure-http :as structure-http]
             [org.httpkit.server :as hk])
   (:import [java.io FileOutputStream PushbackReader StringReader IOException]
@@ -203,9 +204,30 @@
                      (when-let [[_ key] (re-matches #"(.+)\.log\.edn" (.getName file))]
                        (when (valid-name? key 120) key)))) files)))))
 
+;; The snapshot is taken under the document's lock; lualatex (seconds) runs
+;; outside it, so editing continues while a PDF is made.
+(defn- pdf-response [document key]
+  (let [snapshot (locking document
+                   (if-let [error (:error @document)]
+                     {:error error}
+                     {:key key :rev (count (get-in @document [:hub :log]))
+                      :at (subs (str (Instant/now)) 0 16)
+                      :runs (t/runs (get-in @document [:hub :doc]))}))]
+    (if (:error snapshot)
+      (response 500 {:error (:error snapshot)})
+      (try
+        (let [^bytes bytes (pdf/document-pdf! snapshot)]
+          {:status 200
+           :headers {"Content-Type" "application/pdf"
+                     "Content-Disposition" (str "attachment; filename=\"" key "-rev" (:rev snapshot) ".pdf\"")
+                     "Cache-Control" "no-store"}
+           :body (java.io.ByteArrayInputStream. bytes)})
+        (catch Exception e
+          (response 500 {:error (ex-message e) :log (:log (ex-data e))}))))))
+
 (defn- handler [server]
   (fn [request]
-    (let [route (re-matches #"/together/v1/doc/(.*)/(state|ops|events)" (:uri request))
+    (let [route (re-matches #"/together/v1/doc/(.*)/(state|ops|events|pdf)" (:uri request))
           [_ key action] route
           method (:request-method request)
           health? (and (= method :get) (= (:uri request) "/together/v1/health"))
@@ -230,6 +252,7 @@
                    (catch Exception e (response 500 {:error (ex-message e)})))
         health? (response 200 {:ok true :documents (count @(:documents server))})
         (not (valid-name? key 120)) (response 400 {:error "invalid-key"})
+        (= action "pdf") (pdf-response (document! server key) key)
         :else
         (let [document (document! server key)]
           (locking document

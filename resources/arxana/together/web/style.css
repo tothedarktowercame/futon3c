@@ -179,3 +179,16 @@ body,
     font-size: 15px;
   }
 }
+
+.pdf-link {
+  margin-left: auto;
+  padding: 0.15rem 0.6rem;
+  border: 1px solid #9aa3ad;
+  border-radius: 4px;
+  background: #f4f6f8;
+  color: #20242a;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.pdf-link:hover { background: #e6eaee; }

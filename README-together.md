@@ -36,6 +36,13 @@ form) is a separate log of serialised acts.
 
 - Browser: `https://zone.hyperreal.enterprises/edit/` lists documents and shared
   forms; `?doc=KEY` opens one document; `form.html?ws=incubator.<layer>` opens a form.
+- Printing: the "Download PDF" link on a document's status line, or
+  `GET doc/KEY/pdf`. The hub (`together_pdf.clj`) typesets the text as it is at
+  that moment with LuaLaTeX: US letter, Libertinus, 1.45 line spacing, a 1.7 in
+  right margin for notes, headings and provenance colours kept, struck text
+  crossed out. It runs `/usr/local/texlive/<newest>/bin/*/lualatex`
+  (`TOGETHER_LUALATEX` overrides), with shell escape off, outside the
+  document's lock. A shared form (`form.html`) has no PDF link yet.
 - Emacs: `M-x futon4a-together-open RET KEY` for a document. In the incubator
   form, `E` then `M-x futon4a-incubator-together-share-all` shares every answer
   and writes the form's index; `C-c C-s` detaches and saves as usual.

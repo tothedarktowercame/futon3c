@@ -111,7 +111,14 @@ export function createEditor({
     noticeNode.className = "notice";
     legend = document.createElement("span");
     legend.className = "legend";
-    status.append(statusMain, noticeNode, legend);
+    // The hub renders the document as it stands at the moment of the click.
+    const pdf = document.createElement("a");
+    pdf.className = "pdf-link";
+    pdf.textContent = "Download PDF";
+    pdf.title = "The document as it is now, on US letter paper, for printing";
+    pdf.href = endpointFor(`doc/${encodeURIComponent(documentKey)}/pdf`);
+    pdf.setAttribute("download", `${documentKey}.pdf`);
+    status.append(statusMain, noticeNode, legend, pdf);
     container.append(status);
   }
 
