@@ -1,0 +1,15 @@
+[
+  {"name":"whole-document","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abcde","attrs":{}}],"start":["a",1],"end":["a",5],"expect":{"from":0,"to":5,"text":"abcde","live":5,"deleted":0}},
+  {"name":"interior-span","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abcde","attrs":{}}],"start":["a",2],"end":["a",4],"expect":{"from":1,"to":4,"text":"bcd","live":3,"deleted":0}},
+  {"name":"one-character","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abc","attrs":{}}],"start":["a",2],"end":["a",2],"expect":{"from":1,"to":2,"text":"b","live":1,"deleted":0}},
+  {"name":"other-site-insert-inside","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abcde","attrs":{}},{"op":"insert","id":["b",6],"after":["a",2],"text":"X","attrs":{}}],"start":["a",2],"end":["a",4],"expect":{"from":1,"to":5,"text":"bXcd","live":4,"deleted":0}},
+  {"name":"deleted-inside","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abcde","attrs":{}},{"op":"delete","ids":[["a",3]]}],"start":["a",2],"end":["a",4],"expect":{"from":1,"to":3,"text":"bd","live":2,"deleted":1}},
+  {"name":"deleted-start","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abcde","attrs":{}},{"op":"delete","ids":[["a",2]]}],"start":["a",2],"end":["a",4],"expect":{"from":1,"to":3,"text":"cd","live":2,"deleted":1}},
+  {"name":"deleted-end","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abcde","attrs":{}},{"op":"delete","ids":[["a",4]]}],"start":["a",2],"end":["a",4],"expect":{"from":1,"to":3,"text":"bc","live":2,"deleted":1}},
+  {"name":"all-deleted-live-sides","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abcde","attrs":{}},{"op":"delete","ids":[["a",2],["a",3],["a",4]]}],"start":["a",2],"end":["a",4],"expect":{"from":1,"to":1,"text":"","live":0,"deleted":3}},
+  {"name":"non-bmp-inside-and-before","ops":[{"op":"insert","id":["a",1],"after":null,"text":"😀a𝕏bc","attrs":{}}],"start":["a",2],"end":["a",4],"expect":{"from":1,"to":4,"text":"a𝕏b","live":3,"deleted":0}},
+  {"name":"end-before-start","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abc","attrs":{}}],"start":["a",3],"end":["a",1],"expect":{"error":"invalid-span"}},
+  {"name":"unknown-start","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abc","attrs":{}}],"start":["missing",9],"end":["a",2],"expect":{"error":"unknown-id"}},
+  {"name":"unknown-end","ops":[{"op":"insert","id":["a",1],"after":null,"text":"abc","attrs":{}}],"start":["a",2],"end":["missing",9],"expect":{"error":"unknown-id"}},
+  {"name":"different-site-endpoints","ops":[{"op":"insert","id":["a",1],"after":null,"text":"A","attrs":{}},{"op":"insert","id":["b",2],"after":["a",1],"text":"B","attrs":{}}],"start":["a",1],"end":["b",2],"expect":{"from":0,"to":2,"text":"AB","live":2,"deleted":0}}
+]

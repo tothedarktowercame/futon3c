@@ -12,6 +12,7 @@ import {
   leftIdForInsert,
   nextCounter,
   runs,
+  spanExtent,
   text,
   utf16OffsetToIndex,
   visibleIndexOf,
@@ -19,6 +20,8 @@ import {
 
 const fixtureUrl = new URL("../../resources/arxana/together/conformance.json", import.meta.url);
 const fixture = JSON.parse(await readFile(fixtureUrl, "utf8"));
+const spanFixtureUrl = new URL("../../resources/arxana/together/span-conformance.json", import.meta.url);
+const spanFixture = JSON.parse(await readFile(spanFixtureUrl, "utf8"));
 
 function runOps(ops, order = ops.map((_, index) => index)) {
   return order.reduce((doc, index) => applyOp(doc, ops[index]), emptyDoc());
@@ -34,6 +37,73 @@ for (const fixtureCase of fixture) {
     }
   });
 }
+
+for (const fixtureCase of spanFixture) {
+  test(`span conformance: ${fixtureCase.name}`, () => {
+    const doc = runOps(fixtureCase.ops);
+    if (fixtureCase.expect.error) {
+      assert.throws(() => spanExtent(doc, fixtureCase.start, fixtureCase.end),
+        (error) => error.code === fixtureCase.expect.error);
+    } else {
+      assert.deepEqual(spanExtent(doc, fixtureCase.start, fixtureCase.end), fixtureCase.expect);
+    }
+  });
+}
+
+function slowSpanExtent(doc, start, end) {
+  const key = (id) => `${id[0]}\0${id[1]}`;
+  const lo = doc.characters.findIndex((character) => key(character.id) === key(start));
+  const hi = doc.characters.findIndex((character) => key(character.id) === key(end));
+  if (lo < 0 || hi < 0) return { error: "unknown-id" };
+  if (hi < lo) return { error: "invalid-span" };
+  const before = doc.characters.slice(0, lo).filter((character) => !character.deleted).length;
+  const inside = doc.characters.slice(lo, hi + 1);
+  const liveCharacters = inside.filter((character) => !character.deleted);
+  return {
+    from: before,
+    to: before + liveCharacters.length,
+    text: liveCharacters.map((character) => String.fromCodePoint(character.cp)).join(""),
+    live: liveCharacters.length,
+    deleted: inside.length - liveCharacters.length,
+  };
+}
+
+test("span extent agrees with a slow reference on 200 random documents", () => {
+  let seed = 0x21c0ffee;
+  const random = (n) => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed % n;
+  };
+  for (let trial = 0; trial < 200; trial += 1) {
+    let doc = applyOp(emptyDoc(), {
+      op: "insert", id: ["seed", 1], after: null, text: "A😀𝕏Z", attrs: {},
+    });
+    for (let step = 0; step < 20; step += 1) {
+      const anchor = doc.characters[random(doc.characters.length)].id;
+      if (random(3) === 0) {
+        doc = applyOp(doc, { op: "delete", ids: [anchor] });
+      } else {
+        const counter = nextCounter(doc);
+        doc = applyOp(doc, {
+          op: "insert",
+          id: [`site${random(3)}`, counter],
+          after: anchor,
+          text: ["x", "😀", "𝕏"][random(3)].repeat(1 + random(3)),
+          attrs: {},
+        });
+      }
+    }
+    const first = random(doc.characters.length);
+    const second = random(doc.characters.length);
+    const lo = Math.min(first, second);
+    const hi = Math.max(first, second);
+    const start = doc.characters[lo].id;
+    const end = doc.characters[hi].id;
+    const before = structuredClone(doc);
+    assert.deepEqual(spanExtent(doc, start, end), slowSpanExtent(doc, start, end), `trial ${trial}`);
+    assert.deepEqual(doc, before, `mutation in trial ${trial}`);
+  }
+});
 
 test("runs and fromRuns round-trip Unicode and split maximal runs", () => {
   const unicodeRuns = [{

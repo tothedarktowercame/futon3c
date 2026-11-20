@@ -218,6 +218,44 @@ export function visibleIndexOf(doc, id) {
   return -1;
 }
 
+// Does not mutate. Resolves inclusive document ids in one pass, counting
+// visible positions in Unicode code points rather than UTF-16 code units.
+export function spanExtent(doc, start, end) {
+  assertId(start);
+  assertId(end);
+  let visible = 0;
+  let from;
+  let live = 0;
+  let deleted = 0;
+  let started = false;
+  let ended = false;
+  let reversed = false;
+  let surviving = "";
+  for (const character of characters(doc)) {
+    if (sameId(character.id, start)) {
+      started = true;
+      from = visible;
+    }
+    if (started && !ended) {
+      if (character.deleted) deleted += 1;
+      else {
+        live += 1;
+        surviving += String.fromCodePoint(character.cp);
+      }
+    }
+    if (sameId(character.id, end)) {
+      if (!started) reversed = true;
+      ended = true;
+    }
+    if (!character.deleted) visible += 1;
+  }
+  if (!started || !ended) {
+    throw codedError("unknown-id", "span names an unknown character id");
+  }
+  if (reversed) throw codedError("invalid-span", "span end comes before its start");
+  return { from, to: from + live, text: surviving, live, deleted };
+}
+
 // Does not mutate. Returns a fresh id, or null when i is outside visible text.
 export function idAtVisibleIndex(doc, i) {
   if (!Number.isInteger(i) || i < 0) return null;
