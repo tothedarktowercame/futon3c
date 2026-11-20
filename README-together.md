@@ -81,9 +81,9 @@ batch only, never inside the Emacs that has the real form open.
   `(futon3c.arxana.together-service/stop!)` then `(…/start!)`; open pages
   reconnect by themselves.
 - After `stop!`/`start!` or a JVM restart, a document is read from its log on
-  first use. For the two long documents of 2026-11-20 that took about a minute
-  each, during which requests for that document wait (packets 15 and 16 address
-  this).
+  first use. Since packet 15 (608dd5f9f) a 5,000-entry log loads in well under a
+  second; before it, the two long documents of 2026-11-20 took about a minute
+  each, with every request for that document waiting.
 - Check `curl -s -H 'X-Together-Editor: joe' localhost:7096/together/v1/health`.
 
 ## When something looks wrong
