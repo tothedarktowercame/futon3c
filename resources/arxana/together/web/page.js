@@ -1,6 +1,6 @@
 import { NAME_RE, SURFACE_RE, createEditor, endpoint } from "./editor.js";
-import { NOTE_COLOURS, allNoteExtents, currentNodes, decodeNotes, notesAtIndex,
-  findWords, textAtCaret, underlineRuns } from "./notes.js";
+import { NOTE_COLOURS, allNoteExtents, currentNodes, decodeNotes, decodeProvenance,
+  findWords, notesAtIndex, textAtCaret, thisTextLines, underlineRuns } from "./notes.js";
 
 const params = new URLSearchParams(location.search);
 const documentKey = params.get("doc");
@@ -17,10 +17,12 @@ function addText(parent, tag, value, className) {
 
 function notesController(documentKey, workspace, layout, editorHost) {
   let notes = [];
+  let provenance = [];
   let doc = { characters: [] };
   let value = "";
   let extents = { resolved: [], unresolved: [] };
-  let failure = "";
+  let provenanceExtents = { resolved: [], unresolved: [] };
+  let notesFailure = ""; let provenanceFailure = "";
   let pane = null;
   let frame = null;
   let repaint = () => {};
@@ -117,7 +119,7 @@ function notesController(documentKey, workspace, layout, editorHost) {
   narrow.addEventListener("change", screenChanged);
 
   function ensurePane() {
-    if (!notes.length) {
+    if (!notes.length && !provenance.length) {
       if (strip) {
         ++request; sourceAbort?.abort(); resize.disconnect();
         layout.append(editorHost); strip.remove(); mobileNav.remove();
@@ -154,9 +156,9 @@ function notesController(documentKey, workspace, layout, editorHost) {
     // "no longer resolve" about every note then would be false.
     if (!doc.characters.length) { addText(pane, "p", "Reading the document…", "muted"); return; }
     const at = textAtCaret(doc, editorHost.querySelector("textarea")?.value ?? value, caret);
-    addText(pane, "p", at.author
-      ? `This text: written by ${at.author}${at.label ? ` (${at.label})` : ""}`
-      : "This text: no character at the caret", "notes-this-text");
+    const description = thisTextLines(at.character, at.index, provenanceExtents.resolved);
+    addText(pane, "p", description.line1, "notes-this-text");
+    addText(pane, "p", description.line2, "muted provenance-detail");
     const active = frozen ?? notesAtIndex(extents.resolved, at.index);
     current = active;
     controls.lastElementChild.disabled = !active.some((n) => n.source);
@@ -179,6 +181,7 @@ function notesController(documentKey, workspace, layout, editorHost) {
       }
     } else {
       addText(pane, "h2", "Notes");
+      if (!notes.length) addText(pane, "p", "No notes", "muted");
       const counts = new Map();
       for (const note of notes) counts.set(note.colour, (counts.get(note.colour) ?? 0) + 1);
       for (const [colour, count] of [...counts].sort()) {
@@ -196,7 +199,7 @@ function notesController(documentKey, workspace, layout, editorHost) {
       addText(pane, "h2", "Notes that no longer resolve");
       for (const note of extents.unresolved) addText(pane, "p", note.id, "unresolved-note");
     }
-    addText(pane, "p", failure, "muted notes-error");
+    addText(pane, "p", [notesFailure, provenanceFailure].filter(Boolean).join(" "), "muted notes-error");
   }
 
   function schedule(caret) {
@@ -205,25 +208,32 @@ function notesController(documentKey, workspace, layout, editorHost) {
   }
 
   async function refresh() {
-    try {
-      const response = await fetch(endpoint(`structure/${encodeURIComponent(workspace)}/state`), { cache: "no-store" });
-      if (!response.ok) throw new Error(`notes returned ${response.status}`);
-      const state = await response.json();
-      notes = decodeNotes(currentNodes(state), documentKey);
-      extents = allNoteExtents(doc, notes);
-      failure = "";
-      ensurePane();
-      repaint();
-      schedule();
-    } catch (error) {
-      failure = `Notes could not be refreshed: ${error.message}`;
-      schedule();
-    }
+    const read = async (key) => {
+      const response = await fetch(endpoint(`structure/${encodeURIComponent(key)}/state`), { cache: "no-store" });
+      if (!response.ok) throw new Error(`returned ${response.status}`);
+      return response.json();
+    };
+    const [notesResult, provenanceResult] = await Promise.allSettled([
+      read(workspace), read(`${documentKey}.provenance`),
+    ]);
+    if (notesResult.status === "fulfilled") {
+      notes = decodeNotes(currentNodes(notesResult.value), documentKey);
+      notesFailure = "";
+    } else notesFailure = `Notes could not be refreshed: ${notesResult.reason.message}.`;
+    if (provenanceResult.status === "fulfilled") {
+      provenance = decodeProvenance(currentNodes(provenanceResult.value), documentKey);
+      provenanceFailure = "";
+    } else provenanceFailure = `Provenance could not be refreshed: ${provenanceResult.reason.message}.`;
+    extents = allNoteExtents(doc, notes);
+    provenanceExtents = allNoteExtents(doc, provenance);
+    ensurePane(); repaint(); schedule();
   }
 
   return {
-    decorate(nextDoc, runs) { doc = nextDoc; extents = allNoteExtents(doc, notes); return underlineRuns(runs, extents.resolved); },
-    update(detail) { doc = detail.doc; value = detail.value; extents = allNoteExtents(doc, notes); schedule(detail.selectionStart); },
+    decorate(nextDoc, runs) { doc = nextDoc; extents = allNoteExtents(doc, notes);
+      provenanceExtents = allNoteExtents(doc, provenance); return underlineRuns(runs, extents.resolved); },
+    update(detail) { doc = detail.doc; value = detail.value; extents = allNoteExtents(doc, notes);
+      provenanceExtents = allNoteExtents(doc, provenance); schedule(detail.selectionStart); },
     schedule, refresh,
     setRepaint(callback) { repaint = callback; },
     destroy() {

@@ -30,6 +30,25 @@ export function decodeNotes(nodes, documentKey) {
   return result.sort((a, b) => a.id.localeCompare(b.id));
 }
 
+export function decodeProvenance(nodes, documentKey) {
+  if (!nodes || typeof nodes !== "object") return [];
+  const result = [];
+  for (const [id, node] of Object.entries(nodes)) {
+    const attrs = node?.attrs;
+    if (node?.kind !== "span" || attrs?.doc !== documentKey
+        || !validId(attrs.start) || !validId(attrs.end)
+        || typeof attrs.label !== "string" || !attrs.label.trim()
+        || !Array.isArray(attrs.sites) || attrs.sites.length === 0
+        || !attrs.sites.every((site) => typeof site === "string" && site.length > 0)) continue;
+    const record = { id, doc: attrs.doc, start: [...attrs.start], end: [...attrs.end],
+      label: attrs.label, sites: [...attrs.sites] };
+    for (const key of ["as_of", "act", "by"]) if (typeof attrs[key] === "string") record[key] = attrs[key];
+    if (Number.isInteger(attrs.segment)) record.segment = attrs.segment;
+    result.push(record);
+  }
+  return result.sort((a, b) => a.id.localeCompare(b.id));
+}
+
 const idKey = (id) => `${id[0]}\0${id[1]}`;
 
 // One pass over DOC resolves all notes together; neither argument is mutated.
@@ -88,6 +107,32 @@ export function notesAtIndex(resolved, index) {
       || a.id.localeCompare(b.id));
 }
 
+export function provenanceAtIndex(resolved, index, site) {
+  const covering = notesAtIndex(resolved, index);
+  const record = covering[0] ?? null;
+  return {
+    record,
+    applies: Boolean(record?.sites.includes(site)),
+  };
+}
+
+export function thisTextLines(character, index, provenance) {
+  const author = character?.attrs?.author ?? character?.id?.[0]?.split(".", 1)[0] ?? null;
+  const label = character ? FACE_STYLES[faceOf(character.attrs)]?.label ?? null : null;
+  const fallback = author ? `This text: written by ${author}${label ? ` (${label})` : ""}`
+    : "This text: no character at the caret";
+  if (!character) return { line1: fallback, line2: "" };
+  const picked = provenanceAtIndex(provenance, index, character.id[0]);
+  if (!picked.record) return { line1: fallback, line2: "" };
+  if (!picked.applies) return { line1: fallback, line2: `typed later, inside: ${picked.record.label}` };
+  const record = picked.record;
+  const act = record.act ? `${record.act}${Number.isInteger(record.segment) ? `, segment ${record.segment}` : ""}` : "";
+  return {
+    line1: `This text: ${record.label}`,
+    line2: [record.as_of ? `as of ${record.as_of}` : "", act, record.by ?? ""].filter(Boolean).join(" · "),
+  };
+}
+
 export function underlineRuns(authorRuns, resolved) {
   const result = [];
   // The innermost note can change only at a note's start or end, so it is
@@ -116,17 +161,23 @@ export function underlineRuns(authorRuns, resolved) {
 }
 
 export function textAtCaret(doc, textareaValue, caretUtf16) {
-  const index = utf16OffsetToIndex(textareaValue, caretUtf16);
+  const caret = utf16OffsetToIndex(textareaValue, caretUtf16);
+  const describe = (character, index) => ({ index,
+    author: character.attrs?.author ?? character.id[0].split(".", 1)[0],
+    label: FACE_STYLES[faceOf(character.attrs)]?.label ?? null,
+    character, site: character.id[0] });
   let visible = 0;
+  let last = null;
   for (const character of doc.characters) {
     if (character.deleted) continue;
-    if (visible === index) {
-      const author = character.attrs?.author ?? character.id[0].split(".", 1)[0];
-      return { index, author, label: FACE_STYLES[faceOf(character.attrs)]?.label ?? null };
-    }
+    if (visible === caret) return describe(character, caret);
+    last = character;
     visible += 1;
   }
-  return { index, author: null, label: null };
+  // A caret at the very end (where a page starts) has no character after it;
+  // describe the one before it instead of saying there is none.
+  if (last && caret === visible) return describe(last, visible - 1);
+  return { index: caret, author: null, label: null };
 }
 
 // Does not mutate. The workspace's nodes without those a later `supersede`

@@ -396,6 +396,14 @@ async function main() {
         colour: "red", title: "Lost",
       } },
     ]) await postJSON(`${origin}/together/v1/structure/${notesWorkspace}/acts`, { op });
+    const provenanceWorkspace = `${notesKey}.provenance`;
+    await postJSON(`${origin}/together/v1/structure/${provenanceWorkspace}/acts`, { op: {
+      op: "add-node", id: "restored-beta", kind: "span", attrs: {
+        doc: notesKey, start: ["joe.seed", 7], end: ["joe.seed", 10],
+        label: "written by Murch; kept by Joe", as_of: "version 17 (0017-fixture)",
+        act: "act/171", segment: 3, by: "fixture derivation", sites: ["joe.seed"],
+      },
+    } });
 
     const notesPage = await joeContext.newPage();
     await notesPage.goto(`${origin}/together/v1/web/index.html?doc=${notesKey}`, { waitUntil: "domcontentloaded" });
@@ -410,6 +418,10 @@ async function main() {
       element.setSelectionRange(8, 8); element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     await notesPage.waitForSelector('[data-note-id="magenta-note"]');
+    await notesPage.waitForFunction(() => document.querySelector(".notes-this-text")?.textContent
+      === "This text: written by Murch; kept by Joe");
+    assert.match(await notesPage.locator("#notes-pane").textContent(),
+      /as of version 17 \(0017-fixture\) · act\/171, segment 3 · fixture derivation/);
     const cards = await notesPage.locator(".note-card").evaluateAll((items) => items.map((item) => item.dataset.noteId));
     assert.deepEqual(cards, ["magenta-note", "yellow-note"]);
     assert.match(await notesPage.locator('[data-note-id="magenta-note"]').textContent(), /For the project.*Keep this precise.*note by joe/s);
@@ -427,6 +439,11 @@ async function main() {
     await notesPage.waitForFunction(() => [...document.querySelectorAll(".text-layer span")]
       .filter((span) => getComputedStyle(span).textDecorationLine.includes("underline"))
       .map((span) => span.textContent).join("").includes("beXta"));
+    await notesPage.locator("textarea").evaluate((element) => {
+      element.setSelectionRange(8, 8); element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await notesPage.waitForFunction(() => document.querySelector(".provenance-detail")?.textContent
+      === "typed later, inside: written by Murch; kept by Joe");
     await notesPage.locator("textarea").evaluate((element) => {
       // After "gamma": past the end of the outer (yellow) note as well.
       const at = element.value.indexOf("gamma") + 5;
@@ -462,6 +479,44 @@ async function main() {
     }));
     assert.equal(layoutHeights.editor, layoutHeights.layer);
     console.log("CHECK 18 focus refresh adds a new note and preserves editor/layer alignment");
+
+    const provenanceOnlyKey = `provenance-only-${process.pid}`;
+    await seedDocument(origin, provenanceOnlyKey, "Restored text");
+    await postJSON(`${origin}/together/v1/structure/${provenanceOnlyKey}.provenance/acts`, { op: {
+      op: "add-node", id: "restored-run", kind: "span", attrs: {
+        doc: provenanceOnlyKey, start: ["joe.seed", 1], end: ["joe.seed", 8],
+        label: "written by Murch; kept by Joe", sites: ["joe.seed"], by: "fixture derivation",
+      },
+    } });
+    const provenanceOnly = await joeContext.newPage();
+    provenanceOnly.on("pageerror", (error) => console.log("PAGEERROR provenance-only:", error.message, (error.stack ?? "").split("\n").slice(0, 4).join(" | ")));
+    provenanceOnly.on("console", (message) => { if (message.type() === "error") console.log("CONSOLE provenance-only:", message.text()); });
+    await provenanceOnly.goto(`${origin}/together/v1/web/index.html?doc=${provenanceOnlyKey}`, { waitUntil: "domcontentloaded" });
+    await waitLive(provenanceOnly).catch(async (error) => {
+      console.log("DEBUG", JSON.stringify(await provenanceOnly.evaluate(() => {
+        const box = (s) => { const b = document.querySelector(s)?.getBoundingClientRect(); return b ? [Math.round(b.left), Math.round(b.right), Math.round(b.top), Math.round(b.bottom)] : null; };
+        return { app: document.querySelector("#app")?.textContent.slice(0, 200), textarea: box("textarea"), layout: box(".document-layout"), cls: document.querySelector(".document-layout")?.className,
+          strip: box(".notes-strip"), pane: box("#notes-pane"), editor: box(".document-editor"), status: document.querySelector(".status-main")?.textContent };
+      })));
+      throw error;
+    });
+    // A page opens with the caret at the end, after "text", outside the record.
+    await provenanceOnly.waitForFunction(() => document.querySelector(".notes-this-text")?.textContent
+      === "This text: written by joe");
+    await provenanceOnly.locator("textarea").evaluate((element) => {
+      element.setSelectionRange(2, 2); element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await provenanceOnly.waitForFunction(() => document.querySelector(".notes-this-text")?.textContent
+      === "This text: written by Murch; kept by Joe", null, { timeout: 8000 }).catch(async (error) => {
+      console.log("DEBUG pane:", JSON.stringify(await provenanceOnly.evaluate(() => ({
+        pane: document.querySelector("#notes-pane")?.textContent ?? null, app: document.querySelector("#app").className,
+        layout: document.querySelector(".document-layout")?.className, value: document.querySelector("textarea")?.value }))));
+      throw error;
+    });
+    assert.match(await provenanceOnly.locator("#notes-pane").textContent(), /No notes/);
+    assert.equal(await provenanceOnly.locator(".note-card, .note-colour-count").count(), 0);
+    console.log("CHECK 23 provenance without notes shows its text block and No notes");
+    await provenanceOnly.close();
 
     const bareKey = `bare-${process.pid}`;
     await seedDocument(origin, bareKey, "No notes here");
@@ -559,7 +614,7 @@ async function main() {
     await visible([".document-editor"], "#notes-pane");
     assert.equal(await notesPage.locator(".document-layout").getAttribute("data-position"), "0");
     console.log("CHECK 22 narrow lineup has three single-pane positions");
-    console.log("SUMMARY 22 checks passed");
+    console.log("SUMMARY 23 checks passed");
 
     await Promise.all([notesPage.close(), bare.close()]);
 
