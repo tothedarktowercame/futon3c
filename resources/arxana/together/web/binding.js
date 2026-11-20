@@ -67,9 +67,14 @@ function changedSpan(oldValue, newValue, caretUtf16) {
   const newPoints = [...newValue];
   const candidates = [];
 
-  for (let prefix = 0; prefix <= Math.min(oldPoints.length, newPoints.length); prefix += 1) {
+  // The common suffix does not depend on the prefix except through the cap
+  // that the two may not overlap, so it is computed once (one pass, not one
+  // pass per candidate prefix: that was quadratic in the document length).
+  const shorter = Math.min(oldPoints.length, newPoints.length);
+  const fullSuffix = commonSuffix(oldPoints, newPoints, 0);
+  for (let prefix = 0; prefix <= shorter; prefix += 1) {
     if (prefix > 0 && oldPoints[prefix - 1] !== newPoints[prefix - 1]) break;
-    const suffix = commonSuffix(oldPoints, newPoints, prefix);
+    const suffix = Math.min(fullSuffix, shorter - prefix);
     candidates.push({ prefix, suffix, retained: prefix + suffix });
   }
 
