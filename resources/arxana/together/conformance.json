@@ -1,0 +1,641 @@
+[
+  {
+    "name": "plain-typing",
+    "note": "Successive local runs, counter increasing.",
+    "ops": [
+      {
+        "op": "insert",
+        "id": [
+          "joe",
+          1
+        ],
+        "after": null,
+        "text": "Hi",
+        "attrs": {
+          "author": "joe"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "joe",
+          3
+        ],
+        "after": [
+          "joe",
+          2
+        ],
+        "text": "!",
+        "attrs": {
+          "author": "joe"
+        }
+      }
+    ],
+    "text": "Hi!",
+    "ids": [
+      [
+        "joe",
+        1
+      ],
+      [
+        "joe",
+        2
+      ],
+      [
+        "joe",
+        3
+      ]
+    ]
+  },
+  {
+    "name": "two-concurrent-runs",
+    "note": "Hand check: zoe:2 > alice:2; zoe:3 is also greater, so alice scans past both. Runs remain XY then ab.",
+    "ops": [
+      {
+        "op": "insert",
+        "id": [
+          "root",
+          1
+        ],
+        "after": null,
+        "text": "R",
+        "attrs": {
+          "author": "root"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "alice",
+          2
+        ],
+        "after": [
+          "root",
+          1
+        ],
+        "text": "ab",
+        "attrs": {
+          "author": "alice"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "zoe",
+          2
+        ],
+        "after": [
+          "root",
+          1
+        ],
+        "text": "XY",
+        "attrs": {
+          "author": "zoe"
+        }
+      }
+    ],
+    "text": "RXYab",
+    "ids": [
+      [
+        "root",
+        1
+      ],
+      [
+        "zoe",
+        2
+      ],
+      [
+        "zoe",
+        3
+      ],
+      [
+        "alice",
+        2
+      ],
+      [
+        "alice",
+        3
+      ]
+    ],
+    "orders": [
+      [
+        0,
+        1,
+        2
+      ],
+      [
+        0,
+        2,
+        1
+      ]
+    ]
+  },
+  {
+    "name": "three-concurrent-runs",
+    "note": "All six permutations of runs at start.",
+    "ops": [
+      {
+        "op": "insert",
+        "id": [
+          "a",
+          1
+        ],
+        "after": null,
+        "text": "aa",
+        "attrs": {
+          "author": "a"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "m",
+          1
+        ],
+        "after": null,
+        "text": "mm",
+        "attrs": {
+          "author": "m"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "z",
+          1
+        ],
+        "after": null,
+        "text": "zz",
+        "attrs": {
+          "author": "z"
+        }
+      }
+    ],
+    "text": "zzmmaa",
+    "ids": [
+      [
+        "z",
+        1
+      ],
+      [
+        "z",
+        2
+      ],
+      [
+        "m",
+        1
+      ],
+      [
+        "m",
+        2
+      ],
+      [
+        "a",
+        1
+      ],
+      [
+        "a",
+        2
+      ]
+    ],
+    "orders": [
+      [
+        0,
+        1,
+        2
+      ],
+      [
+        0,
+        2,
+        1
+      ],
+      [
+        1,
+        0,
+        2
+      ],
+      [
+        1,
+        2,
+        0
+      ],
+      [
+        2,
+        0,
+        1
+      ],
+      [
+        2,
+        1,
+        0
+      ]
+    ]
+  },
+  {
+    "name": "insert-after-concurrent-deletion",
+    "note": "Hand check: joe:1 remains as tombstone; bob:3 goes before joe:2 because 2 < 3, irrespective of deleting joe:1 first.",
+    "ops": [
+      {
+        "op": "insert",
+        "id": [
+          "joe",
+          1
+        ],
+        "after": null,
+        "text": "ab",
+        "attrs": {
+          "author": "joe"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "bob",
+          3
+        ],
+        "after": [
+          "joe",
+          1
+        ],
+        "text": "X",
+        "attrs": {
+          "author": "bob"
+        }
+      },
+      {
+        "op": "delete",
+        "ids": [
+          [
+            "joe",
+            1
+          ]
+        ]
+      }
+    ],
+    "text": "Xb",
+    "ids": [
+      [
+        "bob",
+        3
+      ],
+      [
+        "joe",
+        2
+      ]
+    ],
+    "orders": [
+      [
+        0,
+        1,
+        2
+      ],
+      [
+        0,
+        2,
+        1
+      ]
+    ]
+  },
+  {
+    "name": "double-delete",
+    "note": "Two independent deletes of the same id are harmless.",
+    "ops": [
+      {
+        "op": "insert",
+        "id": [
+          "joe",
+          1
+        ],
+        "after": null,
+        "text": "ab",
+        "attrs": {
+          "author": "joe"
+        }
+      },
+      {
+        "op": "delete",
+        "ids": [
+          [
+            "joe",
+            1
+          ]
+        ]
+      },
+      {
+        "op": "delete",
+        "ids": [
+          [
+            "joe",
+            1
+          ]
+        ]
+      }
+    ],
+    "text": "b",
+    "ids": [
+      [
+        "joe",
+        2
+      ]
+    ],
+    "orders": [
+      [
+        0,
+        1,
+        2
+      ],
+      [
+        0,
+        2,
+        1
+      ]
+    ]
+  },
+  {
+    "name": "concurrent-start",
+    "note": "nil anchor orders start inserts by counter then editor.",
+    "ops": [
+      {
+        "op": "insert",
+        "id": [
+          "a",
+          1
+        ],
+        "after": null,
+        "text": "A",
+        "attrs": {
+          "author": "a"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "z",
+          1
+        ],
+        "after": null,
+        "text": "Z",
+        "attrs": {
+          "author": "z"
+        }
+      }
+    ],
+    "text": "ZA",
+    "ids": [
+      [
+        "z",
+        1
+      ],
+      [
+        "a",
+        1
+      ]
+    ],
+    "orders": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        0
+      ]
+    ]
+  },
+  {
+    "name": "inside-earlier-run",
+    "note": "bob:5 after joe:2 stops before joe:3.",
+    "ops": [
+      {
+        "op": "insert",
+        "id": [
+          "joe",
+          1
+        ],
+        "after": null,
+        "text": "abcd",
+        "attrs": {
+          "author": "joe"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "bob",
+          5
+        ],
+        "after": [
+          "joe",
+          2
+        ],
+        "text": "XY",
+        "attrs": {
+          "author": "bob"
+        }
+      }
+    ],
+    "text": "abXYcd",
+    "ids": [
+      [
+        "joe",
+        1
+      ],
+      [
+        "joe",
+        2
+      ],
+      [
+        "bob",
+        5
+      ],
+      [
+        "bob",
+        6
+      ],
+      [
+        "joe",
+        3
+      ],
+      [
+        "joe",
+        4
+      ]
+    ]
+  },
+  {
+    "name": "unicode-codepoints",
+    "note": "Emoji and U+1D54F each consume one counter; after joe:2 is after 𝕏, not inside UTF-16.",
+    "ops": [
+      {
+        "op": "insert",
+        "id": [
+          "joe",
+          1
+        ],
+        "after": null,
+        "text": "😀𝕏z",
+        "attrs": {
+          "author": "joe"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "bob",
+          4
+        ],
+        "after": [
+          "joe",
+          2
+        ],
+        "text": "!",
+        "attrs": {
+          "author": "bob"
+        }
+      }
+    ],
+    "text": "😀𝕏!z",
+    "ids": [
+      [
+        "joe",
+        1
+      ],
+      [
+        "joe",
+        2
+      ],
+      [
+        "bob",
+        4
+      ],
+      [
+        "joe",
+        3
+      ]
+    ]
+  },
+  {
+    "name": "skip-sibling-and-continuation",
+    "note": "Hand check inserting m:3 after root:1 skips z:3 (same counter, z > m) AND z:4 (later continuation), then stops before a:2. Expected RHhXL.",
+    "ops": [
+      {
+        "op": "insert",
+        "id": [
+          "root",
+          1
+        ],
+        "after": null,
+        "text": "R",
+        "attrs": {
+          "author": "root"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "a",
+          2
+        ],
+        "after": [
+          "root",
+          1
+        ],
+        "text": "L",
+        "attrs": {
+          "author": "a"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "z",
+          3
+        ],
+        "after": [
+          "root",
+          1
+        ],
+        "text": "H",
+        "attrs": {
+          "author": "z"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "z",
+          4
+        ],
+        "after": [
+          "z",
+          3
+        ],
+        "text": "h",
+        "attrs": {
+          "author": "z"
+        }
+      },
+      {
+        "op": "insert",
+        "id": [
+          "m",
+          3
+        ],
+        "after": [
+          "root",
+          1
+        ],
+        "text": "X",
+        "attrs": {
+          "author": "m"
+        }
+      }
+    ],
+    "text": "RHhXL",
+    "ids": [
+      [
+        "root",
+        1
+      ],
+      [
+        "z",
+        3
+      ],
+      [
+        "z",
+        4
+      ],
+      [
+        "m",
+        3
+      ],
+      [
+        "a",
+        2
+      ]
+    ],
+    "orders": [
+      [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      [
+        0,
+        1,
+        4,
+        2,
+        3
+      ],
+      [
+        0,
+        1,
+        2,
+        4,
+        3
+      ]
+    ]
+  }
+]
