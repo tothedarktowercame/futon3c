@@ -26,12 +26,13 @@ run "clojure: engine, hub, structure, catalogues" "$here" \
   clojure -M:test -n futon3c.arxana.together-test -n futon3c.arxana.together-http-test \
     -n futon3c.arxana.together-structure-test -n futon3c.arxana.together-structure-http-test \
     -n futon3c.arxana.together-catalogue-test -n futon3c.arxana.catalogue-document-test \
-    -n futon3c.arxana.incubator-catalogue-test
+    -n futon3c.arxana.incubator-catalogue-test -n futon3c.arxana.together-pdf-test
 run "javascript: model and binding" "$here" node --test test/js/binding.test.mjs test/js/together.test.mjs
 run "emacs: model, binding, transport, live, incubator sharing" "$futon4a" \
   emacs -Q --batch -L lisp -L "$here/emacs" -l test/futon4a-together-test.el \
     -l test/futon4a-together-buffer-test.el -l test/futon4a-together-net-test.el \
     -l test/futon4a-together-live-test.el -l test/futon4a-incubator-together-test.el \
+    -l test/futon4a-together-span-test.el \
     -f ert-run-tests-batch-and-exit
 run "emacs: incubator form" "$futon4a" \
   emacs -Q --batch -L "$here/emacs" -L lisp -L test -l test/futon4a-incubator-test.el \
@@ -40,6 +41,7 @@ if [ "$fast" = 0 ]; then
   run "browser: two-browser run against a throwaway hub" "$here" node test/js/page-e2e.mjs
   run "emacs end to end: transport" "$futon4a" bash test/together-net-e2e.sh
   run "emacs end to end: live buffers" "$futon4a" bash test/together-live-e2e.sh
+  run "emacs end to end: spans" "$futon4a" bash test/together-span-e2e.sh
   run "emacs end to end: incubator sharing" "$futon4a" bash test/incubator-together-e2e.sh
   run "clojure: catalogue probes that run the ERT suites (slow)" "$here" \
     clojure -M:test:test-all -n futon3c.arxana.incubator-catalogue-test
