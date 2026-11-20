@@ -541,7 +541,16 @@ async function main() {
     await notesPage.setViewportSize({ width: 390, height: 844 });
     await caret(9);
     await notesPage.locator('.lineup-mobile-nav button', { hasText: "Notes" }).click();
-    await visible(["#notes-pane"], ".document-editor");
+    await visible(["#notes-pane"], ".document-editor").catch(async (error) => {
+      console.log("DEBUG", JSON.stringify(await notesPage.evaluate(() => {
+        const box = (s) => { const b = document.querySelector(s)?.getBoundingClientRect(); return b && [Math.round(b.left), Math.round(b.right), Math.round(b.top), Math.round(b.bottom)]; };
+        const strip = document.querySelector(".notes-strip");
+        return { pos: document.querySelector(".document-layout").dataset.position, w: innerWidth, h: innerHeight,
+          strip: box(".notes-strip"), transform: strip.style.transform, cols: strip.style.gridTemplateColumns,
+          editor: box(".document-editor"), notes: box("#notes-pane"), source: box("#source-pane"), layout: box(".document-layout"), nav: box(".lineup-mobile-nav") };
+      })));
+      throw error;
+    });
     assert.equal(await notesPage.locator(".document-layout").getAttribute("data-position"), "1");
     await right.click();
     await visible(["#source-pane"], "#notes-pane");

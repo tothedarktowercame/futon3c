@@ -41,6 +41,9 @@ function notesController(documentKey, workspace, layout, editorHost) {
     strip.style.width = `${2 * mainWidth + noteWidth + 2 * gap}px`;
     strip.style.gridTemplateColumns = `${mainWidth}px ${noteWidth}px ${mainWidth}px`;
     strip.style.transform = `translateX(-${position * (mainWidth + gap)}px)`;
+    // Focus moving into a pane can scroll a clipped box sideways; the strip's
+    // place is set by the transform alone.
+    layout.scrollLeft = 0;
     layout.dataset.position = String(position);
     editorHost.inert = position !== 0;
     sourcePane.inert = position !== (narrow.matches ? 2 : 1);

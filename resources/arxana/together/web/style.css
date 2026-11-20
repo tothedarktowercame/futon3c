@@ -229,6 +229,7 @@ body,
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  overflow: clip; /* not scrollable even by focus(); hidden is the fallback */
   gap: 0;
   min-width: 0;
 }
