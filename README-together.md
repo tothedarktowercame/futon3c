@@ -29,6 +29,7 @@ form) is a separate log of serialised acts.
 | browser client | futon3c `resources/arxana/together/web/`: `together.js` (model), `binding.js` (text area to operations, colours), `editor.js` (one editor), `page.js` (list and single document), `form.js` + `form.html` (a shared form) |
 | shared fixture all three models must pass | futon3c `resources/arxana/together/conformance.json` |
 | Emacs model, binding, transport, live buffers | futon4a `lisp/futon4a-together.el`, `-buffer.el`, `-net.el`, `-live.el` |
+| spans, links, transclusion on yank | futon4a `lisp/futon4a-together-span.el` |
 | sharing the incubator form | futon4a `lisp/futon4a-incubator-together.el` |
 | Demo A records for these features | futon3c `together_catalogue.clj`, `incubator_catalogue.clj`, `catalogue_document.clj` |
 
@@ -48,6 +49,13 @@ form) is a separate log of serialised acts.
   and writes the form's index; `C-c C-s` detaches and saves as usual.
   The Emacs libraries are not loaded at startup: `(require 'futon4a-together-live)`
   and `(require 'futon4a-incubator-together)` with `futon4a/lisp` on the load path.
+- Spans and links (Emacs only; `futon4a-together-span.el`, loaded with
+  `(require 'futon4a-together-span)`): `M-x futon4a-together-span-show RET spans`
+  in each shared buffer shows a workspace's spans. `-span-create` makes one from
+  the region; `-span-mark` then `-span-link-here` links two; `-span-follow`
+  jumps to the other end. Copying inside a shared region and yanking into
+  another records a `transclusion` link by itself. Records are structure acts in
+  `~/storage/arxana-together/structure/<WS>.log.edn`.
 - Logins are in the `/edit/` block of `/etc/caddy/Caddyfile` (realm
   `arxana-together`). Adding a person is one `user hash` line there
   (`caddy hash-password`), then `sudo caddy reload --config /etc/caddy/Caddyfile
