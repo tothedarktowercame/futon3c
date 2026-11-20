@@ -185,6 +185,10 @@ function openStream() {
   stream.addEventListener("message", (event) => {
     try {
       const entry = JSON.parse(event.data);
+      // A reconnect before any event arrived replays from the rev in the URL,
+      // which may now be behind us: entries we already hold are not a gap.
+      if (Number.isInteger(entry.rev) && entry.rev <= state.rev
+          && bufferedEntries.length === 0) return;
       if (composing) bufferedEntries.push(entry);
       else applyEntry(entry);
     } catch (error) {

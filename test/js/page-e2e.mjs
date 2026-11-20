@@ -10,7 +10,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const checkout = resolve(here, "../..");
 const playwrightPath = resolve(
   checkout,
-  process.env.TOGETHER_PLAYWRIGHT ?? "../excitement-to-evidence/node_modules/playwright",
+  process.env.TOGETHER_PLAYWRIGHT ?? "../futon4/dev/web/webarxana/node_modules/playwright",
 );
 const require = createRequire(import.meta.url);
 
