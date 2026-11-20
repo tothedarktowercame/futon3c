@@ -7,6 +7,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]
             [futon3c.arxana.together :as t]
+            [futon3c.arxana.together-structure-http :as structure-http]
             [org.httpkit.server :as hk])
   (:import [java.io FileOutputStream PushbackReader StringReader IOException]
            [java.net InetAddress InetSocketAddress Socket URLDecoder]
@@ -208,6 +209,10 @@
                 (when-let [[_ name] (re-matches #"/together/v1/web/(.+)" (:uri request))]
                   (web-response name)))]
       (cond
+        (str/starts-with? (:uri request) "/together/v1/structure/")
+        (structure-http/handle server request
+                               {:response response :valid-identity? valid-identity?
+                                :valid-name? valid-name? :append-entry! append-entry!})
         web web
         (not (or health? whoami? docs? (and route (= method (if (= action "ops") :post :get)))))
         (response 404 {:error "not-found"})
@@ -256,7 +261,7 @@
   (let [scheduler (Executors/newSingleThreadScheduledExecutor
                    (reify ThreadFactory
                      (newThread [_ r] (doto (Thread. r "together-keepalive") (.setDaemon true)))))
-        state {:dir dir :documents (atom {}) :scheduler scheduler}]
+        state {:dir dir :documents (atom {}) :structures (atom {}) :scheduler scheduler}]
     (try
       (let [server (hk/run-server (handler state) {:ip host :port port :legacy-return-value? false})]
         (.scheduleAtFixedRate
