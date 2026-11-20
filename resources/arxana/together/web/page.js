@@ -1,5 +1,5 @@
 import { NAME_RE, SURFACE_RE, createEditor, endpoint } from "./editor.js";
-import { NOTE_COLOURS, allNoteExtents, decodeNotes, notesAtIndex,
+import { NOTE_COLOURS, allNoteExtents, currentNodes, decodeNotes, notesAtIndex,
   textAtCaret, underlineRuns } from "./notes.js";
 
 const params = new URLSearchParams(location.search);
@@ -98,7 +98,7 @@ function notesController(documentKey, workspace, layout, editorHost) {
       const response = await fetch(endpoint(`structure/${encodeURIComponent(workspace)}/state`), { cache: "no-store" });
       if (!response.ok) throw new Error(`notes returned ${response.status}`);
       const state = await response.json();
-      notes = decodeNotes(state.nodes, documentKey);
+      notes = decodeNotes(currentNodes(state), documentKey);
       extents = allNoteExtents(doc, notes);
       failure = "";
       ensurePane();

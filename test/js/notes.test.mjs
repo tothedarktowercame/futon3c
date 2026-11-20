@@ -69,3 +69,13 @@ test("non-BMP characters before a note count as one visible index", () => {
   assert.deepEqual(allNoteExtents(doc, [note]).resolved[0].extent,
     { from: 1, to: 3, text: "ab", live: 2, deleted: 0 });
 });
+
+test("a superseded note is not rendered; the note that replaced it is", async () => {
+  const { currentNodes } = await import("../../resources/arxana/together/web/notes.js");
+  const span = (start, end) => ({ kind: "span", attrs: { doc: "d", start: ["a", start], end: ["a", end], colour: "magenta", title: "t" } });
+  const state = { nodes: { old: span(1, 9), new: span(3, 4), other: span(5, 6) }, derived: { new: "old" } };
+  assert.deepEqual(decodeNotes(currentNodes(state), "d").map((note) => note.id), ["new", "other"]);
+  assert.deepEqual(Object.keys(state.nodes), ["old", "new", "other"]);
+  assert.deepEqual(Object.keys(currentNodes({ nodes: { a: span(1, 2) } })), ["a"]);
+  assert.deepEqual(currentNodes(undefined), {});
+});

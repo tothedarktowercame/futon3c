@@ -126,3 +126,11 @@ export function textAtCaret(doc, textareaValue, caretUtf16) {
   }
   return { index, author: null, label: null };
 }
+
+// Does not mutate. The workspace's nodes without those a later `supersede`
+// act replaced: STATE.derived maps each replacing id to the id it replaced.
+export function currentNodes(state) {
+  const replaced = new Set(Object.values(state?.derived ?? {}));
+  return Object.fromEntries(Object.entries(state?.nodes ?? {})
+    .filter(([id]) => !replaced.has(id)));
+}
