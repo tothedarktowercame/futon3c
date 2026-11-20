@@ -254,3 +254,22 @@
         "as is the same text with other attributes")
     (is (= 409 (:status (post! s c "retry" "rob" (op "joe" 1 nil "ab") 2)))
         "and another person repeating it"))))
+
+(deftest only-one-of-two-seeders-succeeds
+  (with-server (fn [s c _dir]
+    (let [seed! (fn [editor operation parent]
+                  (request s c :post "/together/v1/doc/seed/ops" editor
+                           {:parents {:rev parent} :op operation :alone true} {} false))]
+      (is (= 200 (:status (seed! "joe" (op "joe.emacs" 1 nil "The answer. ") 0))))
+      (is (= 200 (:status (seed! "joe" (op "joe.emacs" 13 ["joe.emacs" 12] "More.") 1)))
+          "the first seeder's later pieces are accepted")
+      (is (= {:status 409 :body {:error "not-alone"}}
+             (seed! "murch" (op "murch.emacs" 1 nil "The answer. ") 0))
+          "the second seeder is refused")
+      (is (= "The answer. More." (t/text (t/from-runs (get-in (state! s c "seed") [:body :runs])))))
+      (is (= 200 (:status (post! s c "seed" "murch" (op "murch.emacs" 18 nil "Hi ") 2)))
+          "ordinary edits by the second person are accepted")
+      (is (= 409 (:status (seed! "joe" (op "joe.emacs" 21 nil "x") 3)))
+          "and after that nobody is alone")
+      (is (= 400 (:status (request s c :post "/together/v1/doc/seed/ops" "joe"
+                                   {:parents {:rev 3} :op (op "joe.emacs" 21 nil "x") :alone false} {} false))))))))

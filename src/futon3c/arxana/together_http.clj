@@ -128,7 +128,8 @@
     (let [body (json/parse-string-strict (slurp (:body request) :encoding "UTF-8") true)
           op (:op body)
           id? #(and (vector? %) (= 2 (count %)) (string? (first %)) (integer? (second %)))
-          shape? (and (map? body) (= #{:parents :op} (set (keys body)))
+          shape? (and (map? body) (contains? #{#{:parents :op} #{:parents :op :alone}} (set (keys body)))
+                      (or (not (contains? body :alone)) (true? (:alone body)))
                       (map? (:parents body)) (= #{:rev} (set (keys (:parents body))))
                       (integer? (get-in body [:parents :rev])) (map? op)
                       (case (:op op)
@@ -142,15 +143,21 @@
     (catch Exception _ nil)))
 
 (defn- submit! [document body identity]
-  (let [result (t/submit (:hub @document) (:op body) identity
-                         (get-in body [:parents :rev]) (str (Instant/now)))]
+  (let [log (get-in @document [:hub :log])
+        ;; "alone": true is how a client seeds a document from text it already
+        ;; holds: accepted only while nobody else has written, so of two people
+        ;; seeding at once exactly one succeeds and the other reloads.
+        result (if (and (:alone body) (some #(not= identity (:author %)) log))
+                 {:error :not-alone}
+                 (t/submit (:hub @document) (:op body) identity
+                           (get-in body [:parents :rev]) (str (Instant/now))))]
     (if-let [error (:error result)]
       ;; A client whose POST timed out after the hub accepted it sends the same
       ;; operation again. Answer with the revision it already has, and publish
       ;; nothing: inserts only (a repeated delete is accepted and logged anyway).
       (if-let [logged (when (= :insert (get-in body [:op :op]))
                         (some #(when (and (= (:op %) (:op body)) (= (:author %) identity)) %)
-                              (get-in @document [:hub :log])))]
+                              log))]
         (response 200 {:rev (:rev logged)})
         (response 409 {:error (name error)}))
       (try
