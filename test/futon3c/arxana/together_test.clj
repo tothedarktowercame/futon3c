@@ -153,3 +153,21 @@
                         (:name case))))]
     (is (seq caught))
     (is (some #{"inside-earlier-run"} caught))))
+
+(deftest runs-round-trip
+  (let [doc (-> []
+                (t/apply-op (insert-op "joe" 1 nil "a😀𝕏bc"))
+                (t/apply-op (insert-op "rob" 6 ["joe" 3] "!?"))
+                (t/apply-op {:op :delete :ids [["joe" 2]]}))
+        rs (t/runs doc)]
+    (is (= ["a" "😀" "𝕏" "!?" "bc"] (mapv :text rs)))
+    (is (= [false true false false false] (mapv :deleted rs)))
+    (is (= doc (t/from-runs rs)))
+    (is (= rs (t/runs (t/from-runs rs))))
+    (is (= [] (t/from-runs [])))
+    (is (= [] (t/runs [])))
+    (is (= :id-in-use (try (t/from-runs (conj rs (first rs)))
+                          (catch clojure.lang.ExceptionInfo e (:together/error (ex-data e)))))))
+  (let [doc (-> [] (t/apply-op (insert-op "joe" 1 nil "a"))
+                (t/apply-op (assoc (insert-op "joe" 2 ["joe" 1] "b") :attrs {:style "different"})))]
+    (is (= 2 (count (t/runs doc))))))

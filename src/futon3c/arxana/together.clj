@@ -113,3 +113,36 @@
   "Rebuild a hub document from its entries, independent of their input order."
   [log]
   (reduce (fn [doc entry] (apply-op doc (:op entry))) empty-doc (sort-by :rev log)))
+
+(defn runs
+  "Compress the whole ordered document, tombstones included. A run extends only
+  across equal attrs/deletion flags and consecutive ids of the same editor."
+  [doc]
+  (first
+   (reduce
+    (fn [[out previous] {:keys [id cp attrs deleted?] :as character}]
+      (let [piece (String. (Character/toChars (int cp)))
+            contiguous? (and previous (= (first id) (first (:id previous)))
+                             (= (second id) (inc' (second (:id previous))))
+                             (= attrs (:attrs previous)) (= deleted? (:deleted? previous)))]
+        [(if contiguous?
+           (update-in out [(dec (count out)) :text] str piece)
+           (conj out {:id id :text piece :attrs attrs :deleted deleted?})) character]))
+    [[] nil] doc)))
+
+(defn from-runs
+  "Expand snapshot runs in their supplied order; never integrate them as edits.
+  Reject malformed runs or reused ids with :together/error."
+  [rs]
+  (when-not (vector? rs)
+    (throw (ex-info "Invalid runs" {:together/error :invalid-runs})))
+  (reduce
+   (fn [doc {:keys [id text attrs deleted] :as run}]
+     (let [op {:op :insert :id id :after nil :text text :attrs attrs}
+           error (or (when-not (boolean? deleted) :invalid-run)
+                     (check-op doc op (when (id-shape? id) (first id))))]
+       (when error (throw (ex-info "Invalid run" {:together/error error :run run})))
+       (into doc (map-indexed (fn [k cp] {:id [(first id) (+' (second id) k)]
+                                         :cp cp :attrs attrs :deleted? deleted})
+                             (codepoints text)))))
+   [] rs))
