@@ -273,3 +273,35 @@
           "and after that nobody is alone")
       (is (= 400 (:status (request s c :post "/together/v1/doc/seed/ops" "joe"
                                    {:parents {:rev 3} :op (op "joe.emacs" 21 nil "x") :alone false} {} false))))))))
+
+(deftest durable-document-list
+  (let [dir (temp-dir) c (client) first-server (h/start! {:port 0 :dir dir})
+        docs! (fn [s] (request s c :get "/together/v1/docs" "joe" nil {} false))]
+    (try
+      (is (= {:status 200 :body {:docs []}} (docs! first-server)))
+      (is (= 401 (:status (request first-server c :get "/together/v1/docs" nil nil {} false))))
+      (state! first-server c "unwritten")
+      (is (= [] (get-in (docs! first-server) [:body :docs])) "Only log files are listed")
+      (post! first-server c "beta" "murch" (op "murch" 1 nil "B") 0)
+      (post! first-server c "alpha" "joe" (op "joe" 1 nil "a😀𝕏") 0)
+      (post! first-server c "alpha" "murch" {:op "delete" :ids [["joe" 1]]} 1)
+      (spit (io/file dir "empty.log.edn") "")
+      (let [items (get-in (docs! first-server) [:body :docs])
+            last-at (:at (last (map edn/read-string (str/split-lines (slurp (io/file dir "alpha.log.edn"))))))]
+        (is (= ["alpha" "beta" "empty"] (mapv :key items)))
+        (is (= {:key "alpha" :rev 2 :chars 2 :authors ["joe" "murch"] :at last-at} (first items)))
+        (is (= {:key "empty" :rev 0 :chars 0 :authors [] :at nil} (last items)))
+        (is (= 1 (:chars (second items))))
+        (is (= ["murch"] (:authors (second items))))
+        (h/stop! first-server)
+        (spit (io/file dir "broken.log.edn") "{:rev 1 :op")
+        (let [restarted (h/start! {:port 0 :dir dir})]
+          (try
+            (is (empty? @(:documents restarted)) "No document was opened after restart")
+            (let [listed (get-in (docs! restarted) [:body :docs])]
+              (is (= ["alpha" "beta" "broken" "empty"] (mapv :key listed)))
+              (is (= items (filterv #(not= "broken" (:key %)) listed)))
+              (is (str/includes? (:error (nth listed 2)) "Damaged document log")))
+            (is (= "{:rev 1 :op" (slurp (io/file dir "broken.log.edn"))))
+            (finally (h/stop! restarted)))))
+      (finally (h/stop! first-server) (remove-dir! dir)))))

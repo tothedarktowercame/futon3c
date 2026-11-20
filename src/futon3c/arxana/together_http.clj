@@ -171,12 +171,37 @@
             (doseq [ch (:subscribers @document)] (hk/close ch))
             (response 500 {:error error})))))))
 
+(defn- document-list [server]
+  ;; Enumerate durable documents, not merely this process's open-document map.
+  ;; Re-read each file under its existing lock, so an append cannot be observed
+  ;; halfway through. There is deliberately no cross-document snapshot/lock.
+  (let [files (.listFiles (io/file (:dir server)))]
+    (when (nil? files)
+      (throw (ex-info "Cannot list Together log directory" {})))
+    (mapv
+     (fn [key]
+       (let [document (document! server key)]
+         (locking document
+           (try
+             (if-let [error (:error @document)]
+               {:key key :error error}
+               (let [{:keys [doc log]} (load-hub (:file @document))]
+                 {:key key :rev (count log) :chars (count (t/ids doc))
+                  :authors (vec (sort (distinct (map :author log)))) :at (:at (peek log))}))
+             (catch Exception e
+               {:key key :error (str "Damaged document log: " (ex-message e))})))))
+     (sort (keep (fn [^java.io.File file]
+                   (when (.isFile file)
+                     (when-let [[_ key] (re-matches #"(.+)\.log\.edn" (.getName file))]
+                       (when (valid-name? key 120) key)))) files)))))
+
 (defn- handler [server]
   (fn [request]
     (let [route (re-matches #"/together/v1/doc/(.*)/(state|ops|events)" (:uri request))
           [_ key action] route
           method (:request-method request)
           health? (and (= method :get) (= (:uri request) "/together/v1/health"))
+          docs? (and (= method :get) (= (:uri request) "/together/v1/docs"))
           whoami? (and (= method :get) (= (:uri request) "/together/v1/whoami"))
           editor (get-in request [:headers "x-together-editor"])
           web (when (= method :get)
@@ -184,11 +209,13 @@
                   (web-response name)))]
       (cond
         web web
-        (not (or health? whoami? (and route (= method (if (= action "ops") :post :get)))))
+        (not (or health? whoami? docs? (and route (= method (if (= action "ops") :post :get)))))
         (response 404 {:error "not-found"})
         (not (valid-identity? editor)) (response 401 {:error "invalid-editor"})
         ;; The browser client cannot read its own request headers, so it asks.
         whoami? (response 200 {:identity editor})
+        docs? (try (response 200 {:docs (document-list server)})
+                   (catch Exception e (response 500 {:error (ex-message e)})))
         health? (response 200 {:ok true :documents (count @(:documents server))})
         (not (valid-name? key 120)) (response 400 {:error "invalid-key"})
         :else

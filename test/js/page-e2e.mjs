@@ -210,7 +210,36 @@ async function main() {
     const values = await Promise.all([joe, murch, phone].map((page) => page.locator("textarea").inputValue()));
     values.forEach((value) => assert.equal(value, hubText));
     console.log("CHECK 8 hub and all three browser surfaces ended equal");
-    console.log("SUMMARY 8 checks passed");
+    // Listing discovers durable documents and preserves a requested surface.
+    const secondKey = `listing-second-${process.pid}`;
+    const seeded = await fetch(`${origin}/together/v1/doc/${secondKey}/ops`, {
+      method: "POST",
+      headers: { "X-Together-Editor": "joe", "Content-Type": "application/json" },
+      body: JSON.stringify({ parents: { rev: 0 }, op: {
+        op: "insert", id: ["joe.seed", 1], after: null, text: "A discoverable document 😀",
+        attrs: { author: "joe" },
+      } }),
+    });
+    assert.equal(seeded.status, 200);
+    const listing = await joeContext.newPage();
+    await listing.goto(`${origin}/together/v1/web/index.html?surface=listing`, { waitUntil: "domcontentloaded" });
+    await listing.waitForSelector("#document-list a");
+    assert.equal(await listing.locator("#list-identity").textContent(), "Signed in as joe");
+    const keys = await listing.locator("#document-list a").allTextContents();
+    assert.ok(keys.includes(documentKey) && keys.includes(secondKey));
+    const originalURL = listing.url();
+    await listing.locator('input[name="document-key"]').fill("invalid key");
+    await listing.getByRole("button", { name: "Open", exact: true }).click();
+    assert.equal(listing.url(), originalURL);
+    assert.match(await listing.locator("#key-validation").textContent(), /Invalid document key/);
+    await listing.getByRole("link", { name: secondKey, exact: true }).click();
+    await waitLive(listing);
+    assert.equal(await listing.locator("textarea").inputValue(), "A discoverable document 😀");
+    assert.equal(new URL(listing.url()).searchParams.get("surface"), "listing");
+    assert.equal(new URL(listing.url()).pathname, "/together/v1/web/index.html");
+    await listing.close();
+    console.log("CHECK 9 document list discovers both keys and opens the selected editor");
+    console.log("SUMMARY 9 checks passed");
 
     await phoneContext.close();
     await murchContext.close();

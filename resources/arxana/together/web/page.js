@@ -50,6 +50,70 @@ function showPlainMessage(message) {
   app.append(paragraph);
 }
 
+function documentURL(key) {
+  const url = new URL(location.href);
+  url.searchParams.set("doc", key);
+  return url.href;
+}
+
+async function showDocuments() {
+  app.replaceChildren();
+  const heading = document.createElement("h1");
+  heading.textContent = "Together documents";
+  const who = document.createElement("p");
+  who.id = "list-identity";
+  who.textContent = `Signed in as ${identity}`;
+  const form = document.createElement("form");
+  const label = document.createElement("label");
+  label.textContent = "Document key ";
+  const input = document.createElement("input");
+  input.name = "document-key";
+  input.type = "text";
+  label.append(input);
+  const button = document.createElement("button");
+  button.type = "submit";
+  button.textContent = "Open";
+  const validation = document.createElement("p");
+  validation.id = "key-validation";
+  validation.setAttribute("role", "alert");
+  form.append(label, button, validation);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!NAME_RE.test(input.value)) {
+      validation.textContent = "Invalid document key: use 1–120 letters, digits, dots, underscores or hyphens.";
+      return;
+    }
+    location.assign(documentURL(input.value));
+  });
+  const list = document.createElement("ul");
+  list.id = "document-list";
+  const message = document.createElement("p");
+  message.id = "list-status";
+  message.textContent = "Reading documents…";
+  app.append(heading, who, form, message, list);
+  try {
+    const response = await fetch(endpoint("docs"));
+    if (!response.ok) throw new Error(`documents returned ${response.status}`);
+    const { docs } = await response.json();
+    if (!Array.isArray(docs)) throw new Error("invalid document list");
+    for (const doc of docs) {
+      const row = document.createElement("li");
+      const link = document.createElement("a");
+      link.textContent = doc.key;
+      link.href = documentURL(doc.key);
+      const detail = document.createElement("span");
+      detail.textContent = doc.error
+        ? ` — unavailable: ${doc.error}`
+        : ` — rev ${doc.rev} · ${doc.chars} chars · ${doc.authors.join(", ") || "no authors"} · ${doc.at ?? "no changes yet"}`;
+      row.append(link, detail);
+      list.append(row);
+    }
+    message.textContent = docs.length ? "" : "No shared documents yet.";
+  } catch (error) {
+    message.textContent = `Unable to list documents: ${error.message}`;
+  }
+}
+
 function syncScroll() {
   layer.scrollTop = textarea.scrollTop;
   layer.scrollLeft = textarea.scrollLeft;
@@ -301,7 +365,7 @@ window.addEventListener("online", () => {
 });
 
 async function start() {
-  if (!documentKey || !NAME_RE.test(documentKey)) {
+  if (documentKey !== null && !NAME_RE.test(documentKey)) {
     showPlainMessage("Missing or invalid document key.");
     return;
   }
@@ -313,6 +377,10 @@ async function start() {
     const response = await fetch(endpoint("whoami"));
     if (!response.ok) throw new Error(`identity returned ${response.status}`);
     ({ identity } = await response.json());
+    if (documentKey === null) {
+      await showDocuments();
+      return;
+    }
     state = createClient({ site: `${identity}.${surface}`, author: identity });
     buildEditor();
     await resync(false);
