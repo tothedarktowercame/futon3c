@@ -29,45 +29,56 @@
        (or (= site identity)
            (.startsWith ^String site (str identity ".")))))
 
-(defn check-op
-  "Return nil or a refusal keyword, without changing DOC.
+(defn- check-known
+  "Return nil or a refusal keyword using the supplied id-membership predicate.
   Identity authenticates an insert's editor. Malformed shapes are refused before
   semantic checks. All generated ids, including tombstoned ones, must be unused."
-  [doc op identity]
-  (let [known (set (map :id doc))]
-    (if-not (map? op)
-      :invalid-op
-      (case (:op op)
-        :insert
-        (let [{:keys [id after text attrs]} op]
-          (cond
-            (not (id-shape? id)) :invalid-id
-            (not (and (integer? (second id)) (pos? (second id)))) :invalid-counter
-            (not (site-of? (first id) identity)) :wrong-author
-            (not (string? text)) :invalid-text
-            (empty? text) :empty-text
-            (not (map? attrs)) :invalid-attrs
-            (and (some? after) (not (contains? known after))) :unknown-after
-            (and after (<= (second id) (second after))) :counter-not-after
-            (some #(contains? known [(first id) (+' (second id) %)])
-                  (range (count (codepoints text)))) :id-in-use
-            :else nil))
-        :delete
+  [known? op identity]
+  (if-not (map? op)
+    :invalid-op
+    (case (:op op)
+      :insert
+      (let [{:keys [id after text attrs]} op]
         (cond
-          (not (vector? (:ids op))) :invalid-ids
-          (not-every? valid-id? (:ids op)) :invalid-id
-          (some #(not (contains? known %)) (:ids op)) :unknown-id
-          :else nil)
-        :invalid-op))))
+          (not (id-shape? id)) :invalid-id
+          (not (and (integer? (second id)) (pos? (second id)))) :invalid-counter
+          (not (site-of? (first id) identity)) :wrong-author
+          (not (string? text)) :invalid-text
+          (empty? text) :empty-text
+          (not (map? attrs)) :invalid-attrs
+          (and (some? after) (not (known? after))) :unknown-after
+          (and after (<= (second id) (second after))) :counter-not-after
+          (some #(known? [(first id) (+' (second id) %)])
+                (range (count (codepoints text)))) :id-in-use
+          :else nil))
+      :delete
+      (cond
+        (not (vector? (:ids op))) :invalid-ids
+        (not-every? valid-id? (:ids op)) :invalid-id
+        (some #(not (known? %)) (:ids op)) :unknown-id
+        :else nil)
+      :invalid-op)))
 
-(defn- insert-character [doc after character]
+(defn check-op
+  "Return nil or a refusal keyword; include tombstones in the id index."
+  [doc op identity]
+  (check-known (set (map :id doc)) op identity))
+
+(defn- insert-run [doc {:keys [id after text attrs]}]
   (let [start (if (nil? after) 0
                (inc (first (keep-indexed #(when (= (:id %2) after) %1) doc))))
         at (loop [i start]
-             (if (and (< i (count doc))
-                      (pos? (compare-ids (:id (nth doc i)) (:id character))))
-               (recur (inc i)) i))]
-    (into (conj (subvec doc 0 at) character) (subvec doc at))))
+             (if (and (< i (count doc)) (pos? (compare-ids (:id (nth doc i)) id)))
+               (recur (inc i)) i))
+        characters (map-indexed (fn [k cp] {:id [(first id) (+' (second id) k)]
+                                           :cp cp :attrs attrs :deleted? false})
+                                (codepoints text))]
+    ;; At the stopping point the next id is smaller than id (equality was
+    ;; rejected by check-op). Every subsequent run id is larger still, so its
+    ;; scan stops immediately after its predecessor. Splice the whole run once;
+    ;; this holds even when earlier concurrent runs have insertions inside them.
+    (persistent! (reduce conj! (reduce conj! (reduce conj! (transient []) (subvec doc 0 at)) characters)
+                          (subvec doc at)))))
 
 (defn apply-op
   "Integrate OP into DOC, or throw ex-info with :together/error.
@@ -77,14 +88,7 @@
   (if-let [error (check-op doc op (when (id-shape? (:id op)) (first (:id op))))]
     (throw (ex-info "Invalid Together operation" {:together/error error :op op}))
     (case (:op op)
-      :insert
-      (let [{:keys [id after text attrs]} op]
-        (first
-         (reduce (fn [[d left] [k cp]]
-                   (let [next-id [(first id) (+' (second id) k)]]
-                     [(insert-character d left {:id next-id :cp cp :attrs attrs :deleted? false})
-                      next-id]))
-                 [doc after] (map-indexed vector (codepoints text)))))
+      :insert (insert-run doc op)
       :delete
       (let [deleted (set (:ids op))]
         (mapv #(if (contains? deleted (:id %)) (assoc % :deleted? true) %) doc)))))
@@ -119,9 +123,39 @@
        :entry entry})))
 
 (defn rebuild
-  "Rebuild a hub document from its entries, independent of their input order."
+  "Rebuild in revision order using a private id-indexed linked sequence.
+  Mutable replay nodes never escape: return the same persistent vector of maps.
+  No vector rebuilding or whole-document id/anchor scan occurs per log entry."
   [log]
-  (reduce (fn [doc entry] (apply-op doc (:op entry))) empty-doc (sort-by :rev log)))
+  (let [index (volatile! (transient {}))
+        head (object-array [nil nil])
+        known? #(contains? @index %)]
+    (doseq [entry (sort-by :rev log)]
+      (let [{:keys [id after text attrs ids] :as op} (:op entry)]
+        (when-let [error (check-known known? op (when (id-shape? id) (first id)))]
+          (throw (ex-info "Invalid Together operation" {:together/error error :op op})))
+        (case (:op op)
+          :insert
+          (let [left (loop [left (if (nil? after) head (get @index after))]
+                       (let [next-node (aget ^objects left 1)]
+                         (if (and next-node (pos? (compare-ids (:id (aget ^objects next-node 0)) id)))
+                           (recur next-node) left)))
+                right (aget ^objects left 1)]
+            (loop [left left k 0 cps (seq (codepoints text))]
+              (when cps
+                (let [next-id [(first id) (+' (second id) k)]
+                      node (object-array [{:id next-id :cp (first cps) :attrs attrs :deleted? false} right])]
+                  (vswap! index assoc! next-id node)
+                  (aset ^objects left 1 node)
+                  (recur node (inc k) (next cps))))))
+          :delete
+          (doseq [id ids]
+            (let [node (get @index id)]
+              (aset ^objects node 0 (assoc (aget ^objects node 0) :deleted? true)))))))
+    (loop [node (aget head 1) out (transient [])]
+      (if node
+        (recur (aget ^objects node 1) (conj! out (aget ^objects node 0)))
+        (persistent! out)))))
 
 (defn runs
   "Compress the whole ordered document, tombstones included. A run extends only

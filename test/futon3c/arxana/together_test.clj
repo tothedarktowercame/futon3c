@@ -3,7 +3,7 @@
             [clojure.java.io :as io]
             [clojure.set :as set]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.arxana.together :as t]))
+            [futon3c.arxana.together :as t :refer [compare-ids]]))
 
 (defn fixtures []
   (json/read-str (slurp (io/resource "arxana/together/conformance.json")) :key-fn keyword))
@@ -171,3 +171,113 @@
   (let [doc (-> [] (t/apply-op (insert-op "joe" 1 nil "a"))
                 (t/apply-op (assoc (insert-op "joe" 2 ["joe" 1] "b") :attrs {:style "different"})))]
     (is (= 2 (count (t/runs doc))))))
+
+;; Packet 15: original per-character implementation, copied before optimization.
+(defn reference-insert-character [doc after character]
+  (let [start (if (nil? after) 0
+               (inc (first (keep-indexed #(when (= (:id %2) after) %1) doc))))
+        at (loop [i start]
+             (if (and (< i (count doc))
+                      (pos? (compare-ids (:id (nth doc i)) (:id character))))
+               (recur (inc i)) i))]
+    (into (conj (subvec doc 0 at) character) (subvec doc at))))
+
+
+(defn reference-apply-op [doc op]
+  (if-let [error (t/check-op doc op (first (:id op)))]
+    (throw (ex-info "Invalid reference operation" {:together/error error}))
+    (case (:op op)
+      :insert (first (reduce (fn [[d left] [k cp]]
+                               (let [id [(first (:id op)) (+' (second (:id op)) k)]]
+                                 [(reference-insert-character d left
+                                                              {:id id :cp cp :attrs (:attrs op) :deleted? false}) id]))
+                             [doc (:after op)]
+                             (map-indexed vector (.toArray (.codePoints ^String (:text op))))))
+      :delete (let [deleted (set (:ids op))]
+                (mapv #(if (contains? deleted (:id %)) (assoc % :deleted? true) %) doc)))))
+
+(defn- random-valid-order [rng events]
+  (loop [seen #{} order []]
+    (let [ready (vec (available events seen))]
+      (if (seq ready)
+        (let [i (choose rng ready)] (recur (conj seen i) (conj order i)))
+        order))))
+
+(deftest run-splice-reference-equivalence
+  (let [rng (java.util.Random. 151515)]
+    (dotimes [trial-no 300]
+      (let [events (:events
+                    (with-redefs [generate-op
+                                  (fn [rng doc editor]
+                                    (if (and (seq doc) (zero? (.nextInt ^java.util.Random rng 4)))
+                                      {:op :delete :ids (mapv :id (repeatedly (inc (.nextInt ^java.util.Random rng 10)) #(choose rng doc)))}
+                                      (insert-op editor (t/next-counter doc)
+                                                 (choose rng (conj (mapv :id doc) nil))
+                                                 (apply str (repeatedly (inc (.nextInt ^java.util.Random rng 40))
+                                                                        #(choose rng ["a" "b" "😀" "𝕏"]))))))]
+                      (trial rng)))
+            orders [(vec (range (count events))) (random-valid-order rng events) (random-valid-order rng events)]]
+        (doseq [order orders]
+          (let [ops (map #(get-in events [% :op]) order)
+                expected (reductions reference-apply-op [] ops)
+                actual (reductions t/apply-op [] ops)]
+            (is (= expected actual) (str "reference trial " trial-no " order " order))
+            (is (= (last expected) (t/rebuild (map-indexed (fn [i op] {:rev i :op op}) ops))))))))))
+
+(deftest concurrent-run-with-interior-insertion
+  (let [ops [(insert-op "base" 1 nil "!")
+             (insert-op "a" 2 ["base" 1] "abcd")
+             (insert-op "b" 2 ["base" 1] "WXYZ")
+             (insert-op "c" 6 ["a" 3] "😀𝕏")]]
+    (doseq [order [[0 1 3 2] [0 2 1 3] [0 1 2 3]]]
+      (let [ordered (map ops order)]
+        (is (= "!WXYZab😀𝕏cd" (t/text (reduce t/apply-op [] ordered))))
+        (is (= (reduce reference-apply-op [] ordered) (reduce t/apply-op [] ordered)))))))
+
+(defn performance-log []
+  (mapv (fn [i] {:rev (inc i)
+                 :op (insert-op "fixture" (inc (* i 12))
+                                (when (pos? i) ["fixture" (* i 12)]) "abcdefghijkl")
+                 :author "fixture" :parents {:rev i} :at "2026-01-01T00:00:00Z"})
+        (range 5000)))
+
+(defn timed [label f]
+  (let [start (System/nanoTime) result (f)
+        ms (/ (- (System/nanoTime) start) 1e6)]
+    (println "Together performance" label ms "ms")
+    [result ms]))
+
+(deftest large-document-time-bounds
+  (let [base (mapv (fn [i] {:id ["fixture" (inc i)] :cp 120 :attrs {} :deleted? (< i 40000)})
+                   (range 60000))
+        [inserted insert-ms] (timed :insert-20000 #(t/apply-op base (insert-op "fixture" 60001 ["fixture" 30000]
+                                                                                           (apply str (repeat 20000 "y")))))
+        [deleted delete-ms] (timed :delete-20000 #(t/apply-op base {:op :delete :ids (mapv :id (subvec base 40000))}))
+        [rebuilt rebuild-ms] (timed :rebuild-5000 #(t/rebuild (performance-log)))]
+    (is (= 80000 (count inserted)))
+    (is (every? :deleted? deleted))
+    (is (= 60000 (count rebuilt)))
+    (is (= (apply str (repeat 5000 "abcdefghijkl")) (t/text rebuilt)))
+    ;; Bounds are rounded up from 10x the cold measurements (70/42/135 ms).
+    (is (< insert-ms 1000))
+    (is (< delete-ms 500))
+    (is (< rebuild-ms 1500))))
+
+(deftest indexed-replay-preserves-validation
+  (let [first-op (insert-op "fixture" 2 nil "😀")]
+    (doseq [[error operation] [[:id-in-use (insert-op "fixture" 1 nil "ab")]
+                               [:unknown-after (insert-op "other" 3 ["absent" 1] "x")]
+                               [:unknown-id {:op :delete :ids [["absent" 1]]}]
+                               [:counter-not-after (insert-op "other" 2 ["fixture" 2] "x")]
+                               [:invalid-op nil]]]
+      (is (= error (try (t/rebuild [{:rev 1 :op first-op}
+                                    {:rev 2 :op {:op :delete :ids [["fixture" 2]]}}
+                                    {:rev 3 :op operation}])
+                        (catch clojure.lang.ExceptionInfo e (:together/error (ex-data e)))))))))
+
+(deftest indexed-replay-retains-clojure-numeric-id-equality
+  (let [ops [(insert-op "fixture" 1 nil "x")
+             (insert-op "fixture" 2N ["fixture" 1N] "y")
+             {:op :delete :ids [["fixture" 2]]}]]
+    (is (= (reduce reference-apply-op [] ops)
+           (t/rebuild (map-indexed (fn [i op] {:rev i :op op}) ops))))))

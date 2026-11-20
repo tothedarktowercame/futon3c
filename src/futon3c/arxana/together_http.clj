@@ -57,17 +57,21 @@
           _ (when (and (seq s) (not (str/ends-with? s "\n")))
               (throw (ex-info "Incomplete log line (missing newline)" {})))
           entries (if (empty? s) [] (mapv read-entry (str/split-lines s)))]
-      (reduce (fn [hub entry]
-                (when-not (and (= #{:rev :op :author :parents :at} (set (keys entry)))
-                               (= (:rev entry) (inc (count (:log hub))))
-                               (valid-identity? (:author entry))
-                               (= #{:rev} (set (keys (:parents entry)))))
-                  (throw (ex-info "Invalid log entry/revision" {:entry entry})))
-                (Instant/parse (:at entry))
-                (let [result (t/submit hub (:op entry) (:author entry) (get-in entry [:parents :rev]) (:at entry))]
-                  (when (:error result) (throw (ex-info "Log operation refused" result)))
-                  (:hub result)))
-              {:doc [] :log []} entries)
+      ;; Validate transport metadata without rebuilding the document for each
+      ;; entry. rebuild checks operation shape, ids and causal anchors using its
+      ;; private replay index; insert author checking requires no document state.
+      (doseq [[i entry] (map-indexed vector entries)]
+        (when-not (and (= #{:rev :op :author :parents :at} (set (keys entry)))
+                       (= (:rev entry) (inc i))
+                       (valid-identity? (:author entry))
+                       (= #{:rev} (set (keys (:parents entry))))
+                       (integer? (get-in entry [:parents :rev]))
+                       (<= 0 (get-in entry [:parents :rev]) i))
+          (throw (ex-info "Invalid log entry/revision" {:entry entry})))
+        (Instant/parse (:at entry))
+        (when (and (= :insert (get-in entry [:op :op]))
+                   (not (t/site-of? (first (get-in entry [:op :id])) (:author entry))))
+          (throw (ex-info "Log operation refused" {:error :wrong-author}))))
       {:doc (t/rebuild entries) :log entries})))
 
 (defn- document! [{:keys [documents dir]} key]

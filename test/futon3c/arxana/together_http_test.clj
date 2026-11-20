@@ -319,3 +319,52 @@
       ;; because it must not read the file again
       (spit (io/file dir "listed.log.edn") "not a log\n")
       (is (= before (:body (list!))))))))
+
+(deftest large-log-restart-time-bound
+  (let [dir (temp-dir)
+        log (mapv (fn [i] {:rev (inc i)
+                           :op {:op :insert :id ["fixture" (inc (* i 12))]
+                                :after (when (pos? i) ["fixture" (* i 12)])
+                                :text "abcdefghijkl" :attrs {:author "fixture"}}
+                           :author "fixture" :parents {:rev i} :at "2026-01-01T00:00:00Z"})
+                  (range 5000))
+        c (client)]
+    (try
+      ;; Fixture log only: never mint thousands of fsynced HTTP requests.
+      (spit (io/file dir "large.log.edn") (apply str (map #(str (pr-str %) "\n") log)))
+      (let [before (let [server (h/start! {:port 0 :dir dir})]
+                     (try (state! server c "large") (finally (h/stop! server))))
+            server (h/start! {:port 0 :dir dir})]
+        (try
+          (let [start (System/nanoTime)
+                after (state! server c "large")
+                ms (/ (- (System/nanoTime) start) 1e6)]
+            (println "Together performance restarted-state-5000" ms "ms")
+            (is (= 200 (:status before) (:status after)))
+            (is (= before after))
+            (is (= 5000 (get-in after [:body :rev])))
+            (is (= (apply str (repeat 5000 "abcdefghijkl"))
+                   (apply str (map :text (get-in after [:body :runs])))))
+            ;; About 10x the measured 449 ms restarted request.
+            (is (< ms 5000)))
+          (finally (h/stop! server))))
+      (finally (remove-dir! dir)))))
+
+(deftest indexed-loader-keeps-transport-validation
+  (with-server
+    (fn [server c dir]
+      (let [entry {:rev 1 :op {:op :insert :id ["fixture" 1] :after nil :text "x" :attrs {}}
+                   :author "fixture" :parents {:rev 0} :at "2026-01-01T00:00:00Z"}
+            corrupt [(assoc entry :rev 2)
+                     (assoc entry :author "other")
+                     (assoc entry :author "invalid.name")
+                     (assoc-in entry [:parents :rev] 1)
+                     (assoc-in entry [:parents :rev] -1)
+                     (assoc-in entry [:parents :rev] 0.5)
+                     (assoc entry :at "not-a-time")
+                     (assoc-in entry [:op :after] ["missing" 1])
+                     (assoc entry :extra true)]]
+        (doseq [[i row] (map-indexed vector corrupt)]
+          (let [key (str "corrupt" i)]
+            (spit (io/file dir (str key ".log.edn")) (str (pr-str row) "\n"))
+            (is (= 500 (:status (state! server c key))))))))))
