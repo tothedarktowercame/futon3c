@@ -207,6 +207,57 @@ test("a display mark splits runs and unknown marks are ignored", () => {
   for (const colour of Object.values(MARK_COLOURS)) assert.match(colour, /^#[0-9a-f]{6}$/);
 });
 
+test("text put back where this client removed it keeps its attributes", () => {
+  // the 2026-11-20 case: select all, one keystroke, undo
+  const snapshot = {
+    rev: 3,
+    runs: [
+      { id: ["fable-1.seed", 1], text: "Head ", attrs: { author: "fable-1", face: "heading" }, deleted: false },
+      { id: ["fable-1.seed", 6], text: "typed ", attrs: { author: "fable-1", face: "typed" }, deleted: false },
+      { id: ["murch.web", 12], text: "more", attrs: { author: "murch" }, deleted: false },
+    ],
+  };
+  let joe = load(createClient({ site: "joe.web", author: "joe" }), snapshot);
+  const original = text(joe.doc);
+  const before = decorations(joe);
+  let step = localChange(joe, original, "x", 1); // select all, type x
+  joe = step.state;
+  assert.equal(text(joe.doc), "x");
+  step = localChange(joe, "x", original, original.length); // undo
+  joe = step.state;
+  assert.equal(text(joe.doc), original);
+  assert.deepEqual(decorations(joe), before, "authors and faces are as they were");
+  const inserts = step.ops.map((wrapped) => wrapped.op).filter((op) => op.op === "insert");
+  assert.deepEqual(inserts.map((op) => [op.text, op.attrs]), [
+    ["Head ", { author: "fable-1", face: "heading" }],
+    ["typed ", { author: "fable-1", face: "typed" }],
+    ["more", { author: "murch" }],
+  ]);
+  assert.ok(inserts.every((op) => op.id[0] === "joe.web"), "new ids are the restorer's own");
+  // a hub applying the same ops ends with the same document
+  let hub = load(createClient({ site: "hub.x", author: "hub" }), snapshot).doc;
+  for (const wrapped of [
+    ...localChange(load(createClient({ site: "joe.web", author: "joe" }), snapshot), original, "x", 1).ops,
+    ...step.ops,
+  ]) hub = applyOp(hub, wrapped.op);
+  assert.equal(text(hub), original);
+
+  // typing the same words again later is ordinary typing: restoring is used once
+  step = localChange(joe, original, original + "more", original.length + 4);
+  assert.deepEqual(step.ops.map((wrapped) => wrapped.op.attrs), [{ author: "joe" }]);
+
+  // text someone else removed is not restored under its old author
+  let rob = load(createClient({ site: "rob.web", author: "rob" }), {
+    rev: 4,
+    runs: [
+      { id: ["murch.web", 1], text: "gone", attrs: { author: "murch" }, deleted: true },
+      { id: ["murch.web", 5], text: "kept", attrs: { author: "murch" }, deleted: false },
+    ],
+  });
+  step = localChange(rob, "kept", "gonekept", 4);
+  assert.deepEqual(step.ops.map((wrapped) => wrapped.op.attrs), [{ author: "rob" }]);
+});
+
 test("a face fixed at insert splits runs; Emacs faces from a shared answer map to it", () => {
   const sym = (value) => ({ tag: "symbol", value });
   const state = load(createClient({ site: "joe.web", author: "joe" }), {

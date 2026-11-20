@@ -143,26 +143,95 @@ export function localChange(state, oldValue, newValue, caretUtf16) {
   const operations = [];
   let doc = state.doc;
 
+  let removed = state.removed ?? new Set();
+
   if (change.removed.length > 0) {
     const deletedIds = ids(doc).slice(change.index, change.index + change.removed.length);
     const op = { op: "delete", ids: deletedIds };
     operations.push(wrap(op, state.rev));
     doc = applyOp(doc, op);
+    removed = new Set(removed);
+    for (const id of deletedIds) removed.add(idKey(id));
   }
 
   if (change.inserted.length > 0) {
-    const op = {
-      op: "insert",
-      id: [state.site, nextCounter(doc)],
-      after: leftIdForInsert(doc, change.index),
-      text: change.inserted.join(""),
-      attrs: { author: state.author },
-    };
-    operations.push(wrap(op, state.rev));
-    doc = applyOp(doc, op);
+    const pieces = restoredPieces(doc, change.index, change.inserted, removed)
+      ?? [{ text: change.inserted.join(""), length: change.inserted.length, attrs: { author: state.author } }];
+    let after = leftIdForInsert(doc, change.index);
+    for (const piece of pieces) {
+      const counter = nextCounter(doc);
+      const op = { op: "insert", id: [state.site, counter], after, text: piece.text, attrs: piece.attrs };
+      operations.push(wrap(op, state.rev));
+      doc = applyOp(doc, op);
+      after = [state.site, counter + piece.length - 1];
+    }
+    if (pieces.consumed) {
+      removed = new Set(removed);
+      for (const key of pieces.consumed) removed.delete(key);
+    }
   }
 
-  return { state: { ...state, doc }, ops: operations };
+  return { state: { ...state, doc, removed }, ops: operations };
+}
+
+// Text put back where this client removed it keeps what it had. Undo in the
+// text area, or cutting and pasting back in place, arrives here as an insert of
+// the same characters at the spot where their deleted originals still lie in the
+// document. Those characters get new ids (a deleted id is never reused) but the
+// attributes of the originals: author, face, mark, provenance. Without this,
+// select-all, one keystroke and undo re-inserted a whole document as the
+// person who pressed undo (2026-11-20).
+// Only characters this client deleted in this session qualify, so retyping a
+// word someone else removed does not take over its attribution. Returns pieces
+// [{text, length, attrs}] with a `consumed` list of id keys, or null.
+function restoredPieces(doc, index, inserted, removed) {
+  if (removed.size === 0 || inserted.length < 2) return null;
+  // the deleted characters lying between visible positions index-1 and index
+  let visible = 0;
+  let start = 0;
+  const characters = doc.characters;
+  if (index > 0) {
+    for (start = 0; start < characters.length; start += 1) {
+      if (!characters[start].deleted) {
+        visible += 1;
+        if (visible === index) { start += 1; break; }
+      }
+    }
+  }
+  const gap = [];
+  for (let k = start; k < characters.length && characters[k].deleted; k += 1) {
+    if (removed.has(idKey(characters[k].id))) gap.push(characters[k]);
+  }
+  if (gap.length < inserted.length) return null;
+  const points = inserted.map((point) => point.codePointAt(0));
+  let at = -1;
+  for (let k = 0; k + points.length <= gap.length && at < 0; k += 1) {
+    let same = true;
+    for (let j = 0; j < points.length && same; j += 1) same = gap[k + j].cp === points[j];
+    if (same) at = k;
+  }
+  if (at < 0) return null;
+  const pieces = [];
+  const consumed = [];
+  let previousKey;
+  for (let j = 0; j < points.length; j += 1) {
+    const original = gap[at + j];
+    const attrs = original.attrs && Object.keys(original.attrs).length > 0
+      ? original.attrs
+      : { author: original.id[0].split(".", 1)[0] };
+    const key = JSON.stringify(attrs);
+    if (key === previousKey) {
+      const piece = pieces[pieces.length - 1];
+      piece.text += inserted[j];
+      piece.length += 1;
+    } else {
+      pieces.push({ text: inserted[j], length: 1, attrs });
+      previousKey = key;
+    }
+    consumed.push(idKey(original.id));
+  }
+  pieces.consumed = consumed;
+  return pieces;
 }
 
 // Does not mutate: integrates the next hub entry and maps the UTF-16 selection.
