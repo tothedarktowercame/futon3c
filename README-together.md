@@ -56,6 +56,13 @@ form) is a separate log of serialised acts.
   jumps to the other end. Copying inside a shared region and yanking into
   another records a `transclusion` link by itself. Records are structure acts in
   `~/storage/arxana-together/structure/<WS>.log.edn`.
+- Notes (web; `notes.js`, `page.js`): a note is a span record with `by`,
+  `colour`, `title`, `text`, optional `quote_title`, `quote`, `where`, and
+  optional `source` `{doc, words}` or `{url, words}`, in workspace `KEY.notes`
+  (`?ws=NAME` overrides). The document page underlines noted text and shows the
+  note at the caret in a side pane; `›` slides to Note | Source with the quoted
+  words highlighted in the source document, `‹` slides back. A note replaced by
+  a `supersede` act is not shown. The hub cannot delete a note.
 - Logins are in the `/edit/` block of `/etc/caddy/Caddyfile` (realm
   `arxana-together`). Adding a person is one `user hash` line there
   (`caddy hash-password`), then `sudo caddy reload --config /etc/caddy/Caddyfile
