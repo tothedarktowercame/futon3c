@@ -27,12 +27,12 @@ run "clojure: engine, hub, structure, catalogues" "$here" \
     -n futon3c.arxana.together-structure-test -n futon3c.arxana.together-structure-http-test \
     -n futon3c.arxana.together-catalogue-test -n futon3c.arxana.catalogue-document-test \
     -n futon3c.arxana.incubator-catalogue-test -n futon3c.arxana.together-pdf-test
-run "javascript: model and binding" "$here" node --test test/js/binding.test.mjs test/js/together.test.mjs
+run "javascript: model and binding" "$here" node --test test/js/binding.test.mjs test/js/together.test.mjs test/js/notes.test.mjs
 run "emacs: model, binding, transport, live, incubator sharing" "$futon4a" \
   emacs -Q --batch -L lisp -L "$here/emacs" -l test/futon4a-together-test.el \
     -l test/futon4a-together-buffer-test.el -l test/futon4a-together-net-test.el \
     -l test/futon4a-together-live-test.el -l test/futon4a-incubator-together-test.el \
-    -l test/futon4a-together-span-test.el \
+    -l test/futon4a-together-span-test.el -l test/futon4a-together-notes-test.el \
     -f ert-run-tests-batch-and-exit
 run "emacs: incubator form" "$futon4a" \
   emacs -Q --batch -L "$here/emacs" -L lisp -L test -l test/futon4a-incubator-test.el \
