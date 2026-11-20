@@ -62,7 +62,12 @@ body,
 
 .text-layer {
   z-index: 0;
-  overflow: hidden;
+  /* Same scrollbar as the editor above it. With "hidden" here and "auto" there,
+     a browser with classic scrollbars (Windows) gave the editor a narrower text
+     column once the document needed scrolling, so lines wrapped at different
+     places and the caret sat away from the coloured text. */
+  overflow-x: hidden;
+  overflow-y: scroll;
   background: #fff;
   color: #20242a;
   pointer-events: none;
@@ -71,13 +76,23 @@ body,
 .text-editor {
   z-index: 1;
   resize: none;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: scroll;
   background: transparent;
   color: transparent;
   -webkit-text-fill-color: transparent;
   caret-color: #111;
   border-color: transparent;
   outline: none;
+}
+
+/* The editor's own glyphs are never painted, selected or not: only the
+   coloured layer beneath shows text. Without this a selection painted the
+   editor's copy of the text over the layer's. */
+.text-editor::selection {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: rgb(73 121 184 / 30%);
 }
 
 .text-editor:focus {

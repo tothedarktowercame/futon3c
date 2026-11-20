@@ -225,7 +225,9 @@ export const MARK_COLOURS = { ok: "#1a7f37", debt: "#9a6700", bad: "#b42318" };
 // maps those names here. Unknown names are ignored.
 export const FACE_STYLES = {
   plain: { color: "#20242a" },
-  heading: { color: "#20242a", fontWeight: "700" },
+  // No bold: the coloured text lies under a plain-weight text area, and a bold
+  // glyph need not be as wide as a regular one, which moves the caret off the text.
+  heading: { color: "#20242a", textDecoration: "underline" },
   muted: { color: "#6b7280" },
   typed: { color: "#1d7a1d", label: "typed" },
   call: { color: "#1f5fbf", label: "from the call" },
