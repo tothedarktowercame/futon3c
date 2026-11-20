@@ -10,7 +10,7 @@
 (def features
   [{:feature :edit-is-one-act :kind :ruling
     :statement "Committing an edit adds one edit act with its text and provenance; an unchanged commit or a cancel adds none."
-    :repo "futon4a" :revision "b317cc976b77ebfb0081627c8638e00edecd7268" :path "lisp/futon4a-incubator.el" :section "futon4a-incubator-edit, futon4a-incubator-edit-commit, futon4a-incubator-edit-cancel"
+    :repo "futon4a" :revision "1e92625a75e1fb7a69f7ff092c46d9e738010422" :path "lisp/futon4a-incubator.el" :section "futon4a-incubator-edit, futon4a-incubator-edit-commit, futon4a-incubator-edit-cancel"
     :test-path main-test :tests ["incubator-edit-flows-back-to-the-slot"]}
    {:feature :layers-on-a-main-line :kind :ruling
     :statement "Versions are layers on a main line; a layer shows the acts of its lineage only."
@@ -22,18 +22,18 @@
     :test-path main-test :tests ["incubator-murch-layer-is-a-teammates-not-an-agents"]}
    {:feature :proposals-are-not-the-answer :kind :constraint
     :statement "An edit on a proposal layer or a fork is not counted as Joe's answer unless that layer is shown."
-    :repo "futon4a" :revision "b317cc976b77ebfb0081627c8638e00edecd7268" :path "lisp/futon4a-incubator.el" :section "futon4a-incubator--latest-edit, futon4a-incubator--slot-text"
+    :repo "futon4a" :revision "1e92625a75e1fb7a69f7ff092c46d9e738010422" :path "lisp/futon4a-incubator.el" :section "futon4a-incubator--latest-edit, futon4a-incubator--slot-text"
     :test-path main-test :tests ["incubator-proposals-sit-above-joes-pass" "incubator-murch-layer-is-a-teammates-not-an-agents"]}
    {:feature :proposer-is-never-joe :kind :constraint
     :statement "Proposing a revision as Joe, or with no actor, is refused."
     :repo "futon4a" :revision "b317cc976b77ebfb0081627c8638e00edecd7268" :path "lisp/futon4a-incubator-layers.el" :section "futon4a-incubator-propose-revision"}
    {:feature :editorial-save :kind :decision
     :statement "In an editorial pass, saving writes one edit act by Joe per changed answer; the placeholder of an unanswered question is not saved; leaving without saving writes nothing."
-    :repo "futon4a" :revision "8d8b09ebbed0dc3f8b71d9f525c15bf25f2ad456" :path "lisp/futon4a-incubator-editorial.el" :section "futon4a-incubator-editorial-save, futon4a-incubator-editorial-abandon"
+    :repo "futon4a" :revision "1e92625a75e1fb7a69f7ff092c46d9e738010422" :path "lisp/futon4a-incubator-editorial.el" :section "futon4a-incubator-editorial-save, futon4a-incubator-editorial-abandon"
     :test-path main-test :tests ["incubator-editorial-pass-tracks-typing-acceptance-and-cut-and-paste"]}
    {:feature :character-provenance :kind :decision
     :statement "On save each character is classed typed, accepted, agent, kept or moved; text pasted from outside counts as typed."
-    :repo "futon4a" :revision "8d8b09ebbed0dc3f8b71d9f525c15bf25f2ad456" :path "lisp/futon4a-incubator-editorial.el" :section "futon4a-incubator--editorial-classify, futon4a-incubator--editorial-segments"
+    :repo "futon4a" :revision "1e92625a75e1fb7a69f7ff092c46d9e738010422" :path "lisp/futon4a-incubator-editorial.el" :section "futon4a-incubator--editorial-classify, futon4a-incubator--editorial-segments"
     :test-path main-test :tests ["incubator-editorial-pass-tracks-typing-acceptance-and-cut-and-paste"]}
    {:feature :sources-in-colour :kind :ruling
     :statement "Each source has its own face; agent text is bracketed, a teammate's is not."
@@ -45,7 +45,7 @@
     :test-path main-test :tests ["incubator-snapshot-shows-a-fork-without-touching-the-form"]}
    {:feature :copy-keeps-source :kind :decision
     :statement "Text copied from a teammate's view and pasted in an editorial pass is saved as accepted from that teammate."
-    :repo "futon4a" :revision "8d8b09ebbed0dc3f8b71d9f525c15bf25f2ad456" :path "lisp/futon4a-incubator-editorial.el" :section "futon4a-incubator--editorial-segments, futon4a-incubator-editorial-save"
+    :repo "futon4a" :revision "1e92625a75e1fb7a69f7ff092c46d9e738010422" :path "lisp/futon4a-incubator-editorial.el" :section "futon4a-incubator--editorial-segments, futon4a-incubator-editorial-save"
     :test-path main-test :tests ["incubator-copy-from-murchs-view-keeps-his-colour"]}
    {:feature :numbered-versions :kind :ruling
     :statement "When the session's content changes, an idle timer writes it as a numbered version named by its hash; a state seen before keeps its old number."
@@ -61,7 +61,7 @@
     :test-path "test/futon4a-call-notes-test.el" :tests ["clip-derivation-paraphrase-merge-reject-and-cycle"]}
    {:feature :first-cut-once :kind :ruling
     :statement "An over-limit answer is cut once automatically, and never again after anyone has cut or restored."
-    :repo "futon4a" :revision "b317cc976b77ebfb0081627c8638e00edecd7268" :path "lisp/futon4a-incubator.el" :section "futon4a-incubator--first-cuts, futon4a-incubator-toggle-cut"
+    :repo "futon4a" :revision "1e92625a75e1fb7a69f7ff092c46d9e738010422" :path "lisp/futon4a-incubator.el" :section "futon4a-incubator--first-cuts, futon4a-incubator-toggle-cut"
     :test-path main-test :tests ["incubator-first-cut-strikes-to-fit-and-x-restores"]}
    {:feature :load-refused-whole :kind :constraint
     :statement "A turn-clip load with any text mismatch is refused whole and leaves the session unchanged."
@@ -69,11 +69,11 @@
     :test-path "test/futon4a-incubator-turns-test.el" :tests ["turn-clips-mismatch-refuses-whole-load"]}
    {:feature :export-is-explicit :kind :constraint
     :statement "Export goes only to a file the user chooses, and quitting with unsaved acts asks first."
-    :repo "futon4a" :revision "b317cc976b77ebfb0081627c8638e00edecd7268" :path "lisp/futon4a-incubator.el" :section "futon4a-incubator-export, futon4a-incubator-quit"
+    :repo "futon4a" :revision "1e92625a75e1fb7a69f7ff092c46d9e738010422" :path "lisp/futon4a-incubator.el" :section "futon4a-incubator-export, futon4a-incubator-quit"
     :test-path main-test :tests ["incubator-explicit-export-and-unsaved-warning"]}
    {:feature :tests-do-not-persist :kind :constraint
     :statement "The test harness fails any store request or file write, and autosave never starts in batch."
-    :repo "futon4a" :revision "274acce071c1766a2ecb9026150ba9a58d2a1f09" :path "test/futon4a-incubator-test.el" :section "with-incubator, incubator-test-harness-refuses-writes-and-store"
+    :repo "futon4a" :revision "1e92625a75e1fb7a69f7ff092c46d9e738010422" :path "test/futon4a-incubator-test.el" :section "with-incubator, incubator-test-harness-refuses-writes-and-store"
     :test-path main-test :tests ["incubator-test-harness-refuses-writes-and-store"]}
    {:feature :shared-answer-saves-as-usual :kind :decision
     :statement "A shared answer, once detached, is saved by the ordinary editorial save with the same provenance classes."
