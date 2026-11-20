@@ -1,4 +1,5 @@
 import {
+  FACE_STYLES,
   MARK_COLOURS,
   authorColour,
   createClient,
@@ -128,7 +129,11 @@ function repaint() {
     const span = document.createElement("span");
     span.dataset.author = run.author;
     if (run.mark) span.dataset.mark = run.mark;
-    span.style.color = run.mark ? MARK_COLOURS[run.mark] : authorColour(run.author);
+    if (run.face) span.dataset.face = run.face;
+    const style = run.face ? FACE_STYLES[run.face] : null;
+    span.style.color = run.mark ? MARK_COLOURS[run.mark] : style ? style.color : authorColour(run.author);
+    if (style?.fontWeight) span.style.fontWeight = style.fontWeight;
+    if (style?.textDecoration) span.style.textDecoration = style.textDecoration;
     span.textContent = run.text;
     layer.append(span);
   }
@@ -156,6 +161,20 @@ function renderStatus(authorRuns = decorations(state)) {
     swatch.style.backgroundColor = authorColour(author);
     const label = document.createElement("span");
     label.textContent = author;
+    item.append(swatch, label);
+    legend.append(item);
+  }
+  // Faces with a label (the incubator's sources) are named too.
+  for (const [face, style] of Object.entries(FACE_STYLES)) {
+    if (!style.label || !authorRuns.some((run) => run.face === face)) continue;
+    const item = document.createElement("span");
+    item.className = "legend-item";
+    item.dataset.face = face;
+    const swatch = document.createElement("span");
+    swatch.className = "legend-swatch";
+    swatch.style.backgroundColor = style.color;
+    const label = document.createElement("span");
+    label.textContent = style.label;
     item.append(swatch, label);
     legend.append(item);
   }

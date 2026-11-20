@@ -4,8 +4,10 @@ import test from "node:test";
 import {
   authorColour,
   createClient,
+  FACE_STYLES,
   MARK_COLOURS,
   decorations,
+  faceOf,
   load,
   localChange,
   receive,
@@ -203,6 +205,30 @@ test("a display mark splits runs and unknown marks are ignored", () => {
     { author: "fable-1", text: "xy" },
   ]);
   for (const colour of Object.values(MARK_COLOURS)) assert.match(colour, /^#[0-9a-f]{6}$/);
+});
+
+test("a face fixed at insert splits runs; Emacs faces from a shared answer map to it", () => {
+  const sym = (value) => ({ tag: "symbol", value });
+  const state = load(createClient({ site: "joe.web", author: "joe" }), {
+    rev: 5,
+    runs: [
+      { id: ["fable-1.seed", 1], text: "Q", attrs: { author: "fable-1", face: "heading" }, deleted: false },
+      { id: ["fable-1.seed", 2], text: "ab", attrs: { author: "fable-1", face: "typed" }, deleted: false },
+      { id: ["joe.emacs", 4], text: "cd", attrs: { author: "joe", prov: { face: sym("futon4a-variants-diff-added") } }, deleted: false },
+      { id: ["joe.emacs", 6], text: "m", attrs: { author: "joe", prov: { face: { tag: "list", value: [sym("unknown-face"), sym("futon4a-incubator-teammate")] } } }, deleted: false },
+      { id: ["joe.emacs", 7], text: "z", attrs: { author: "joe", face: "__proto__", prov: { face: sym("toString") } }, deleted: false },
+    ],
+  });
+  assert.deepEqual(decorations(state), [
+    { author: "fable-1", face: "heading", text: "Q" },
+    { author: "fable-1", face: "typed", text: "ab" },
+    { author: "joe", face: "typed", text: "cd" },
+    { author: "joe", face: "teammate", text: "m" },
+    { author: "joe", text: "z" },
+  ]);
+  assert.equal(faceOf(undefined), undefined);
+  assert.equal(faceOf({ face: 7 }), undefined);
+  for (const style of Object.values(FACE_STYLES)) assert.match(style.color, /^#[0-9a-f]{6}$/);
 });
 
 test("decorations cover text and merge adjacent sites of one author", () => {

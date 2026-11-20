@@ -218,19 +218,71 @@ export function receive(state, entry, selection) {
 // colour instead of its author's. Any other value is ignored.
 export const MARK_COLOURS = { ok: "#1a7f37", debt: "#9a6700", bad: "#b42318" };
 
-// Does not mutate: returns maximal visible runs sharing a displayed author and
-// mark. A run has a `mark` key only when its characters are marked.
+// A character may also carry a face, fixed at insert: a name from FACE_STYLES.
+// It is how a document copied or shared from the incubator form keeps the form's
+// colours (typed, from the call, an agent, a teammate, ...). An answer shared
+// from Emacs carries the Emacs face under attrs.prov.face instead; EMACS_FACES
+// maps those names here. Unknown names are ignored.
+export const FACE_STYLES = {
+  plain: { color: "#20242a" },
+  heading: { color: "#20242a", fontWeight: "700" },
+  muted: { color: "#6b7280" },
+  typed: { color: "#1d7a1d", label: "typed" },
+  call: { color: "#1f5fbf", label: "from the call" },
+  agent: { color: "#7a2fb0", label: "agent" },
+  teammate: { color: "#a35200", label: "teammate" },
+  peeragogy: { color: "#8b2a7a", label: "Peeragogy call" },
+  struck: { color: "#b42318", textDecoration: "line-through", label: "struck" },
+};
+
+export const EMACS_FACES = {
+  "futon4a-variants-diff-added": "typed",
+  "futon4a-incubator-clip": "call",
+  "futon4a-incubator-agent": "agent",
+  "futon4a-incubator-teammate": "teammate",
+  "futon4a-incubator-peeragogy": "peeragogy",
+  "futon4a-variants-diff-dropped": "struck",
+  "futon4a-incubator-struck": "struck",
+  bold: "heading",
+  shadow: "muted",
+};
+
+// Does not mutate. The face name for ATTRS, or undefined.
+export function faceOf(attrs) {
+  const direct = attrs?.face;
+  if (typeof direct === "string" && Object.hasOwn(FACE_STYLES, direct)) return direct;
+  const emacs = attrs?.prov?.face;
+  const names = emacs?.tag === "symbol" ? [emacs.value]
+    : emacs?.tag === "list" && Array.isArray(emacs.value)
+      ? emacs.value.filter((item) => item?.tag === "symbol").map((item) => item.value)
+      : [];
+  for (const name of names) {
+    if (typeof name === "string" && Object.hasOwn(EMACS_FACES, name)) return EMACS_FACES[name];
+  }
+  return undefined;
+}
+
+// Does not mutate: returns maximal visible runs sharing a displayed author, mark
+// and face. A run has a `mark` or `face` key only when its characters have one.
 export function decorations(state) {
   const result = [];
   for (const character of state.doc.characters) {
     if (character.deleted) continue;
     const author = character.attrs?.author ?? character.id[0].split(".", 1)[0];
     const raw = character.attrs?.mark;
-    const mark = Object.hasOwn(MARK_COLOURS, raw) ? raw : undefined;
+    const mark = typeof raw === "string" && Object.hasOwn(MARK_COLOURS, raw) ? raw : undefined;
+    const face = faceOf(character.attrs);
     const point = String.fromCodePoint(character.cp);
     const previous = result[result.length - 1];
-    if (previous?.author === author && previous.mark === mark) previous.text += point;
-    else result.push(mark ? { author, mark, text: point } : { author, text: point });
+    if (previous?.author === author && previous.mark === mark && previous.face === face) {
+      previous.text += point;
+    } else {
+      const run = { author };
+      if (mark) run.mark = mark;
+      if (face) run.face = face;
+      run.text = point;
+      result.push(run);
+    }
   }
   return result;
 }
