@@ -42,7 +42,10 @@ function notesController(documentKey, workspace, layout, editorHost) {
     ensurePane();
     if (!pane) return;
     pane.replaceChildren();
-    const at = textAtCaret(doc, value, caret);
+    // Until the document's text has arrived nothing can resolve; saying
+    // "no longer resolve" about every note then would be false.
+    if (!doc.characters.length) { addText(pane, "p", "Reading the document…", "muted"); return; }
+    const at = textAtCaret(doc, editorHost.querySelector("textarea")?.value ?? value, caret);
     addText(pane, "p", at.author
       ? `This text: written by ${at.author}${at.label ? ` (${at.label})` : ""}`
       : "This text: no character at the caret", "notes-this-text");
