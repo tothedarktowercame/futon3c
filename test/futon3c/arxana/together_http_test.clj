@@ -234,3 +234,23 @@
            (request s c :get "/together/v1/whoami" "murch" nil {} false)))
     (is (= 401 (:status (request s c :get "/together/v1/whoami" nil nil {} false))))
     (is (= 401 (:status (request s c :get "/together/v1/whoami" "murch.web" nil {} false)))))))
+
+(deftest a-repeated-insert-is-acknowledged-not-refused
+  ;; the case this is for: a POST that timed out after the hub accepted it
+  (with-server (fn [s c dir]
+    (is (= {:status 200 :body {:rev 1}} (post! s c "retry" "joe" (op "joe" 1 nil "ab") 0)))
+    (is (= {:status 200 :body {:rev 2}} (post! s c "retry" "rob" (op "rob" 3 ["joe" 2] "c") 1)))
+    (is (= {:status 200 :body {:rev 1}} (post! s c "retry" "joe" (op "joe" 1 nil "ab") 0))
+        "the same insert again answers with its first revision")
+    (is (= {:status 200 :body {:rev 1}} (post! s c "retry" "joe" (op "joe" 1 nil "ab") 2))
+        "whatever parents the retry names")
+    (let [body (:body (state! s c "retry"))]
+      (is (= 2 (:rev body)) "nothing new was logged")
+      (is (= "abc" (t/text (t/from-runs (:runs body))))))
+    (is (= 2 (count (str/split-lines (slurp (io/file dir "retry.log.edn"))))))
+    (is (= 409 (:status (post! s c "retry" "joe" (op "joe" 1 nil "xy") 2)))
+        "a different insert under a used id is still refused")
+    (is (= 409 (:status (post! s c "retry" "joe" (assoc (op "joe" 1 nil "ab") :attrs {:author "rob"}) 2)))
+        "as is the same text with other attributes")
+    (is (= 409 (:status (post! s c "retry" "rob" (op "joe" 1 nil "ab") 2)))
+        "and another person repeating it"))))

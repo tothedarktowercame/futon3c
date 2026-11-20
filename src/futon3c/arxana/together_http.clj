@@ -145,7 +145,14 @@
   (let [result (t/submit (:hub @document) (:op body) identity
                          (get-in body [:parents :rev]) (str (Instant/now)))]
     (if-let [error (:error result)]
-      (response 409 {:error (name error)})
+      ;; A client whose POST timed out after the hub accepted it sends the same
+      ;; operation again. Answer with the revision it already has, and publish
+      ;; nothing: inserts only (a repeated delete is accepted and logged anyway).
+      (if-let [logged (when (= :insert (get-in body [:op :op]))
+                        (some #(when (and (= (:op %) (:op body)) (= (:author %) identity)) %)
+                              (get-in @document [:hub :log])))]
+        (response 200 {:rev (:rev logged)})
+        (response 409 {:error (name error)}))
       (try
         (append-entry! (:file @document) (:entry result))
         (swap! document assoc :hub (:hub result))
