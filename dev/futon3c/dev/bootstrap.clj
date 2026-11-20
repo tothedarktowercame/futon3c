@@ -12,6 +12,7 @@
             [futon3c.blackboard :as bb]
             [futon3c.cyder :as cyder]
             [futon3c.giraffe.reread-service :as reread-service]
+            [futon3c.arxana.together-service :as together-service]
             [futon3c.arxana.workplan-service :as workplan-service]
             [futon3c.dev.config :as config]
             [futon3c.evidence.invariant :as evidence-invariant]
@@ -77,6 +78,23 @@
        {:id "workplan-arxana" :type :daemon
         :stop-fn workplan-service/stop!
         :state-fn #(or @failure (workplan-service/health))}))))
+
+(defn start-together-service!
+  "Managed in-JVM Together hub (M-arxana-together);
+  FUTON3C_TOGETHER_SERVICE_AUTOSTART=0 opts out."
+  []
+  (when (config/env-bool "FUTON3C_TOGETHER_SERVICE_AUTOSTART" true)
+    (let [failure (atom nil)]
+      (try
+        (together-service/start!)
+        (println "[dev] Together hub listening on 7096 (logs: ~/storage/arxana-together)")
+        (catch Throwable t
+          (reset! failure {:status :failed :error (.getMessage t)})
+          (println (str "[dev] Together hub start failed: " (.getMessage t)))))
+      (cyder/register!
+       {:id "together-hub" :type :daemon
+        :stop-fn together-service/stop!
+        :state-fn #(or @failure (together-service/health))}))))
 
 (defn start-futon1a!
   "Retired: futon1a's embedded XTDB 1 node is gone. Always returns nil; the
@@ -669,6 +687,7 @@
         ;; are logged as :stopped and caught by the startup reconciliation.
         _ (start-giraffe-reread!)
         _ (start-workplan-service!)
+        _ (start-together-service!)
         webarxana-sys (try
                         (start-webarxana!)
                         (catch Throwable t

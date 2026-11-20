@@ -22,6 +22,26 @@
 (defn- valid-name? [s max-length]
   (and (string? s) (<= 1 (count s) max-length) (boolean (re-matches #"[A-Za-z0-9._-]+" s))))
 
+(defn- valid-identity?
+  "An identity is a person's name with no dot, so that \"joe\" can never be
+  mistaken for a site of another identity (see together/site-of?)."
+  [s]
+  (and (string? s) (boolean (re-matches #"[A-Za-z0-9_-]{1,60}" s))))
+
+(def ^:private web-types
+  {"html" "text/html; charset=utf-8" "js" "text/javascript; charset=utf-8"
+   "css" "text/css; charset=utf-8"})
+
+(defn- web-response
+  "Serve one file of the browser client from the classpath, or nil. NAME is
+  matched against a strict pattern, so no path can leave the web directory."
+  [name]
+  (when-let [[_ ext] (re-matches #"[a-z0-9-]{1,40}\.(html|js|css)" name)]
+    (when-let [resource (io/resource (str "arxana/together/web/" name))]
+      {:status 200
+       :headers {"Content-Type" (web-types ext) "Cache-Control" "no-store"}
+       :body (slurp resource :encoding "UTF-8")})))
+
 (defn- read-entry [line]
   (with-open [r (PushbackReader. (StringReader. line))]
     (let [entry (edn/read {:eof ::eof} r)]
@@ -39,7 +59,7 @@
       (reduce (fn [hub entry]
                 (when-not (and (= #{:rev :op :author :parents :at} (set (keys entry)))
                                (= (:rev entry) (inc (count (:log hub))))
-                               (valid-name? (:author entry) 60)
+                               (valid-identity? (:author entry))
                                (= #{:rev} (set (keys (:parents entry)))))
                   (throw (ex-info "Invalid log entry/revision" {:entry entry})))
                 (Instant/parse (:at entry))
@@ -143,11 +163,15 @@
           [_ key action] route
           method (:request-method request)
           health? (and (= method :get) (= (:uri request) "/together/v1/health"))
-          editor (get-in request [:headers "x-together-editor"])]
+          editor (get-in request [:headers "x-together-editor"])
+          web (when (= method :get)
+                (when-let [[_ name] (re-matches #"/together/v1/web/(.+)" (:uri request))]
+                  (web-response name)))]
       (cond
+        web web
         (not (or health? (and route (= method (if (= action "ops") :post :get)))))
         (response 404 {:error "not-found"})
-        (not (valid-name? editor 60)) (response 401 {:error "invalid-editor"})
+        (not (valid-identity? editor)) (response 401 {:error "invalid-editor"})
         health? (response 200 {:ok true :documents (count @(:documents server))})
         (not (valid-name? key 120)) (response 400 {:error "invalid-key"})
         :else

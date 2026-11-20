@@ -20,6 +20,15 @@
 (defn- codepoints [^String s]
   (vec (.toArray (.codePoints s))))
 
+(defn site-of?
+  "True when SITE, the editor part of an id, belongs to IDENTITY: SITE is IDENTITY
+  itself or IDENTITY followed by \".\" and a surface name (\"joe.emacs\" for
+  \"joe\"). One person's surfaces are separate sites, so their ids cannot collide."
+  [site identity]
+  (and (string? site) (string? identity)
+       (or (= site identity)
+           (.startsWith ^String site (str identity ".")))))
+
 (defn check-op
   "Return nil or a refusal keyword, without changing DOC.
   Identity authenticates an insert's editor. Malformed shapes are refused before
@@ -34,7 +43,7 @@
           (cond
             (not (id-shape? id)) :invalid-id
             (not (and (integer? (second id)) (pos? (second id)))) :invalid-counter
-            (not= (first id) identity) :wrong-author
+            (not (site-of? (first id) identity)) :wrong-author
             (not (string? text)) :invalid-text
             (empty? text) :empty-text
             (not (map? attrs)) :invalid-attrs

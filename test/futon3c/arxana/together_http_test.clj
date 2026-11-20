@@ -181,3 +181,49 @@
       (is (= [] (get-in @(get @(:documents s) "blocked") [:hub :log])))
       (is (= 500 (:status (state! s c "blocked"))))
       (is (= 0 (get-in (state! s c "healthy") [:body :rev]))))))
+
+(deftest sites-belong-to-their-identity
+  (with-server (fn [s c _dir]
+    ;; One person's two surfaces are two sites and both are accepted.
+    (is (= 200 (:status (post! s c "sites" "joe" (op "joe.emacs" 1 nil "a") 0))))
+    (is (= 200 (:status (post! s c "sites" "joe" (op "joe.web" 2 ["joe.emacs" 1] "b") 1))))
+    ;; A site of another person, and a name that merely starts with "joe", are not joe's.
+    (is (= {:status 409 :body {:error "wrong-author"}}
+           (post! s c "sites" "joe" (op "murch.web" 3 nil "x") 2)))
+    (is (= {:status 409 :body {:error "wrong-author"}}
+           (post! s c "sites" "joe" (op "joex.emacs" 3 nil "x") 2)))
+    (is (= {:status 409 :body {:error "wrong-author"}}
+           (post! s c "sites" "joe" (op "joe-2" 3 nil "x") 2)))
+    ;; An identity may not itself contain a dot, or "joe.emacs" could claim "joe.emacs.x".
+    (is (= 401 (:status (post! s c "sites" "joe.emacs" (op "joe.emacs" 3 nil "x") 2))))
+    (is (= "ab" (t/text (t/from-runs (get-in (state! s c "sites") [:body :runs])))))
+    (is (= ["joe" "joe"]
+           (mapv :author (map read-string (line-seq (io/reader (io/file _dir "sites.log.edn")))))))))
+  (is (t/site-of? "joe" "joe"))
+  (is (t/site-of? "joe.emacs" "joe"))
+  (is (not (t/site-of? "joe" "joe.emacs")))
+  (is (not (t/site-of? "joex" "joe")))
+  (is (not (t/site-of? "joe.emacs" nil))))
+
+(deftest web-files-are-served-without-identity-and-cannot-escape
+  (with-server (fn [s c _dir]
+    (let [raw (fn [path]
+                (let [resp (.send ^HttpClient c
+                                  (.build (.GET (HttpRequest/newBuilder
+                                                 (URI/create (str "http://127.0.0.1:" (:port s) path)))))
+                                  (HttpResponse$BodyHandlers/ofString))]
+                  {:status (.statusCode resp)
+                   :type (.orElse (.firstValue (.headers resp) "content-type") nil)
+                   :body (.body resp)}))
+          js (raw "/together/v1/web/together.js")]
+      (is (= 200 (:status js)))
+      (is (= "text/javascript; charset=utf-8" (:type js)))
+      (is (= (slurp (io/resource "arxana/together/web/together.js")) (:body js)))
+      ;; Not a web file: the conformance fixture one directory up, a missing file,
+      ;; an encoded traversal, and a type that is not served.
+      (doseq [path ["/together/v1/web/../conformance.json"
+                    "/together/v1/web/%2e%2e%2fconformance.json"
+                    "/together/v1/web/nothing.js"
+                    "/together/v1/web/together.json"
+                    "/together/v1/web/sub/together.js"]]
+        (is (= 404 (:status (raw path))) path))))))
