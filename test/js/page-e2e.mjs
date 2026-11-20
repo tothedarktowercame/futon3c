@@ -94,6 +94,32 @@ async function installPostHold(page) {
   });
 }
 
+async function postJSON(url, body, identity = "joe") {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "X-Together-Editor": identity, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  assert.equal(response.status, 200, `${url}: ${await response.text()}`);
+}
+
+async function seedDocument(origin, key, value) {
+  if (value === "") {
+    await postJSON(`${origin}/together/v1/doc/${key}/ops`, {
+      parents: { rev: 0 },
+      op: { op: "insert", id: ["joe.seed", 1], after: null, text: "x", attrs: { author: "joe" } },
+    });
+    await postJSON(`${origin}/together/v1/doc/${key}/ops`, {
+      parents: { rev: 1 }, op: { op: "delete", ids: [["joe.seed", 1]] },
+    });
+  } else {
+    await postJSON(`${origin}/together/v1/doc/${key}/ops`, {
+      parents: { rev: 0 },
+      op: { op: "insert", id: ["joe.seed", 1], after: null, text: value, attrs: { author: "joe" } },
+    });
+  }
+}
+
 async function main() {
   const directory = await mkdtemp(resolve(tmpdir(), "together-page-"));
   const expression = `(require 'futon3c.arxana.together-http) (let [h (futon3c.arxana.together-http/start! {:port 0 :dir ${JSON.stringify(directory)}})] (println "PORT" (:port h)) (flush) @(promise))`;
@@ -239,7 +265,91 @@ async function main() {
     assert.equal(new URL(listing.url()).pathname, "/together/v1/web/index.html");
     await listing.close();
     console.log("CHECK 9 document list discovers both keys and opens the selected editor");
-    console.log("SUMMARY 9 checks passed");
+
+    const layerName = `packet14-${process.pid}`;
+    const workspace = `incubator.${layerName}`;
+    const docs = {
+      first: `incubator.first.${layerName}`,
+      second: `incubator.second.${layerName}`,
+      third: `incubator.third.${layerName}`,
+    };
+    await Promise.all([
+      seedDocument(origin, docs.first, "First answer"),
+      seedDocument(origin, docs.second, ""),
+      seedDocument(origin, docs.third, "Third answer"),
+    ]);
+    for (const op of [
+      { op: "add-node", id: "third", kind: "question", attrs: { question: "Third question", doc: docs.third, order: 2 } },
+      { op: "add-node", id: "form", kind: "form", attrs: { title: "Packet 14 form", layer: layerName } },
+      { op: "add-node", id: "second", kind: "question", attrs: { question: "Second question", doc: docs.second, order: 1 } },
+      { op: "add-node", id: "bad", kind: "question", attrs: { question: "Broken question", doc: "bad key", order: 3 } },
+      { op: "add-node", id: "first", kind: "question", attrs: { question: "First question", doc: docs.first, order: 0 } },
+    ]) {
+      await postJSON(`${origin}/together/v1/structure/${workspace}/acts`, { op });
+    }
+
+    const formA = await joeContext.newPage();
+    const formB = await murchContext.newPage();
+    const formURL = `${origin}/together/v1/web/form.html?ws=${workspace}&surface=form`;
+    await Promise.all([
+      formA.goto(formURL, { waitUntil: "domcontentloaded" }),
+      formB.goto(formURL, { waitUntil: "domcontentloaded" }),
+    ]);
+    await Promise.all([
+      formA.waitForFunction(() => document.querySelector("#form-status")?.textContent.includes("3 live")),
+      formB.waitForFunction(() => document.querySelector("#form-status")?.textContent.includes("3 live")),
+    ]);
+    assert.deepEqual(await formA.locator(".form-question h2").allTextContents(),
+      ["First question", "Second question", "Third question", "Broken question"]);
+    assert.deepEqual(await formA.locator(".form-question textarea").evaluateAll(
+      (elements) => elements.map((element) => element.value)),
+      ["First answer", "", "Third answer"]);
+    assert.equal(await formA.locator('[data-node-id="bad"] .editor-error').textContent(),
+      "This question has no valid shared document.");
+    console.log("CHECK 10 form questions and answers render in structure order");
+
+    const secondA = formA.locator('[data-node-id="second"] textarea');
+    await secondA.fill("Second answer shared");
+    await formB.waitForFunction(() => document.querySelector('[data-node-id="second"] textarea')?.value === "Second answer shared");
+    const single = await joeContext.newPage();
+    await single.goto(`${origin}/together/v1/web/index.html?doc=${docs.second}&surface=single`, { waitUntil: "domcontentloaded" });
+    await waitLive(single);
+    assert.equal(await single.locator("textarea").inputValue(), "Second answer shared");
+    console.log("CHECK 11 an answer edit reaches the other form and single-document page");
+
+    const firstB = formB.locator('[data-node-id="first"] .editor-stack');
+    const beforeHeight = (await firstB.boundingBox()).height;
+    const firstA = formA.locator('[data-node-id="first"] textarea');
+    await firstA.fill("First answer\nwith remote lines\nthat make it taller\nand keep growing\none more line\nlast line");
+    await formB.waitForFunction(() => document.querySelector('[data-node-id="first"] textarea')?.value.includes("last line"));
+    await formB.waitForFunction((height) => document.querySelector('[data-node-id="first"] .editor-stack').getBoundingClientRect().height > height, beforeHeight);
+    const grown = await firstB.boundingBox();
+    assert.ok(grown.height > beforeHeight);
+    assert.equal(await formB.locator('[data-node-id="bad"] .editor-error').count(), 1);
+    assert.match(await formB.locator('[data-node-id="third"] textarea').inputValue(), /Third answer/);
+    console.log("CHECK 12 remote multiline edits grow one editor without breaking its siblings");
+
+    const formListing = await joeContext.newPage();
+    console.log("TRACE opening form listing");
+    await formListing.goto(`${origin}/together/v1/web/index.html?surface=forms`, { waitUntil: "domcontentloaded" });
+    console.log("TRACE form listing loaded");
+    await formListing.waitForSelector("#form-list a", { timeout: 10000 });
+    console.log("TRACE form listing populated");
+    const formLink = formListing.getByRole("link", { name: workspace, exact: true });
+    assert.equal(await formLink.count(), 1);
+    const linked = new URL(await formLink.getAttribute("href"));
+    assert.equal(linked.pathname, "/together/v1/web/form.html");
+    assert.equal(linked.searchParams.get("ws"), workspace);
+    assert.equal(linked.searchParams.get("surface"), "forms");
+    console.log("CHECK 13 document listing derives and links the shared form workspace");
+
+    assert.equal(await formA.locator("#form-title").textContent(), "Packet 14 form");
+    assert.match(await formA.locator("#form-layer").textContent(), new RegExp(layerName));
+    assert.match(await formA.locator("#form-status").textContent(), /joe · 4 answers · 3 live · 0 unsent/);
+    console.log("CHECK 14 form title, layer and aggregate status are visible");
+    console.log("SUMMARY 14 checks passed");
+
+    await Promise.all([single.close(), formA.close(), formB.close(), formListing.close()]);
 
     await phoneContext.close();
     await murchContext.close();
