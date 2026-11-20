@@ -32,8 +32,14 @@ let posting = false;
 let postController;
 let generation = 0;
 
+// The hub serves this page at .../together/v1/web/index.html with its routes one
+// level up. A proxy may instead serve the page and the routes in one directory
+// (zone's Caddy does, at /edit/), so that the browser sends its saved basic-auth
+// credentials with every request: it only does so at or below the page's directory.
+const API_BASE = /\/web\/[^/]*$/.test(location.pathname) ? "../" : "./";
+
 function endpoint(path) {
-  return `/together/v1/${path}`;
+  return new URL(`${API_BASE}${path}`, location.href).href;
 }
 
 function showPlainMessage(message) {
