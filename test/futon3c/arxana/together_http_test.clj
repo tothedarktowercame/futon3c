@@ -227,3 +227,10 @@
                     "/together/v1/web/together.json"
                     "/together/v1/web/sub/together.js"]]
         (is (= 404 (:status (raw path))) path))))))
+
+(deftest whoami-reports-the-header-identity
+  (with-server (fn [s c _dir]
+    (is (= {:status 200 :body {:identity "murch"}}
+           (request s c :get "/together/v1/whoami" "murch" nil {} false)))
+    (is (= 401 (:status (request s c :get "/together/v1/whoami" nil nil {} false))))
+    (is (= 401 (:status (request s c :get "/together/v1/whoami" "murch.web" nil {} false)))))))

@@ -163,15 +163,18 @@
           [_ key action] route
           method (:request-method request)
           health? (and (= method :get) (= (:uri request) "/together/v1/health"))
+          whoami? (and (= method :get) (= (:uri request) "/together/v1/whoami"))
           editor (get-in request [:headers "x-together-editor"])
           web (when (= method :get)
                 (when-let [[_ name] (re-matches #"/together/v1/web/(.+)" (:uri request))]
                   (web-response name)))]
       (cond
         web web
-        (not (or health? (and route (= method (if (= action "ops") :post :get)))))
+        (not (or health? whoami? (and route (= method (if (= action "ops") :post :get)))))
         (response 404 {:error "not-found"})
         (not (valid-identity? editor)) (response 401 {:error "invalid-editor"})
+        ;; The browser client cannot read its own request headers, so it asks.
+        whoami? (response 200 {:identity editor})
         health? (response 200 {:ok true :documents (count @(:documents server))})
         (not (valid-name? key 120)) (response 400 {:error "invalid-key"})
         :else
