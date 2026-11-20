@@ -79,3 +79,29 @@ test("a superseded note is not rendered; the note that replaced it is", async ()
   assert.deepEqual(Object.keys(currentNodes({ nodes: { a: span(1, 2) } })), ["a"]);
   assert.deepEqual(currentNodes(undefined), {});
 });
+
+import { findWords } from "../../resources/arxana/together/web/notes.js";
+
+test("findWords matches exact words across whitespace with codepoint offsets", () => {
+  assert.deepEqual(findWords("before one two after", "one two"), { from: 7, to: 14 });
+  assert.deepEqual(findWords("one\n   two", "one two"), { from: 0, to: 10 });
+  assert.deepEqual(findWords("one two / one two", "one two"), { from: 0, to: 7 });
+  assert.equal(findWords("One two", "one two"), null);
+  assert.deepEqual(findWords("😀 one two", "one two"), { from: 2, to: 9 });
+  assert.deepEqual(findWords("scale-at-all-costs (model)?", "scale-at-all-costs (model)?"), { from: 0, to: 27 });
+  assert.equal(findWords("anything", "  "), null);
+});
+
+test("decodeNotes retains valid sources and drops malformed sources only", () => {
+  const note = (source) => ({ kind: "span", attrs: { doc: "d", start: ["a", 1], end: ["a", 2], colour: "blue", source } });
+  for (const source of [{ doc: "source-1", words: "some words" },
+    { url: "https://example.test/source", words: "quoted" }, { url: "http://example.test/" }]) {
+    assert.deepEqual(decodeNotes({ n: note(source) }, "d")[0].source, source);
+  }
+  for (const source of [null, [], "bad", { doc: "bad/key", words: "x" }, { doc: "d", words: " " },
+    { doc: "d" }, { url: "javascript:alert(1)" }, { url: "file:///tmp/a" }, { url: "https://" },
+    { url: "https://example.test", words: 3 }, { doc: "d", words: "x", url: "https://example.test" }]) {
+    const notes = decodeNotes({ n: note(source) }, "d");
+    assert.equal(notes.length, 1); assert.equal(notes[0].source, undefined);
+  }
+});

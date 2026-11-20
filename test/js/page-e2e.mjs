@@ -377,6 +377,8 @@ async function main() {
     const notesKey = `notes-${process.pid}`;
     const notesText = "Alpha beta gamma delta";
     await seedDocument(origin, notesKey, notesText);
+    const sourceKey = `source-${process.pid}`;
+    await seedDocument(origin, sourceKey, `${"Context line.\n".repeat(80)}beta\n   gamma${"\nFollowing context.".repeat(80)}`);
     const notesWorkspace = `${notesKey}.notes`;
     for (const op of [
       { op: "add-node", id: "magenta-note", kind: "span", attrs: {
@@ -387,6 +389,7 @@ async function main() {
         doc: notesKey, start: ["joe.seed", 7], end: ["joe.seed", 16], by: "murch",
         colour: "yellow", title: "Source", text: "Compare the wording.",
         quote_title: "Earlier draft", quote: "beta gamma", where: "Draft 2",
+        source: { doc: sourceKey, words: "beta gamma" },
       } },
       { op: "add-node", id: "lost-note", kind: "span", attrs: {
         doc: notesKey, start: ["missing", 1], end: ["missing", 2], by: "joe",
@@ -444,7 +447,8 @@ async function main() {
     await postJSON(`${origin}/together/v1/structure/${notesWorkspace}/acts`, { op: {
       op: "add-node", id: "blue-note", kind: "span", attrs: { doc: notesKey,
         start: ["joe.seed", 18], end: ["joe.seed", 22], by: "rob", colour: "blue",
-        title: "Late note", text: "Added after the page opened." },
+        title: "Late note", text: "Added after the page opened.",
+        source: { url: "https://example.test/source", words: "A quotation" } },
     } });
     await notesPage.evaluate(() => window.dispatchEvent(new Event("focus")));
     await notesPage.locator("textarea").evaluate((element) => {
@@ -467,7 +471,86 @@ async function main() {
     await bare.waitForTimeout(100);
     assert.equal(await bare.locator("#notes-pane").count(), 0);
     console.log("CHECK 19 a document without notes has no pane");
-    console.log("SUMMARY 19 checks passed");
+    assert.equal(await bare.locator(".notes-strip, .note-navigation, .lineup-mobile-nav").count(), 0);
+    // Lineup retains the existing textarea and its live connection.
+    const caret = async (index) => {
+      await notesPage.locator("textarea").evaluate((el, at) => {
+        el.setSelectionRange(at, at); el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      }, index);
+    };
+    const right = notesPage.locator('.note-navigation button[title="Show the source in context"]');
+    const left = notesPage.locator('.note-navigation button[title="Back to the document"]');
+    await caret(0);
+    await notesPage.waitForFunction(() => document.querySelector('.note-navigation button:last-child')?.disabled);
+    assert.equal(await right.isDisabled(), true);
+    await caret(8);
+    await notesPage.waitForFunction(() => !document.querySelector('.note-navigation button:last-child')?.disabled);
+    const preserved = await notesPage.locator("textarea").evaluate((el) => {
+      window.__originalEditor = el;
+      return { caret: el.selectionStart, scroll: el.scrollTop, text: el.value };
+    });
+    const visible = async (selectors, hidden) => notesPage.waitForFunction(({ selectors, hidden }) => {
+      const inside = (selector) => {
+        const box = document.querySelector(selector).getBoundingClientRect();
+        return box.left >= -1 && box.right <= innerWidth + 1 && box.width > 0;
+      };
+      const box = document.querySelector(hidden).getBoundingClientRect();
+      return selectors.every(inside) && (box.right <= 1 || box.left >= innerWidth - 1);
+    }, { selectors, hidden });
+    await right.click();
+    await visible(["#notes-pane", "#source-pane"], ".document-editor");
+    await notesPage.waitForFunction(() => {
+      const mark = document.querySelector("#source-pane mark");
+      if (!mark) return false;
+      const box = mark.getBoundingClientRect(); const pane = document.querySelector("#source-pane").getBoundingClientRect();
+      return box.top >= pane.top && box.bottom <= pane.bottom;
+    });
+    assert.equal((await notesPage.locator("#source-pane mark").textContent()).replace(/\s+/g, " "), "beta gamma");
+    assert.deepEqual(await notesPage.locator(".note-card").evaluateAll((items) => items.map((item) => item.dataset.noteId)), ["magenta-note", "yellow-note"]);
+    await left.click();
+    await visible([".document-editor", "#notes-pane"], "#source-pane");
+    assert.deepEqual(await notesPage.locator("textarea").evaluate((el) => ({ caret: el.selectionStart, scroll: el.scrollTop, text: el.value })), preserved);
+    assert.equal(await notesPage.locator("textarea").evaluate((el) => el === window.__originalEditor), true);
+    assert.match(await notesPage.locator(".status-main").textContent(), /live/);
+    await notesPage.locator("textarea").focus(); await notesPage.keyboard.type(">");
+    assert.equal(await notesPage.locator(".document-layout").getAttribute("data-position"), "0");
+    assert.ok((await notesPage.locator("textarea").inputValue()).includes(">"));
+    console.log("CHECK 20 desktop lineup, source match, preserved editor and literal >");
+
+    await caret((await notesPage.locator("textarea").inputValue()).indexOf("delta"));
+    await notesPage.waitForSelector('[data-note-id="blue-note"] button');
+    await notesPage.locator('[data-note-id="blue-note"] button').click();
+    const sourceLink = notesPage.locator("#source-pane a");
+    assert.equal(await sourceLink.getAttribute("href"), "https://example.test/source");
+    assert.equal(await sourceLink.getAttribute("rel"), "noopener noreferrer");
+    assert.equal(await sourceLink.getAttribute("target"), "_blank");
+    await left.click();
+    await postJSON(`${origin}/together/v1/structure/${notesWorkspace}/acts`, { op: {
+      op: "add-node", id: "missing-source", kind: "span", attrs: { doc: notesKey,
+        start: ["joe.seed", 1], end: ["joe.seed", 2], colour: "red",
+        source: { doc: `absent-${process.pid}`, words: "absent" } },
+    } });
+    await notesPage.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await caret(0);
+    await notesPage.waitForSelector('[data-note-id="missing-source"] button');
+    await notesPage.locator('[data-note-id="missing-source"] button').click();
+    await notesPage.waitForFunction(() => document.querySelector("#source-pane")?.textContent.includes("missing or unreadable"));
+    await left.click();
+    console.log("CHECK 21 URL sources and missing source documents");
+
+    await notesPage.setViewportSize({ width: 390, height: 844 });
+    await caret(9);
+    await notesPage.locator('.lineup-mobile-nav button', { hasText: "Notes" }).click();
+    await visible(["#notes-pane"], ".document-editor");
+    assert.equal(await notesPage.locator(".document-layout").getAttribute("data-position"), "1");
+    await right.click();
+    await visible(["#source-pane"], "#notes-pane");
+    assert.equal(await notesPage.locator(".document-layout").getAttribute("data-position"), "2");
+    await notesPage.locator('.lineup-mobile-nav button', { hasText: "Document" }).click();
+    await visible([".document-editor"], "#notes-pane");
+    assert.equal(await notesPage.locator(".document-layout").getAttribute("data-position"), "0");
+    console.log("CHECK 22 narrow lineup has three single-pane positions");
+    console.log("SUMMARY 22 checks passed");
 
     await Promise.all([notesPage.close(), bare.close()]);
 

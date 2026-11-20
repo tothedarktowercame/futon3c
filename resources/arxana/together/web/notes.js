@@ -23,6 +23,8 @@ export function decodeNotes(nodes, documentKey) {
     for (const key of ["by", "title", "text", "quote_title", "quote", "where"]) {
       if (typeof attrs[key] === "string") note[key] = attrs[key];
     }
+    const source = decodeSource(attrs.source);
+    if (source) note.source = source;
     result.push(note);
   }
   return result.sort((a, b) => a.id.localeCompare(b.id));
@@ -133,4 +135,31 @@ export function currentNodes(state) {
   const replaced = new Set(Object.values(state?.derived ?? {}));
   return Object.fromEntries(Object.entries(state?.nodes ?? {})
     .filter(([id]) => !replaced.has(id)));
+}
+
+function decodeSource(source) {
+  if (!source || typeof source !== "object" || Array.isArray(source)) return null;
+  const keys = Object.keys(source);
+  if (keys.every((key) => ["doc", "words"].includes(key))
+      && typeof source.doc === "string" && /^[A-Za-z0-9._-]{1,120}$/.test(source.doc)
+      && typeof source.words === "string" && source.words.trim()) return { ...source };
+  if (keys.every((key) => ["url", "words"].includes(key))
+      && typeof source.url === "string" && /^https?:\/\//i.test(source.url)
+      && (!Object.hasOwn(source, "words") || typeof source.words === "string")) {
+    try {
+      const url = new URL(source.url);
+      if (["http:", "https:"].includes(url.protocol)) return { ...source };
+    } catch { /* Malformed source leaves the note intact. */ }
+  }
+  return null;
+}
+
+export function findWords(text, words) {
+  if (typeof text !== "string" || typeof words !== "string" || !words.trim()) return null;
+  const pattern = words.trim().split(/\s+/u)
+    .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
+  const match = new RegExp(pattern, "u").exec(text);
+  if (!match) return null;
+  const from = Array.from(text.slice(0, match.index)).length;
+  return { from, to: from + Array.from(match[0]).length };
 }

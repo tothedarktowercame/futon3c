@@ -1,6 +1,6 @@
 import { NAME_RE, SURFACE_RE, createEditor, endpoint } from "./editor.js";
 import { NOTE_COLOURS, allNoteExtents, currentNodes, decodeNotes, notesAtIndex,
-  textAtCaret, underlineRuns } from "./notes.js";
+  findWords, textAtCaret, underlineRuns } from "./notes.js";
 
 const params = new URLSearchParams(location.search);
 const documentKey = params.get("doc");
@@ -24,17 +24,117 @@ function notesController(documentKey, workspace, layout, editorHost) {
   let pane = null;
   let frame = null;
   let repaint = () => {};
+  let strip = null; let sourcePane = null; let mobileNav = null;
+  let position = 0; let frozen = null; let current = [];
+  let request = 0; let sourceAbort = null;
+  const narrow = matchMedia("(max-width: 799px)");
+  function button(parent, label, title, action, disabled = false) {
+    const b = document.createElement("button"); b.type = "button";
+    b.textContent = label; b.title = title; b.disabled = disabled;
+    b.addEventListener("click", action); parent.append(b); return b;
+  }
+  function geometry() {
+    if (!strip) return;
+    const width = layout.clientWidth; const gap = 12;
+    const noteWidth = narrow.matches ? width : Math.max(256, (width - gap) / 3);
+    const mainWidth = narrow.matches ? width : width - gap - noteWidth;
+    strip.style.width = `${2 * mainWidth + noteWidth + 2 * gap}px`;
+    strip.style.gridTemplateColumns = `${mainWidth}px ${noteWidth}px ${mainWidth}px`;
+    strip.style.transform = `translateX(-${position * (mainWidth + gap)}px)`;
+    layout.dataset.position = String(position);
+    editorHost.inert = position !== 0;
+    sourcePane.inert = position !== (narrow.matches ? 2 : 1);
+    pane.inert = narrow.matches && position !== 1;
+  }
+  const resize = new ResizeObserver(geometry);
+  function move(next) {
+    if (!strip) return;
+    next = Math.max(0, Math.min(narrow.matches ? 2 : 1, next));
+    if (position === 0 && next > 0) frozen = current;
+    position = next;
+    if (position === 0) frozen = null;
+    geometry(); render();
+  }
+  async function showSource(note = current.find((n) => n.source)) {
+    if (!note?.source) return;
+    move(narrow.matches ? 2 : 1);
+    const ticket = ++request;
+    sourceAbort?.abort(); sourceAbort = new AbortController();
+    sourcePane.replaceChildren(); sourcePane.scrollTop = 0;
+    addText(sourcePane, "h2", note.source.doc ?? "Source");
+    addText(sourcePane, "p", note.where, "muted");
+    if (note.source.url) {
+      addText(sourcePane, "blockquote", note.source.words);
+      const link = document.createElement("a"); link.textContent = note.source.url;
+      link.href = note.source.url; link.rel = "noopener noreferrer"; link.target = "_blank";
+      sourcePane.append(link); return;
+    }
+    const loading = document.createElement("p"); loading.textContent = "Reading the source…"; sourcePane.append(loading);
+    try {
+      const response = await fetch(endpoint(`doc/${encodeURIComponent(note.source.doc)}/state`),
+        { cache: "no-store", signal: sourceAbort.signal });
+      if (!response.ok) throw new Error("unreadable");
+      const state = await response.json();
+      if (!Array.isArray(state.runs) || (state.rev === 0 && !state.runs.length)
+          || state.runs.some((run) => typeof run.text !== "string" || typeof run.deleted !== "boolean")) throw new Error("missing");
+      if (ticket !== request) return;
+      loading.remove();
+      const text = state.runs.filter((run) => !run.deleted).map((run) => run.text).join("");
+      const found = findWords(text, note.source.words);
+      if (!found) addText(sourcePane, "p", "Quoted words not found in the source.", "source-message");
+      const pre = document.createElement("pre"); pre.className = "source-text";
+      if (found) {
+        const points = Array.from(text);
+        const before = document.createElement("span"); before.textContent = points.slice(0, found.from).join("");
+        const mark = document.createElement("mark"); mark.textContent = points.slice(found.from, found.to).join("");
+        mark.style.backgroundColor = `${NOTE_COLOURS[note.colour]}33`;
+        const after = document.createElement("span"); after.textContent = points.slice(found.to).join("");
+        pre.append(before, mark, after); sourcePane.append(pre);
+        requestAnimationFrame(() => {
+          if (ticket !== request) return;
+          sourcePane.scrollTop += mark.getBoundingClientRect().top - sourcePane.getBoundingClientRect().top
+            - sourcePane.clientHeight / 2 + mark.getBoundingClientRect().height / 2;
+        });
+      } else { pre.textContent = text; sourcePane.append(pre); sourcePane.scrollTop = 0; }
+    } catch (error) {
+      if (ticket !== request || error.name === "AbortError") return;
+      loading.textContent = "Source document missing or unreadable.";
+    }
+  }
+  function keys(event) {
+    if (!strip || event.target.closest("textarea, input, [contenteditable='true']")) return;
+    if (event.key === ">" && current.some((n) => n.source)) { event.preventDefault(); showSource(); }
+    if (event.key === "<") { event.preventDefault(); move(position - 1); }
+  }
+  function screenChanged() {
+    position = position === 0 ? 0 : (narrow.matches ? 2 : 1);
+    geometry(); render();
+  }
+  document.addEventListener("keydown", keys);
+  narrow.addEventListener("change", screenChanged);
 
   function ensurePane() {
     if (!notes.length) {
-      pane?.remove(); pane = null; layout.classList.remove("has-notes"); return;
+      if (strip) {
+        ++request; sourceAbort?.abort(); resize.disconnect();
+        layout.append(editorHost); strip.remove(); mobileNav.remove();
+        strip = null; sourcePane = null; mobileNav = null; editorHost.inert = false;
+      }
+      pane = null; position = 0; frozen = null; layout.classList.remove("has-notes"); return;
     }
     if (!pane) {
       pane = document.createElement("aside");
       pane.id = "notes-pane";
       pane.className = "notes-pane";
-      layout.append(pane);
-      layout.classList.add("has-notes");
+      strip = document.createElement("div"); strip.className = "notes-strip";
+      sourcePane = document.createElement("aside"); sourcePane.id = "source-pane";
+      sourcePane.className = "source-pane"; sourcePane.setAttribute("aria-label", "Source context");
+      strip.append(editorHost, pane, sourcePane); layout.append(strip);
+      mobileNav = document.createElement("nav"); mobileNav.className = "lineup-mobile-nav";
+      button(mobileNav, "‹ Document", "Back to the document", () => move(0));
+      button(mobileNav, "Notes ›", "Show notes", () => move(1));
+      layout.prepend(mobileNav); layout.classList.add("has-notes");
+      resize.observe(layout); geometry();
     }
   }
 
@@ -42,6 +142,11 @@ function notesController(documentKey, workspace, layout, editorHost) {
     ensurePane();
     if (!pane) return;
     pane.replaceChildren();
+    const controls = document.createElement("nav"); controls.className = "note-navigation";
+    button(controls, "‹", "Back to the document", () => move(position - 1), position === 0);
+    button(controls, "›", "Show the source in context", () => showSource(),
+      !(frozen ?? current).some((n) => n.source));
+    pane.append(controls);
     // Until the document's text has arrived nothing can resolve; saying
     // "no longer resolve" about every note then would be false.
     if (!doc.characters.length) { addText(pane, "p", "Reading the document…", "muted"); return; }
@@ -49,7 +154,9 @@ function notesController(documentKey, workspace, layout, editorHost) {
     addText(pane, "p", at.author
       ? `This text: written by ${at.author}${at.label ? ` (${at.label})` : ""}`
       : "This text: no character at the caret", "notes-this-text");
-    const active = notesAtIndex(extents.resolved, at.index);
+    const active = frozen ?? notesAtIndex(extents.resolved, at.index);
+    current = active;
+    controls.lastElementChild.disabled = !active.some((n) => n.source);
     if (active.length) {
       for (const note of active) {
         const card = document.createElement("article");
@@ -64,6 +171,7 @@ function notesController(documentKey, workspace, layout, editorHost) {
         addText(card, "p", `note by ${note.by || "unknown"}`, "muted");
         if (note.extent.deleted) addText(card, "p",
           `${note.extent.deleted} of ${note.extent.live + note.extent.deleted} characters deleted`, "muted");
+        if (note.source) button(card, "Source ›", "Show the source in context", () => showSource(note));
         pane.append(card);
       }
     } else {
@@ -115,7 +223,11 @@ function notesController(documentKey, workspace, layout, editorHost) {
     update(detail) { doc = detail.doc; value = detail.value; extents = allNoteExtents(doc, notes); schedule(detail.selectionStart); },
     schedule, refresh,
     setRepaint(callback) { repaint = callback; },
-    destroy() { if (frame !== null) cancelAnimationFrame(frame); },
+    destroy() {
+      if (frame !== null) cancelAnimationFrame(frame);
+      ++request; sourceAbort?.abort(); resize.disconnect();
+      document.removeEventListener("keydown", keys); narrow.removeEventListener("change", screenChanged);
+    },
   };
 }
 
