@@ -305,3 +305,17 @@
             (is (= "{:rev 1 :op" (slurp (io/file dir "broken.log.edn"))))
             (finally (h/stop! restarted)))))
       (finally (h/stop! first-server) (remove-dir! dir)))))
+
+(deftest listing-does-not-reread-the-logs
+  ;; the bad case: a listing that replays each log from disk holds every
+  ;; document's lock for as long as the replay takes
+  (with-server (fn [s c dir]
+    (is (= 200 (:status (post! s c "listed" "joe" (op "joe" 1 nil "abc") 0))))
+    (let [list! #(request s c :get "/together/v1/docs" "joe" nil {} false)
+          before (:body (list!))]
+      (is (= [{:key "listed" :rev 1 :chars 3 :authors ["joe"]}]
+             (mapv #(dissoc % :at) (:docs before))))
+      ;; spoil the file behind the running server: the listing must not notice,
+      ;; because it must not read the file again
+      (spit (io/file dir "listed.log.edn") "not a log\n")
+      (is (= before (:body (list!))))))))

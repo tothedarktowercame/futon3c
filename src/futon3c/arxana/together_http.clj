@@ -174,8 +174,11 @@
 
 (defn- document-list [server]
   ;; Enumerate durable documents, not merely this process's open-document map.
-  ;; Re-read each file under its existing lock, so an append cannot be observed
-  ;; halfway through. There is deliberately no cross-document snapshot/lock.
+  ;; Each is read from its in-memory state under its own lock (`document!` loads
+  ;; a log from disk once). Until 2026-11-20 this replayed every log file on
+  ;; every call while holding that document's lock: with two 16,000-character
+  ;; documents one listing took two minutes and every reader of those documents
+  ;; waited for it. There is deliberately no cross-document snapshot/lock.
   (let [files (.listFiles (io/file (:dir server)))]
     (when (nil? files)
       (throw (ex-info "Cannot list Together log directory" {})))
@@ -186,7 +189,7 @@
            (try
              (if-let [error (:error @document)]
                {:key key :error error}
-               (let [{:keys [doc log]} (load-hub (:file @document))]
+               (let [{:keys [doc log]} (:hub @document)]
                  {:key key :rev (count log) :chars (count (t/ids doc))
                   :authors (vec (sort (distinct (map :author log)))) :at (:at (peek log))}))
              (catch Exception e
