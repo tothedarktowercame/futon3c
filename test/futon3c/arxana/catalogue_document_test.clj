@@ -36,6 +36,17 @@
     (is (str/includes? text "• scope — Not enforced (unknown: no-run)."))
     (is (not-any? #(> (count (re-seq #"\n" %)) 0) lines))))
 
+(deftest lines-carry-the-status-mark-of-their-choice
+  (let [ls (doc/lines (assoc-in view [:choices 3 :enforcement-status] {:status :violation}))
+        mark-of (fn [prefix] (set (map :mark (filter #(str/starts-with? (:text %) prefix) ls))))]
+    (is (= #{"ok"} (mark-of "• convergence")))
+    (is (= #{"debt"} (mark-of "• undo-is-an-act")))
+    (is (= #{"debt"} (mark-of "• scope —")))
+    (is (= #{"bad"} (mark-of "• thing")))
+    (is (= #{"bad"} (mark-of "• elsewhere/thing")) "the debt list carries the mark too")
+    (is (= #{nil} (mark-of "== ")) "headings are unmarked")
+    (is (= (doc/render view) (str/join "\n" (map :text (doc/lines view)))))))
+
 (deftest an-incomplete-read-shows-nothing
   (let [text (doc/render (assoc view :status :inconclusive))]
     (is (str/includes? text "could not be read completely"))

@@ -27,44 +27,64 @@
              (str ": " (str/join ", " (map name why))))
            ")."))))
 
+(defn- mark
+  "Display mark for a choice: the Together page and Emacs show marked text in
+  green (:ok), amber (:debt) or red (:bad), as the Emacs catalogue view does."
+  [choice]
+  (case (get-in choice [:enforcement-status :status])
+    :enforced "ok"
+    :violation "bad"
+    "debt"))
+
 (defn- choice-lines [{:keys [statement kind lifecycle sources checks] :as choice}]
   (let [key (:choice/key choice)
-        {:keys [repo path section]} (first sources)]
-    [(str "• " (name key) " — " statement)
-     (str "  " (name kind) ", " (name lifecycle) ". " (status-line choice)
-          (when (seq checks) (str " Check: " (str/join ", " (map #(subs (str (:check/key %)) 1) checks)) "."))
-          (when repo (str " Source: " repo " " path (when section (str " (" section ")")) ".")))
-     ""]))
+        {:keys [repo path section]} (first sources)
+        m (mark choice)]
+    [{:mark m :text (str "• " (name key) " — " statement)}
+     {:mark m
+      :text (str "  " (name kind) ", " (name lifecycle) ". " (status-line choice)
+                 (when (seq checks) (str " Check: " (str/join ", " (map #(subs (str (:check/key %)) 1) checks)) "."))
+                 (when repo (str " Source: " repo " " path (when section (str " (" section ")")) ".")))}
+     {:text ""}]))
 
-(defn render
-  "Text of the whole catalogue. VIEW must have :status :ok; anything else is
-  rendered as one line saying so, never as a partial catalogue."
+(defn lines
+  "The catalogue as a vector of {:text line, :mark \"ok\"|\"debt\"|\"bad\"} maps;
+  :mark is present only on a choice's own lines. VIEW must have :status :ok;
+  anything else gives one line saying so, never a partial catalogue."
   [{:keys [status choices valid-time]}]
   (if (not= :ok status)
-    (str "The catalogue could not be read completely (" status "); nothing is shown.\n")
+    [{:text (str "The catalogue could not be read completely (" status "); nothing is shown.")}]
     (let [known (set (keep first sections))
           group (fn [choice] (let [n (namespace (:choice/key choice))] (when (known n) n)))
           grouped (group-by group choices)
           enforced (count (filter #(= :enforced (get-in % [:enforcement-status :status])) choices))
-          debt (remove #(= :enforced (get-in % [:enforcement-status :status])) choices)]
-      (str/join
-       "\n"
+          debt (remove #(= :enforced (get-in % [:enforcement-status :status])) choices)
+          plain (fn [text] {:text text})]
+      (vec
        (concat
-        ["Arxana documents itself"
-         ""
-         (str "This is Demo A as a document: the design choices behind Arxana, each a record in the store with the checks that hold it to its word. "
-              "Read from the store at " valid-time ": " (count choices) " choices, " enforced " enforced, " (count debt) " not.")
-         "Each entry gives the choice in one sentence, then its kind and standing, whether a check enforces it, and where it comes from. \"Enforced\" is never stored: it is worked out from the latest run of each check."
-         "This text was generated from the records. Editing it here changes this document only, not the records."
-         ""]
+        (map plain
+             ["Arxana documents itself"
+              ""
+              (str "This is Demo A as a document: the design choices behind Arxana, each a record in the store with the checks that hold it to its word. "
+                   "Read from the store at " valid-time ": " (count choices) " choices, " enforced " enforced, " (count debt) " not.")
+              "Each entry gives the choice in one sentence, then its kind and standing, whether a check enforces it, and where it comes from. \"Enforced\" is never stored: it is worked out from the latest run of each check."
+              "Green entries are enforced by a passing check; amber ones have no check or no run; red ones have a failing check."
+              "This text was generated from the records. Editing it here changes this document only, not the records."
+              ""])
         (mapcat (fn [[n heading intro]]
                   (when-let [cs (seq (sort-by :choice/key (grouped n)))]
-                    (concat [(str "== " heading " ==") intro ""] (mapcat choice-lines cs))))
+                    (concat (map plain [(str "== " heading " ==") intro ""]) (mapcat choice-lines cs))))
                 sections)
-        ["== Debt =="
-         (if (seq debt)
-           "Choices that nothing enforces yet:"
-           "Every choice is enforced by a passing check.")]
+        (map plain
+             ["== Debt =="
+              (if (seq debt)
+                "Choices that nothing enforces yet:"
+                "Every choice is enforced by a passing check.")])
         (for [c (sort-by :choice/key debt)]
-          (str "• " (subs (str (:choice/key c)) 1) " — " (status-line c)))
-        [""])))))
+          {:mark (mark c) :text (str "• " (subs (str (:choice/key c)) 1) " — " (status-line c))})
+        [(plain "")])))))
+
+(defn render
+  "Text of the whole catalogue, one paragraph per line."
+  [view]
+  (str/join "\n" (map :text (lines view))))

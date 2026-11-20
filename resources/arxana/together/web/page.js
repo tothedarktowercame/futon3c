@@ -1,4 +1,5 @@
 import {
+  MARK_COLOURS,
   authorColour,
   createClient,
   decorations,
@@ -126,7 +127,8 @@ function repaint() {
   for (const run of authorRuns) {
     const span = document.createElement("span");
     span.dataset.author = run.author;
-    span.style.color = authorColour(run.author);
+    if (run.mark) span.dataset.mark = run.mark;
+    span.style.color = run.mark ? MARK_COLOURS[run.mark] : authorColour(run.author);
     span.textContent = run.text;
     layer.append(span);
   }
@@ -154,6 +156,20 @@ function renderStatus(authorRuns = decorations(state)) {
     swatch.style.backgroundColor = authorColour(author);
     const label = document.createElement("span");
     label.textContent = author;
+    item.append(swatch, label);
+    legend.append(item);
+  }
+  // Marked text is shown in its mark's colour, so the legend names the marks in use.
+  for (const mark of Object.keys(MARK_COLOURS)) {
+    if (!authorRuns.some((run) => run.mark === mark)) continue;
+    const item = document.createElement("span");
+    item.className = "legend-item";
+    item.dataset.mark = mark;
+    const swatch = document.createElement("span");
+    swatch.className = "legend-swatch";
+    swatch.style.backgroundColor = MARK_COLOURS[mark];
+    const label = document.createElement("span");
+    label.textContent = { ok: "enforced", debt: "not enforced", bad: "violated" }[mark];
     item.append(swatch, label);
     legend.append(item);
   }

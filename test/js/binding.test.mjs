@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   authorColour,
   createClient,
+  MARK_COLOURS,
   decorations,
   load,
   localChange,
@@ -184,6 +185,24 @@ test("localChange refuses a stale textarea value", () => {
     () => localChange(repeatedState("abc"), "wrong", "new", 3),
     (error) => error.code === "stale-value",
   );
+});
+
+test("a display mark splits runs and unknown marks are ignored", () => {
+  const state = load(createClient({ site: "joe.web", author: "joe" }), {
+    rev: 4,
+    runs: [
+      { id: ["fable-1.seed", 1], text: "ok", attrs: { author: "fable-1", mark: "ok" }, deleted: false },
+      { id: ["fable-1.seed", 3], text: "!!", attrs: { author: "fable-1", mark: "debt" }, deleted: false },
+      { id: ["fable-1.seed", 5], text: "x", attrs: { author: "fable-1", mark: "constructor" }, deleted: false },
+      { id: ["fable-1.seed", 6], text: "y", attrs: { author: "fable-1" }, deleted: false },
+    ],
+  });
+  assert.deepEqual(decorations(state), [
+    { author: "fable-1", mark: "ok", text: "ok" },
+    { author: "fable-1", mark: "debt", text: "!!" },
+    { author: "fable-1", text: "xy" },
+  ]);
+  for (const colour of Object.values(MARK_COLOURS)) assert.match(colour, /^#[0-9a-f]{6}$/);
 });
 
 test("decorations cover text and merge adjacent sites of one author", () => {

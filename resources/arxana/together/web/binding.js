@@ -213,16 +213,24 @@ export function receive(state, entry, selection) {
   };
 }
 
-// Does not mutate: returns maximal visible runs sharing a displayed author.
+// A character may carry a display mark, fixed at insert like its other
+// attributes: "ok", "debt" or "bad". The page shows marked text in that mark's
+// colour instead of its author's. Any other value is ignored.
+export const MARK_COLOURS = { ok: "#1a7f37", debt: "#9a6700", bad: "#b42318" };
+
+// Does not mutate: returns maximal visible runs sharing a displayed author and
+// mark. A run has a `mark` key only when its characters are marked.
 export function decorations(state) {
   const result = [];
   for (const character of state.doc.characters) {
     if (character.deleted) continue;
     const author = character.attrs?.author ?? character.id[0].split(".", 1)[0];
+    const raw = character.attrs?.mark;
+    const mark = Object.hasOwn(MARK_COLOURS, raw) ? raw : undefined;
     const point = String.fromCodePoint(character.cp);
     const previous = result[result.length - 1];
-    if (previous?.author === author) previous.text += point;
-    else result.push({ author, text: point });
+    if (previous?.author === author && previous.mark === mark) previous.text += point;
+    else result.push(mark ? { author, mark, text: point } : { author, text: point });
   }
   return result;
 }
