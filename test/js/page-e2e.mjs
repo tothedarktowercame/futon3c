@@ -367,9 +367,109 @@ async function main() {
     assert.match(await formA.locator("#form-layer").textContent(), new RegExp(layerName));
     assert.match(await formA.locator("#form-status").textContent(), /joe · 4 answers · 3 live · 0 unsent/);
     console.log("CHECK 14 form title, layer and aggregate status are visible");
-    console.log("SUMMARY 15 checks passed");
 
+    // The throwaway hub speaks HTTP/1.1, where a browser allows six connections
+    // per host; the pages above hold that many event streams between them, so a
+    // further request from a new page would wait for ever. (Caddy serves HTTP/2
+    // to real browsers, which has no such limit.)
     await Promise.all([single.close(), formA.close(), formB.close(), formListing.close()]);
+
+    const notesKey = `notes-${process.pid}`;
+    const notesText = "Alpha beta gamma delta";
+    await seedDocument(origin, notesKey, notesText);
+    const notesWorkspace = `${notesKey}.notes`;
+    for (const op of [
+      { op: "add-node", id: "magenta-note", kind: "span", attrs: {
+        doc: notesKey, start: ["joe.seed", 7], end: ["joe.seed", 10], by: "joe",
+        colour: "magenta", title: "For the project", text: "Keep this precise.",
+      } },
+      { op: "add-node", id: "yellow-note", kind: "span", attrs: {
+        doc: notesKey, start: ["joe.seed", 7], end: ["joe.seed", 16], by: "murch",
+        colour: "yellow", title: "Source", text: "Compare the wording.",
+        quote_title: "Earlier draft", quote: "beta gamma", where: "Draft 2",
+      } },
+      { op: "add-node", id: "lost-note", kind: "span", attrs: {
+        doc: notesKey, start: ["missing", 1], end: ["missing", 2], by: "joe",
+        colour: "red", title: "Lost",
+      } },
+    ]) await postJSON(`${origin}/together/v1/structure/${notesWorkspace}/acts`, { op });
+
+    const notesPage = await joeContext.newPage();
+    await notesPage.goto(`${origin}/together/v1/web/index.html?doc=${notesKey}`, { waitUntil: "domcontentloaded" });
+    await waitLive(notesPage);
+    await notesPage.waitForSelector("#notes-pane");
+    const underlined = await notesPage.locator(".text-layer span").evaluateAll((spans) => spans
+      .filter((span) => getComputedStyle(span).textDecorationLine.includes("underline"))
+      .map((span) => [span.textContent, getComputedStyle(span).textDecorationColor]));
+    assert.deepEqual(underlined.map(([value]) => value), ["beta", " gamma"]);
+    assert.notEqual(underlined[0][1], underlined[1][1]);
+    await notesPage.locator("textarea").evaluate((element) => {
+      element.setSelectionRange(8, 8); element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await notesPage.waitForSelector('[data-note-id="magenta-note"]');
+    const cards = await notesPage.locator(".note-card").evaluateAll((items) => items.map((item) => item.dataset.noteId));
+    assert.deepEqual(cards, ["magenta-note", "yellow-note"]);
+    assert.match(await notesPage.locator('[data-note-id="magenta-note"]').textContent(), /For the project.*Keep this precise.*note by joe/s);
+    assert.match(await notesPage.locator('[data-note-id="yellow-note"]').textContent(), /Earlier draft.*“beta gamma”.*Draft 2.*note by murch/s);
+    assert.match(await notesPage.locator("#notes-pane").textContent(), /Notes that no longer resolve.*lost-note/s);
+    console.log("CHECK 16 note underlines, nested cards, quote and unresolved list render");
+
+    await notesPage.locator("textarea").evaluate((element) => {
+      element.value = `${element.value.slice(0, 8)}X${element.value.slice(8)}`;
+      element.setSelectionRange(9, 9);
+      element.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+    });
+    // Wait on the underline itself: the layer is repainted more than once
+    // (the local edit, then its echo), and a read between repaints sees none.
+    await notesPage.waitForFunction(() => [...document.querySelectorAll(".text-layer span")]
+      .filter((span) => getComputedStyle(span).textDecorationLine.includes("underline"))
+      .map((span) => span.textContent).join("").includes("beXta"));
+    await notesPage.locator("textarea").evaluate((element) => {
+      // After "gamma": past the end of the outer (yellow) note as well.
+      const at = element.value.indexOf("gamma") + 5;
+      element.value = `${element.value.slice(0, at)}Y${element.value.slice(at)}`;
+      element.setSelectionRange(at + 1, at + 1);
+      element.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+    });
+    await notesPage.waitForFunction(() => document.querySelector(".text-layer")?.textContent.includes("gammaY"));
+    await notesPage.waitForFunction(() => {
+      const spans = [...document.querySelectorAll(".text-layer span")];
+      const y = spans.find((span) => span.textContent.includes("Y"));
+      const gamma = spans.find((span) => span.textContent.includes("gamma"));
+      const underlined = (span) => getComputedStyle(span).textDecorationLine.includes("underline");
+      return y && gamma && y !== gamma && !underlined(y) && underlined(gamma);
+    });
+    console.log("CHECK 17 edits inside a note extend its underline; edits after it do not");
+
+    await postJSON(`${origin}/together/v1/structure/${notesWorkspace}/acts`, { op: {
+      op: "add-node", id: "blue-note", kind: "span", attrs: { doc: notesKey,
+        start: ["joe.seed", 18], end: ["joe.seed", 22], by: "rob", colour: "blue",
+        title: "Late note", text: "Added after the page opened." },
+    } });
+    await notesPage.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await notesPage.locator("textarea").evaluate((element) => {
+      const at = element.value.indexOf("delta"); element.setSelectionRange(at, at);
+      element.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await notesPage.waitForSelector('[data-note-id="blue-note"]');
+    const layoutHeights = await notesPage.evaluate(() => ({
+      editor: document.querySelector("textarea").scrollHeight,
+      layer: document.querySelector(".text-layer").scrollHeight,
+    }));
+    assert.equal(layoutHeights.editor, layoutHeights.layer);
+    console.log("CHECK 18 focus refresh adds a new note and preserves editor/layer alignment");
+
+    const bareKey = `bare-${process.pid}`;
+    await seedDocument(origin, bareKey, "No notes here");
+    const bare = await joeContext.newPage();
+    await bare.goto(`${origin}/together/v1/web/index.html?doc=${bareKey}`, { waitUntil: "domcontentloaded" });
+    await waitLive(bare);
+    await bare.waitForTimeout(100);
+    assert.equal(await bare.locator("#notes-pane").count(), 0);
+    console.log("CHECK 19 a document without notes has no pane");
+    console.log("SUMMARY 19 checks passed");
+
+    await Promise.all([notesPage.close(), bare.close()]);
 
     await phoneContext.close();
     await murchContext.close();

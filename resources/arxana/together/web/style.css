@@ -23,6 +23,31 @@ body,
   gap: 1rem;
 }
 
+.document-layout { display: contents; }
+.document-layout.has-notes {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  gap: 0.75rem;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.document-editor { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.notes-pane {
+  overflow: auto;
+  padding: 0.75rem;
+  border: 1px solid #cfd4dc;
+  border-radius: 4px;
+  background: #fff;
+}
+.notes-pane h2 { font-size: 1rem; }
+.note-card { margin: 0 0 0.8rem; padding-left: 0.65rem; border-left: 4px solid; }
+.note-card p, .note-card blockquote { margin: 0.25rem 0 0.5rem; }
+.note-card blockquote { margin-left: 0; }
+.muted { color: #6b7280; font-size: 0.85rem; }
+.note-colour-count { display: flex; align-items: center; gap: 0.4rem; }
+.note-swatch { width: 0.8rem; height: 0.8rem; border-radius: 50%; }
+.unresolved-note { color: #8b2d20; }
+
 #app {
   display: flex;
   flex-direction: column;
@@ -178,6 +203,12 @@ body,
     padding: 0.5rem;
     font-size: 15px;
   }
+}
+
+@media (max-width: 799px) {
+  .document-layout.has-notes { grid-template-columns: 1fr; overflow: visible; }
+  .document-layout.has-notes .document-editor { min-height: 60vh; }
+  .notes-pane { overflow: visible; }
 }
 
 .pdf-link {

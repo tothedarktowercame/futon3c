@@ -70,6 +70,7 @@ export function createEditor({
   surface,
   endpoint: endpointFor,
   grow,
+  decorateRuns = (_doc, runs) => runs,
 }) {
   let state = createClient({ site: `${identity}.${surface}`, author: identity });
   let previousValue = "";
@@ -150,6 +151,9 @@ export function createEditor({
         unsent: queue.length,
         runs: authorRuns,
         rev: state.rev,
+        doc: state.doc,
+        value: textarea.value,
+        selectionStart: textarea.selectionStart,
       },
     }));
   }
@@ -166,7 +170,7 @@ export function createEditor({
   function repaint() {
     if (destroyed) return;
     layer.replaceChildren();
-    const authorRuns = decorations(state);
+    const authorRuns = decorateRuns(state.doc, decorations(state));
     for (const run of authorRuns) {
       const span = document.createElement("span");
       span.dataset.author = run.author;
@@ -177,6 +181,12 @@ export function createEditor({
         : style ? style.color : authorColour(run.author);
       if (style?.fontWeight) span.style.fontWeight = style.fontWeight;
       if (style?.textDecoration) span.style.textDecoration = style.textDecoration;
+      if (run.underline) {
+        span.style.textDecorationLine = style?.textDecoration === "line-through" ? "line-through underline" : "underline";
+        span.style.textDecorationColor = run.underline;
+        span.style.textDecorationThickness = "2px";
+        span.style.textUnderlineOffset = "2px";
+      }
       span.textContent = run.text;
       layer.append(span);
     }
@@ -384,6 +394,7 @@ export function createEditor({
   void resync(false);
 
   return {
+    repaint,
     destroy() {
       if (destroyed) return;
       destroyed = true;

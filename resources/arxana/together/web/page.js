@@ -1,9 +1,120 @@
 import { NAME_RE, SURFACE_RE, createEditor, endpoint } from "./editor.js";
+import { NOTE_COLOURS, allNoteExtents, decodeNotes, notesAtIndex,
+  textAtCaret, underlineRuns } from "./notes.js";
 
 const params = new URLSearchParams(location.search);
 const documentKey = params.get("doc");
 const surface = params.get("surface") ?? "web";
 const app = document.querySelector("#app");
+
+function addText(parent, tag, value, className) {
+  if (!value) return;
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  node.textContent = value;
+  parent.append(node);
+}
+
+function notesController(documentKey, workspace, layout, editorHost) {
+  let notes = [];
+  let doc = { characters: [] };
+  let value = "";
+  let extents = { resolved: [], unresolved: [] };
+  let failure = "";
+  let pane = null;
+  let frame = null;
+  let repaint = () => {};
+
+  function ensurePane() {
+    if (!notes.length) {
+      pane?.remove(); pane = null; layout.classList.remove("has-notes"); return;
+    }
+    if (!pane) {
+      pane = document.createElement("aside");
+      pane.id = "notes-pane";
+      pane.className = "notes-pane";
+      layout.append(pane);
+      layout.classList.add("has-notes");
+    }
+  }
+
+  function render(caret = editorHost.querySelector("textarea")?.selectionStart ?? 0) {
+    ensurePane();
+    if (!pane) return;
+    pane.replaceChildren();
+    const at = textAtCaret(doc, value, caret);
+    addText(pane, "p", at.author
+      ? `This text: written by ${at.author}${at.label ? ` (${at.label})` : ""}`
+      : "This text: no character at the caret", "notes-this-text");
+    const active = notesAtIndex(extents.resolved, at.index);
+    if (active.length) {
+      for (const note of active) {
+        const card = document.createElement("article");
+        card.className = "note-card";
+        card.dataset.noteId = note.id;
+        card.style.borderColor = NOTE_COLOURS[note.colour];
+        addText(card, "strong", note.title);
+        addText(card, "p", note.text);
+        addText(card, "strong", note.quote_title);
+        addText(card, "blockquote", note.quote ? `“${note.quote}”` : "");
+        addText(card, "p", note.where, "muted");
+        addText(card, "p", `note by ${note.by || "unknown"}`, "muted");
+        if (note.extent.deleted) addText(card, "p",
+          `${note.extent.deleted} of ${note.extent.live + note.extent.deleted} characters deleted`, "muted");
+        pane.append(card);
+      }
+    } else {
+      addText(pane, "h2", "Notes");
+      const counts = new Map();
+      for (const note of notes) counts.set(note.colour, (counts.get(note.colour) ?? 0) + 1);
+      for (const [colour, count] of [...counts].sort()) {
+        const row = document.createElement("p");
+        row.className = "note-colour-count";
+        const swatch = document.createElement("span");
+        swatch.className = "note-swatch";
+        swatch.style.backgroundColor = NOTE_COLOURS[colour];
+        addText(row, "span", `${colour}: ${count} note${count === 1 ? "" : "s"}`);
+        row.prepend(swatch);
+        pane.append(row);
+      }
+    }
+    if (extents.unresolved.length) {
+      addText(pane, "h2", "Notes that no longer resolve");
+      for (const note of extents.unresolved) addText(pane, "p", note.id, "unresolved-note");
+    }
+    addText(pane, "p", failure, "muted notes-error");
+  }
+
+  function schedule(caret) {
+    if (frame !== null) return;
+    frame = requestAnimationFrame(() => { frame = null; render(caret); });
+  }
+
+  async function refresh() {
+    try {
+      const response = await fetch(endpoint(`structure/${encodeURIComponent(workspace)}/state`), { cache: "no-store" });
+      if (!response.ok) throw new Error(`notes returned ${response.status}`);
+      const state = await response.json();
+      notes = decodeNotes(state.nodes, documentKey);
+      extents = allNoteExtents(doc, notes);
+      failure = "";
+      ensurePane();
+      repaint();
+      schedule();
+    } catch (error) {
+      failure = `Notes could not be refreshed: ${error.message}`;
+      schedule();
+    }
+  }
+
+  return {
+    decorate(nextDoc, runs) { doc = nextDoc; extents = allNoteExtents(doc, notes); return underlineRuns(runs, extents.resolved); },
+    update(detail) { doc = detail.doc; value = detail.value; extents = allNoteExtents(doc, notes); schedule(detail.selectionStart); },
+    schedule, refresh,
+    setRepaint(callback) { repaint = callback; },
+    destroy() { if (frame !== null) cancelAnimationFrame(frame); },
+  };
+}
 
 function message(text) {
   app.replaceChildren();
@@ -112,7 +223,32 @@ async function start() {
     if (!identity) throw new Error("identity is missing");
     if (documentKey === null) await showDocuments(identity);
     else if (!NAME_RE.test(documentKey)) message("Invalid document key.");
-    else createEditor({ container: app, documentKey, identity, surface, endpoint, grow: false });
+    else {
+      const workspace = params.get("ws") ?? `${documentKey}.notes`;
+      if (!NAME_RE.test(workspace)) return message("Invalid notes workspace.");
+      app.replaceChildren();
+      const layout = document.createElement("div");
+      layout.className = "document-layout";
+      const editorHost = document.createElement("div");
+      editorHost.className = "document-editor";
+      layout.append(editorHost);
+      app.append(layout);
+      const notes = notesController(documentKey, workspace, layout, editorHost);
+      const editor = createEditor({ container: editorHost, documentKey, identity, surface,
+        endpoint, grow: false, decorateRuns: notes.decorate });
+      notes.setRepaint(editor.repaint);
+      editorHost.addEventListener("together-editor-state", (event) => notes.update(event.detail));
+      const selectionChanged = () => notes.schedule(editorHost.querySelector("textarea")?.selectionStart ?? 0);
+      editorHost.addEventListener("click", selectionChanged);
+      editorHost.addEventListener("keyup", selectionChanged);
+      window.addEventListener("focus", notes.refresh);
+      const interval = setInterval(notes.refresh, 15000);
+      window.addEventListener("pagehide", () => {
+        clearInterval(interval); notes.destroy(); editor.destroy();
+        window.removeEventListener("focus", notes.refresh);
+      }, { once: true });
+      await notes.refresh();
+    }
   } catch (error) {
     message(`Unable to start: ${error.message}`);
   }
