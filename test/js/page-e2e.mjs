@@ -226,7 +226,27 @@ async function main() {
     assert.equal(reconnectValue.split("RECONNECT_ONCE").length - 1, 1);
     console.log("CHECK 7 interrupted event stream reconnected and delivered once");
 
+    // One dropped POST while the event stream stays open: the retry goes through,
+    // and the failure message and "reconnecting" must then leave the status line.
+    let dropped = 0;
+    await phone.route("**/ops", (route) => {
+      if (dropped === 0) { dropped += 1; return route.abort("connectionreset"); }
+      return route.continue();
+    });
     await phone.waitForFunction(() => document.querySelector("textarea")?.value.endsWith("RECONNECT_ONCE"));
+    await setValue(phone, suffixWith("DROPPED_ONCE"));
+    await phone.waitForFunction(() => document.querySelector(".status")?.textContent.includes("Posting failed"));
+    await joe.waitForFunction(() => document.querySelector("textarea")?.value.endsWith("DROPPED_ONCE"));
+    await phone.waitForFunction(() => {
+      const text = document.querySelector(".status")?.textContent ?? "";
+      return text.includes("live") && text.includes("0 unsent") && !text.includes("Posting failed") && !text.includes("reconnecting");
+    });
+    await phone.unroute("**/ops");
+    assert.equal(dropped, 1);
+    assert.equal((await joe.locator("textarea").inputValue()).split("DROPPED_ONCE").length - 1, 1);
+    console.log("CHECK 15 a dropped post is retried once and its message is cleared");
+
+    await phone.waitForFunction(() => document.querySelector("textarea")?.value.endsWith("DROPPED_ONCE"));
     const response = await fetch(`${origin}/together/v1/doc/${documentKey}/state`, {
       headers: { "X-Together-Editor": "joe" },
     });
@@ -347,7 +367,7 @@ async function main() {
     assert.match(await formA.locator("#form-layer").textContent(), new RegExp(layerName));
     assert.match(await formA.locator("#form-status").textContent(), /joe · 4 answers · 3 live · 0 unsent/);
     console.log("CHECK 14 form title, layer and aggregate status are visible");
-    console.log("SUMMARY 14 checks passed");
+    console.log("SUMMARY 15 checks passed");
 
     await Promise.all([single.close(), formA.close(), formB.close(), formListing.close()]);
 

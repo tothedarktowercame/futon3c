@@ -75,6 +75,7 @@ export function createEditor({
   let previousValue = "";
   let connection = "connecting";
   let notice = "";
+  let postFailing = false;
   let stream;
   let composing = false;
   let bufferedEntries = [];
@@ -276,9 +277,19 @@ export function createEditor({
       if (!response.ok) throw new Error(`hub returned ${response.status}`);
       if (queue[0] === item) queue.shift();
       item.retry = 500;
+      // A post that failed and then went through must not leave its message
+      // and "reconnecting" on the status line: until 2026-11-20 only a
+      // reopened event stream cleared them, so one dropped request left
+      // "Posting failed; retrying in 0.5s" showing while everything worked.
+      if (postFailing) {
+        postFailing = false;
+        notice = "";
+        if (stream?.readyState === EventSource.OPEN) connection = "live";
+      }
     } catch (error) {
       if (thisGeneration !== generation || destroyed || error.name === "AbortError") return;
       connection = "reconnecting";
+      postFailing = true;
       notice = `Posting failed; retrying in ${item.retry / 1000}s`;
       renderStatus();
       await sleep(item.retry);
