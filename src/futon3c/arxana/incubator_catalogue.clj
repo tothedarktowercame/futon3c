@@ -78,7 +78,29 @@
    {:feature :shared-answer-saves-as-usual :kind :decision
     :statement "A shared answer, once detached, is saved by the ordinary editorial save with the same provenance classes."
     :repo "futon4a" :revision "6b6c71579c8569ae986eda3cf90a8445a3475bab" :path "lisp/futon4a-incubator-together.el" :section "futon4a-incubator-together-detach, futon4a-incubator-together-save"
-    :test-path "test/futon4a-incubator-together-test.el" :tests ["incubator-together-seed-and-save-attribution"]}])
+    :test-path "test/futon4a-incubator-together-test.el" :tests ["incubator-together-seed-and-save-attribution"]}
+   ;; Rows added in review (fable-1). The first three were left out of the first
+   ;; build because the planned statement said more than its test asserts; each
+   ;; statement here is cut down to what the named tests check.
+   {:feature :actor-required :kind :constraint
+    :statement "A non-interactive act that names no actor is refused, and an act by a named agent is attributed to that agent, not to Joe."
+    :repo "futon4a" :revision "1e92625a75e1fb7a69f7ff092c46d9e738010422" :path "lisp/futon4a-incubator.el" :section "futon4a-incubator--act"
+    :test-path main-test :tests ["incubator-navigation-source-and-identity-refusal" "incubator-acts-memory-attribution-and-budget"]}
+   {:feature :reason-and-slot-required :kind :constraint
+    :statement "A challenge with no reason, and a move to an unknown slot, are refused."
+    :repo "futon4a" :revision "1e92625a75e1fb7a69f7ff092c46d9e738010422" :path "lisp/futon4a-incubator.el" :section "futon4a-incubator--act"
+    :test-path main-test :tests ["incubator-navigation-source-and-identity-refusal"]}
+   {:feature :clips-pinned-to-revisions :kind :ruling
+    :statement "A clip's source revision is stored by its content hash and is not rewritten when the notes are reloaded."
+    :repo "futon4a" :revision "058808d1f5f4cf116d4e3eee8dbd6626bc467366" :path "lisp/futon4a-call-notes.el" :section "futon4a-call-notes-reload"
+    :test-path "test/futon4a-call-notes-test.el" :tests ["call-notes-revision-is-content-addressed-and-not-rewritten"]}
+   ;; Not true of the code yet, so proposed and unchecked: attaching revision
+   ;; segments replaces an act and restoring a version replaces the session.
+   ;; Elephant's rewind (emacs/turn-stepper.el) already works this way for
+   ;; commits: an undo is a `git revert`, new commits, nothing removed.
+   {:feature :undo-is-an-act :kind :decision :lifecycle :proposed
+    :statement "An undo is a new act that withdraws earlier acts; an act is never changed or removed."
+    :repo "futon4a" :revision "4f6e80ac3738050c5a4bd5ee9901a26fd816118a" :path "lisp/futon4a-incubator-provenance.el" :section "futon4a-incubator-attach-revision-segments"}])
 
 (defn- tail [text] (apply str (take-last 800 text)))
 
@@ -119,12 +141,12 @@
 (defn build [{:keys [pins at implementation-digest]}]
   (let [groups
         (mapv
-         (fn [{:keys [feature kind statement tests] :as specification}]
+         (fn [{:keys [feature kind statement tests lifecycle] :as specification}]
            (let [choice (design/choice
                          {:choice/key (keyword "incubator" (name feature)) :kind kind
                           :statement statement
                           :sources [(select-keys specification [:repo :revision :path :section])]
-                          :lifecycle :accepted :applies-to [feature]
+                          :lifecycle (or lifecycle :accepted) :applies-to [feature]
                           :rationale "Expose the incubator editing contract and its isolated ERT evidence in Demo A."
                           :alternatives []})
                  check (when (seq tests)

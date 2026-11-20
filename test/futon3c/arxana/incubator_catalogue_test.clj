@@ -33,7 +33,9 @@
 (deftest built-records-validate-and-report-debt
   (let [{:keys [choices checks links runs records]} (catalogue/build inputs)
         by-key (into {} (map #(vector (get-in % [:asserted-content :choice/key]) %) choices))]
-    (is (= [18 17 17 17] (mapv count [choices checks links runs])))
+    (is (= [22 20 20 20] (mapv count [choices checks links runs])))
+    (is (= {:accepted 21 :proposed 1}
+           (frequencies (map #(get-in % [:asserted-content :lifecycle]) choices))))
     (is (every? :ok (design-test/validate records)))
     (doseq [{:keys [feature tests]} catalogue/features]
       (let [choice (by-key (keyword "incubator" (name feature)))]
