@@ -119,7 +119,12 @@ export function provenanceAtIndex(resolved, index, site) {
 export function thisTextLines(character, index, provenance) {
   const author = character?.attrs?.author ?? character?.id?.[0]?.split(".", 1)[0] ?? null;
   const label = character ? FACE_STYLES[faceOf(character.attrs)]?.label ?? null : null;
-  const fallback = author ? `This text: written by ${author}${label ? ` (${label})` : ""}`
+  // A character carrying a `source` attribute was copied in, not written, by
+  // its author (the incubator copy was seeded by an agent): say so.
+  const source = typeof character?.attrs?.source === "string" ? character.attrs.source : null;
+  const detail = [source, label].filter(Boolean).join(", ");
+  const fallback = author
+    ? `This text: ${source ? "brought in" : "written"} by ${author}${detail ? ` (${detail})` : ""}`
     : "This text: no character at the caret";
   if (!character) return { line1: fallback, line2: "" };
   const picked = provenanceAtIndex(provenance, index, character.id[0]);

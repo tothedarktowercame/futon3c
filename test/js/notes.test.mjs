@@ -172,3 +172,11 @@ test("a caret at the end of the text describes the last character", async () => 
   assert.equal(textAtCaret(doc, "a😀b", 0).character.id[1], 1);
   assert.equal(textAtCaret(emptyDoc(), "", 0).author, null);
 });
+
+test("a copied-in character is not said to be written by whoever copied it", async () => {
+  const { thisTextLines } = await import("../../resources/arxana/together/web/notes.js");
+  const copied = { id: ["fable-1.restore", 5], attrs: { author: "fable-1", source: "incubator-buffer-copy", face: "typed" } };
+  assert.equal(thisTextLines(copied, 0, []).line1, "This text: brought in by fable-1 (incubator-buffer-copy, typed)");
+  const typed = { id: ["rob.web", 5], attrs: { author: "rob" } };
+  assert.equal(thisTextLines(typed, 0, []).line1, "This text: written by rob");
+});
