@@ -55,6 +55,36 @@
           (throw (ex-info "mission scope page full without a cursor" {:url url}))
           :else rows)))))
 
+(defn fetch-pattern-missions
+  "Return the mission ids whose BINDER scope cites PATTERN-ID.  Mission ids
+  come from the ingested scope's :hx/props :mission field—the same value that
+  project-hyperedges exposes—not from repository entity ids or canonical-id
+  parsing.  Each substrate request is bounded; full pages must provide a
+  cursor and cursors may not repeat."
+  ([pattern-id binder]
+   (fetch-pattern-missions pattern-id binder (substrate-url)))
+  ([pattern-id binder base-url]
+   (let [client (HttpClient/newHttpClient)
+         url (str (str/replace base-url #"/$" "")
+                  "/api/alpha/hyperedges?type="
+                  (url-encode (str "mission-scope/" binder))
+                  "&end=" (url-encode pattern-id)
+                  "&limit=200")]
+     (loop [after nil seen #{} missions #{}]
+       (let [response (http-edn client (str url (when after
+                                                  (str "&after=" (url-encode after)))))
+             page (or (:hyperedges response) [])
+             cursor (:next-cursor response)
+             missions (into missions (keep #(get-in % [:hx/props :mission])) page)]
+         (cond
+           (and cursor (contains? seen cursor))
+           (throw (ex-info "pattern mission pagination repeated a cursor"
+                           {:url url :cursor cursor}))
+           cursor (recur cursor (conj seen cursor) missions)
+           (= 200 (count page))
+           (throw (ex-info "pattern mission page full without a cursor" {:url url}))
+           :else missions))))))
+
 (defn- first-line [s]
   (when (seq (str/trim (str s)))
     (first (str/split-lines (str/trim (str s))))))

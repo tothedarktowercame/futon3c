@@ -152,6 +152,57 @@
     (routes/top-items-response cfg {"run" (.getName run)})
     (is (= 2 @calls))))
 
+(defn- related-view [scopes]
+  (fn [_mission _base-url _binders] {:scopes scopes}))
+
+(deftest related-missions-ranks-by-shared-pattern-rarity
+  (let [self "M-self"
+        scopes [{:type "pattern" :pattern_id "p/common"}
+                {:type "pattern" :pattern_id "p/rare"}
+                {:type "psr" :pattern_id "p/psr"}
+                {:type "pur" :pattern_id "p/pur"}]
+        citations {"p/common" #{self "M-a" "M-b" "M-c"}
+                   "p/rare" #{self "M-a"}
+                   "p/psr" #{self "M-b"}
+                   "p/pur" #{self "M-b"}}
+        fetch (fn [pattern _binder _base-url] (get citations pattern))
+        response (routes/mission-related-missions-response
+                  {"mission" self "n" "50"} (related-view scopes) fetch)
+        body (:body response)
+        related (get body "related")
+        by-mission (into {} (map (juxt #(get % "mission") identity)) related)
+        common-weight (/ 1.0 (/ (Math/log 5.0) (Math/log 2.0)))
+        rare-weight (/ 1.0 (/ (Math/log 3.0) (Math/log 2.0)))]
+    (is (= 200 (:status response)))
+    (is (= ["p/common" "p/psr" "p/pur" "p/rare"] (get body "patterns")))
+    (is (= ["M-b" "M-a" "M-c"] (mapv #(get % "mission") related)))
+    (is (< (Math/abs (- (+ common-weight rare-weight)
+                        (get-in by-mission ["M-a" "score"]))) 1.0e-12))
+    (is (= ["p/common" "p/psr" "p/pur"]
+           (get-in by-mission ["M-b" "shared"])))
+    (is (nil? (get by-mission self)))))
+
+(deftest related-missions-without-patterns-is-empty
+  (let [called? (atom false)
+        response (routes/mission-related-missions-response
+                  {"mission" "M-empty"}
+                  (related-view [])
+                  (fn [& _] (reset! called? true) #{}))]
+    (is (= 200 (:status response)))
+    (is (= [] (get-in response [:body "patterns"])))
+    (is (= [] (get-in response [:body "related"])))
+    (is (false? @called?))))
+
+(deftest related-missions-reports-futon1b-failure
+  (let [response (routes/mission-related-missions-response
+                  {"mission" "M-one"}
+                  (related-view [{:type "pattern" :pattern_id "p/one"}])
+                  (fn [& _] (throw (ex-info "futon1b refused" {}))))]
+    (is (= 503 (:status response)))
+    (is (= "mission-related-missions-unavailable"
+           (get-in response [:body "reason"])))
+    (is (= "futon1b refused" (get-in response [:body "message"])))))
+
 (defn- strand-fixture []
   (let [prev {"turn-four" "turn-three" "turn-three" "turn-two"
               "turn-two" "turn-one" "turn-one" nil}

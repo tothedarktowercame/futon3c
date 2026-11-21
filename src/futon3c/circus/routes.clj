@@ -537,3 +537,64 @@
            {:status 200 :body (json-ready {:mission mission :scopes scopes})})
          (catch Exception e
            (error-response 503 "mission-pattern-scopes-unavailable" {:message (.getMessage e)})))))))
+
+(def ^:private max-related-patterns 100)
+
+(defn- rarity-weight [mission-count]
+  (/ 1.0 (/ (Math/log (inc mission-count)) (Math/log 2.0))))
+
+(defn mission-related-missions-response
+  "Other missions citing this mission's pattern/psr/pur scopes. Pattern
+  rarity is computed from distinct mission ids returned by substrate-2.
+  Reads are capped at 100 own patterns and delegated to a bounded, paginated
+  hyperedge query per typed pattern."
+  ([params]
+   (mission-related-missions-response params scope-view/fetch-view
+                                      scope-view/fetch-pattern-missions))
+  ([params fetch-view fetch-missions]
+   (let [mission (get params "mission")]
+     (if (str/blank? mission)
+       (error-response 400 "mission-required")
+       (try
+         (let [base-url (scope-view/substrate-url)
+               view (fetch-view mission base-url pattern-binders)
+               pattern-rows (->> (:scopes view)
+                                 (filter #(and (some #{(:type %)} pattern-binders)
+                                               (not (str/blank? (:pattern_id %)))))
+                                 (map (juxt :pattern_id :type))
+                                 distinct
+                                 (sort-by (juxt first second))
+                                 (take max-related-patterns)
+                                 vec)
+               patterns (->> pattern-rows (map first) distinct sort vec)
+               citations (reduce
+                          (fn [acc [pattern binder]]
+                            (update acc pattern (fnil into #{})
+                                    (fetch-missions pattern binder base-url)))
+                          {} pattern-rows)
+               related (->> citations
+                            (reduce-kv
+                             (fn [acc pattern missions]
+                               (let [weight (rarity-weight (count missions))]
+                                 (reduce (fn [a other]
+                                           (if (= mission other)
+                                             a
+                                             (-> a
+                                                 (update-in [other :mission] #(or % other))
+                                                 (update-in [other :shared] (fnil conj #{}) pattern)
+                                                 (update-in [other :score] (fnil + 0.0) weight))))
+                                         acc missions)))
+                             {})
+                            vals
+                            (map #(update % :shared (comp vec sort)))
+                            (sort-by (juxt (comp - :score) :mission))
+                            (take (parse-n (or (get params "n") 50)))
+                            vec)]
+           {:status 200
+            :body (json-ready {:mission mission
+                               :patterns patterns
+                               :related related
+                               :sources {:futon1b base-url}})})
+         (catch Exception e
+           (error-response 503 "mission-related-missions-unavailable"
+                           {:message (.getMessage e)})))))))
