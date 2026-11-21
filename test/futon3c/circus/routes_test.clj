@@ -312,6 +312,82 @@
     (is (= ["p/z-target"] (get-in response [:body "patterns"])))
     (is (= 60 (get-in response [:body "window" "sessions_seen"])))))
 
+(deftest related-turns-ranks-by-rarity-excludes-self-and-other-session
+  (let [session "s-one"
+        records {"turn-c" {:session_id session :created_at "2026-11-21T11:50:00Z"
+                            :prev_operator_turn_id "turn-b" :origin "operator"
+                            :source_text "newest common turn"}
+                 "turn-b" {:session_id session :created_at "2026-11-21T11:40:00Z"
+                            :prev_operator_turn_id "turn-x" :origin "operator"
+                            :source_text "second common turn"}
+                 "turn-x" {:session_id "s-other" :created_at "2026-11-21T11:35:00Z"
+                            :prev_operator_turn_id "turn-a" :origin "operator"
+                            :source_text "must not appear"}
+                 "turn-a" {:session_id session :created_at "2026-11-21T11:30:00Z"
+                            :prev_operator_turn_id "turn-target" :origin "agent"
+                            :caller "claude-a" :source_text (apply str (repeat 130 "a"))}
+                 "turn-target" {:session_id session :created_at "2026-11-21T11:20:00Z"
+                                 :prev_operator_turn_id nil :origin "operator"
+                                 :source_text "target"}}
+        rows {"turn-c" {:patterns {:proposed ["p/common"] :occurs []}}
+              "turn-b" {:patterns {:proposed [] :occurs ["p/common"]}}
+              "turn-x" {:patterns {:proposed ["p/common"] :occurs ["p/rare"]}}
+              "turn-a" {:patterns {:proposed ["p/common" "p/rare"] :occurs []}}
+              "turn-target" {:patterns {:proposed ["p/common"] :occurs ["p/rare"]}}}
+        cfg {:turn-store ::store
+             :read-turn-fn (fn [_ id] (get records id))
+             :related-turn-fn (fn [id] (get rows id))
+             :session-head-fn (fn [_ _] "turn-c")}
+        response (routes/turn-related-turns-response cfg {"turn" "turn-target" "n" "11"})
+        related (get-in response [:body "related"])
+        common-weight (/ 1.0 (/ (Math/log 5.0) (Math/log 2.0)))
+        rare-weight (/ 1.0 (/ (Math/log 3.0) (Math/log 2.0)))]
+    (is (= 200 (:status response)))
+    (is (= session (get-in response [:body "session"])))
+    (is (= ["p/common" "p/rare"] (get-in response [:body "patterns"])))
+    (is (= ["turn-a" "turn-c" "turn-b"] (mapv #(get % "turn") related)))
+    (is (< (Math/abs (- (+ common-weight rare-weight)
+                        (get-in related [0 "score"]))) 1.0e-12))
+    (is (= "claude-a" (get-in related [0 "speaker"])))
+    (is (= 120 (count (get-in related [0 "excerpt"]))))
+    (is (not-any? #(contains? #{"turn-target" "turn-x"} (get % "turn")) related))))
+
+(deftest related-turns-caps-session-walk-at-two-hundred
+  (let [ids (mapv #(str "turn-long-" %) (range 205))
+        records (into {}
+                      (map-indexed (fn [i id]
+                                     [id {:session_id "s-long"
+                                          :created_at "2026-11-21T11:00:00Z"
+                                          :prev_operator_turn_id (get ids (inc i))
+                                          :origin "operator"}]) ids))
+        rows (into {} (map (fn [id] [id {:patterns {:proposed ["p"] :occurs []}}]) ids))
+        reads (atom 0)
+        cfg {:turn-store ::store
+             :read-turn-fn (fn [_ id] (swap! reads inc) (get records id))
+             :related-turn-fn (fn [id] (get rows id))
+             :session-head-fn (fn [_ _] (first ids))}
+        response (routes/turn-related-turns-response cfg {"turn" (first ids)})]
+    ;; One direct read establishes the requested turn, then the bounded walk.
+    (is (= 201 @reads))
+    (is (= 200 (get-in response [:body "window" "turns_read"])))
+    (is (= 11 (count (get-in response [:body "related"]))))))
+
+(deftest related-turns-unknown-or-patternless-is-empty
+  (let [records {"turn-empty" {:session_id "s-empty"
+                                :created_at "2026-11-21T11:00:00Z"
+                                :origin "operator"}}
+        cfg {:turn-store ::store
+             :read-turn-fn (fn [_ id] (get records id))
+             :related-turn-fn (fn [_] {:patterns {:proposed [] :occurs []}})
+             :session-head-fn (fn [_ session]
+                                (when (= session "s-empty") "turn-empty"))}
+        empty (routes/turn-related-turns-response cfg {"turn" "turn-empty"})
+        unknown (routes/turn-related-turns-response cfg {"turn" "turn-missing"})]
+    (is (= [] (get-in empty [:body "patterns"])))
+    (is (= [] (get-in empty [:body "related"])))
+    (is (= [] (get-in unknown [:body "patterns"])))
+    (is (= [] (get-in unknown [:body "related"])))))
+
 (defn- strand-fixture []
   (let [prev {"turn-four" "turn-three" "turn-three" "turn-two"
               "turn-two" "turn-one" "turn-one" nil}

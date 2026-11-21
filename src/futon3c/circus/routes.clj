@@ -601,30 +601,43 @@
 
 (def ^:private max-related-sessions 60)
 (def ^:private max-related-session-turns 30)
+(def ^:private max-related-turns 200)
 
 (defn- parse-since-hours [s]
   (try (-> (Long/parseLong (str (or s 24))) (max 1) (min 168))
        (catch Exception _ 24)))
 
-(defn- session-pattern-summary [cfg store {:keys [session head]} since]
+(defn- walk-session-turns
+  "Walk HEAD only through durable predecessor pointers. Rows from another
+  session are not projected into the result, but still consume the bound."
+  [cfg store head {:keys [max-turns session since]}]
   (let [read-turn (or (:read-turn-fn cfg) turns/read-record)
         project-turn (or (:related-turn-fn cfg)
                          (fn [id]
-                           (cached-turn (assoc cfg :turn-store store) id false)))
-        rows (loop [id head seen #{} out []]
-               (if (or (nil? id) (seen id) (>= (count out) max-related-session-turns))
-                 out
-                 (if-let [record (read-turn store id)]
-                   (let [at (:created_at record)]
-                     (if (or (nil? at) (not (.isAfter (instant at) since)))
-                       out
-                       (let [row (project-turn id)]
-                         (recur (:prev_operator_turn_id record) (conj seen id)
-                                (conj out (assoc row
-                                                 :id id
-                                                 :created_at at
-                                                 :agent_id (:agent_id record)))))))
-                   out)))
+                           (cached-turn (assoc cfg :turn-store store) id false)))]
+    (loop [id head seen #{} visited 0 out []]
+      (if (or (nil? id) (seen id) (>= visited max-turns))
+        out
+        (if-let [record (read-turn store id)]
+          (let [at (:created_at record)]
+            (if (or (nil? at) (and since (not (.isAfter (instant at) since))))
+              out
+              (let [row (when (or (nil? (:session_id record))
+                                  (= session (:session_id record)))
+                          (project-turn id))]
+                (recur (:prev_operator_turn_id record) (conj seen id) (inc visited)
+                       (cond-> out
+                         row (conj (merge row
+                                          (select-keys record
+                                                       [:origin :source_text :original_text
+                                                        :caller :agent_id])
+                                          {:id id :created_at at})))))))
+          out)))))
+
+(defn- session-pattern-summary [cfg store {:keys [session head]} since]
+  (let [rows (walk-session-turns cfg store head
+                                 {:max-turns max-related-session-turns
+                                  :session session :since since})
         pattern-counts (frequencies
                         (mapcat (fn [row]
                                   (distinct-ids
@@ -710,4 +723,86 @@
                                 :turns_read (reduce + 0 (map :turns-read summaries))}})})))
         (catch Exception e
           (error-response 503 "session-related-sessions-unavailable"
+                          {:message (.getMessage e)}))))))
+
+(defn- turn-speaker [row]
+  (case (:origin row)
+    "operator" "operator"
+    "agent" (or (:caller row) (:agent_id row) "agent")
+    (or (:caller row) (:agent_id row) (:origin row))))
+
+(defn- turn-excerpt [row]
+  (let [text (or (:source_text row) (:original_text row) "")]
+    (subs text 0 (min 120 (count text)))))
+
+(defn turn-related-turns-response
+  "Other turns in TURN's current session that share its patterns. The window
+  starts at the durable session head and follows at most 200 predecessor
+  links; turns whose stored session differs are never returned."
+  [cfg params]
+  (let [turn-id (get params "turn")]
+    (if (str/blank? turn-id)
+      (error-response 400 "turn-required")
+      (try
+        (let [store (or (:turn-store cfg) (turns/store))
+              read-turn (or (:read-turn-fn cfg) turns/read-record)
+              target-record (read-turn store turn-id)
+              session (:session_id target-record)
+              head-fn (or (:session-head-fn cfg) turns/session-head)
+              head (when session (head-fn store session))
+              rows (if head
+                     (walk-session-turns cfg store head
+                                         {:max-turns max-related-turns
+                                          :session session})
+                     [])
+              target (some #(when (= turn-id (:id %)) %) rows)
+              patterns (if target
+                         (distinct-ids
+                          (concat (get-in target [:patterns :proposed])
+                                  (get-in target [:patterns :occurs])))
+                         [])
+              turns-by-pattern
+              (reduce (fn [acc row]
+                        (reduce (fn [a pattern]
+                                  (update a pattern (fnil conj #{}) (:id row)))
+                                acc
+                                (distinct-ids
+                                 (concat (get-in row [:patterns :proposed])
+                                         (get-in row [:patterns :occurs])))))
+                      {} rows)
+              related (if (seq patterns)
+                        (->> rows
+                             (keep (fn [row]
+                                     (when-not (= turn-id (:id row))
+                                       (let [row-patterns
+                                             (set (distinct-ids
+                                                   (concat
+                                                    (get-in row [:patterns :proposed])
+                                                    (get-in row [:patterns :occurs]))))
+                                             shared (->> patterns
+                                                         (filter row-patterns) sort vec)]
+                                         (when (seq shared)
+                                           (cond-> {:turn (:id row)
+                                                    :created_at (:created_at row)
+                                                    :excerpt (turn-excerpt row)
+                                                    :shared shared
+                                                    :score (reduce
+                                                            + 0.0
+                                                            (map #(rarity-weight
+                                                                   (count (get turns-by-pattern %)))
+                                                                 shared))}
+                                             (turn-speaker row)
+                                             (assoc :speaker (turn-speaker row))))))))
+                             (sort-by (juxt (comp - :score)
+                                            (comp - #(.toEpochMilli (instant %)) :created_at)
+                                            :turn))
+                             (take (parse-n (or (get params "n") 11)))
+                             vec)
+                        [])]
+          {:status 200
+           :body (json-ready {:turn turn-id :session session
+                              :patterns patterns :related related
+                              :window {:turns_read (count rows)}})})
+        (catch Exception e
+          (error-response 503 "turn-related-turns-unavailable"
                           {:message (.getMessage e)}))))))
