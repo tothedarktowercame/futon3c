@@ -83,9 +83,12 @@
 
 (defn- piece-tex [[{:keys [face mark]} text]]
   (let [body (escape text)
+        ;; \color ends in \ignorespaces and TeX skips spaces after \small, so
+        ;; a piece that starts with a space would lose it ("theeconomic").
+        body (if (str/starts-with? body " ") (str "{}" body) body)
         colour (or (mark-colours mark) (face-colours face))
         body (if (= face "struck") (str "\\strikeThrough{" body "}") body)
-        body (if (= face "muted") (str "{\\small " body "}") body)]
+        body (if (= face "muted") (str "{\\small{}" body "}") body)]
     (if colour (str "\\textcolor[HTML]{" colour "}{" body "}") body)))
 
 (defn- line-tex [line]

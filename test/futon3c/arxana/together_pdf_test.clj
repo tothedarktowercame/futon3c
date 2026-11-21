@@ -39,6 +39,33 @@
                                   (.redirectOutput (java.io.File. "/dev/null"))))))
        (catch Exception _ false)))
 
+(defn- pdf-text
+  "The text of PDF bytes via pdftotext, or nil when it is not installed."
+  [^bytes bytes]
+  (try
+    (let [f (java.io.File/createTempFile "together-pdf-test" ".pdf")]
+      (try
+        (java.nio.file.Files/write (.toPath f) bytes (make-array java.nio.file.OpenOption 0))
+        (let [p (.start (ProcessBuilder. ^java.util.List ["pdftotext" "-layout" (str f) "-"]))
+              out (slurp (.getInputStream p))]
+          (when (zero? (.waitFor p)) out))
+        (finally (.delete f))))
+    (catch java.io.IOException _ nil)))
+
+(deftest a-space-at-the-start-of-a-coloured-piece-is-printed
+  ;; 2026-11-21: "the" (typed) then " economic" (teammate) printed as
+  ;; "theeconomic", since \\color ends in \\ignorespaces.
+  (let [runs (fn [face] [{"text" "believe that the" "attrs" {"face" "typed"} "deleted" false}
+                         {"text" " economic surplus" "attrs" {"face" face} "deleted" false}
+                         {"text" " " "attrs" {"face" "typed"} "deleted" false}
+                         {"text" "to them" "attrs" {"face" "plain"} "deleted" false}])
+        src (pdf/tex {:key "k" :rev 1 :at "now" :runs (runs "teammate")})]
+    (is (str/includes? src "{{} economic surplus}"))
+    (when (lualatex?)
+      (doseq [face ["teammate" "muted" "struck" "plain"]]
+        (when-let [text (pdf-text (pdf/pdf! (pdf/tex {:key "k" :rev 1 :at "now" :runs (runs face)})))]
+          (is (re-find #"believe that the economic surplus to them" text) face))))))
+
 (deftest the-route-returns-a-pdf-of-hostile-text
   (when (lualatex?)
     (h/with-server
