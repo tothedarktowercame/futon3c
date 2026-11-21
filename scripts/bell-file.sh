@@ -22,12 +22,13 @@
 #   scripts/bell-file.sh --from claude-2 --to codex-3 /tmp/preamble.md /tmp/specific.md
 set -euo pipefail
 
-FROM=""; TO=""; KIND="bell"; FORCE=0
+FROM=""; TO=""; KIND="bell"; MODE="work"; FORCE=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --from) FROM="${2:-}"; shift 2 ;;
     --to)   TO="${2:-}";   shift 2 ;;
     --kind) KIND="${2:-}"; shift 2 ;;
+    --mode) MODE="${2:-}"; shift 2 ;;
     --force) FORCE=1; shift ;;
     --) shift; break ;;
     -*) echo "bell-file.sh: unknown option $1" >&2; exit 2 ;;
@@ -37,7 +38,10 @@ done
 
 if [[ -z "$FROM" || -z "$TO" || $# -lt 1 ]]; then
   cat >&2 <<'USAGE'
-usage: bell-file.sh --from AGENT --to AGENT [--kind bell|whistle] FILE [FILE...]
+usage: bell-file.sh --from AGENT --to AGENT [--kind bell|whistle] [--mode work|brief] FILE [FILE...]
+
+  --mode defaults to work: a packet is work. Until 2026-11-21 this script sent
+  no --mode, so agency_send.py sent brief, and the seat ran nothing.
 
   --from is REQUIRED: it records the mesh edge and is what lets the recipient's
   completion bell route back. Without it the caller is logged as http-caller and
@@ -64,4 +68,4 @@ if [[ "$FORCE" != "1" ]] && cat "$@" | grep -nE '(\*\* was |against a ,|`` )' >/
   exit 3
 fi
 
-cat "$@" | python3 "$(dirname "$0")/agency_send.py" --from "$FROM" --to "$TO" --kind "$KIND"
+cat "$@" | python3 "$(dirname "$0")/agency_send.py" --from "$FROM" --to "$TO" --kind "$KIND" --mode "$MODE"
