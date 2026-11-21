@@ -598,3 +598,116 @@
          (catch Exception e
            (error-response 503 "mission-related-missions-unavailable"
                            {:message (.getMessage e)})))))))
+
+(def ^:private max-related-sessions 60)
+(def ^:private max-related-session-turns 30)
+
+(defn- parse-since-hours [s]
+  (try (-> (Long/parseLong (str (or s 24))) (max 1) (min 168))
+       (catch Exception _ 24)))
+
+(defn- session-pattern-summary [cfg store {:keys [session head]} since]
+  (let [read-turn (or (:read-turn-fn cfg) turns/read-record)
+        project-turn (or (:related-turn-fn cfg)
+                         (fn [id]
+                           (cached-turn (assoc cfg :turn-store store) id false)))
+        rows (loop [id head seen #{} out []]
+               (if (or (nil? id) (seen id) (>= (count out) max-related-session-turns))
+                 out
+                 (if-let [record (read-turn store id)]
+                   (let [at (:created_at record)]
+                     (if (or (nil? at) (not (.isAfter (instant at) since)))
+                       out
+                       (let [row (project-turn id)]
+                         (recur (:prev_operator_turn_id record) (conj seen id)
+                                (conj out (assoc row
+                                                 :id id
+                                                 :created_at at
+                                                 :agent_id (:agent_id record)))))))
+                   out)))
+        pattern-counts (frequencies
+                        (mapcat (fn [row]
+                                  (distinct-ids
+                                   (concat (get-in row [:patterns :proposed])
+                                           (get-in row [:patterns :occurs]))))
+                                rows))
+        latest (first rows)]
+    {:session session
+     :agent (some :agent_id rows)
+     :mission (some :mission_id rows)
+     :latest_at (:created_at latest)
+     :latest_turn (:id latest)
+     :pattern-counts pattern-counts
+     :turns-read (count rows)}))
+
+(defn session-related-sessions-response
+  "Other current sessions sharing patterns with SESSION. Current means its
+  durable head receipt is inside the bounded time window. Each session is
+  walked only through predecessor pointers, for at most 30 turns; at most 60
+  head receipts are considered."
+  [cfg params]
+  (let [session (get params "session")]
+    (if (str/blank? session)
+      (error-response 400 "session-required")
+      (try
+        (let [hours (parse-since-hours (get params "since-hours"))
+              now ((or (:now-fn cfg) #(java.time.Instant/now)))
+              since (.minusSeconds now (* hours 3600))
+              store (or (:turn-store cfg) (turns/store))
+              active-heads (or (:active-session-heads-fn cfg) turns/active-session-heads)
+              all-heads (->> (active-heads store (.toEpochMilli since))
+                             (sort-by :session) vec)
+              target-head (some #(when (= session (:session %)) %) all-heads)
+              heads (if target-head
+                      (into [target-head]
+                            (take (dec max-related-sessions)
+                                  (remove #(= session (:session %)) all-heads)))
+                      (vec (take max-related-sessions all-heads)))]
+          (if-not target-head
+            {:status 200
+             :body (json-ready {:session session :patterns [] :related []
+                                :window {:since_hours hours
+                                         :sessions_seen (count heads)
+                                         :turns_read 0}})}
+            (let [summaries (mapv #(session-pattern-summary cfg store % since) heads)
+                  target (some #(when (= session (:session %)) %) summaries)
+                  patterns (->> (:pattern-counts target)
+                                (sort-by (juxt (comp - val) key))
+                                (mapv key))
+                  sessions-by-pattern
+                  (reduce (fn [acc summary]
+                            (reduce (fn [a pattern]
+                                      (update a pattern (fnil conj #{}) (:session summary)))
+                                    acc (keys (:pattern-counts summary))))
+                          {} summaries)
+                  related (->> summaries
+                               (keep (fn [summary]
+                                       (when-not (= session (:session summary))
+                                         (let [shared (->> patterns
+                                                           (filter #(contains?
+                                                                     (:pattern-counts summary) %))
+                                                           sort vec)]
+                                           (when (seq shared)
+                                             (cond-> {:session (:session summary)
+                                                      :latest_at (:latest_at summary)
+                                                      :latest_turn (:latest_turn summary)
+                                                      :shared shared
+                                                      :score (reduce
+                                                              + 0.0
+                                                              (map #(rarity-weight
+                                                                     (count (get sessions-by-pattern %)))
+                                                                   shared))}
+                                               (:agent summary) (assoc :agent (:agent summary))
+                                               (:mission summary) (assoc :mission (:mission summary))))))))
+                               (sort-by (juxt (comp - :score) :session))
+                               (take (parse-n (or (get params "n") 10)))
+                               vec)]
+              {:status 200
+               :body (json-ready
+                      {:session session :patterns patterns :related related
+                       :window {:since_hours hours
+                                :sessions_seen (count summaries)
+                                :turns_read (reduce + 0 (map :turns-read summaries))}})})))
+        (catch Exception e
+          (error-response 503 "session-related-sessions-unavailable"
+                          {:message (.getMessage e)}))))))

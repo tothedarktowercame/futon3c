@@ -203,6 +203,115 @@
            (get-in response [:body "reason"])))
     (is (= "futon1b refused" (get-in response [:body "message"])))))
 
+(def related-now (java.time.Instant/parse "2026-11-21T12:00:00Z"))
+
+(defn- related-session-cfg [heads records rows]
+  {:turn-store ::store
+   :now-fn (constantly related-now)
+   :active-session-heads-fn (fn [_ _] heads)
+   :read-turn-fn (fn [_ id] (get records id))
+   :related-turn-fn (fn [id] (get rows id))})
+
+(deftest related-sessions-ranks-by-rarity-and-excludes-self
+  (let [heads [{:session "self" :head "self-2"}
+               {:session "a" :head "a-1"}
+               {:session "b" :head "b-1"}
+               {:session "c" :head "c-1"}]
+        records {"self-2" {:created_at "2026-11-21T11:50:00Z"
+                            :prev_operator_turn_id "self-1" :agent_id "agent-self"}
+                 "self-1" {:created_at "2026-11-21T11:40:00Z"
+                            :prev_operator_turn_id nil :agent_id "agent-self"}
+                 "a-1" {:created_at "2026-11-21T11:45:00Z" :agent_id "agent-a"}
+                 "b-1" {:created_at "2026-11-21T11:35:00Z" :agent_id "agent-b"}
+                 "c-1" {:created_at "2026-11-21T11:25:00Z" :agent_id "agent-c"}}
+        rows {"self-2" {:mission_id "M-self"
+                         :patterns {:proposed ["p/common"] :occurs []}}
+              "self-1" {:mission_id "M-self"
+                         :patterns {:proposed ["p/common"] :occurs ["p/rare"]}}
+              "a-1" {:mission_id "M-a"
+                       :patterns {:proposed ["p/common" "p/rare"] :occurs []}}
+              "b-1" {:mission_id "M-b"
+                       :patterns {:proposed ["p/common"] :occurs []}}
+              "c-1" {:mission_id "M-c"
+                       :patterns {:proposed [] :occurs ["p/common"]}}}
+        response (routes/session-related-sessions-response
+                  (related-session-cfg heads records rows)
+                  {"session" "self" "since-hours" "24" "n" "11"})
+        related (get-in response [:body "related"])
+        common-weight (/ 1.0 (/ (Math/log 5.0) (Math/log 2.0)))
+        rare-weight (/ 1.0 (/ (Math/log 3.0) (Math/log 2.0)))]
+    (is (= 200 (:status response)))
+    (is (= ["p/common" "p/rare"] (get-in response [:body "patterns"])))
+    (is (= ["a" "b" "c"] (mapv #(get % "session") related)))
+    (is (< (Math/abs (- (+ common-weight rare-weight)
+                        (get-in related [0 "score"]))) 1.0e-12))
+    (is (= "agent-a" (get-in related [0 "agent"])))
+    (is (= "M-a" (get-in related [0 "mission"])))
+    (is (not-any? #(= "self" (get % "session")) related))))
+
+(deftest related-sessions-window-excludes-old-heads
+  (let [cutoff (atom nil)
+        active (fn [_ since-ms]
+                 (reset! cutoff since-ms)
+                 [{:session "self" :head "self-1"}])
+        cfg (assoc (related-session-cfg
+                    []
+                    {"self-1" {:created_at "2026-11-21T11:00:00Z"}}
+                    {"self-1" {:patterns {:proposed ["p/one"] :occurs []}}})
+                   :active-session-heads-fn active)
+        response (routes/session-related-sessions-response
+                  cfg {"session" "self" "since-hours" "2"})]
+    (is (= (.toEpochMilli (java.time.Instant/parse "2026-11-21T10:00:00Z"))
+           @cutoff))
+    (is (= 1 (get-in response [:body "window" "sessions_seen"])))
+    (is (= [] (get-in response [:body "related"])))))
+
+(deftest related-sessions-caps-each-predecessor-walk-at-thirty
+  (let [ids (mapv #(str "turn-cap-" %) (range 35))
+        records (into {}
+                      (map-indexed
+                       (fn [i id]
+                         [id {:created_at (str "2026-11-21T11:"
+                                               (format "%02d" (- 59 i)) ":00Z")
+                              :prev_operator_turn_id (get ids (inc i))}])
+                       ids))
+        reads (atom 0)
+        cfg (assoc (related-session-cfg
+                    [{:session "self" :head (first ids)}] records
+                    (into {} (map (fn [id] [id {:patterns {:proposed ["p"]
+                                                            :occurs []}}]) ids)))
+                   :read-turn-fn (fn [_ id] (swap! reads inc) (get records id)))
+        response (routes/session-related-sessions-response cfg {"session" "self"})]
+    (is (= 30 @reads))
+    (is (= 30 (get-in response [:body "window" "turns_read"])))))
+
+(deftest related-sessions-unknown-or-patternless-is-empty
+  (let [cfg (related-session-cfg
+             [{:session "self" :head "self-1"}]
+             {"self-1" {:created_at "2026-11-21T11:00:00Z"}}
+             {"self-1" {:patterns {:proposed [] :occurs []}}})
+        empty (routes/session-related-sessions-response cfg {"session" "self"})
+        unknown (routes/session-related-sessions-response cfg {"session" "missing"})]
+    (is (= [] (get-in empty [:body "patterns"])))
+    (is (= [] (get-in empty [:body "related"])))
+    (is (= [] (get-in unknown [:body "patterns"])))
+    (is (= [] (get-in unknown [:body "related"])))))
+
+(deftest related-sessions-retains-requested-head-at-sixty-session-bound
+  (let [peers (mapv #(str "a-" (format "%02d" %)) (range 60))
+        sessions (conj peers "z-target")
+        heads (mapv (fn [session] {:session session :head (str "turn-" session)}) sessions)
+        records (into {} (map (fn [session]
+                                [(str "turn-" session)
+                                 {:created_at "2026-11-21T11:00:00Z"}]) sessions))
+        rows (into {} (map (fn [session]
+                             [(str "turn-" session)
+                              {:patterns {:proposed [(str "p/" session)] :occurs []}}]) sessions))
+        response (routes/session-related-sessions-response
+                  (related-session-cfg heads records rows) {"session" "z-target"})]
+    (is (= ["p/z-target"] (get-in response [:body "patterns"])))
+    (is (= 60 (get-in response [:body "window" "sessions_seen"])))))
+
 (defn- strand-fixture []
   (let [prev {"turn-four" "turn-three" "turn-three" "turn-two"
               "turn-two" "turn-one" "turn-one" nil}
