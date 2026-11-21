@@ -144,6 +144,10 @@ async function main() {
     ]);
     await Promise.all([waitLive(joe), waitLive(murch)]);
 
+    // With no notes pane the editor fills the page (it was 8rem tall, 2026-11-21).
+    const heights = await joe.evaluate(() => [document.querySelector("textarea").getBoundingClientRect().height, innerHeight]);
+    assert.ok(heights[0] > heights[1] * 0.6, `editor is ${heights[0]}px tall in a ${heights[1]}px window`);
+
     await joe.locator("textarea").fill("hello");
     await murch.waitForFunction(() => document.querySelector("textarea")?.value === "hello");
     const joeColour = await expectedColour(murch, "joe");

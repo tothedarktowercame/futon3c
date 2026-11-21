@@ -31,7 +31,9 @@ body,
   min-height: 0;
   flex: 1 1 auto;
 }
-.document-editor { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+/* flex: 1 so the editor fills the page when there is no notes pane and
+   .document-layout is display: contents (it was 8rem tall, 2026-11-21). */
+.document-editor { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; min-height: 0; }
 .notes-pane {
   overflow: auto;
   padding: 0.75rem;
