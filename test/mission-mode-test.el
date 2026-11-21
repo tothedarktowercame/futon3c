@@ -242,3 +242,38 @@
       ;; Short tail: fall back to the words before the mention.
       (should (equal "… ns/beta and" (mission-mode--overview-citation two "ns/alpha")))
       (should (equal "and ns/alpha — both" (mission-mode--overview-citation two "ns/beta"))))))
+
+(ert-deftest mission-mode-filter-is-visible-and-can-be-dropped ()
+  ;; Bad case 2026-11-21: ※ m p left a patterns-only filter on M-arxana-together
+  ;; (no pattern scopes), and C-c m o showed an empty panel with no hint.
+  (let ((src (generate-new-buffer "mm-src")) (refreshed 0))
+    (unwind-protect
+        (progn
+          (with-current-buffer src
+            (setq-local mission-mode-scope-types '("pattern" "psr" "pur"))
+            (setq mission-mode--mission "M-sections-only"
+                  mission-mode--overlays nil))
+          (cl-letf (((symbol-function 'display-buffer) #'ignore)
+                    ((symbol-function 'select-window) #'ignore)
+                    ((symbol-function 'get-buffer-window) #'ignore)
+                    ((symbol-function 'mission-mode-refresh) (lambda () (cl-incf refreshed))))
+            (with-current-buffer src (mission-mode-overview))
+            (with-current-buffer "*mission-overview*"
+              (should (string-match-p "filtered to pattern/psr/pur scopes (※ m p); M-sections-only has none · a shows every scope"
+                                      (buffer-string)))
+              (should (eq 'mission-mode-overview-show-all (key-binding "a")))
+              (mission-mode-overview-show-all))
+            (should (= 1 refreshed))
+            (should-not (buffer-local-value 'mission-mode-scope-types src))
+            ;; turned on by hand, the mode drops a filter left behind
+            (with-current-buffer src
+              (setq-local mission-mode-scope-types '("pattern"))
+              (call-interactively #'mission-mode-minor-mode)
+              (should-not mission-mode-scope-types)
+              (mission-mode-minor-mode -1)
+              ;; turned on from code (as ※ m p does), the filter stays
+              (setq-local mission-mode-scope-types '("pattern"))
+              (mission-mode-minor-mode 1)
+              (should (equal '("pattern") mission-mode-scope-types)))))
+      (kill-buffer src)
+      (when (get-buffer "*mission-overview*") (kill-buffer "*mission-overview*")))))

@@ -241,6 +241,11 @@ build up live as a greenfield mission grows."
   :keymap mission-mode-minor-mode-map
   (if mission-mode-minor-mode
       (progn
+        ;; Turned on by hand, the mode shows every scope: a filter left by
+        ;; ※ m p (patterns only) must not carry over (Joe 2026-11-21: the
+        ;; overview of M-arxana-together was empty, "nada!").
+        (when (called-interactively-p 'any)
+          (kill-local-variable 'mission-mode-scope-types))
         (setq mission-mode--base-header-line header-line-format)
         (add-hook 'post-command-hook #'mission-mode--hover-post-command nil t)
         (mission-mode-refresh))
@@ -993,6 +998,7 @@ downstream file / related mission in another window."
     (define-key map (kbd "TAB") #'mission-mode-overview-toggle)
     (define-key map (kbd "t") #'mission-mode-overview-toggle-all)
     (define-key map (kbd "g") #'mission-mode-overview)
+    (define-key map (kbd "a") #'mission-mode-overview-show-all)
     (define-key map (kbd "q") #'quit-window)
     map)
   "Keymap for `mission-mode-overview-mode'.")
@@ -1154,6 +1160,16 @@ below it (Joe 2026-11-19: de-duplicate the lavender chips)."
             (add-text-properties start (point)
                                  (list 'mission-mode-file mf))))))))
 
+(defun mission-mode-overview-show-all ()
+  "Drop the mission buffer's scope-type filter and fetch every scope.
+The refresh rebuilds this panel when the scopes land."
+  (interactive)
+  (let ((src (or mission-mode--overview-source (current-buffer))))
+    (with-current-buffer src
+      (kill-local-variable 'mission-mode-scope-types)
+      (mission-mode-refresh))
+    (message "mission-mode: fetching every scope")))
+
 (defun mission-mode-overview ()
   "Show the mission's scopes as a nested, colored visual abstract.
 Moving point in the panel scrolls the mission buffer to the scope under
@@ -1188,6 +1204,12 @@ point; RET jumps to it."
                                 (format " %s — %d scopes\n"
                                         (or mission "mission") (length ovs)))
                               'face 'mission-mode-title-face))
+          (when types
+            (insert (propertize
+                     (format " filtered to %s scopes (※ m p)%s · a shows every scope\n"
+                             (string-join types "/")
+                             (if ovs "" (format "; %s has none" (or mission "this mission"))))
+                     'face 'mission-mode-meta-face)))
           (insert (propertize
                    " keys: TAB fold/pin · t expand/collapse all · RET visit · g rebuild · q quit\n\n"
                    'face 'mission-mode-meta-face))
