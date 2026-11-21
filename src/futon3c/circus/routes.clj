@@ -612,9 +612,7 @@
   session are not projected into the result, but still consume the bound."
   [cfg store head {:keys [max-turns session since]}]
   (let [read-turn (or (:read-turn-fn cfg) turns/read-record)
-        project-turn (or (:related-turn-fn cfg)
-                         (fn [id]
-                           (cached-turn (assoc cfg :turn-store store) id false)))]
+        project-turn (:related-turn-fn cfg)]
     (loop [id head seen #{} visited 0 out []]
       (if (or (nil? id) (seen id) (>= visited max-turns))
         out
@@ -624,7 +622,11 @@
               out
               (let [row (when (or (nil? (:session_id record))
                                   (= session (:session_id record)))
-                          (project-turn id))]
+                          (if project-turn
+                            (project-turn id)
+                            {:mission_id (:mission_id record)
+                             :patterns (turn-patterns (:lu_ranked record)
+                                                      (:pattern_verdicts record))}))]
                 (recur (:prev_operator_turn_id record) (conj seen id) (inc visited)
                        (cond-> out
                          row (conj (merge row

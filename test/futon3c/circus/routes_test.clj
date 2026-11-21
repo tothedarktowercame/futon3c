@@ -388,6 +388,29 @@
     (is (= [] (get-in unknown [:body "patterns"])))
     (is (= [] (get-in unknown [:body "related"])))))
 
+(deftest related-turn-walk-does-not-call-expensive-strand-projection
+  (let [records {"turn-new" {:session_id "s-fast"
+                              :created_at "2026-11-21T11:10:00Z"
+                              :prev_operator_turn_id "turn-target"
+                              :source_text "new"
+                              :lu_ranked {:ranked [{:id "p/shared"}]}
+                              :pattern_verdicts {:patterns []}}
+                 "turn-target" {:session_id "s-fast"
+                                 :created_at "2026-11-21T11:00:00Z"
+                                 :source_text "target"
+                                 :lu_ranked {:ranked [{:id "p/shared"}]}
+                                 :pattern_verdicts {:patterns []}}}
+        cfg {:turn-store ::store
+             :read-turn-fn (fn [_ id] (get records id))
+             :session-head-fn (fn [_ _] "turn-new")
+             :turn-gcc-fn (fn [& _]
+                            (throw (ex-info "expensive reader called" {})))}
+        response (routes/turn-related-turns-response cfg {"turn" "turn-target"})]
+    (is (= 200 (:status response)))
+    (is (= ["p/shared"] (get-in response [:body "patterns"])))
+    (is (= ["turn-new"]
+           (mapv #(get % "turn") (get-in response [:body "related"]))))))
+
 (defn- strand-fixture []
   (let [prev {"turn-four" "turn-three" "turn-three" "turn-two"
               "turn-two" "turn-one" "turn-one" nil}
