@@ -99,3 +99,16 @@ promise and commit, with the acts as first-class.
 track of speech acts at scale.
 **What changes now.** The 象 marks and M-象-2000 are the revival: speech acts recorded
 and read in every turn.
+
+## 4. An expert water plan for Mumbai (story told to Joe, 2026-11-21; unverified)
+
+Joe, from his father: Bill Gates, in his charitable work, brought experts together on a
+detailed plan to bring clean water to Mumbai, "something to do with ripping up every 5th
+street to add clean water piping that would go to hubs", and it did not work. Not yet
+checked: I do not know of a Gates project matching this description (the Gates
+Foundation's best-known water and sanitation work is on sanitation); find the source
+before using it. Kept here because its shape is a known one, whatever the facts turn out
+to be: a plan made by outside experts for a whole city, against infrastructure that
+residents and local officials already work around. Joe's question: "find those policy
+folks who are laughing at Bill Gates right now and see if we could do some work for
+them."
