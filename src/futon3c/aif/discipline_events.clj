@@ -10,7 +10,8 @@
 (defn default-path []
   ;; Absolute — the sink must be the same file regardless of caller cwd
   ;; (CLI vs serving JVM); matches calibration/default-paths.
-  (str (System/getProperty "user.home") "/code/futon3c/data/discipline-events.edn"))
+  (or (System/getenv "FUTON3C_DISCIPLINE_EVENTS_PATH")
+      (str (System/getProperty "user.home") "/code/futon3c/data/discipline-events.edn")))
 
 (defn discipline-event
   "Validate and normalize one out-of-band discipline event."

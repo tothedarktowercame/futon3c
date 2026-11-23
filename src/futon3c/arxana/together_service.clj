@@ -3,12 +3,16 @@
   port 7096, logs under ~/storage/arxana-together. Tests use
   futon3c.arxana.together-http/start! directly with their own :dir and never
   this namespace, so a test cannot write to the live logs."
-  (:require [futon3c.arxana.together-http :as together-http]))
+  (:require [clojure.java.io :as io]
+            [futon3c.arxana.together-http :as together-http]))
 
 (def default-port 7096)
 
 (defn default-dir []
-  (str (System/getProperty "user.home") "/storage/arxana-together"))
+  (or (System/getenv "FUTON3C_ARXANA_TOGETHER_LOG_DIR")
+      (some-> (System/getenv "FUTON_STORAGE_ROOT")
+              (io/file "arxana-together") str)
+      (str (System/getProperty "user.home") "/storage/arxana-together")))
 
 (defonce ^:private running (atom nil))
 
