@@ -17,6 +17,7 @@
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon2.data-paths :as data-paths]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.logic.inventory :as inventory]
             [futon3c.logic.probe :as probe])
@@ -34,11 +35,11 @@
 
 (def default-inventory-path
   "Default structural-law inventory path."
-  "/home/joe/code/futon3c/docs/structural-law-inventory.sexp")
+  (data-paths/code-path "futon3c" "docs" "structural-law-inventory.sexp"))
 
 (def default-code-root
   "Default code root scanned for `futon*` git repos."
-  "/home/joe/code")
+  data-paths/production-code-root)
 
 (defonce !last-hud-render
   (atom nil))

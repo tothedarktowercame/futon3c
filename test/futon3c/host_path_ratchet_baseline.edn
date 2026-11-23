@@ -45,12 +45,10 @@
   "src/futon3c/inbox_zero/sweeper.clj" 7
   "src/futon3c/inbox_zero/turn_promotion.clj" 1
   "src/futon3c/live_efe_map.clj" 4
-  "src/futon3c/logic/archaeology.clj" 2
   "src/futon3c/logic/capability_star_map_extractor.clj" 3
   "src/futon3c/logic/cascade_real_live.clj" 1
   "src/futon3c/logic/mission_clean.clj" 1
   "src/futon3c/logic/mission_doc_invariants.clj" 2
-  "src/futon3c/logic/snapshot.clj" 2
   "src/futon3c/nlp/classical_pipeline.clj" 2
   "src/futon3c/peripheral/live_wm_selection.clj" 1
   "src/futon3c/peripheral/memory_backend.clj" 4

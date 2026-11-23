@@ -173,7 +173,7 @@
    nil to skip the inventory cross-check (then no obsolescence can be
    detected — :outcome :ok always)."
   ([] (check-deferred-stub-obsolescence
-       "/home/joe/code/futon3c/docs/structural-law-inventory.sexp"))
+       (data-paths/code-path "futon3c" "docs" "structural-law-inventory.sexp")))
   ([inventory-path]
    (fn [_evidence-store]
      (try
@@ -317,7 +317,7 @@
 
 (def default-inventory-path
   "Default structural-law inventory path for archaeology load-time checks."
-  "/home/joe/code/futon3c/docs/structural-law-inventory.sexp")
+  (data-paths/code-path "futon3c" "docs" "structural-law-inventory.sexp"))
 
 (declare default-repo-paths)
 
