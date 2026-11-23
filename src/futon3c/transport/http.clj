@@ -3267,7 +3267,9 @@
        :reason fallback
        :details {:message (.getMessage throwable)}})))
 
-(def ^:private default-test-registry-root "/home/joe/code/futon3c")
+(def ^:private default-test-registry-root
+  (or (System/getenv "FUTON3C_ROOT")
+      (str (System/getProperty "user.home") "/code/futon3c")))
 (def ^:private test-registry-report-cache-ms 30000)
 (defonce ^:private test-registry-report-cache (atom nil))
 
