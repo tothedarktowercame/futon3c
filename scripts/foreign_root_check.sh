@@ -137,6 +137,10 @@ allowed_read_exact = {
 }
 for name in glob.glob(prefix + '.*'):
     for line in open(name, errors='replace'):
+        # execve is traced only to attribute an opener; its argv strings are
+        # not themselves filesystem accesses.
+        if line.startswith('execve('):
+            continue
         for path in quoted.findall(line):
             if path == root or path.startswith(root + '/'):
                 continue
