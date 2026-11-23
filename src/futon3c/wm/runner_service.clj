@@ -8,6 +8,7 @@
             [clojure.edn :as edn]
             [clojure.string :as str]
             [futon2.aif.c-fold-config :as digest]
+            [futon2.data-paths :as data-paths]
             [futon2.aif.meta-injury-store :as injury-store]
             [futon2.aif.load-identity :as load-identity]
             [futon3c.agency.bg-process :as bg-process]
@@ -69,6 +70,29 @@
 
 (defonce ^:private acceptance-lock (Object.))
 (defonce ^:private !post-release-retries (atom clojure.lang.PersistentQueue/EMPTY))
+
+(defn configured-paths
+  "Resolve click-path authorities from the serving process configuration."
+  [data-root code-root]
+  (let [code-root (or (some-> code-root str not-empty) "/home/joe/code")
+        futon2-data (data-paths/configured-data-root data-root code-root)
+        futon2-repo (str (io/file code-root "futon2"))
+        futon3c-repo (str (io/file code-root "futon3c"))
+        p4ng-repo (str (io/file code-root "p4ng"))]
+    {:click-acceptance-dir (str (io/file futon3c-repo "data" "wm-click-acceptances"))
+     :click-run-binding-dir (str (io/file futon3c-repo "data" "wm-click-run-bindings"))
+     :run-record-dir (str (io/file futon2-data "wm-runs"))
+     :run4-terminal-projection-dir
+     (str (io/file futon3c-repo "data" "wm-run4-terminal-projections"))
+     :run4-historical-projection-dir
+     (str (io/file futon3c-repo "data" "wm-run4-historical-projections"))
+     :p4ng-repo p4ng-repo
+     :futon2-repo futon2-repo
+     :route-check-script (str (io/file futon2-repo "scripts" "wm_route_check.py"))}))
+
+(def ^:private configured-serving-paths
+  (configured-paths (System/getenv "FUTON2_DATA_ROOT")
+                    (System/getenv "FUTON_WM_CODE_ROOT")))
 
 (defonce ^:private !medic-authority-provider
   ;; Application-installed, process-local authority source. Request data can
@@ -256,7 +280,7 @@
         (assoc base :self-heal-serving-readiness resolved)))))
 
 (def ^:dynamic *click-acceptance-dir*
-  "/home/joe/code/futon3c/data/wm-click-acceptances")
+  (:click-acceptance-dir configured-serving-paths))
 
 (defn- acceptance-file [click-id]
   (io/file *click-acceptance-dir*
@@ -532,16 +556,16 @@
                  {:child-click-id child-click-id :outcome (:outcome summary)})))))
 
 (def ^:dynamic *click-run-binding-dir*
-  "/home/joe/code/futon3c/data/wm-click-run-bindings")
+  (:click-run-binding-dir configured-serving-paths))
 
 (def ^:dynamic *run-record-dir*
-  "/home/joe/code/futon2/data/wm-runs")
+  (:run-record-dir configured-serving-paths))
 
 (def ^:dynamic *run4-terminal-projection-dir*
-  "/home/joe/code/futon3c/data/wm-run4-terminal-projections")
+  (:run4-terminal-projection-dir configured-serving-paths))
 
 (def ^:dynamic *run4-historical-projection-dir*
-  "/home/joe/code/futon3c/data/wm-run4-historical-projections")
+  (:run4-historical-projection-dir configured-serving-paths))
 
 (def ^:dynamic *resolve-var*
   "Resolver seam for tests. Production always delegates to requiring-resolve."
@@ -588,7 +612,7 @@
                       {:reason :report-card-generator-unavailable})))))
 
 (def ^:private publish-chain-command
-  (str "cd /home/joe/code/p4ng && "
+  (str "cd " (:p4ng-repo configured-serving-paths) " && "
        "./publish-job.py wm-run-cards -- ./publish-wm-runs.py && "
        "./publish-job.py wip-index -- python3 ./publish-wip-index.py && "
        "./publish-job.py wip-nav -- bash ./publish-wip-nav.sh"))
@@ -599,9 +623,9 @@
     (bg-process/launch! {:cmd publish-chain-command
                          :agent-id war-machine-agent-id
                          :label (str "publish WM report card " run-id)
-                         :dir "/home/joe/code/p4ng"})))
+                         :dir (:p4ng-repo configured-serving-paths)})))
 
-(def ^:private route-check-script "/home/joe/code/futon2/scripts/wm_route_check.py")
+(def ^:private route-check-script (:route-check-script configured-serving-paths))
 
 (defn- shell-quote [s] (str "'" (str/replace (str s) "'" "'\\''") "'"))
 
@@ -613,7 +637,7 @@
                                    " --binding " (shell-quote binding-path))
                          :agent-id war-machine-agent-id
                          :label (str "route check " click-id)
-                         :dir "/home/joe/code/futon2"})))
+                         :dir (:futon2-repo configured-serving-paths)})))
 
 (defn status
   "Return the current click service status."

@@ -23,14 +23,25 @@
 (def default-cast
   {:author "wm-author" :reviewer "wm-reviewer"
    :repair-reviewer "wm-repair-reviewer"})
-(def default-repository "/home/joe/code/futon2")
+(defn configured-paths
+  "Resolve META repair code paths from the serving process code root."
+  [code-root]
+  (let [code-root (or (some-> code-root str not-empty) "/home/joe/code")]
+    {:repository (str (io/file code-root "futon2"))
+     :bounded-test-runner
+     (str (io/file code-root "futon3c" "scripts" "bounded_test_job.py"))}))
+
+(def ^:private configured-serving-paths
+  (configured-paths (System/getenv "FUTON_WM_CODE_ROOT")))
+
+(def default-repository (:repository configured-serving-paths))
 (def default-self-heal-worktree-root "/home/joe/worktrees/futon2/self-heal")
 (def ^:dynamic *acceptance-repository* default-repository)
 (def ^:dynamic *acceptance-runs-root*
   (str injury-store/default-root "/acceptance-runs"))
 (def ^:private default-acceptance-timeout-ms (* 15 60 1000))
 (def ^:private bounded-test-dir "/tmp/futon-bounded-tests")
-(def ^:private bounded-test-runner "/home/joe/code/futon3c/scripts/bounded_test_job.py")
+(def ^:private bounded-test-runner (:bounded-test-runner configured-serving-paths))
 (def ^:private command-name-pattern #"(?!-)[A-Za-z0-9._-]+")
 
 (defn acceptance-store-environment
@@ -430,7 +441,7 @@
               ":production-functions, a vector of {:role <keyword> :var \"<ns>/<fn>\" :file \"<repo-relative path>\"}. "
               ":production-functions must contain at least one entry for each of the roles :selection-entrypoint, "
               ":required-loop-node-evaluator and :terminal-routing-entrypoint. Each :var must be a real, callable function "
-              "that you found by reading the repository at /home/joe/code/futon2 (read-only shell commands on that repository, "
+              "that you found by reading the repository at " default-repository " (read-only shell commands on that repository, "
               "such as cat, sed -n, grep, ls, git show and git grep, are allowed and expected; nothing that runs code or writes), "
               "and :file is the repo-relative path of the file that defines it. These are the functions the acceptance test "
               "will exercise. The diagnosis must also include :cause-entry {:var <public boundary> :file <defining file> :failure-kind <keyword> :failure-stage <keyword> :input {:record-pin <the request source-record-pin> :path <earliest retained carrier path>} :healthy-predicate <closed result predicate map>}. The boundary is the raising function, or the earliest public upstream boundary containing the failure, and it must accept the actual retained carrier named by :input. :healthy-predicate is an EDN MAP, never code, a function, or a function string: exactly {:op <one of :result-path-equals :result-path-present :result-path-absent> :path <vector of keys> :value <any value, REQUIRED for :result-path-equals, where nil is a valid value; omit for the other ops>}. :path is evaluated (get-in) on the RETURN VALUE of the named boundary applied to the pinned retained carrier at :input, NOT on the original record or on any other input: :result-path-equals means the return value's path equals :value; :result-path-present means the path has an entry (value may be nil or false); :result-path-absent means the path has no entry. Choose a meaningful result-derived condition that distinguishes a healthy repaired return value for THIS failure; do not guess an op or path you cannot justify from the boundary's actual return shape. If you cannot justify a suitable retained carrier and callable boundary, refuse with :cause-scope-unretained. No predicate is prescribed for you and no example op is implied as correct for this injury. A function you cannot find must be reported in a typed refusal "
