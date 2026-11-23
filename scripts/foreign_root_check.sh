@@ -123,12 +123,28 @@ root, out, prefix = sys.argv[1:]
 paths = collections.Counter(); writes = collections.Counter()
 quoted = re.compile(r'"(/home/joe/[^"\\]*)"')
 write_mark = re.compile(r'O_WRONLY|O_RDWR|O_CREAT|O_TRUNC|rename\(|unlink\(')
+# Read-only host toolchain inputs.  They are not application roots and are
+# intentionally shared by relocated checkouts; writes remain prohibited.
+allowed_read_prefixes = (
+    ('/home/joe/.m2/', 'Maven dependency cache'),
+    ('/home/joe/.clojure/', 'Clojure CLI user configuration and cache'),
+    ('/home/joe/.cache/', 'user-level toolchain cache'),
+    ('/home/joe/.deps.clj/', 'deps.clj tool cache'),
+    ('/home/joe/.config/git/', 'Git user configuration fragments'),
+)
+allowed_read_exact = {
+    '/home/joe/.gitconfig': 'Git user configuration',
+}
 for name in glob.glob(prefix + '.*'):
     for line in open(name, errors='replace'):
         for path in quoted.findall(line):
             if path == root or path.startswith(root + '/'):
                 continue
             if '/.git/objects/' in path and not write_mark.search(line):
+                continue
+            allowed_read = (path in allowed_read_exact or
+                            any(path.startswith(p) for p, _ in allowed_read_prefixes))
+            if allowed_read and not write_mark.search(line):
                 continue
             paths[path] += 1
             if write_mark.search(line): writes[path] += 1
