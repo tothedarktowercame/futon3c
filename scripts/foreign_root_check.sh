@@ -88,7 +88,7 @@ watch_writes() {
   export FUTON_PATTERN_LIBRARY_ROOT="$code_root/futon3/library" FUTON3_LIBRARY_DIR="$code_root/futon3/library"
   export FUTON3C_INSTALLATION_WATCH_ROOT="$code_root" FUTON3C_WORKTREE_ROOT="$code_root/futon3c"
   export FUTON3C_PLANETMATH_ROOT="$code_root/planetmath"
-  exec setsid strace -ff -o "$trace_prefix" -e trace=openat,open,connect,rename,unlink make dev
+  exec setsid strace -ff -o "$trace_prefix" -e trace=openat,open,connect,rename,unlink,execve make dev
 ) >"$runtime_log" 2>&1 &
 leader=$!
 watch_writes & watcher=$!
