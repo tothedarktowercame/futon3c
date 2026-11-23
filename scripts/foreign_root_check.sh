@@ -32,7 +32,7 @@ command -v strace >/dev/null || { echo "strace is required" >&2; exit 2; }
 
 mkdir -p "$output_dir" "$code_root/storage/futon3c/mission-control" \
   "$code_root/storage/futon3c/portfolio-inference" "$code_root/notes" \
-  "$code_root/futon2/data"
+  "$code_root/storage/test-registry" "$code_root/futon2/data"
 trace_prefix="$output_dir/trace"
 runtime_log="$output_dir/runtime.log"
 sentinel="$output_dir/live-write"
