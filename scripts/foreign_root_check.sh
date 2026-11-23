@@ -32,7 +32,8 @@ command -v strace >/dev/null || { echo "strace is required" >&2; exit 2; }
 
 mkdir -p "$output_dir" "$code_root/storage/futon3c/mission-control" \
   "$code_root/storage/futon3c/portfolio-inference" "$code_root/notes" \
-  "$code_root/storage/test-registry" "$code_root/futon2/data"
+  "$code_root/storage/test-registry" "$code_root/futon2/data" \
+  "$code_root/futon3c/data/jvm-incidents"
 trace_prefix="$output_dir/trace"
 runtime_log="$output_dir/runtime.log"
 sentinel="$output_dir/live-write"
@@ -83,6 +84,7 @@ watch_writes() {
   export FUTON2_DATA_ROOT="$code_root/futon2/data" FUTON_WM_NOTES_ROOT="$code_root/notes"
   export FUTON_STORAGE_ROOT="$code_root/storage"
   export FUTON3C_WARRANT_INDEX="$code_root/storage/test-registry/warrant-index.sqlite"
+  export FUTON3C_INCIDENTS_ROOT="$code_root/futon3c/data/jvm-incidents"
   export FUTON3C_MISSION_CONTROL_SNAPSHOT_PATH="$code_root/storage/futon3c/mission-control/sessions.edn"
   export FUTON3C_PORTFOLIO_INFERENCE_SNAPSHOT_PATH="$code_root/storage/futon3c/portfolio-inference/sessions.edn"
   export FUTON_PATTERN_LIBRARY_ROOT="$code_root/futon3/library" FUTON3_LIBRARY_DIR="$code_root/futon3/library"

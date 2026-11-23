@@ -10,7 +10,9 @@
            [java.time Instant]
            [java.util UUID]))
 
-(def default-root "/home/joe/code/futon3c/data/jvm-incidents")
+(def default-root
+  (or (System/getenv "FUTON3C_INCIDENTS_ROOT")
+      (str (System/getProperty "user.home") "/code/futon3c/data/jvm-incidents")))
 
 (def ^:private rate-window-ms 60000)
 (def ^:private max-rate-keys 256)

@@ -59,7 +59,6 @@
   "src/futon3c/peripheral/street_sweeper.clj" 2
   "src/futon3c/peripheral/street_sweeper_backend.clj" 4
   "src/futon3c/peripheral/war_machine_pilot_backend.clj" 5
-  "src/futon3c/runtime/incidents.clj" 1
   "src/futon3c/scripts/mission_scope_ingest.clj" 4
   "src/futon3c/test_registry.clj" 1
   "src/futon3c/test_registry/currentness.clj" 1
