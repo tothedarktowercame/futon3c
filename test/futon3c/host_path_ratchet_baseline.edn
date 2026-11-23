@@ -9,7 +9,6 @@
   "src/futon3c/agents/tickle_work_queue.clj" 4
   "src/futon3c/agents/zai_api.clj" 3
   "src/futon3c/aif/stack_generator.clj" 3
-  "src/futon3c/apm/conductor_open.clj" 4
   "src/futon3c/apm/countdown_control.clj" 9
   "src/futon3c/apm/csquare_synthetic_campaign.clj" 2
   "src/futon3c/apm/frame18_control.clj" 1

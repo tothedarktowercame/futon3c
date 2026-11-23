@@ -17,12 +17,21 @@
   [:reg/solver-seat :reg/student-seat :reg/guide-seat
    :reg/proctor-seat :reg/scribe-seat])
 
+(defn- configured-code-root []
+  (or (System/getenv "FUTON_WM_CODE_ROOT")
+      (System/getenv "FUTON_CODE_ROOT")
+      (str (System/getProperty "user.home") "/code")))
+
+(defn- configured-harness-root []
+  (or (System/getenv "FUTON3C_ROOT")
+      (str (io/file (configured-code-root) "futon3c"))))
+
 (defonce ^:private loaded-harness-revision
   ;; Capture process image provenance once. A Drawbridge reload must not move
   ;; the stamp forward to whatever revision happens to be in the git tree.
   (try
     (:harness-revision
-     (problem/measure-harness-repository "/home/joe/code/futon3c"))
+     (problem/measure-harness-repository (configured-harness-root)))
     (catch Throwable _ nil)))
 
 (defn- refusal [code & [details]]
@@ -47,7 +56,7 @@
     :else mode))
 
 (defn- harness-pin-check [registration options]
-  (let [repo (or (:harness-repo options) "/home/joe/code/futon3c")
+  (let [repo (or (:harness-repo options) (configured-harness-root))
         measure (or (:harness-measurer options)
                     #_{:clj-kondo/ignore [:private-call]}
                     problem/measure-harness-repository)
@@ -98,11 +107,12 @@
                               (substrate/configured-url))))
      :evidence-store-url (or (:evidence-store-url options)
                              (substrate/configured-url))
-     :harness-repo (or (:harness-repo options) "/home/joe/code/futon3c")
+     :harness-repo (or (:harness-repo options) (configured-harness-root))
      ;; This is the path persisted by every recovered round-1 cycle. It is the
      ;; Mathlib checkout against which preregistration's Lean source pin is
      ;; measured, not the separately provisioned apm-lean worktree.
-     :lean-repo (or (:lean-repo options) "/home/joe/code/mathlib4")
+     :lean-repo (or (:lean-repo options)
+                    (str (io/file (configured-code-root) "mathlib4")))
      :agency-endpoint (or (:agency-endpoint options)
                           (job-port/jobs-endpoint agency-base 200))
      :agency-base agency-base
