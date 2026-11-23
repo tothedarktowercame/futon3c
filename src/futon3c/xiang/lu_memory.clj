@@ -29,6 +29,7 @@
             [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon2.data-paths :as data-paths]
             [futon3c.xiang.turn-service :as turn-service]
             [futon3c.xiang.turn-store :as ts])
   (:import [java.net URLEncoder]
@@ -67,7 +68,7 @@
   "The 驴 off-switch (shared with lu-rerank): when this file exists the
   listener does nothing. An opts key (:off-switch) so tests never touch
   the real file."
-  "/home/joe/code/data/minus40/lu-off")
+  (data-paths/code-path "data" "minus40" "lu-off"))
 
 ;; ------------------------------------------------------------- the transport
 
@@ -375,7 +376,7 @@
    :min-cos 0.35
    :top 3
    :model "sentence-transformers/all-MiniLM-L6-v2"
-   :script "/home/joe/code/futon3c/scripts/lu_situations.py"
+   :script (data-paths/code-path "futon3c" "scripts" "lu_situations.py")
    :query-timeout-ms 5000
    :startup-timeout-ms 60000})
 
@@ -413,7 +414,7 @@
 
 (defn- futon3a-python []
   (or (System/getenv "FUTON3A_PYTHON")
-      (str (System/getProperty "user.home") "/code/futon3a/.venv/bin/python3")))
+      (data-paths/code-path "futon3a" ".venv" "bin" "python3")))
 
 (defn- read-resident-command [opts]
   (or (:resident-command opts)

@@ -82,7 +82,6 @@
   "src/futon3c/wm/runner_service.clj" 1
   "src/futon3c/wm/scheduler.clj" 1
   "src/futon3c/xiang/futon_view.clj" 1
-  "src/futon3c/xiang/lu_memory.clj" 2
   "src/futon3c/xiang/lu_rerank.clj" 2
   "src/futon3c/xiang/ma_observer.clj" 1
   "src/futon3c/xiang/ma_occurrence.clj" 1
