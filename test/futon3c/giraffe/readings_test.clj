@@ -259,6 +259,48 @@ with no reading record: the typed unread count the certificate must carry.
                     others)))
       (is (every? #(= (:population-sha coverage) (get-in % [:graph-terms :population-sha])) (:order pass))))))
 
+(deftest checker-relocates-canonical-member-and-evidence-filesystem-access
+  (let [root (temp-dir "giraffe-relocated-checker-")
+        repo-name (str "futon-nonexistent-checker-fixture-" (java.util.UUID/randomUUID))
+        code-root (io/file root "code")
+        text "# M-relocated-checker-fixture\n\nRelocated evidence exists only in the sandbox fixture.\n"
+        rel (str repo-name "/holes/missions/M-relocated-checker-fixture.md")
+        local-file (write! code-root rel text)
+        stored-path (str "/home/joe/code/" rel)
+        readings-dir (io/file root "readings")
+        checker (write! readings-dir "check_edges.py"
+                        (slurp (io/resource "giraffe/check_edges.py")))
+        pin (sha256-file local-file)
+        member {:id "M-relocated-checker-fixture" :path stored-path :sha256 pin}
+        record {:id "M-relocated-checker-fixture"
+                :source {:path stored-path :sha256 pin}
+                :status_as_read "open"
+                :purpose "Exercise relocation of canonical corpus filesystem paths."
+                :edges []
+                :unresolved [{:raw_target "M-invented-absent"
+                              :kind "relates-to" :basis "declared"
+                              :evidence {:path stored-path :sha256 pin :line 3
+                                         :quote "Relocated evidence exists only in the sandbox fixture."}
+                              :reason "Invented target is deliberately outside the fixture."}]}
+        members-file (write! readings-dir "members.json" (json/generate-string [member]))
+        batch (write! readings-dir "batch-00.jsonl" (str (json/generate-string record) "\n"))
+        opts {:checker (.getAbsolutePath checker)
+              :members-file (.getAbsolutePath members-file)
+              :batches [(.getAbsolutePath batch)]
+              :repos [(.getAbsolutePath (io/file code-root repo-name))]}]
+    (.mkdirs (io/file code-root repo-name ".git"))
+    (is (not (.exists (io/file stored-path)))
+        "the canonical stored path must not exist: passing proves relocation")
+    (is (= :read
+           (get-in (readings/consume
+                    (assoc opts :checker-env
+                           {"GIRAFFE_CHECK_CODE_ROOT" (.getAbsolutePath code-root)}))
+                   [:coverage :members 0 :status]))
+        (str "checker must relocate the absent canonical path " stored-path))
+    (is (= :unread (get-in (readings/consume opts)
+                           [:coverage :members 0 :status]))
+        "without the override, preserve today's canonical-path behaviour")))
+
 (deftest checker-results-are-temp-path-free-and-deterministic
   ;; The checker runs on a random temp file; its output used to embed that
   ;; path, making the coverage certificate -- and so input.edn's sha256 and

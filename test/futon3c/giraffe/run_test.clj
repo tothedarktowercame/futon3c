@@ -709,6 +709,14 @@
       (is (= :population/missions-excursions-tickets
              (:reading-scope @seen))))))
 
+(deftest configured-reading-checker-environment
+  (is (= {"GIRAFFE_CHECK_CODE_ROOT" "/tmp/wm-code"}
+         (gr/configured-reading-checker-env "/tmp/wm-code" nil)))
+  (is (nil? (gr/configured-reading-checker-env nil nil)))
+  (is (nil? (gr/configured-reading-checker-env "" nil)))
+  (is (= {"EXPLICIT" "wins"}
+         (gr/configured-reading-checker-env "/tmp/wm-code" {"EXPLICIT" "wins"}))))
+
 (deftest current-freshness-replays-the-mint-invocation
   (let [root (temp-root "invocation")
         adapter (gt/tickets->input {:tickets-dir tickets-dir

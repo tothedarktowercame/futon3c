@@ -35,6 +35,14 @@
 (def default-tickets-dir "holes/tickets")
 (def default-index-file "holes/tickets/tickets-index.edn")
 
+(defn configured-reading-checker-env
+  "Return an explicit checker environment unchanged, or configure relocation
+  from a non-blank FUTON_WM_CODE_ROOT value."
+  [code-root checker-env]
+  (or checker-env
+      (when-not (str/blank? code-root)
+        {"GIRAFFE_CHECK_CODE_ROOT" code-root})))
+
 ;; ---------------------------------------------------------------- sha256
 
 (defn sha256
@@ -705,7 +713,7 @@
 
 (defn build-adapter-result
   "Build exactly the adapter input named by a persisted mint invocation."
-  [{:keys [source edges repos readings-root only-ids]
+  [{:keys [source edges repos readings-root only-ids reading-checker-env]
     :or {source "tickets"}}]
   (let [combined? (= "missions-excursions" source)
         missions? (or combined? (= "missions" source))
@@ -734,6 +742,9 @@
             :members-file (when readings-root
                             (str (io/file resolved-readings-root "members.json")))
             :reading-batches reading-batches
+            :reading-checker-env
+            (configured-reading-checker-env (System/getenv "FUTON_WM_CODE_ROOT")
+                                            reading-checker-env)
             :reading-scope (when readings-root
                              :population/missions-excursions-tickets)})
           (gt/tickets->input {:tickets-dir default-tickets-dir

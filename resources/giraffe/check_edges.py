@@ -32,7 +32,9 @@ KINDS = {"depends-on", "unblocks", "part-of", "advances", "relates-to",
          "duplicates", "superseded-by"}
 BASES = {"declared", "inferred"}
 STATUS = {"open", "done-unmarked", "abandoned", "unclear"}
-CODE = Path(os.environ.get("GIRAFFE_CHECK_CODE_ROOT") or (Path.home() / "code"))
+CONFIGURED_CODE_ROOT = os.environ.get("GIRAFFE_CHECK_CODE_ROOT")
+CODE = Path(CONFIGURED_CODE_ROOT or (Path.home() / "code"))
+CANONICAL_CODE = Path("/home/joe/code").resolve()
 WINDOW = 6
 
 
@@ -53,8 +55,20 @@ def norm(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
+def local(p):
+    """Relocate canonical corpus pins only when an explicit code root exists."""
+    path = Path(p)
+    if not CONFIGURED_CODE_ROOT:
+        return path
+    try:
+        relative = path.resolve().relative_to(CANONICAL_CODE)
+    except ValueError:
+        return path
+    return CODE / relative
+
+
 def sha(p):
-    return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+    return hashlib.sha256(local(p).read_bytes()).hexdigest()
 
 
 def main(paths):
@@ -67,14 +81,14 @@ def main(paths):
     def file_lines(p):
         if p not in lines_cache:
             try:
-                lines_cache[p] = Path(p).read_text(errors="replace").splitlines()
+                lines_cache[p] = local(p).read_text(errors="replace").splitlines()
             except OSError:
                 lines_cache[p] = None
         return lines_cache[p]
 
     def file_sha(p):
         if p not in sha_cache:
-            sha_cache[p] = sha(p) if Path(p).is_file() else None
+            sha_cache[p] = sha(p) if local(p).is_file() else None
         return sha_cache[p]
 
     def check_evidence(tag, ev):
