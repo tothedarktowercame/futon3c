@@ -661,3 +661,30 @@ The invented ledger gap is described and an invented remedy is proposed.
     (is (contains? (set (:reading-source-changed drift)) :E-bad))
     (is (not (contains? (set (:read drift)) :E-bad)))
     (is (= ["E-gone"] (:members-not-open drift)))))
+
+(deftest reading-drift-compares-repo-relative-source-pins
+  (let [sandbox-root (temp-dir "giraffe-relocated-code-")
+        canonical-root "/home/joe/code"
+        pin (fn [root relative sha] {:path (str (io/file root relative)) :sha256 sha})
+        item (fn [id source-pin] {:id (keyword id) :source-pin source-pin})
+        member (fn [id source-pin] {:id id :source source-pin :status :read})
+        sha-a (apply str (repeat 64 \a))
+        sha-b (apply str (repeat 64 \b))
+        roots [canonical-root sandbox-root]
+        drift (e/reading-drift
+               [(item "E-relocated" (pin sandbox-root "futon2/holes/E-relocated.md" sha-a))
+                (item "E-new-sha" (pin sandbox-root "futon2/holes/E-new-sha.md" sha-b))
+                (item "E-new-path" (pin sandbox-root "futon3c/holes/E-new-path.md" sha-a))
+                (item "E-outside-same" {:path "/outside/E-same.md" :sha256 sha-a})
+                (item "E-outside-different" {:path "/elsewhere/E-different.md" :sha256 sha-a})]
+               {:members [(member "E-relocated" (pin canonical-root "futon2/holes/E-relocated.md" sha-a))
+                          (member "E-new-sha" (pin canonical-root "futon2/holes/E-new-sha.md" sha-a))
+                          (member "E-new-path" (pin canonical-root "futon2/holes/E-new-path.md" sha-a))
+                          (member "E-outside-same" {:path "/outside/E-same.md" :sha256 sha-a})
+                          (member "E-outside-different" {:path "/outside/E-different.md" :sha256 sha-a})]}
+               roots)]
+    (is (contains? (set (:read drift)) :E-relocated))
+    (is (contains? (set (:reading-source-changed drift)) :E-new-sha))
+    (is (contains? (set (:reading-source-changed drift)) :E-new-path))
+    (is (contains? (set (:read drift)) :E-outside-same))
+    (is (contains? (set (:reading-source-changed drift)) :E-outside-different))))

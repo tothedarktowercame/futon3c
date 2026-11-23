@@ -1,6 +1,7 @@
 (ns futon3c.giraffe.excursions
   "Combined mission/excursion census. Unread E dependency graphs remain unknown."
   (:require [futon2.aif.mission-registry :as registry]
+            [clojure.java.io :as io]
             [futon2.aif.task-requisition :as requisition]
             [futon2.aif.task-completion-surface :as completion]
             [futon2.aif.wm.construction-inputs :as sources]
@@ -8,6 +9,27 @@
             [futon3c.giraffe.pass :as pass]
             [futon3c.giraffe.provenance :as provenance]
             [futon3c.giraffe.readings :as readings]))
+
+(defn repo-relative-source-pin
+  "Source identity under any known code root is repo-relative plus sha256.
+  Paths outside those roots retain their absolute identity."
+  [source-pin code-roots]
+  (let [path (:path source-pin)
+        path-object (when path (.normalize (.toPath (.getAbsoluteFile (io/file path)))))
+        root-paths (keep #(when % (.normalize (.toPath (.getAbsoluteFile (io/file %)))))
+                         code-roots)
+        root (when path-object
+               (->> root-paths
+                    (filter #(.startsWith path-object %))
+                    (sort-by #(count (str %)) >)
+                    first))]
+    {:path (if root (str (.relativize root path-object)) path)
+     :sha256 (:sha256 source-pin)}))
+
+(defn- reading-code-roots []
+  (distinct (cons "/home/joe/code"
+                  (keep #(some-> % io/file .getAbsoluteFile .getParent)
+                        missions/default-repos))))
 
 (defn- census-input
   [{:keys [code-root include-tickets] :as opts}]
@@ -84,26 +106,30 @@
   corpus (claude-1, 2026-10-31).  The population check used to demand exact
   equality, so ONE new item blocked the whole field on every click -- and
   members drift daily.  Drift is partial instead: an open item with no
-  current reading is :unread-new; one whose source sha changed is
-  :reading-source-changed; a corpus member that is no longer open is
+  current reading is :unread-new; one whose repo-relative source identity or
+  sha changed is :reading-source-changed; a corpus member that is no longer open is
   ignored (:members-not-open, reported, never silently dropped); everything
-  else is :read.  Nothing passes as read that was not: the source-pin
-  equality is still demanded of every item that counts as read."
-  [open-items coverage]
+  else is :read.  Nothing passes as read that was not: repo-relative path and
+  sha equality are still demanded of every item that counts as read."
+  ([open-items coverage]
+   (reading-drift open-items coverage (reading-code-roots)))
+  ([open-items coverage code-roots]
   (let [by-id (into {} (map (juxt :id identity)) (:members coverage))
         classified (group-by (fn [item]
                                (let [m (get by-id (name (:id item)))]
                                  (cond
                                    (nil? m) :unread-new
                                    (not= :read (:status m)) :unread-new
-                                   (not= (:source-pin item) (:source m)) :reading-source-changed
+                                   (not= (repo-relative-source-pin (:source-pin item) code-roots)
+                                         (repo-relative-source-pin (:source m) code-roots))
+                                   :reading-source-changed
                                    :else :read)))
                              open-items)
         open-names (set (map #(name (:id %)) open-items))]
     {:read (mapv :id (:read classified))
      :unread-new (mapv :id (:unread-new classified))
      :reading-source-changed (mapv :id (:reading-source-changed classified))
-     :members-not-open (vec (sort (remove open-names (map :id (:members coverage)))))}))
+     :members-not-open (vec (sort (remove open-names (map :id (:members coverage)))))})))
 
 (defn missions-and-excursions->input
   [{:keys [reading-batches reading-checker members-file repos reading-scope
