@@ -34,6 +34,7 @@ mkdir -p "$output_dir" "$code_root/storage/futon3c/mission-control" \
   "$code_root/storage/futon3c/portfolio-inference" "$code_root/notes" \
   "$code_root/storage/test-registry" "$code_root/futon2/data" \
   "$code_root/futon3c/data/jvm-incidents" "$code_root/storage/dispatch-payloads" \
+  "$code_root/.claude/projects" \
   "$code_root/storage/futon3c"
 trace_prefix="$output_dir/trace"
 runtime_log="$output_dir/runtime.log"
@@ -86,6 +87,7 @@ watch_writes() {
   export FUTON_STORAGE_ROOT="$code_root/storage"
   export FUTON3C_WARRANT_INDEX="$code_root/storage/test-registry/warrant-index.sqlite"
   export FUTON3C_INCIDENTS_ROOT="$code_root/futon3c/data/jvm-incidents"
+  export FUTON3C_CLAUDE_PROJECTS_ROOT="$code_root/.claude/projects"
   export FUTON3C_EVIDENCE_SPOOL_DB="$code_root/storage/futon3c/evidence-spool.db"
   export FUTON3C_COMMIT_INGEST_CURSORS="$code_root/storage/futon3c/commit-ingest-cursors.edn"
   export FUTON3C_DISPATCH_PAYLOAD_STORE="$code_root/storage/dispatch-payloads"

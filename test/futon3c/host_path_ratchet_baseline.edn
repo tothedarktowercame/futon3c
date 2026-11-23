@@ -2,7 +2,7 @@
  :allowlist {}
  :files
  {"src/futon3c/agency/clock_lineage.clj" 1
-  "src/futon3c/agency/dog_provider.clj" 4
+  "src/futon3c/agency/dog_provider.clj" 3
   "src/futon3c/agency/hop_events.clj" 1
   "src/futon3c/agents/apm_work_queue.clj" 2
   "src/futon3c/agents/arse_work_queue.clj" 1

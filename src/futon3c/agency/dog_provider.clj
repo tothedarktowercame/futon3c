@@ -594,7 +594,8 @@
    ambiguity) and puts no load on :7093 — the recall's :memory handles
    are exactly these project/slug pairs (verified against the live
    11-11 recalls: -home-joe*, zai-*, 象-* projects all resolve here)."
-  "/home/joe/.claude/projects")
+  (or (System/getenv "FUTON3C_CLAUDE_PROJECTS_ROOT")
+      (str (System/getProperty "user.home") "/.claude/projects")))
 
 (def bury-project
   "The dedicated minus40 project for memories 狗 buries: their files

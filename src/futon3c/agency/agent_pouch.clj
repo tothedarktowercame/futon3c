@@ -136,7 +136,9 @@
   [session-id]
   (let [sid (some-> session-id str str/trim not-empty)]
     (when sid
-      (let [projects (io/file (System/getProperty "user.home") ".claude" "projects")]
+      (let [projects (io/file (or (System/getenv "FUTON3C_CLAUDE_PROJECTS_ROOT")
+                                  (str (System/getProperty "user.home")
+                                       "/.claude/projects")))]
         (when (.isDirectory projects)
           (some (fn [d]
                   (let [f (io/file d (str sid ".jsonl"))]

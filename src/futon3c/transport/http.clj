@@ -4578,6 +4578,10 @@
   [path]
   (str/replace (str path) #"[/.]" "-"))
 
+(defn- claude-projects-root []
+  (io/file (or (System/getenv "FUTON3C_CLAUDE_PROJECTS_ROOT")
+               (str (System/getProperty "user.home") "/.claude/projects"))))
+
 (defn- claude-session-cwd
   "Return the cwd Claude resume needs for SESSION-ID, if the local transcript
    store has it. Claude resume lookup is project-directory scoped, so the
@@ -4591,7 +4595,7 @@
    to the internal cwd when nothing matches (pre-fix behavior)."
   ([session-id]
    (claude-session-cwd
-    (io/file (System/getProperty "user.home") ".claude" "projects")
+    (claude-projects-root)
     session-id))
   ([projects-root session-id]
    (when (and (string? session-id)
@@ -8373,7 +8377,7 @@
    dev.clj reload). Reads the tail of ~/.claude/projects/*/<sid>.jsonl."
   [session-id start-ms]
   (try
-    (let [root (io/file (System/getProperty "user.home") ".claude" "projects")
+    (let [root (claude-projects-root)
           f (->> (.listFiles root)
                  (filter #(.isDirectory ^java.io.File %))
                  (map #(io/file % (str session-id ".jsonl")))
