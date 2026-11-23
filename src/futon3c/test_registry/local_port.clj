@@ -1,6 +1,7 @@
 (ns futon3c.test-registry.local-port
   "Composition root for Futon2's read-only test-registry port."
   (:require [clojure.string :as str]
+            [futon2.data-paths :as data-paths]
             [futon2.aif.registry-port :as port]
             [futon3c.evidence.backend :as backend]
             [futon3c.test-registry :as registry]
@@ -11,8 +12,8 @@
 (defn registry-path [] (local-store/path))
 
 (def ^:dynamic *repo-roots*
-  {"futon2" "/home/joe/code/futon2"
-   "futon3c" "/home/joe/code/futon3c"})
+  {"futon2" (data-paths/code-path "futon2")
+   "futon3c" (data-paths/code-path "futon3c")})
 
 (defn- verified-entry [store entry]
   (when entry

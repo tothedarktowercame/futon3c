@@ -67,7 +67,6 @@
   "src/futon3c/test_registry.clj" 1
   "src/futon3c/test_registry/currentness.clj" 1
   "src/futon3c/test_registry/ledger.clj" 1
-  "src/futon3c/test_registry/local_port.clj" 2
   "src/futon3c/test_registry/sqlite_backend.clj" 1
   "src/futon3c/test_registry/validation_adapters.clj" 1
   "src/futon3c/transport/encyclopedia.clj" 1
