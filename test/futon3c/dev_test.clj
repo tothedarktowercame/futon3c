@@ -459,6 +459,7 @@
           result (invoke-fn "hello from test" "incoming-stale")
           argv (slurp argv-file)]
       (is (= "file-sid" (:session-id result)))
+      (is (re-find #"--model claude-opus-5-5\b" argv))
       (is (re-find #"--resume file-sid\b" argv))
       (is (not (re-find #"incoming-stale" argv)))
       (is (not (re-find #"atom-sid" argv))))))
@@ -635,7 +636,24 @@
           (is (string? (:invoke-trace-id result)))
           (is (= "claude-warm" (:agent-id @fed)))
           (is (= "hello warm" (:prompt @fed)))
+          (is (= "claude-opus-5-5" (get-in @fed [:opts :model])))
           (is (= "incoming-sid" (get-in @fed [:opts :session-id]))))))))
+
+(deftest make-claude-invoke-fn-explicit-model-wins-over-agency-default
+  (let [fed (atom nil)]
+    (with-redefs [futon3c.agents.mfuton-invoke-override/claude-role-codex-opts
+                  (constantly nil)
+                  turn-queue/enabled? (constantly false)
+                  agent-pouch/enabled? (constantly true)
+                  agent-pouch/feed-turn!
+                  (fn [_ _ opts]
+                    (reset! fed opts)
+                    {:result "warm" :session-id "warm-sid"})]
+      (let [invoke-fn (dev/make-claude-invoke-fn
+                       {:agent-id "claude-explicit"
+                        :model "claude-haiku-5-5"})]
+        (invoke-fn "hello" nil)
+        (is (= "claude-haiku-5-5" (:model @fed)))))))
 
 (deftest make-claude-invoke-fn-falls-back-cold-when-pouch-fails
   (testing "Kangaroo failure never strands a turn"

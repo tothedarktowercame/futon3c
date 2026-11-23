@@ -24,6 +24,8 @@
      FUTON3C_PEERS      — comma-separated peer Agency URLs for federation
      FUTON3C_SELF_URL   — this Agency's externally reachable URL
      CLAUDE_BIN         — path to claude CLI binary (default: claude)
+     FUTON3C_CLAUDE_MODEL — model for Agency Claude agents
+                           (default: claude-opus-5-5; independent of Claude CLI settings)
      CLAUDE_SESSION_FILE — path to session ID file (default: /tmp/futon-session-id)
      CODEX_BIN          — path to codex CLI binary (default: codex)
      CODEX_PROFILE      — optional Codex config profile passed as `codex -p <profile>`
@@ -3609,6 +3611,8 @@ RESPOND WITH ONLY:
      (reset! !agents-blackboard-ticker-stop stop-fn)
      stop-fn)))
 
+(def default-claude-model "claude-opus-5-5")
+
 (defn make-claude-invoke-fn
   "Create an invoke-fn that calls `claude -p` for real Claude interaction.
 
@@ -3637,7 +3641,8 @@ RESPOND WITH ONLY:
                          not be arbitrarily killed. IRC relay enforces its own
                          shorter timeout (120s) via invoke-timeout-ms.
      :model            — Claude model override (e.g. \"claude-haiku-4-5-20251001\").
-                         When nil, uses the CLI default."
+                         When nil, uses FUTON3C_CLAUDE_MODEL or Agency's Opus
+                         default, never the mutable Claude CLI global default."
   [{:keys [claude-bin permission-mode agent-id session-file session-id-atom timeout-ms emacs-socket model cwd
            platform-stateless? platform-key-file platform-ledger monthly-limit-usd max-budget-usd]
     :or {claude-bin "claude" permission-mode "bypassPermissions" agent-id "claude"
@@ -3664,7 +3669,8 @@ RESPOND WITH ONLY:
       (println (str "[invoke] " agent-id " claude-role path redirected to codex in mfuton mode"))
       (flush)
       (make-codex-invoke-fn codex-opts))
-    (let [!lock (Object.)
+    (let [model (or model (env "FUTON3C_CLAUDE_MODEL") default-claude-model)
+          !lock (Object.)
           !turn-count (atom 0)
           buf-name (str "*invoke: " agent-id "*")
           bb-opts (cond-> {} emacs-socket (assoc :emacs-socket emacs-socket))]

@@ -344,7 +344,7 @@
                                   0
                                   (inc (long (or n 0))))))
                  @!turns-without-operator)
-        n (long (get counts k))]
+        n (long (get counts k 0))]
     (when (= 6 n)
       (println (format "[kangaroo] %s %d turns without an operator turn — auto-compact on"
                        (str agent-id) n))

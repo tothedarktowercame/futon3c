@@ -60,6 +60,10 @@
   (System/clearProperty "FUTON3C_KANGAROO")
   (is (false? (pouch/enabled?))))
 
+(deftest headerless-first-turn-keeps-unattended-count-at-zero
+  (is (= 0 (pouch/note-turn-origin! "claude-headerless-test" "fresh-session" "provider continuation")))
+  (is (= 0 (pouch/turns-without-operator "claude-headerless-test" "fresh-session"))))
+
 (deftest feed-turn-spawns-one-warm-process-and-reuses-it
   (let [bin (fake-claude-bin)
         r1 (pouch/feed-turn! "claude-test" "one" {:claude-bin bin :timeout-ms 2000})
