@@ -861,6 +861,50 @@ claude-vs-codex behavior arbitrarily different."
       (when (file-exists-p agent-chat-queued-turns-file)
         (delete-file agent-chat-queued-turns-file)))))
 
+(ert-deftest agent-chat-new-session-restores-no-queued-turns ()
+  "A fresh `cr new' buffer starts with an empty queue.
+2026-11-23: a turn queued under the \"(awaiting session)\" placeholder on
+11-07 was sent as the first message of a new claude-12 session."
+  (let ((agent-chat-queued-turns-file (make-temp-file "agent-chat-turns-")))
+    (unwind-protect
+        (progn
+          (delete-file agent-chat-queued-turns-file)
+          (with-temp-buffer
+            (agent-chat-test--init-buffer)
+            (setq-local agent-chat--agent-id "claude-test"
+                        agent-chat--session-id "claude-test (awaiting session)")
+            (should-not (agent-chat--queue-store-key))
+            (agent-chat--queue-turn (lambda (&rest _) 'proc)
+                                    "agent" nil "queued in a fresh session"
+                                    "joe" 'operator)
+            (should (= 1 (length agent-chat--queued-operator-turns))))
+          (should-not (agent-chat--read-queue-store))
+          (with-temp-buffer
+            (agent-chat-test--init-buffer)
+            (setq-local agent-chat--agent-id "claude-test"
+                        agent-chat--session-id "claude-test (awaiting session)")
+            (agent-chat--restore-queued-turns)
+            (should-not agent-chat--queued-operator-turns)))
+      (when (file-exists-p agent-chat-queued-turns-file)
+        (delete-file agent-chat-queued-turns-file)))))
+
+(ert-deftest agent-chat-queue-store-decodes-octal-escaped-text ()
+  "A stored text written as octal escapes is restored as multibyte UTF-8."
+  (let ((agent-chat-queued-turns-file (make-temp-file "agent-chat-turns-")))
+    (unwind-protect
+        (progn
+          (with-temp-file agent-chat-queued-turns-file
+            (insert "((\"a\\0s\" (:text \"\\360\\237\\227\\243 hi\" :speaker \"joe\")))\n"))
+          (let ((text (plist-get (cadr (car (agent-chat--read-queue-store))) :text)))
+            (should (equal text "🗣 hi"))
+            (should (stringp (json-serialize (list :p text)))))
+          (agent-chat--write-queue-store
+           (list (cons "a" (list (list :text "🗣 hi")))))
+          (should (equal (plist-get (cadr (car (agent-chat--read-queue-store))) :text)
+                         "🗣 hi")))
+      (when (file-exists-p agent-chat-queued-turns-file)
+        (delete-file agent-chat-queued-turns-file)))))
+
 (ert-deftest agent-chat-unsolicited-queues-behind-operator-turn ()
   "The mirror race: an unsolicited resume arriving while an OPERATOR turn is in
 flight must QUEUE (and drain after), never signal — the park delivery path has

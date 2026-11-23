@@ -3303,21 +3303,47 @@ the recreated REPL buffer before a restored turn is drained."
   :group 'agent-chat)
 
 (defun agent-chat--queue-store-key ()
-  "Return the durable queue key for the current agent/session, or nil."
+  "Return the durable queue key for the current agent/session, or nil.
+A buffer with no real session yet has no key: \"pending\", or the
+\"<agent> (awaiting session)\" placeholder that `cr new' starts with.  Every
+fresh buffer for an agent shares that placeholder, so a turn stored under it
+was restored into the next new session.  On 2026-11-23 a new claude-12
+buffer sent a turn queued on 2026-11-07 as its first message."
   (when (and (stringp agent-chat--agent-id)
              (not (string-empty-p agent-chat--agent-id))
              (stringp agent-chat--session-id)
              (not (string-empty-p agent-chat--session-id))
-             (not (equal agent-chat--session-id "pending")))
+             (not (equal agent-chat--session-id "pending"))
+             (not (string-match-p "(awaiting session)" agent-chat--session-id)))
     (concat agent-chat--agent-id "\0" agent-chat--session-id)))
+
+(defun agent-chat--queue-text-decode (text)
+  "Return TEXT as multibyte text.
+Older writes left non-ASCII as octal escapes, which `read' returns as a
+unibyte string; sent as is, `json-serialize' rejects it."
+  (if (and (stringp text)
+           (not (multibyte-string-p text))
+           (string-match-p "[^[:ascii:]]" text))
+      (decode-coding-string text 'utf-8)
+    text))
 
 (defun agent-chat--read-queue-store ()
   "Read the durable queued-turn alist, returning nil for an absent store."
   (when (file-readable-p agent-chat-queued-turns-file)
     (condition-case err
         (with-temp-buffer
-          (insert-file-contents agent-chat-queued-turns-file)
-          (read (current-buffer)))
+          (let ((coding-system-for-read 'utf-8-unix))
+            (insert-file-contents agent-chat-queued-turns-file))
+          (mapcar (lambda (cell)
+                    (cons (car cell)
+                          (mapcar (lambda (entry)
+                                    (if (plist-member entry :text)
+                                        (plist-put (copy-sequence entry) :text
+                                                   (agent-chat--queue-text-decode
+                                                    (plist-get entry :text)))
+                                      entry))
+                                  (cdr cell))))
+                  (read (current-buffer))))
       (error
        (message "agent-chat queued-turn store unreadable: %s"
                 (error-message-string err))
@@ -3331,6 +3357,7 @@ the recreated REPL buffer before a restored turn is drained."
       (unwind-protect
           (progn
             (with-temp-file temporary
+              (setq buffer-file-coding-system 'utf-8-unix)
               (let ((print-length nil) (print-level nil))
                 (prin1 store (current-buffer))
                 (insert "\n")))
