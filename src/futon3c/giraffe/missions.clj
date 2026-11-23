@@ -10,14 +10,21 @@
             [futon3c.giraffe.tickets :as gt]
             [futon2.aif.mission-registry :as registry]))
 
+(defn configured-default-repos
+  "Existing canonical repo directories below code-root.  Blank roots retain
+  the production default so callers can pass System/getenv directly."
+  [code-root]
+  (let [code-root (if (str/blank? code-root) "/home/joe/code" code-root)]
+    (vec (keep #(let [d (io/file code-root %)]
+                  (when (.isDirectory d) (str d)))
+               ["futon0" "futon1" "futon1a" "futon1b" "futon2" "futon3"
+                "futon3a" "futon3b" "futon3c" "futon4" "futon5" "futon5a"
+                "futon6" "futon7"]))))
+
 (def default-repos
   "The canonical checkouts scanned in packet 5 (futon1/1a/1b exist but
   hold no mission docs; kept so the list matches the discovery)."
-  (vec (keep #(let [d (io/file "/home/joe/code" %)]
-               (when (.isDirectory d) (str d)))
-             ["futon0" "futon1" "futon1a" "futon1b" "futon2" "futon3"
-              "futon3a" "futon3b" "futon3c" "futon4" "futon5" "futon5a"
-              "futon6" "futon7"])))
+  (configured-default-repos (System/getenv "FUTON_WM_CODE_ROOT")))
 
 ;; ------------------------------------------------------- status mapping
 

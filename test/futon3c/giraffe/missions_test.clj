@@ -19,6 +19,19 @@
     (.mkdirs d)
     (str d)))
 
+(deftest configured-default-repos-follows-code-root
+  (let [root (temp-dir "configured-repos")]
+    (.mkdir (io/file root "futon0"))
+    (.mkdir (io/file root "futon3c"))
+    (is (= [(str (io/file root "futon0"))
+            (str (io/file root "futon3c"))]
+           (gm/configured-default-repos root)))))
+
+(deftest configured-default-repos-retains-canonical-fallback
+  (let [expected (gm/configured-default-repos "/home/joe/code")]
+    (is (= expected (gm/configured-default-repos nil)))
+    (is (= expected (gm/configured-default-repos "")))))
+
 (defn- spit-mission [root repo id body]
   (let [d (io/file root repo "holes/missions")]
     (.mkdirs d)
