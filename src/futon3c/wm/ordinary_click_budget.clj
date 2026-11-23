@@ -4,7 +4,8 @@
   (:require [cheshire.core :as json]
             [clojure.java.io :as io]
             [clojure.set :as set]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [futon2.data-paths :as data-paths])
   (:import [java.nio ByteBuffer]
            [java.nio.channels FileChannel]
            [java.nio.file StandardOpenOption]))
@@ -193,8 +194,15 @@
   ;; commit with a trail row. Issue-time accounting and the no-refund rule
   ;; are unchanged.
   388)
+(defn configured-ledger-path
+  "Resolve the click-consumption ledger under futon2's configured data root."
+  [data-root code-root]
+  (str (io/file (data-paths/configured-data-root data-root code-root)
+                "wm-ordinary-clicks" "consumption.jsonl")))
+
 (def ^:dynamic *ledger-path*
-  "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl")
+  (configured-ledger-path (System/getenv "FUTON2_DATA_ROOT")
+                          (System/getenv "FUTON_WM_CODE_ROOT")))
 (defonce ^:private issue-lock (Object.))
 
 (defn- charged-click-ids [entries]

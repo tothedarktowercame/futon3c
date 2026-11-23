@@ -22,6 +22,15 @@
     (mapv #(json/parse-string % true) (remove str/blank? (str/split-lines (slurp budget/*ledger-path*))))
     []))
 
+(deftest configured-ledger-path-follows-data-and-code-roots
+  (let [canonical "/home/joe/code/futon2/data/wm-ordinary-clicks/consumption.jsonl"]
+    (is (= canonical (budget/configured-ledger-path nil nil)))
+    (is (= canonical (budget/configured-ledger-path "" "")))
+    (is (= "/tmp/x/futon2/data/wm-ordinary-clicks/consumption.jsonl"
+           (budget/configured-ledger-path nil "/tmp/x")))
+    (is (= "/tmp/data/wm-ordinary-clicks/consumption.jsonl"
+           (budget/configured-ledger-path "/tmp/data" "/tmp/x")))))
+
 ;; The allocation is DATA (budget/allocated), renewed whenever Joe grants
 ;; more; what this test pins is the behaviour at the boundary -- every click
 ;; up to the allocation issues and is charged before the worker runs, and the
