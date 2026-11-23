@@ -7,13 +7,15 @@ agency_port=7270
 drawbridge_port=6968
 settle_seconds=120
 output_dir="${TMPDIR:-/tmp}/futon3c-foreign-root-check-$$"
+alt_objects_root=""
 
 usage() {
-  echo "usage: $0 --code-root DIR [--agency-port PORT] [--drawbridge-port PORT] [--seconds N] [--output DIR]" >&2
+  echo "usage: $0 --code-root DIR [--alt-objects-root DIR] [--agency-port PORT] [--drawbridge-port PORT] [--seconds N] [--output DIR]" >&2
 }
 while (($#)); do
   case "$1" in
     --code-root) code_root=$2; shift 2 ;;
+    --alt-objects-root) alt_objects_root=$2; shift 2 ;;
     --agency-port) agency_port=$2; shift 2 ;;
     --drawbridge-port) drawbridge_port=$2; shift 2 ;;
     --seconds) settle_seconds=$2; shift 2 ;;
@@ -24,6 +26,7 @@ while (($#)); do
 done
 [[ -n "$code_root" ]] || { usage; exit 2; }
 code_root=$(realpath "$code_root")
+[[ -z "$alt_objects_root" ]] || alt_objects_root=$(realpath "$alt_objects_root")
 [[ -d "$code_root/futon3c" ]] || { echo "missing $code_root/futon3c" >&2; exit 2; }
 for port in "$agency_port" "$drawbridge_port"; do
   case "$port" in 7070|6768|7073|7074) echo "refusing live port $port" >&2; exit 2;; esac
@@ -61,7 +64,7 @@ watch_writes() {
       while IFS= read -r line; do
         [[ "$line" == *"/home/joe/"* ]] || continue
         [[ "$line" == *"$code_root"* ]] && continue
-        if [[ "$line" =~ O_WRONLY|O_RDWR|O_CREAT|O_TRUNC|rename\(|unlink\( ]]; then
+        if [[ "$line" =~ O_WRONLY|O_RDWR|O_CREAT|O_TRUNC|mkdir(at)?\(|rmdir\(|unlink(at)?\(|rename(at2?)?\(|link(at)?\(|symlink(at)?\(|truncate\(|creat\(|chmod\(|fchmodat\(|utimensat\( ]]; then
           printf '%s\n' "$line" >"$sentinel"
           stop_group
           return
@@ -97,7 +100,7 @@ watch_writes() {
   export FUTON_PATTERN_LIBRARY_ROOT="$code_root/futon3/library" FUTON3_LIBRARY_DIR="$code_root/futon3/library"
   export FUTON3C_INSTALLATION_WATCH_ROOT="$code_root" FUTON3C_WORKTREE_ROOT="$code_root/futon3c"
   export FUTON3C_PLANETMATH_ROOT="$code_root/planetmath"
-  exec setsid strace -ff -o "$trace_prefix" -e trace=openat,open,connect,rename,unlink,execve make dev
+  exec setsid strace -ff -o "$trace_prefix" -e trace=%file,connect,execve make dev
 ) >"$runtime_log" 2>&1 &
 leader=$!
 watch_writes & watcher=$!
@@ -126,12 +129,16 @@ if [[ -f "$sentinel" ]]; then
   cat "$sentinel" >&2
 fi
 
-python3 - "$code_root" "$output_dir" "$trace_prefix" <<'PY'
+python3 - "$code_root" "$alt_objects_root" "$output_dir" "$trace_prefix" <<'PY'
 import collections, glob, os, re, sys
-root, out, prefix = sys.argv[1:]
+root, alt_objects_root, out, prefix = sys.argv[1:]
 paths = collections.Counter(); writes = collections.Counter()
 quoted = re.compile(r'"(/home/joe/[^"\\]*)"')
-write_mark = re.compile(r'O_WRONLY|O_RDWR|O_CREAT|O_TRUNC|rename\(|unlink\(')
+write_mark = re.compile(
+    r'O_WRONLY|O_RDWR|O_CREAT|O_TRUNC|mkdir(?:at)?\(|rmdir\(|'
+    r'unlink(?:at)?\(|rename(?:at2?)?\(|link(?:at)?\(|symlink(?:at)?\(|'
+    r'truncate\(|creat\(|chmod\(|fchmodat\(|utimensat\('
+)
 # Read-only host toolchain inputs.  They are not application roots and are
 # intentionally shared by relocated checkouts; writes remain prohibited.
 allowed_read_prefixes = (
@@ -143,6 +150,7 @@ allowed_read_prefixes = (
 )
 allowed_read_exact = {
     '/home/joe/.gitconfig': 'Git user configuration',
+    '/home/joe/.zai-key': 'ZAI API credential',
 }
 for name in glob.glob(prefix + '.*'):
     for line in open(name, errors='replace'):
@@ -154,6 +162,10 @@ for name in glob.glob(prefix + '.*'):
             if path == root or path.startswith(root + '/'):
                 continue
             if '/.git/objects/' in path and not write_mark.search(line):
+                continue
+            if (alt_objects_root and
+                    (path == alt_objects_root or path.startswith(alt_objects_root + '/')) and
+                    '/objects/' in path and not write_mark.search(line)):
                 continue
             allowed_read = (path in allowed_read_exact or
                             any(path.startswith(p) for p, _ in allowed_read_prefixes))
