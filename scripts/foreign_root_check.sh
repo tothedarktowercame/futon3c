@@ -39,6 +39,7 @@ mkdir -p "$output_dir" "$code_root/storage/futon3c/mission-control" \
   "$code_root/futon3c/data/jvm-incidents" "$code_root/storage/dispatch-payloads" \
   "$code_root/.claude/projects" \
   "$code_root/storage/futon3c" "$code_root/storage/arxana-together"
+mkdir -p "$code_root/.emacs-server"
 trace_prefix="$output_dir/trace"
 runtime_log="$output_dir/runtime.log"
 sentinel="$output_dir/live-write"
@@ -88,6 +89,9 @@ watch_writes() {
   export FUTON3A_ROOT="$code_root/futon3a" FUTON5_ROOT="$code_root/futon5" FUTON6_ROOT="$code_root/futon6"
   export FUTON2_DATA_ROOT="$code_root/futon2/data" FUTON_WM_NOTES_ROOT="$code_root/notes"
   export FUTON_STORAGE_ROOT="$code_root/storage"
+  export GIRAFFE_ROOT="$code_root/storage/giraffe"
+  export FUTON3C_BLACKBOARD_PROJECT=false
+  export FUTON3C_EMACS_SOCKET="$code_root/.emacs-server/nonexistent"
   export FUTON3C_WARRANT_INDEX="$code_root/storage/test-registry/warrant-index.sqlite"
   export FUTON3C_INCIDENTS_ROOT="$code_root/futon3c/data/jvm-incidents"
   export FUTON3C_CLAUDE_PROJECTS_ROOT="$code_root/.claude/projects"

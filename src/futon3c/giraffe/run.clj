@@ -31,7 +31,10 @@
             [futon3c.giraffe.stale-markers :as stale]
             [futon3c.giraffe.tickets :as gt]))
 
-(def default-root "/home/joe/code/storage/giraffe/")
+(def default-root
+  (str (or (System/getenv "FUTON_STORAGE_ROOT")
+           (str (System/getProperty "user.home") "/code/storage"))
+       "/giraffe/"))
 (def default-tickets-dir "holes/tickets")
 (def default-index-file "holes/tickets/tickets-index.edn")
 

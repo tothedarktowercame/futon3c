@@ -37,7 +37,6 @@
   "src/futon3c/giraffe/reread_cli.clj" 3
   "src/futon3c/giraffe/reread_mint.clj" 4
   "src/futon3c/giraffe/reread_worker.clj" 3
-  "src/futon3c/giraffe/run.clj" 1
   "src/futon3c/giraffe/second_reading.clj" 2
   "src/futon3c/inbox_zero/board_consumer.clj" 1
   "src/futon3c/inbox_zero/confirm_intake.clj" 1

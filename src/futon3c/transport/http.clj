@@ -4343,7 +4343,9 @@
 ;; =============================================================================
 
 (def ^:private backpack-file
-  (str (System/getProperty "user.home") "/code/storage/futon3c/backpacks.json"))
+  (str (or (System/getenv "FUTON_STORAGE_ROOT")
+           (str (System/getProperty "user.home") "/code/storage"))
+       "/futon3c/backpacks.json"))
 
 (defonce ^:private !backpacks
   (atom (try
@@ -4354,7 +4356,7 @@
 (defn- save-backpacks!
   "Persist backpacks to disk."
   []
-  (let [dir (io/file (str (System/getProperty "user.home") "/code/storage/futon3c"))]
+  (let [dir (.getParentFile (io/file backpack-file))]
     (.mkdirs dir)
     (spit backpack-file (json/generate-string @!backpacks {:pretty true}))))
 
