@@ -65,7 +65,8 @@ watch_writes() {
       while IFS= read -r line; do
         [[ "$line" == *"/home/joe/"* ]] || continue
         [[ "$line" == *"$code_root"* ]] && continue
-        if [[ "$line" =~ O_WRONLY|O_RDWR|O_CREAT|O_TRUNC|mkdir(at)?\(|rmdir\(|unlink(at)?\(|rename(at2?)?\(|link(at)?\(|symlink(at)?\(|truncate\(|creat\(|chmod\(|fchmodat\(|utimensat\( ]]; then
+        if [[ "$line" =~ ^(open|openat|openat2)\(.*(O_WRONLY|O_RDWR|O_CREAT|O_TRUNC) ]] ||
+           [[ "$line" =~ ^(mkdir|mkdirat|rmdir|unlink|unlinkat|rename|renameat|renameat2|link|linkat|symlink|symlinkat|truncate|creat|chmod|fchmodat|utimensat)\( ]]; then
           printf '%s\n' "$line" >"$sentinel"
           stop_group
           return
@@ -141,9 +142,9 @@ root, alt_objects_root, out, prefix = sys.argv[1:]
 paths = collections.Counter(); writes = collections.Counter()
 quoted = re.compile(r'"(/home/joe/[^"\\]*)"')
 write_mark = re.compile(
-    r'O_WRONLY|O_RDWR|O_CREAT|O_TRUNC|mkdir(?:at)?\(|rmdir\(|'
-    r'unlink(?:at)?\(|rename(?:at2?)?\(|link(?:at)?\(|symlink(?:at)?\(|'
-    r'truncate\(|creat\(|chmod\(|fchmodat\(|utimensat\('
+    r'^(?:(?:open|openat|openat2)\(.*(?:O_WRONLY|O_RDWR|O_CREAT|O_TRUNC)|'
+    r'(?:mkdir|mkdirat|rmdir|unlink|unlinkat|rename|renameat|renameat2|'
+    r'link|linkat|symlink|symlinkat|truncate|creat|chmod|fchmodat|utimensat)\()'
 )
 # Read-only host toolchain inputs.  They are not application roots and are
 # intentionally shared by relocated checkouts; writes remain prohibited.
@@ -157,6 +158,11 @@ allowed_read_prefixes = (
 allowed_read_exact = {
     '/home/joe/.gitconfig': 'Git user configuration',
     '/home/joe/.zai-key': 'ZAI API credential',
+    '/home/joe/.m2': 'Maven dependency cache root',
+    '/home/joe/.clojure': 'Clojure CLI user configuration root',
+    '/home/joe/.cache': 'user-level toolchain cache root',
+    '/home/joe/.deps.clj': 'deps.clj tool cache root',
+    '/home/joe/.config/git': 'Git user configuration root',
 }
 for name in glob.glob(prefix + '.*'):
     for line in open(name, errors='replace'):
