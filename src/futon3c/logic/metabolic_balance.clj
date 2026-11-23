@@ -37,6 +37,7 @@
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon2.data-paths :as data-paths]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.logic.disposition-edn :as disposition-edn]
             [futon3c.logic.mana-session :as mana-session]
@@ -286,15 +287,9 @@
 (def default-repo-paths
   "Default futon-stack repo paths for the working-tree drain channel.
    Mirrors `futon3c.logic.locus/default-repo-paths` shape."
-  ["/home/joe/code/futon0"
-   "/home/joe/code/futon1a"
-   "/home/joe/code/futon3"
-   "/home/joe/code/futon3a"
-   "/home/joe/code/futon3b"
-   "/home/joe/code/futon3c"
-   "/home/joe/code/futon4"
-   "/home/joe/code/futon5"
-   "/home/joe/code/futon5a"])
+  (mapv #(data-paths/code-path %)
+        ["futon0" "futon1a" "futon3" "futon3a" "futon3b"
+         "futon3c" "futon4" "futon5" "futon5a"]))
 
 ;; ---------------------------------------------------------------------------
 ;; Boot-time emit + print helpers (Block 4)

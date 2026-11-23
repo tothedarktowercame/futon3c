@@ -33,6 +33,7 @@
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon2.data-paths :as data-paths]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.evidence.store :as store]
             [futon3c.logic.inventory :as inventory]
@@ -944,15 +945,9 @@
 (def default-repo-paths
   "The futon-stack repos `obsolescence-recognition/autostash` scans by
    default. Override at activation time by passing :repo-paths."
-  ["/home/joe/code/futon0"
-   "/home/joe/code/futon1a"
-   "/home/joe/code/futon3"
-   "/home/joe/code/futon3a"
-   "/home/joe/code/futon3b"
-   "/home/joe/code/futon3c"
-   "/home/joe/code/futon4"
-   "/home/joe/code/futon5"
-   "/home/joe/code/futon5a"])
+  (mapv #(data-paths/code-path %)
+        ["futon0" "futon1a" "futon3" "futon3a" "futon3b"
+         "futon3c" "futon4" "futon5" "futon5a"]))
 
 (defn register-archaeology-control-taps!
   "Register the six `archaeology-control` family check-fns with

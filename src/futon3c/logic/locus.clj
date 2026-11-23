@@ -27,6 +27,7 @@
    Mission: M-single-locus (futon3c/holes/missions/)."
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
+            [futon2.data-paths :as data-paths]
             [futon3c.agency.registry :as reg]
             [futon3c.evidence.boundary :as boundary]
             [futon3c.logic.probe :as probe])
@@ -469,15 +470,9 @@
 
 (def default-repo-paths
   "Default futon-stack repo paths the mission-home check scans."
-  ["/home/joe/code/futon0"
-   "/home/joe/code/futon1a"
-   "/home/joe/code/futon3"
-   "/home/joe/code/futon3a"
-   "/home/joe/code/futon3b"
-   "/home/joe/code/futon3c"
-   "/home/joe/code/futon4"
-   "/home/joe/code/futon5"
-   "/home/joe/code/futon5a"])
+  (mapv #(data-paths/code-path %)
+        ["futon0" "futon1a" "futon3" "futon3a" "futon3b"
+         "futon3c" "futon4" "futon5" "futon5a"]))
 
 (defn- emit-load-time-fired!
   [evidence-store family-id author {:keys [outcome detail]}]
