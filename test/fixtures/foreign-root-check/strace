@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+prefix=""
+while (($#)); do
+  if [[ "$1" == "-o" ]]; then
+    prefix=$2
+    shift 2
+  else
+    shift
+  fi
+done
+[[ -n "$prefix" ]]
+printf '%s\n' "${FAKE_TRACE_LINE:?}" >"$prefix.$$"

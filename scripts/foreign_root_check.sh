@@ -90,7 +90,11 @@ watch_writes() {
   export FUTON3A_ROOT="$code_root/futon3a" FUTON5_ROOT="$code_root/futon5" FUTON6_ROOT="$code_root/futon6"
   export FUTON2_DATA_ROOT="$code_root/futon2/data" FUTON_WM_NOTES_ROOT="$code_root/notes"
   export FUTON_STORAGE_ROOT="$code_root/storage"
+  export FUTON3A_PATTERN_INDEX_DB="$code_root/storage/futon3a/pattern-index.sqlite"
+  export MEME_DB_PATH="$code_root/futon3a/meme.db"
   export GIRAFFE_ROOT="$code_root/storage/giraffe"
+  export FUTON3C_GIRAFFE_REREAD_ENV_FILE="$code_root/.config/futon3c/giraffe-reread.env"
+  export FUTON3C_AGENTS_MD_ROOT="$code_root"
   export FUTON3C_BLACKBOARD_PROJECT=false
   export FUTON3C_EMACS_SOCKET="$code_root/.emacs-server/nonexistent"
   export FUTON3C_WARRANT_INDEX="$code_root/storage/test-registry/warrant-index.sqlite"
@@ -140,6 +144,7 @@ python3 - "$code_root" "$alt_objects_root" "$output_dir" "$trace_prefix" <<'PY'
 import collections, glob, os, re, sys
 root, alt_objects_root, out, prefix = sys.argv[1:]
 paths = collections.Counter(); writes = collections.Counter()
+ancestor_lookups = collections.Counter()
 quoted = re.compile(r'"(/home/joe/[^"\\]*)"')
 write_mark = re.compile(
     r'^(?:(?:open|openat|openat2)\(.*(?:O_WRONLY|O_RDWR|O_CREAT|O_TRUNC)|'
@@ -154,24 +159,48 @@ allowed_read_prefixes = (
     ('/home/joe/.cache/', 'user-level toolchain cache'),
     ('/home/joe/.deps.clj/', 'deps.clj tool cache'),
     ('/home/joe/.config/git/', 'Git user configuration fragments'),
+    ('/home/joe/.local/share/claude/', 'Claude launcher toolchain'),
+    ('/home/joe/.nvm/', 'Node launcher toolchain'),
 )
 allowed_read_exact = {
     '/home/joe/.gitconfig': 'Git user configuration',
     '/home/joe/.zai-key': 'ZAI API credential',
+    '/home/joe/.zaikey': 'legacy ZAI API credential',
     '/home/joe/.m2': 'Maven dependency cache root',
     '/home/joe/.clojure': 'Clojure CLI user configuration root',
     '/home/joe/.cache': 'user-level toolchain cache root',
     '/home/joe/.deps.clj': 'deps.clj tool cache root',
     '/home/joe/.config/git': 'Git user configuration root',
 }
+lines = []
 for name in glob.glob(prefix + '.*'):
-    for line in open(name, errors='replace'):
+    lines.extend(open(name, errors='replace'))
+object_roots = set()
+for line in lines:
+    for path in quoted.findall(line):
+        marker = '/.git/objects'
+        if marker in path:
+            object_roots.add(path.split(marker, 1)[0] + marker)
+        if alt_objects_root and '/objects' in path and (path == alt_objects_root or path.startswith(alt_objects_root + '/')):
+            object_roots.add(path.split('/objects', 1)[0] + '/objects')
+allowed_roots = tuple(x.rstrip('/') for x in (root, alt_objects_root, *object_roots) if x)
+lookup_mark = re.compile(
+    r'^(?:stat|lstat|newfstatat|statx|access|faccessat|faccessat2|readlink|readlinkat)\('
+    r'|^(?:open|openat|openat2)\(.*O_RDONLY.*O_DIRECTORY'
+)
+for line in lines:
         # execve is traced only to attribute an opener; its argv strings are
         # not themselves filesystem accesses.
         if line.startswith('execve('):
             continue
         for path in quoted.findall(line):
             if path == root or path.startswith(root + '/'):
+                continue
+            is_allowed_ancestor = any(
+                path == allowed or allowed.startswith(path.rstrip('/') + '/')
+                for allowed in allowed_roots)
+            if is_allowed_ancestor and lookup_mark.search(line) and not write_mark.search(line):
+                ancestor_lookups[path] += 1
                 continue
             if '/.git/objects/' in path and not write_mark.search(line):
                 continue
@@ -189,6 +218,12 @@ with open(os.path.join(out, 'prohibited.tsv'), 'w') as f:
     f.write('count\tpath\twrites\n')
     for path, count in sorted(paths.items()):
         f.write(f'{count}\t{path}\t{writes[path]}\n')
-print(f'prohibited_unique={len(paths)} prohibited_calls={sum(paths.values())} write_paths={len(writes)}')
+with open(os.path.join(out, 'ancestor-lookups.tsv'), 'w') as f:
+    f.write('count\tpath\n')
+    for path, count in sorted(ancestor_lookups.items()):
+        f.write(f'{count}\t{path}\n')
+print(f'prohibited_unique={len(paths)} prohibited_calls={sum(paths.values())} '
+      f'write_paths={len(writes)} ancestor_lookup_unique={len(ancestor_lookups)} '
+      f'ancestor_lookup_calls={sum(ancestor_lookups.values())}')
 sys.exit(1 if paths else 0)
 PY

@@ -159,6 +159,14 @@
       (is (= 2 (:new-item-cap c)))
       (is (= 123 (:mint-window-ms c))))))
 
+(deftest environment-file-path-can-be-relocated
+  (let [f (io/file (temp-dir) "relocated-service.env")]
+    (spit f "FUTON3C_GIRAFFE_REREAD_NEW_ITEM_CAP=17\n")
+    (is (= 17 (:new-item-cap
+               (service/load-config
+                (assoc (dissoc (fixture) :new-item-cap) :env-file nil
+                       :environment {"FUTON3C_GIRAFFE_REREAD_ENV_FILE" (str f)})))))))
+
 (deftest per-item-checker-does-not-check-unrelated-records-or-admit-duplicates
   (let [root (temp-dir) checker (io/file root "check_edges.py") members (io/file root "members.json")
         records (io/file root "batch-fixture.jsonl") calls (atom [])

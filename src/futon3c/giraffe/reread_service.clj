@@ -74,8 +74,11 @@
    environment overrides the file; explicit options override both."
   [{:keys [env-file environment] :as opts}]
   (let [file (when-not (= false env-file)
-               (io/file (or env-file (str (System/getProperty "user.home")
-                                         "/.config/futon3c/giraffe-reread.env"))))
+               (io/file (or env-file
+                            (get environment "FUTON3C_GIRAFFE_REREAD_ENV_FILE")
+                            (System/getenv "FUTON3C_GIRAFFE_REREAD_ENV_FILE")
+                            (str (System/getProperty "user.home")
+                                 "/.config/futon3c/giraffe-reread.env"))))
         assignments
         (if (and file (.isFile file))
           (into {} (keep (fn [line]

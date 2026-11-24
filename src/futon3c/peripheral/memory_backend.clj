@@ -43,11 +43,14 @@
        :dirty-count (count dirty)
        :dirty-files (vec (take 40 dirty))})))
 
+(def ^:dynamic *agents-md-root*
+  (System/getenv "FUTON3C_AGENTS_MD_ROOT"))
+
 (defn- find-agents-md
   "AGENTS.md in dir, else walk up to the git toplevel (inclusive).
    Outside a git repo, only dir itself is checked."
   [dir]
-  (let [dir (io/file dir)
+  (let [dir (io/file (or *agents-md-root* dir))
         top (some-> (sh (.getPath dir) "git" "rev-parse" "--show-toplevel")
                     io/file
                     .getCanonicalPath)]

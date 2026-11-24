@@ -40,6 +40,22 @@
                     "known checkpoint\n"))
     (.getCanonicalPath file)))
 
+(deftest agents-contract-discovery-can-be-confined-to-a-relocated-root
+  (let [root (.toFile
+              (java.nio.file.Files/createTempDirectory
+               "agents-contract-root-"
+               (make-array java.nio.file.attribute.FileAttribute 0)))]
+    (try
+      (spit (io/file root "AGENTS.md") "sandbox contract")
+      (binding [memory-backend/*agents-md-root* (.getPath root)]
+        (let [result (memory-backend/repo-contract
+                      {:cwd "/outside/relocated/root"} {})]
+          (is (:ok result))
+          (is (= "sandbox contract" (get-in result [:result :content])))))
+      (finally
+        (doseq [file (reverse (file-seq root))]
+          (.delete ^java.io.File file))))))
+
 (deftest mission-context-defaults-from-excursion-clock
   (testing "an excursion-only clock is a valid default target"
     (with-temp-code-repo
