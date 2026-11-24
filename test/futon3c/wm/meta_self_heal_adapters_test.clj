@@ -1853,3 +1853,9 @@
            (get env "FUTON_WM_REPAIR_OBLIGATION_ROOT")))
     (is (= "/tmp/acceptance-stores-test/ticket-publication"
            (get env "FUTON_WM_TICKET_PUBLICATION_ROOT")))))
+
+(deftest self-heal-worktree-root-is-configurable
+  (is (= "/tmp/wm-worktrees/futon2/self-heal"
+         (sut/configured-self-heal-worktree-root "/tmp/wm-worktrees" "/home/test")))
+  (is (= "/home/test/worktrees/futon2/self-heal"
+         (sut/configured-self-heal-worktree-root nil "/home/test"))))

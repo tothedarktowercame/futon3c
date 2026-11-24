@@ -66,7 +66,7 @@
   "src/futon3c/wm/enactment_clauses.clj" 9
   "src/futon3c/wm/machinery_execution_cohort.clj" 1
   "src/futon3c/wm/meta_latest.clj" 1
-  "src/futon3c/wm/meta_self_heal_adapters.clj" 2
+  "src/futon3c/wm/meta_self_heal_adapters.clj" 1
   "src/futon3c/wm/operator_lane_adapter.clj" 4
   "src/futon3c/wm/run4_boot.clj" 3
   "src/futon3c/wm/runner_service.clj" 1

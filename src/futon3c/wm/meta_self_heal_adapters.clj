@@ -35,7 +35,15 @@
   (configured-paths (System/getenv "FUTON_WM_CODE_ROOT")))
 
 (def default-repository (:repository configured-serving-paths))
-(def default-self-heal-worktree-root "/home/joe/worktrees/futon2/self-heal")
+(defn configured-self-heal-worktree-root
+  [configured-root home]
+  (str (io/file (or (some-> configured-root str not-empty)
+                    (str (io/file home "worktrees")))
+                "futon2" "self-heal")))
+(def default-self-heal-worktree-root
+  (configured-self-heal-worktree-root
+   (System/getenv "FUTON_WM_WORKTREE_ROOT")
+   (System/getProperty "user.home")))
 (def ^:dynamic *acceptance-repository* default-repository)
 (def ^:dynamic *acceptance-runs-root*
   (str injury-store/default-root "/acceptance-runs"))
