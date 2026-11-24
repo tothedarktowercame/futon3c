@@ -1050,8 +1050,9 @@ def main(argv=None):
         "holes", "labs", "M-repl-circus", "gcc-shapes.edn")))
     ap.add_argument("--out", default=os.path.expanduser("~/storage/gcc-preview"))
     ap.add_argument("--corpus", default="/home/joe/notes/wm-next/giraffe-reads-2026-11-04/corpus")
-    ap.add_argument("--queue", default=os.path.expanduser(
-        "~/.local/state/futon3c/giraffe-reread/requests.sqlite"))
+    ap.add_argument("--queue", default=str(Path(os.environ.get(
+        "FUTON3C_GIRAFFE_REREAD_STATE_ROOT",
+        Path.home() / ".local/state/futon3c/giraffe-reread")) / "requests.sqlite"))
     ap.add_argument("--turns", default=os.path.expanduser("~/.emacs-graph/session-turn-analysis"))
     ap.add_argument("--questions", default="/home/joe/code/futon7/holes/argument-graph/questions.edn")
     ap.add_argument("--source", choices=("workplan", "futon1b"), default="workplan")

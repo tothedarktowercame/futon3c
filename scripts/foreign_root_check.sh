@@ -86,6 +86,7 @@ watch_writes() {
   export FUTON3C_PORT="$agency_port" FUTON3C_DRAWBRIDGE_PORT="$drawbridge_port"
   export FUTON3C_IRC_PORT=0 FUTON1A_PORT=0 FUTON1B_EMBED=0 FUTON5_PORT=0 FUTON3C_WEBARXANA_PORT=0
   export FUTON_CODE_ROOT="$code_root" FUTON_WM_CODE_ROOT="$code_root"
+  export FUTON_WM_WORKTREE_ROOT="$code_root/worktrees"
   export FUTON_REPO_BASE="$code_root" FUTON3C_REPO_BASE="$code_root" FUTON3C_REPOS="$repos"
   export FUTON3C_ROOT="$code_root/futon3c" FUTON3_ROOT="$code_root/futon3"
   export FUTON3A_ROOT="$code_root/futon3a" FUTON5_ROOT="$code_root/futon5" FUTON6_ROOT="$code_root/futon6"
@@ -95,6 +96,8 @@ watch_writes() {
   export MEME_DB_PATH="$code_root/futon3a/meme.db"
   export GIRAFFE_ROOT="$code_root/storage/giraffe"
   export FUTON3C_GIRAFFE_REREAD_ENV_FILE="$code_root/.config/futon3c/giraffe-reread.env"
+  export FUTON3C_GIRAFFE_REREAD_STATE_ROOT="$code_root/.local/state/futon3c/giraffe-reread"
+  export FUTON3C_GIRAFFE_REREAD_REQUISITIONS_ROOT="$code_root/giraffe-reread-requisitions"
   export FUTON3C_AGENTS_MD_ROOT="$code_root"
   export FUTON3C_BLACKBOARD_PROJECT=false
   export FUTON3C_EMACS_SOCKET="$code_root/.emacs-server/nonexistent"

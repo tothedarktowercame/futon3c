@@ -899,7 +899,10 @@ def reading_source_current(run, queue_path=None):
         queue_missing = False
         if stale:
             queue_path = Path(queue_path) if queue_path is not None else (
-                Path.home() / '.local/state/futon3c/giraffe-reread/requests.sqlite')
+                Path(os.environ.get(
+                    'FUTON3C_GIRAFFE_REREAD_STATE_ROOT',
+                    Path.home() / '.local/state/futon3c/giraffe-reread')) /
+                'requests.sqlite')
             queue_missing = not queue_path.is_file()
             if not queue_missing:
                 with closing(sqlite3.connect(queue_path.resolve().as_uri() + '?mode=ro', uri=True)) as db:

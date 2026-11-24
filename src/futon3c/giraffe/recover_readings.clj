@@ -30,7 +30,10 @@
 
 (def default-agency-url "http://localhost:7070")
 (def default-ledger-dir
-  "/home/joe/code/giraffe-reread-requisitions/holes/excursions")
+  (str (io/file (or (System/getenv "FUTON3C_GIRAFFE_REREAD_REQUISITIONS_ROOT")
+                    (str (io/file (System/getProperty "user.home")
+                                  "code" "giraffe-reread-requisitions")))
+                "holes" "excursions")))
 
 (defn default-fetch-job
   "The stored Agency job map for JOB-ID, or nil."

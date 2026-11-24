@@ -10,7 +10,10 @@
 (def default-pointer
   "/home/joe/notes/wm-next/giraffe-reads-2026-11-04/corpus")
 (def default-readers ["kimi-2" "kimi-3"])
-(def default-outcomes-dir "/home/joe/code/storage/giraffe-second-reading")
+(def default-outcomes-dir
+  (str (io/file (or (System/getenv "FUTON_STORAGE_ROOT")
+                    (str (io/file (System/getProperty "user.home") "code" "storage")))
+                "giraffe-second-reading")))
 (defonce ^:private outcomes-lock (Object.))
 
 (defn- json-lines [file]
