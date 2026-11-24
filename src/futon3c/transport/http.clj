@@ -4208,6 +4208,94 @@
                :evidence-id a-id
                :evidence-ok (:ok result)})))))))
 
+(defn- arse-legacy-turns
+  "Project a legacy QAPair into turns without mutating it. Legacy records do
+   not retain answer authors or timestamps, so those fields are nil rather
+   than being guessed."
+  [entity thread-id]
+  (cond-> [{:role "question"
+            :text (or (:question-body entity) "")
+            :author (:author entity)
+            :at nil
+            :evidence-id (str "arse-q-" thread-id)}]
+    (not (str/blank? (or (:answer-body entity) "")))
+    (conj {:role "answer"
+           :text (:answer-body entity)
+           :author nil
+           :at nil
+           :evidence-id (str "arse-a-" thread-id)})))
+
+(defn- arse-turns
+  [entity thread-id]
+  (if (contains? entity :turns)
+    (vec (:turns entity))
+    (arse-legacy-turns entity thread-id)))
+
+(defn- arse-find-entity
+  [entities thread-id]
+  (first
+   (keep-indexed (fn [i entity]
+                   (when (= (or (:entity/id entity) (:thread_id entity)) thread-id)
+                     [i entity]))
+                 entities)))
+
+(defn- arse-reply!
+  [config {:keys [thread-id text author role]}]
+  (let [thread-id (or (nonblank-str thread-id) "")
+        text (or text "")
+        author (or author "agent")
+        role (or (nonblank-str role) "")]
+    (cond
+      (str/blank? thread-id)
+      {:ok false :status 400 :err "thread-id-required"
+       :message "thread-id is required"}
+
+      (str/blank? text)
+      {:ok false :status 400 :err "text-required"
+       :message "text is required"}
+
+      (not (#{"question" "answer"} role))
+      {:ok false :status 400 :err "invalid-role"
+       :message "role must be question or answer"}
+
+      :else
+      (let [entities (arse-load-entities)]
+        (if-let [[target-idx target] (arse-find-entity entities thread-id)]
+          (let [turns (arse-turns target thread-id)
+                turn-index (count turns)
+                evidence-id (str "arse-t-" thread-id "-" turn-index)
+                previous-id (:evidence-id (peek turns))
+                turn {:role role
+                      :text text
+                      :author author
+                      :at (.toString (Instant/now))
+                      :evidence-id evidence-id}
+                updated (if (= role "question")
+                          (assoc target :turns (conj turns turn) :unanswered true)
+                          (-> target
+                              (assoc :turns (conj turns turn) :answer-body text)
+                              (dissoc :unanswered)))
+                entities' (assoc (vec entities) target-idx updated)]
+            (arse-save-entities entities')
+            (let [evidence-store (evidence-store-for-config config)
+                  entry {:evidence-id evidence-id
+                         :subject {:ref/type :arse-thread :ref/id thread-id}
+                         :type :arse-qa
+                         :claim-type (if (= role "question") :question :conclusion)
+                         :author author
+                         :body {:text text}
+                         :tags (mapv keyword (or (:tags target) []))
+                         :in-reply-to previous-id}
+                  result (boundary/append! evidence-store entry)]
+              {:ok true
+               :status 201
+               :thread-id thread-id
+               :evidence-id evidence-id
+               :turn-index turn-index
+               :evidence-ok (:ok result)}))
+          {:ok false :status 404 :err "not-found"
+           :message (str "Question not found: " thread-id)})))))
+
 (defn- handle-arse-ask
   "POST /api/alpha/arse/ask — post a new ArSE question.
    Body: {\"title\": \"...\", \"question\": \"...\", \"tags\": [...], \"author\": \"...\"}
@@ -4235,6 +4323,35 @@
                                          :answer (:answer payload)
                                          :author (:author payload)})]
         (json-response (:status result) result)))))
+
+(defn- handle-arse-reply
+  "POST /api/alpha/arse/reply — append a question or answer turn to a thread."
+  [request config]
+  (let [payload (parse-json-map (read-body request))]
+    (if (nil? payload)
+      (json-response 400 {:ok false :err "invalid-json"})
+      (let [result (arse-reply! config {:thread-id (or (:thread-id payload)
+                                                       (get payload "thread-id"))
+                                        :text (:text payload)
+                                        :author (:author payload)
+                                        :role (:role payload)})]
+        (json-response (:status result) result)))))
+
+(defn- handle-arse-thread
+  "GET /api/alpha/arse/thread/:thread-id — return an ordered thread view."
+  [_request _config thread-id]
+  (let [entities (arse-load-entities)]
+    (if-let [[_ entity] (arse-find-entity entities thread-id)]
+      (json-response 200
+                     {:ok true
+                      :thread-id thread-id
+                      :title (:title entity)
+                      :tags (vec (or (:tags entity) []))
+                      :unanswered (boolean (:unanswered entity))
+                      :turns (arse-turns entity thread-id)})
+      (json-response 404 {:ok false
+                          :err "not-found"
+                          :thread-id thread-id}))))
 
 (defn- handle-arse-unanswered
   "GET /api/alpha/arse/unanswered — list unanswered ArSE questions."
@@ -13852,6 +13969,13 @@
 
           (and (= :post method) (= "/api/alpha/arse/answer" uri))
           (handle-arse-answer request config)
+
+          (and (= :post method) (= "/api/alpha/arse/reply" uri))
+          (handle-arse-reply request config)
+
+          (and (= :get method) (re-matches #"/api/alpha/arse/thread/(.+)" uri))
+          (let [[_ raw-id] (re-find #"/api/alpha/arse/thread/(.+)" uri)]
+            (handle-arse-thread request config (enc/decode-uri-component raw-id)))
 
           (and (= :get method) (= "/api/alpha/arse/unanswered" uri))
           (handle-arse-unanswered request config)

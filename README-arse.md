@@ -68,9 +68,24 @@ curl -X POST http://localhost:7070/api/alpha/arse/answer \
   -H "Content-Type: application/json" \
   -d '{"thread-id": "ask-1772986500-3", "answer": "...", "author": "joe"}'
 
+# Continue an existing thread with a follow-up question or answer
+curl -X POST http://localhost:7070/api/alpha/arse/reply \
+  -H "Content-Type: application/json" \
+  -d '{"thread-id": "ask-1772986500-3", "text": "But what if the index is stale?", "author": "claude-1", "role": "question"}'
+
+# Read the complete ordered thread
+curl http://localhost:7070/api/alpha/arse/thread/ask-1772986500-3
+
 # List unanswered questions
 curl http://localhost:7070/api/alpha/arse/unanswered
 ```
+
+`/arse/reply` appends a turn to the existing QAPair. `role` must be
+`question` or `answer`; each turn receives a unique `arse-t-<thread>-<n>`
+evidence ID and replies to the preceding turn. A follow-up question marks the
+thread unanswered, and a subsequent answer settles it again. For legacy
+QAPairs, the thread reader and first reply project the existing question and
+answer into turns without discarding them.
 
 ### CLI skills (Claude Code only)
 
