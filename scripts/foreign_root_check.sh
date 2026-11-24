@@ -9,6 +9,8 @@ drawbridge_port=6968
 settle_seconds=120
 output_dir="${TMPDIR:-/tmp}/futon3c-foreign-root-check-$$"
 alt_objects_root=""
+codex_state_root="$home_root/.codex"
+seat_worktree_root="$home_root/worktrees/futon3c/vscode-port"
 
 usage() {
   echo "usage: $0 --code-root DIR [--alt-objects-root DIR] [--agency-port PORT] [--drawbridge-port PORT] [--seconds N] [--output DIR]" >&2
@@ -66,6 +68,11 @@ watch_writes() {
       while IFS= read -r line; do
         [[ "$line" == *"$home_root/"* ]] || continue
         [[ "$line" == *"$code_root"* ]] && continue
+        if [[ "$line" == *"$codex_state_root"* &&
+              "$line" != *"$codex_state_root/auth.json"* ]]; then
+          continue
+        fi
+        [[ "$line" == *"$seat_worktree_root"* ]] && continue
         if [[ "$line" =~ ^(open|openat|openat2)\(.*(O_WRONLY|O_RDWR|O_CREAT|O_TRUNC) ]] ||
            [[ "$line" =~ ^(mkdir|mkdirat|rmdir|unlink|unlinkat|rename|renameat|renameat2|link|linkat|symlink|symlinkat|truncate|creat|chmod|fchmodat|utimensat)\( ]]; then
           printf '%s\n' "$line" >"$sentinel"
@@ -87,6 +94,8 @@ watch_writes() {
   export FUTON3C_IRC_PORT=0 FUTON1A_PORT=0 FUTON1B_EMBED=0 FUTON5_PORT=0 FUTON3C_WEBARXANA_PORT=0
   export FUTON_CODE_ROOT="$code_root" FUTON_WM_CODE_ROOT="$code_root"
   export FUTON_WM_WORKTREE_ROOT="$code_root/worktrees"
+  export XDG_CACHE_HOME="$code_root/.cache" XDG_STATE_HOME="$code_root/.local/state"
+  export XDG_CONFIG_HOME="$code_root/.config" NPM_CONFIG_CACHE="$code_root/.npm-cache"
   export FUTON_REPO_BASE="$code_root" FUTON3C_REPO_BASE="$code_root" FUTON3C_REPOS="$repos"
   export FUTON3C_ROOT="$code_root/futon3c" FUTON3_ROOT="$code_root/futon3"
   export FUTON3A_ROOT="$code_root/futon3a" FUTON5_ROOT="$code_root/futon5" FUTON6_ROOT="$code_root/futon6"
@@ -144,9 +153,9 @@ if [[ -f "$sentinel" ]]; then
   cat "$sentinel" >&2
 fi
 
-python3 - "$home_root" "$code_root" "$alt_objects_root" "$output_dir" "$trace_prefix" <<'PY'
+python3 - "$home_root" "$code_root" "$alt_objects_root" "$output_dir" "$trace_prefix" "$codex_state_root" "$seat_worktree_root" <<'PY'
 import collections, glob, os, re, sys
-home, root, alt_objects_root, out, prefix = sys.argv[1:]
+home, root, alt_objects_root, out, prefix, codex_state_root, seat_worktree_root = sys.argv[1:]
 paths = collections.Counter(); writes = collections.Counter()
 ancestor_lookups = collections.Counter()
 quoted = re.compile(r'"(' + re.escape(home) + r'/[^"\\]*)"')
@@ -239,6 +248,13 @@ for line in lines:
             allowed_read = (path in allowed_read_exact or
                             any(path.startswith(p) for p, _ in allowed_read_prefixes))
             if allowed_read and not write_mark.search(line):
+                continue
+            codex_state = path == codex_state_root or path.startswith(codex_state_root + '/')
+            codex_auth_write = (path == os.path.join(codex_state_root, 'auth.json') and
+                                write_mark.search(line))
+            seat_worktree = (path == seat_worktree_root or
+                             path.startswith(seat_worktree_root + '/'))
+            if (codex_state and not codex_auth_write) or seat_worktree:
                 continue
             paths[path] += 1
             if write_mark.search(line): writes[path] += 1
