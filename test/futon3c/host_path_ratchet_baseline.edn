@@ -37,11 +37,7 @@
   "src/futon3c/giraffe/reread_mint.clj" 4
   "src/futon3c/giraffe/reread_worker.clj" 3
   "src/futon3c/giraffe/second_reading.clj" 2
-  "src/futon3c/inbox_zero/board_consumer.clj" 1
-  "src/futon3c/inbox_zero/confirm_intake.clj" 1
-  "src/futon3c/inbox_zero/followup_validity.clj" 1
-  "src/futon3c/inbox_zero/sweeper.clj" 7
-  "src/futon3c/inbox_zero/turn_promotion.clj" 1
+  "src/futon3c/inbox_zero/sweeper.clj" 2
   "src/futon3c/live_efe_map.clj" 4
   "src/futon3c/logic/capability_star_map_extractor.clj" 3
   "src/futon3c/logic/cascade_real_live.clj" 1

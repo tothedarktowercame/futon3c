@@ -23,12 +23,13 @@
             [futon3.inbox-zero.promotion :as promotion]
             [futon3.inbox-zero.projection :as projection]
             [futon3.inbox-zero.state :as inbox-state]
-            [futon3c.agency.clock-store :as clock-store])
+            [futon3c.agency.clock-store :as clock-store]
+            [futon3c.inbox-zero.paths :as inbox-paths])
   (:import [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]
            [java.util Date]))
 
-(def default-state-path "/home/joe/code/storage/inbox-zero/state.edn")
+(def default-state-path inbox-paths/state-path)
 (defonce ^:private ledger-monitor (Object.))
 
 (defn- mode-keyword [mode]

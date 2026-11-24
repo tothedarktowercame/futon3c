@@ -4,11 +4,12 @@
             [futon3.inbox-zero.projection :as projection]
             [futon3.inbox-zero.state :as state]
             [futon3c.dev.config :as config]
+            [futon3c.inbox-zero.paths :as inbox-paths]
             [futon3c.inbox-zero.sweeper :as sweeper]
             [futon3c.watcher.roots :as roots])
   (:import [java.util Date]))
 
-(def default-state-path "/home/joe/code/storage/inbox-zero/state.edn")
+(def default-state-path inbox-paths/state-path)
 
 (defn- value [m k]
   (or (get m k) (get m (name k))))

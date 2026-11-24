@@ -12,6 +12,7 @@
             [futon3.inbox-zero.projection :as projection]
             [futon3.inbox-zero.state :as inbox-state]
             [futon3c.inbox-zero.infer-adapters :as infer-adapters]
+            [futon3c.inbox-zero.paths :as inbox-paths]
             [futon3c.inbox-zero.witness :as witness])
   (:import [java.net InetAddress]
            [java.util Date]))
@@ -45,7 +46,7 @@
   (let [seat-id (str "seat:" agent ":" session)
         state-path (or (:state-path options)
                        (System/getenv "FUTON3C_INBOX_ZERO_STATE_PATH")
-                       "/home/joe/code/storage/inbox-zero/state.edn")
+                       inbox-paths/state-path)
         witness-dir (or (:witness-dir options)
                         (System/getenv "FUTON3_INBOX_ZERO_WITNESS_DIR"))
         build-bundle-fn (or (:build-bundle-fn options)

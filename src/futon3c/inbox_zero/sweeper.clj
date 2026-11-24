@@ -44,6 +44,7 @@
             [clojure.set :as set]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon3c.inbox-zero.paths :as inbox-paths]
             [futon3c.watcher.roots :as roots])
   (:import [java.nio.file Files StandardCopyOption]
            [java.nio.file.attribute FileAttribute]
@@ -257,7 +258,7 @@
   {:repos 0 :over-threshold 0 :uncertain 0 :errored 0})
 
 (def ^:private default-backlog-path
-  "/home/joe/code/storage/inbox-zero/operator-backlog.edn")
+  (inbox-paths/path "operator-backlog.edn"))
 
 (defn- write-backlog!
   "Overwrite the operator backlog with the repos that are over threshold and
@@ -288,7 +289,7 @@
       false)))
 
 (def ^:private default-uncertain-pressure-path
-  "/home/joe/code/storage/inbox-zero/uncertain-pressure.edn")
+  (inbox-paths/path "uncertain-pressure.edn"))
 
 (defn- write-uncertain-pressure!
   "Atomically publish the uncertain-ownership pressure feed that the mana
@@ -480,10 +481,10 @@
 ;; ---------- the push lane: act, never notify ----------
 
 (def ^:private default-push-log-path
-  "/home/joe/code/storage/inbox-zero/push-log.edn")
+  (inbox-paths/path "push-log.edn"))
 
 (def ^:private default-sync-log-path
-  "/home/joe/code/storage/inbox-zero/sync-log.edn")
+  (inbox-paths/path "sync-log.edn"))
 
 (def ^:private push-timeout-ms 120000)
 
@@ -785,7 +786,7 @@
 ;; ---------- the worktree lane: retire what is already saved ----------
 
 (def ^:private default-worktree-log-path
-  "/home/joe/code/storage/inbox-zero/worktree-log.edn")
+  (inbox-paths/path "worktree-log.edn"))
 
 (def ^:private default-worktree-idle-hours 24)
 

@@ -14,6 +14,7 @@
             [futon3.inbox-zero.watcher :as watcher]
             [futon3c.agents.inbox-zero-board :as board]
             [futon3c.agents.inbox-zero-board-live :as live]
+            [futon3c.inbox-zero.paths :as inbox-paths]
             [futon3c.inbox-zero.turn-promotion :as turn])
   (:import [java.time Instant]
            [java.util Date]
@@ -265,7 +266,7 @@
 
 (defn -main [& [options-edn]]
   (let [result (run-cycle! (merge {:state-path turn/default-state-path
-                                   :ledger-path "/home/joe/code/storage/inbox-zero/board-consumer.edn"}
+                                   :ledger-path (inbox-paths/path "board-consumer.edn")}
                                   (when options-edn (edn/read-string options-edn))))]
     (prn (select-keys result [:flags/before :flags/after]))
     (shutdown-agents)))
