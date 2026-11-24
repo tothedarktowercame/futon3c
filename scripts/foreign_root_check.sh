@@ -7,6 +7,7 @@ home_root=$(realpath "$HOME")
 agency_port=7270
 drawbridge_port=6968
 settle_seconds=120
+health_seconds=180
 output_dir="${TMPDIR:-/tmp}/futon3c-foreign-root-check-$$"
 alt_objects_root=""
 sandbox_ports=()
@@ -14,7 +15,7 @@ codex_state_root="$home_root/.codex"
 seat_worktree_root="$home_root/worktrees/futon3c/vscode-port"
 
 usage() {
-  echo "usage: $0 --code-root DIR [--sandbox-port PORT ...] [--alt-objects-root DIR] [--agency-port PORT] [--drawbridge-port PORT] [--seconds N] [--output DIR]" >&2
+  echo "usage: $0 --code-root DIR [--sandbox-port PORT ...] [--alt-objects-root DIR] [--agency-port PORT] [--drawbridge-port PORT] [--health-seconds N] [--seconds N] [--output DIR]" >&2
 }
 while (($#)); do
   case "$1" in
@@ -23,6 +24,7 @@ while (($#)); do
     --sandbox-port) sandbox_ports+=("$2"); shift 2 ;;
     --agency-port) agency_port=$2; shift 2 ;;
     --drawbridge-port) drawbridge_port=$2; shift 2 ;;
+    --health-seconds) health_seconds=$2; shift 2 ;;
     --seconds) settle_seconds=$2; shift 2 ;;
     --output) output_dir=$2; shift 2 ;;
     -h|--help) usage; exit 0 ;;
@@ -141,7 +143,7 @@ watch_writes() {
 leader=$!
 watch_writes & watcher=$!
 
-deadline=$((SECONDS + 180))
+deadline=$((SECONDS + health_seconds))
 until curl -fsS --max-time 2 "http://127.0.0.1:$agency_port/health" >/dev/null 2>&1; do
   [[ ! -f "$sentinel" ]] || break
   kill -0 "$leader" 2>/dev/null || break
@@ -231,6 +233,7 @@ toolchain_lookup_only = {
     os.path.join(home, 'AGENTS.md'),
     os.path.join(home, 'wm-sandbox/AGENTS.md'),
 }
+path_dirs = {os.path.realpath(p) for p in os.environ.get('PATH', '').split(os.pathsep) if p}
 lookup_mark = re.compile(
     r'^(?:stat|lstat|newfstatat|statx|access|faccessat|faccessat2|readlink|readlinkat)\('
     r'|^(?:open|openat|openat2)\(.*O_RDONLY.*O_DIRECTORY'
@@ -279,6 +282,18 @@ for line in lines:
                 continue
             if ((path in git_discovery_lookups or path in toolchain_lookup_only)
                     and lookup_mark.search(line) and not write_mark.search(line)):
+                ancestor_lookups[path] += 1
+                continue
+            # PATH search probes are not application reads.  Count lookup
+            # syscalls on a PATH directory, and failed ENOENT probes for a
+            # command beneath one, with the visible ancestor lookups.  A
+            # successful open/read of a regular file deliberately does not
+            # match either form and remains prohibited.
+            path_parent = os.path.realpath(os.path.dirname(path))
+            path_probe = ((os.path.realpath(path) in path_dirs and lookup_mark.search(line)) or
+                          (path_parent in path_dirs and '= -1 ENOENT' in line and
+                           (lookup_mark.search(line) or line.startswith('execve('))))
+            if path_probe and not write_mark.search(line):
                 ancestor_lookups[path] += 1
                 continue
             if '/.git/objects/' in path and not write_mark.search(line):
