@@ -14,7 +14,9 @@
 
 (def default-root giraffe/default-root)
 (def default-certificate-root
-  "/home/joe/code/futon3c/data/circus-certificates")
+  (str (or (System/getenv "FUTON3C_ROOT")
+           (io/file (System/getProperty "user.home") "code" "futon3c"))
+       "/data/circus-certificates"))
 
 (defn json-ready [x]
   (cond

@@ -24,7 +24,6 @@
   "src/futon3c/arxana/workplan.clj" 1
   "src/futon3c/circus/chain_certificate.clj" 1
   "src/futon3c/circus/navigability.clj" 2
-  "src/futon3c/circus/routes.clj" 1
   "src/futon3c/diagramprover/r20_witness.clj" 1
   "src/futon3c/diagramprover/sentence_records.clj" 6
   "src/futon3c/dispatch_with_recall.clj" 1

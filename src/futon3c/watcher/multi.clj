@@ -1244,7 +1244,10 @@
 (def max-deletions-per-cycle 200)
 
 (def deferred-deletions-file
-  (str (System/getProperty "user.home") "/storage/watcher/deferred-deletions.tsv"))
+  (or (System/getenv "FUTON3C_WATCHER_DEFERRED_DELETIONS_PATH")
+      (str (io/file (or (System/getenv "FUTON_STORAGE_ROOT")
+                        (io/file (System/getProperty "user.home") "storage"))
+                    "watcher" "deferred-deletions.tsv"))))
 
 (defn- record-deferred-deletion!
   "Append a deletion the watcher could not process (label, path, error) to

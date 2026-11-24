@@ -31,7 +31,11 @@
    the write can only run INSIDE the serving JVM (I-0), where an env var
    cannot be set. Same consent idiom as wm-operator-promote: an explicit,
    expiring operator artifact."
-  (str (System/getProperty "user.home") "/code/storage/futon0/flight-ingest-write.edn"))
+  (or (System/getenv "FUTON3C_FLIGHT_INGEST_SENTINEL_PATH")
+      (str (java.io.File. (or (System/getenv "FUTON_STORAGE_ROOT")
+                              (str (java.io.File. (System/getProperty "user.home")
+                                                  "code/storage")))
+                           "futon0/flight-ingest-write.edn"))))
 
 (defn- sentinel-armed? []
   (try
