@@ -9,16 +9,18 @@ drawbridge_port=6968
 settle_seconds=120
 output_dir="${TMPDIR:-/tmp}/futon3c-foreign-root-check-$$"
 alt_objects_root=""
+sandbox_ports=()
 codex_state_root="$home_root/.codex"
 seat_worktree_root="$home_root/worktrees/futon3c/vscode-port"
 
 usage() {
-  echo "usage: $0 --code-root DIR [--alt-objects-root DIR] [--agency-port PORT] [--drawbridge-port PORT] [--seconds N] [--output DIR]" >&2
+  echo "usage: $0 --code-root DIR [--sandbox-port PORT ...] [--alt-objects-root DIR] [--agency-port PORT] [--drawbridge-port PORT] [--seconds N] [--output DIR]" >&2
 }
 while (($#)); do
   case "$1" in
     --code-root) code_root=$2; shift 2 ;;
     --alt-objects-root) alt_objects_root=$2; shift 2 ;;
+    --sandbox-port) sandbox_ports+=("$2"); shift 2 ;;
     --agency-port) agency_port=$2; shift 2 ;;
     --drawbridge-port) drawbridge_port=$2; shift 2 ;;
     --seconds) settle_seconds=$2; shift 2 ;;
@@ -27,6 +29,8 @@ while (($#)); do
     *) usage; echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
+sandbox_ports+=("$agency_port" "$drawbridge_port")
+sandbox_ports_csv=$(IFS=,; echo "${sandbox_ports[*]}")
 [[ -n "$code_root" ]] || { usage; exit 2; }
 code_root=$(realpath "$code_root")
 [[ -z "$alt_objects_root" ]] || alt_objects_root=$(realpath "$alt_objects_root")
@@ -91,6 +95,7 @@ watch_writes() {
   export GIT_OPTIONAL_LOCKS=0
   export FUTON3C_HEAP="${FUTON3C_HEAP:-1536m}"
   export FUTON3C_PORT="$agency_port" FUTON3C_DRAWBRIDGE_PORT="$drawbridge_port"
+  export FUTON3C_DISABLE_EMACSCLIENT=true
   export FUTON3C_IRC_PORT=0 FUTON1A_PORT=0 FUTON1B_EMBED=0 FUTON5_PORT=0 FUTON3C_WEBARXANA_PORT=0
   export FUTON_CODE_ROOT="$code_root" FUTON_WM_CODE_ROOT="$code_root"
   export FUTON_WM_WORKTREE_ROOT="$code_root/worktrees"
@@ -100,6 +105,8 @@ watch_writes() {
   export FUTON3C_ROOT="$code_root/futon3c" FUTON3_ROOT="$code_root/futon3"
   export FUTON3A_ROOT="$code_root/futon3a" FUTON5_ROOT="$code_root/futon5" FUTON6_ROOT="$code_root/futon6"
   export FUTON2_DATA_ROOT="$code_root/futon2/data" FUTON_WM_NOTES_ROOT="$code_root/notes"
+  export FUTON1A_URL="http://127.0.0.1:7271" FUTON_SUBSTRATE_URL="http://127.0.0.1:7271"
+  export FUTON1B_URL="http://127.0.0.1:7273" FUTON_MEMORY_BASE="http://127.0.0.1:7273"
   export FUTON_STORAGE_ROOT="$code_root/storage"
   export FUTON3A_PATTERN_INDEX_DB="$code_root/storage/futon3a/pattern-index.sqlite"
   export MEME_DB_PATH="$code_root/futon3a/meme.db"
@@ -153,11 +160,13 @@ if [[ -f "$sentinel" ]]; then
   cat "$sentinel" >&2
 fi
 
-python3 - "$home_root" "$code_root" "$alt_objects_root" "$output_dir" "$trace_prefix" "$codex_state_root" "$seat_worktree_root" <<'PY'
+python3 - "$home_root" "$code_root" "$alt_objects_root" "$output_dir" "$trace_prefix" "$codex_state_root" "$seat_worktree_root" "$sandbox_ports_csv" <<'PY'
 import collections, glob, os, re, sys
-home, root, alt_objects_root, out, prefix, codex_state_root, seat_worktree_root = sys.argv[1:]
+home, root, alt_objects_root, out, prefix, codex_state_root, seat_worktree_root, sandbox_csv = sys.argv[1:]
+sandbox_ports = {int(x) for x in sandbox_csv.split(',') if x}
 paths = collections.Counter(); writes = collections.Counter()
 ancestor_lookups = collections.Counter()
+connects = collections.Counter(); execs = collections.Counter()
 quoted = re.compile(r'"(' + re.escape(home) + r'/[^"\\]*)"')
 write_mark = re.compile(
     r'^(?:(?:open|openat|openat2)\(.*(?:O_WRONLY|O_RDWR|O_CREAT|O_TRUNC)|'
@@ -222,10 +231,38 @@ lookup_mark = re.compile(
     r'|^(?:open|openat|openat2)\(.*O_RDONLY.*O_DIRECTORY'
 )
 for line in lines:
+        if line.startswith('execve('):
+            executable = re.search(r'^execve\("([^"]+)"', line)
+            binary = os.path.basename(executable.group(1)) if executable else '<unknown>'
+            kind = 'prohibited' if binary == 'emacsclient' else 'allowed'
+            execs[kind] += 1
+            continue
+        if line.startswith('connect('):
+            unix = re.search(r'sa_family=AF_UNIX, sun_path="([^"]+)"', line)
+            inet_family = 'sa_family=AF_INET' in line
+            port_match = re.search(r'sin6?_port=htons\((\d+)\)', line)
+            address_match = (re.search(r'inet_addr\("([^"]+)"\)', line) or
+                             re.search(r'inet_pton\(AF_INET6, "([^"]+)"', line))
+            if unix:
+                socket = unix.group(1)
+                if (socket == '/var/run/nscd/socket' or
+                        socket.startswith('/run/systemd/userdb/')):
+                    connects['allowed-system-socket'] += 1
+                elif socket == root or socket.startswith(root + '/'):
+                    connects['allowed-sandbox-socket'] += 1
+                else:
+                    connects['prohibited'] += 1
+            elif inet_family and port_match and address_match:
+                port = int(port_match.group(1)); address = address_match.group(1)
+                if address in {'127.0.0.1', '::1'}:
+                    connects['allowed-sandbox-port' if port in sandbox_ports else 'prohibited'] += 1
+                else:
+                    connects['external-network'] += 1
+            else:
+                connects['prohibited'] += 1
+            continue
         # execve is traced only to attribute an opener; its argv strings are
         # not themselves filesystem accesses.
-        if line.startswith('execve('):
-            continue
         for path in quoted.findall(line):
             if path == root or path.startswith(root + '/'):
                 continue
@@ -268,6 +305,10 @@ with open(os.path.join(out, 'ancestor-lookups.tsv'), 'w') as f:
         f.write(f'{count}\t{path}\n')
 print(f'prohibited_unique={len(paths)} prohibited_calls={sum(paths.values())} '
       f'write_paths={len(writes)} ancestor_lookup_unique={len(ancestor_lookups)} '
-      f'ancestor_lookup_calls={sum(ancestor_lookups.values())}')
-sys.exit(1 if paths else 0)
+      f'ancestor_lookup_calls={sum(ancestor_lookups.values())} '
+      f'connect_allowed_sandbox={connects["allowed-sandbox-port"] + connects["allowed-sandbox-socket"]} '
+      f'connect_allowed_system={connects["allowed-system-socket"]} '
+      f'connect_external={connects["external-network"]} connect_prohibited={connects["prohibited"]} '
+      f'exec_allowed={execs["allowed"]} exec_prohibited={execs["prohibited"]}')
+sys.exit(1 if paths or connects['prohibited'] or execs['prohibited'] else 0)
 PY
