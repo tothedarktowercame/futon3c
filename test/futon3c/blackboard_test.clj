@@ -6,7 +6,16 @@
    in the test suite)."
   (:require [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
-            [futon3c.blackboard :as bb]))
+            [futon3c.blackboard :as bb]
+            [futon3c.emacsclient-policy :as emacs-policy]))
+
+(deftest disabled-emacsclient-ignores-agent-metadata-socket
+  (let [constructed (atom 0)]
+    (with-redefs [emacs-policy/enabled? (constantly false)
+                  futon3c.blackboard/build-emacsclient-cmd
+                  (fn [& _] (swap! constructed inc) ["emacsclient"])]
+      (bb/project-agents! {:agents {"seat" {:metadata {:emacs-socket "tt"}}}})
+      (is (zero? @constructed)))))
 
 ;; =============================================================================
 ;; render-blackboard — pure rendering tests

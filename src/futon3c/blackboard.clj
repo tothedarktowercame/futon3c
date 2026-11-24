@@ -22,6 +22,7 @@
   (:require [clojure.string :as str]
             [cheshire.core :as json]
             [futon3c.evidence.boundary :as boundary]
+            [futon3c.emacsclient-policy :as emacs-policy]
             [futon3c.dev.config :as config])
   (:import [java.util UUID]))
 
@@ -94,7 +95,7 @@
    Falls back to FUTON3C_EMACS_SOCKET or EMACS_SOCKET_NAME env vars."
   (atom (or (System/getenv "FUTON3C_EMACS_SOCKET")
             (System/getenv "EMACS_SOCKET_NAME")
-            (detect-emacs-socket))))
+            (when (emacs-policy/enabled?) (detect-emacs-socket)))))
 
 (defn- env-bool
   "Parse a conservative boolean env var.
@@ -261,7 +262,9 @@
    Optional socket-override targets a specific Emacs daemon (e.g. \"workspace2\")."
   ([elisp] (run-emacsclient! elisp nil))
   ([elisp socket-override]
-   (let [proc-box (atom nil)]
+   (if-not (emacs-policy/enabled?)
+     {:ok false :disabled? true :output "emacsclient disabled"}
+     (let [proc-box (atom nil)]
      (try
        (let [pb (doto (ProcessBuilder. ^java.util.List
                                        (build-emacsclient-cmd elisp socket-override nil))
@@ -276,7 +279,7 @@
        (catch Exception e
          {:ok false :output (or (.getMessage e) (.. e getClass getSimpleName))})
        (finally
-         (reap-emacsclient! @proc-box))))))
+         (reap-emacsclient! @proc-box)))))))
 
 (defn- run-emacsclient-async!
   "Fire-and-forget emacsclient for idempotent UI projections.
@@ -290,10 +293,12 @@
   ([elisp] (run-emacsclient-async! elisp nil nil))
   ([elisp socket-override] (run-emacsclient-async! elisp socket-override nil))
   ([elisp socket-override coalesce-key]
-   (let [socket-key (emacsclient-target-key socket-override)
+   (if-not (emacs-policy/enabled?)
+     {:ok false :disabled? true :output "emacsclient disabled"}
+     (let [socket-key (emacsclient-target-key socket-override)
          lane (or coalesce-key ::default)]
      (enqueue-async-emacsclient!
-      socket-key lane {:elisp elisp :socket-override socket-override}))))
+      socket-key lane {:elisp elisp :socket-override socket-override})))))
 
 (defn blackboard!
   "Project content to a named Emacs buffer.

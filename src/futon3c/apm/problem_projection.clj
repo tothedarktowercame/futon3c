@@ -3,6 +3,7 @@
   (:require [clojure.edn :as edn]
             [clojure.java.shell :as shell]
             [clojure.string :as str]
+            [futon3c.emacsclient-policy :as emacs-policy]
             [futon3c.apm.campaign-ledger :as ledger]
             [futon3c.apm.campaign-machine :as machine]
             [futon3c.apm.campaign-projection :as campaign-projection]
@@ -166,7 +167,9 @@
   ([run {:keys [buffer-name content]}]
    (if-not (and (fn? run) (string? buffer-name) (string? content))
      {:ok false :error/code :problem-projection-buffer-payload-invalid}
-     (let [encoded (.encodeToString (Base64/getEncoder)
+     (if-not (emacs-policy/enabled?)
+       {:ok false :disabled? true :error/code :emacsclient-disabled}
+       (let [encoded (.encodeToString (Base64/getEncoder)
                                     (.getBytes content StandardCharsets/UTF_8))
            form (str "(let ((inhibit-read-only t)"
                      " (text (decode-coding-string (base64-decode-string \""
@@ -184,7 +187,7 @@
              {:ok false :error/code :problem-projection-buffer-readback-invalid
               :finding {:stdout (str/trim (:out result))}}))
          {:ok false :error/code :problem-projection-buffer-replace-failed
-          :finding {:exit (:exit result) :stderr (str/trim (:err result))}})))))
+          :finding {:exit (:exit result) :stderr (str/trim (:err result))}}))))))
 
 (defn- publication-directory [{:keys [publication-directory output-path]}]
   (or (path publication-directory)

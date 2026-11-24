@@ -21,7 +21,8 @@
    Failure surfacing: emacsclient stderr is captured and returned in the
    response on non-zero exit.  No silent swallowing of errors."
   (:require [clojure.java.io :as io]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [futon3c.emacsclient-policy :as emacs-policy])
   (:import (java.io File)
            (java.util.concurrent TimeUnit)))
 
@@ -91,7 +92,9 @@
      {:ok? false :emacsclient-missing? true :stderr msg}.
    Hard timeout after 5 s so a wedged Emacs cannot hang the request."
   [lisp-form]
-  (try
+  (if-not (emacs-policy/enabled?)
+    {:ok? false :disabled? true :stderr "emacsclient disabled"}
+    (try
     (let [pb (ProcessBuilder. ["emacsclient" "-n" "-e" lisp-form])
           _  (.redirectErrorStream pb false)
           p  (.start pb)
@@ -110,7 +113,7 @@
        :stderr (str "emacsclient not found on PATH: " (.getMessage e))})
     (catch Exception e
       {:ok? false
-       :stderr (str (.getName (class e)) ": " (.getMessage e))})))
+       :stderr (str (.getName (class e)) ": " (.getMessage e))}))))
 
 (defn- escape-elisp-string
   "Escape a Clojure string for embedding inside an elisp double-quoted string."
