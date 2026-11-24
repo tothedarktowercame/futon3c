@@ -13094,6 +13094,15 @@
   (let [method (:request-method request)
         uri    (:uri request)]
     (cond
+      ;; ArSE multi-turn threads. Here rather than in make-handler's cond so a
+      ;; plain Drawbridge reload activates them.
+      (and (= :post method) (= "/api/alpha/arse/reply" uri))
+      (handle-arse-reply request config)
+
+      (and (= :get method) (re-matches #"/api/alpha/arse/thread/(.+)" uri))
+      (let [[_ raw-id] (re-find #"/api/alpha/arse/thread/(.+)" uri)]
+        (handle-arse-thread request config (enc/decode-uri-component raw-id)))
+
       ;; Circus QA for Mojira (CL-43). Here rather than in make-handler's
       ;; cond so a plain Drawbridge reload activates them.
       (and (= :get method) (= "/api/alpha/circus/top-items" uri))
@@ -13969,13 +13978,6 @@
 
           (and (= :post method) (= "/api/alpha/arse/answer" uri))
           (handle-arse-answer request config)
-
-          (and (= :post method) (= "/api/alpha/arse/reply" uri))
-          (handle-arse-reply request config)
-
-          (and (= :get method) (re-matches #"/api/alpha/arse/thread/(.+)" uri))
-          (let [[_ raw-id] (re-find #"/api/alpha/arse/thread/(.+)" uri)]
-            (handle-arse-thread request config (enc/decode-uri-component raw-id)))
 
           (and (= :get method) (= "/api/alpha/arse/unanswered" uri))
           (handle-arse-unanswered request config)
