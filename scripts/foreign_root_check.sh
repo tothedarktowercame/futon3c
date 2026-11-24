@@ -107,6 +107,11 @@ watch_writes() {
   export FUTON2_DATA_ROOT="$code_root/futon2/data" FUTON_WM_NOTES_ROOT="$code_root/notes"
   export FUTON1A_URL="http://127.0.0.1:7271" FUTON_SUBSTRATE_URL="http://127.0.0.1:7271"
   export FUTON1B_URL="http://127.0.0.1:7273" FUTON_MEMORY_BASE="http://127.0.0.1:7273"
+  # These optional in-JVM servers preflight their default ports (7094/7096)
+  # by connecting before binding.  A portability run needs neither service;
+  # disabling them prevents even a readiness probe of a live host listener.
+  export FUTON3C_WORKPLAN_SERVICE_AUTOSTART=0
+  export FUTON3C_TOGETHER_SERVICE_AUTOSTART=0
   export FUTON_STORAGE_ROOT="$code_root/storage"
   export FUTON3A_PATTERN_INDEX_DB="$code_root/storage/futon3a/pattern-index.sqlite"
   export MEME_DB_PATH="$code_root/futon3a/meme.db"
