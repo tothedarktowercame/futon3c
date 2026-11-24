@@ -186,8 +186,10 @@ for line in lines:
 allowed_roots = tuple(x.rstrip('/') for x in (root, alt_objects_root, *object_roots) if x)
 root_ancestors = []
 cursor = os.path.dirname(root)
-while cursor.startswith('/home/joe') and cursor != '/home/joe':
+while cursor.startswith('/home/joe'):
     root_ancestors.append(cursor)
+    if cursor == '/home/joe':
+        break
     cursor = os.path.dirname(cursor)
 git_discovery_lookups = {
     candidate
