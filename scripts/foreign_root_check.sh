@@ -7,15 +7,19 @@ home_root=$(realpath "$HOME")
 agency_port=7270
 drawbridge_port=6968
 settle_seconds=120
-health_seconds=180
+health_seconds=300
 output_dir="${TMPDIR:-/tmp}/futon3c-foreign-root-check-$$"
 alt_objects_root=""
 sandbox_ports=()
+throwaway_futon1b=false
+futon1b_port=7273
+futon1b_start_seconds=120
+unreachable_limit=20
 codex_state_root="$home_root/.codex"
 seat_worktree_root="$home_root/worktrees/futon3c/vscode-port"
 
 usage() {
-  echo "usage: $0 --code-root DIR [--sandbox-port PORT ...] [--alt-objects-root DIR] [--agency-port PORT] [--drawbridge-port PORT] [--health-seconds N] [--seconds N] [--output DIR]" >&2
+  echo "usage: $0 --code-root DIR [--throwaway-futon1b] [--sandbox-port PORT ...] [--alt-objects-root DIR] [--agency-port PORT] [--drawbridge-port PORT] [--health-seconds N] [--seconds N] [--output DIR]" >&2
 }
 while (($#)); do
   case "$1" in
@@ -24,6 +28,7 @@ while (($#)); do
     --sandbox-port) sandbox_ports+=("$2"); shift 2 ;;
     --agency-port) agency_port=$2; shift 2 ;;
     --drawbridge-port) drawbridge_port=$2; shift 2 ;;
+    --throwaway-futon1b) throwaway_futon1b=true; shift ;;
     --health-seconds) health_seconds=$2; shift 2 ;;
     --seconds) settle_seconds=$2; shift 2 ;;
     --output) output_dir=$2; shift 2 ;;
@@ -31,14 +36,14 @@ while (($#)); do
     *) usage; echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-sandbox_ports+=("$agency_port" "$drawbridge_port")
+sandbox_ports+=("$agency_port" "$drawbridge_port" "$futon1b_port")
 sandbox_ports_csv=$(IFS=,; echo "${sandbox_ports[*]}")
 [[ -n "$code_root" ]] || { usage; exit 2; }
 code_root=$(realpath "$code_root")
 [[ -z "$alt_objects_root" ]] || alt_objects_root=$(realpath "$alt_objects_root")
 [[ -d "$code_root/futon3c" ]] || { echo "missing $code_root/futon3c" >&2; exit 2; }
-for port in "$agency_port" "$drawbridge_port"; do
-  case "$port" in 7070|6768|7073|7074) echo "refusing live port $port" >&2; exit 2;; esac
+for port in "$agency_port" "$drawbridge_port" "$futon1b_port"; do
+  case "$port" in 6768|7070|7072|7073|7074|7094|7096) echo "refusing live port $port" >&2; exit 2;; esac
 done
 command -v strace >/dev/null || { echo "strace is required" >&2; exit 2; }
 
@@ -51,6 +56,8 @@ mkdir -p "$output_dir" "$code_root/storage/futon3c/mission-control" \
 mkdir -p "$code_root/.emacs-server"
 trace_prefix="$output_dir/trace"
 runtime_log="$output_dir/runtime.log"
+futon1b_log="$output_dir/futon1b.log"
+throwaway_store="$output_dir/futon1b-store"
 sentinel="$output_dir/live-write"
 
 repos=""
@@ -65,7 +72,48 @@ stop_group() {
     kill -KILL -- "-$leader" 2>/dev/null || true
   fi
 }
-trap stop_group EXIT INT TERM
+stop_futon1b() {
+  if [[ -n "${futon1b_leader:-}" ]] && kill -0 "$futon1b_leader" 2>/dev/null; then
+    kill -TERM -- "-$futon1b_leader" 2>/dev/null || true
+    sleep 2
+    kill -KILL -- "-$futon1b_leader" 2>/dev/null || true
+  fi
+}
+cleanup() {
+  stop_group
+  stop_futon1b
+  if [[ "$throwaway_futon1b" == true && -d "$throwaway_store" ]]; then
+    rm -rf -- "$throwaway_store"
+  fi
+}
+trap cleanup EXIT INT TERM
+
+if [[ "$throwaway_futon1b" == true ]]; then
+  [[ -d "$code_root/futon1b" ]] || { echo "missing $code_root/futon1b" >&2; exit 2; }
+  [[ ! -e "$throwaway_store" ]] || { echo "throwaway store already exists: $throwaway_store" >&2; exit 2; }
+  mkdir -p "$throwaway_store"
+  (
+    cd "$code_root/futon1b"
+    export GIT_OPTIONAL_LOCKS=0 MALLOC_ARENA_MAX=2 FUTON1B_DRAWBRIDGE_PORT=0
+    exec setsid strace -ff -o "$trace_prefix" -e trace=%file,connect,execve \
+      clojure -J-Xmx2g -M:node -m futon1b-server \
+      --store-dir "$throwaway_store" --port "$futon1b_port"
+  ) >"$futon1b_log" 2>&1 &
+  futon1b_leader=$!
+  futon1b_deadline=$((SECONDS + futon1b_start_seconds))
+  until curl -fsS --max-time 2 "http://127.0.0.1:$futon1b_port/health" >/dev/null 2>&1; do
+    kill -0 "$futon1b_leader" 2>/dev/null || {
+      echo "FAIL: throwaway futon1b exited before health" >&2
+      exit 1
+    }
+    ((SECONDS < futon1b_deadline)) || {
+      echo "FAIL: throwaway futon1b health timeout" >&2
+      exit 1
+    }
+    sleep 1
+  done
+  echo "throwaway futon1b healthy after ${SECONDS}s" >&2
+fi
 
 watch_writes() {
   while :; do
@@ -143,13 +191,34 @@ watch_writes() {
 leader=$!
 watch_writes & watcher=$!
 
+health_start=$SECONDS
 deadline=$((SECONDS + health_seconds))
+run_failure=0
 until curl -fsS --max-time 2 "http://127.0.0.1:$agency_port/health" >/dev/null 2>&1; do
   [[ ! -f "$sentinel" ]] || break
   kill -0 "$leader" 2>/dev/null || break
-  ((SECONDS < deadline)) || { echo "health timeout" >&2; stop_group; break; }
+  unreachable_count=$(grep -F -c 'I-evidence-per-turn VIOLATION: futon1b server unreachable' "$runtime_log" 2>/dev/null || true)
+  if ((unreachable_count >= unreachable_limit)); then
+    echo "FAIL: repeated unreachable backend (${unreachable_count}): I-evidence-per-turn VIOLATION: futon1b server unreachable" >&2
+    run_failure=1
+    stop_group
+    break
+  fi
+  if ((SECONDS >= deadline)); then
+    echo "FAIL: health timeout" >&2
+    run_failure=1
+    stop_group
+    break
+  fi
   sleep 1
 done
+if ((run_failure == 0)) && [[ ! -f "$sentinel" ]] && ! kill -0 "$leader" 2>/dev/null; then
+  echo "FAIL: futon3c exited before health" >&2
+  run_failure=1
+fi
+if ((run_failure == 0)) && [[ ! -f "$sentinel" ]] && kill -0 "$leader" 2>/dev/null; then
+  echo "futon3c health ready after $((SECONDS - health_start))s" >&2
+fi
 if [[ ! -f "$sentinel" ]] && kill -0 "$leader" 2>/dev/null; then
   end=$((SECONDS + settle_seconds))
   while ((SECONDS < end)); do
@@ -159,7 +228,11 @@ if [[ ! -f "$sentinel" ]] && kill -0 "$leader" 2>/dev/null; then
   done
 fi
 stop_group
+stop_futon1b
 wait "$watcher" 2>/dev/null || true
+if [[ "$throwaway_futon1b" == true && -d "$throwaway_store" ]]; then
+  rm -rf -- "$throwaway_store"
+fi
 trap - EXIT INT TERM
 
 if [[ -f "$sentinel" ]]; then
@@ -167,7 +240,8 @@ if [[ -f "$sentinel" ]]; then
   cat "$sentinel" >&2
 fi
 
-python3 - "$home_root" "$code_root" "$alt_objects_root" "$output_dir" "$trace_prefix" "$codex_state_root" "$seat_worktree_root" "$sandbox_ports_csv" <<'PY'
+classification_failure=0
+python3 - "$home_root" "$code_root" "$alt_objects_root" "$output_dir" "$trace_prefix" "$codex_state_root" "$seat_worktree_root" "$sandbox_ports_csv" <<'PY' || classification_failure=$?
 import collections, glob, os, re, sys
 home, root, alt_objects_root, out, prefix, codex_state_root, seat_worktree_root, sandbox_csv = sys.argv[1:]
 sandbox_ports = {int(x) for x in sandbox_csv.split(',') if x}
@@ -332,3 +406,6 @@ print(f'prohibited_unique={len(paths)} prohibited_calls={sum(paths.values())} '
       f'exec_allowed={execs["allowed"]} exec_prohibited={execs["prohibited"]}')
 sys.exit(1 if paths or connects['prohibited'] or execs['prohibited'] else 0)
 PY
+if ((run_failure != 0 || classification_failure != 0)); then
+  exit 1
+fi
