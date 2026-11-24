@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Trace a sandbox futon3c boot and fail on accesses to another /home/joe root.
+# Trace a sandbox futon3c boot and fail on accesses to another path below HOME.
 set -euo pipefail
 
 code_root=""
+home_root=$(realpath "$HOME")
 agency_port=7270
 drawbridge_port=6968
 settle_seconds=120
@@ -63,7 +64,7 @@ watch_writes() {
     for file in "$trace_prefix".*; do
       [[ -f "$file" ]] || continue
       while IFS= read -r line; do
-        [[ "$line" == *"/home/joe/"* ]] || continue
+        [[ "$line" == *"$home_root/"* ]] || continue
         [[ "$line" == *"$code_root"* ]] && continue
         if [[ "$line" =~ ^(open|openat|openat2)\(.*(O_WRONLY|O_RDWR|O_CREAT|O_TRUNC) ]] ||
            [[ "$line" =~ ^(mkdir|mkdirat|rmdir|unlink|unlinkat|rename|renameat|renameat2|link|linkat|symlink|symlinkat|truncate|creat|chmod|fchmodat|utimensat)\( ]]; then
@@ -140,12 +141,12 @@ if [[ -f "$sentinel" ]]; then
   cat "$sentinel" >&2
 fi
 
-python3 - "$code_root" "$alt_objects_root" "$output_dir" "$trace_prefix" <<'PY'
+python3 - "$home_root" "$code_root" "$alt_objects_root" "$output_dir" "$trace_prefix" <<'PY'
 import collections, glob, os, re, sys
-root, alt_objects_root, out, prefix = sys.argv[1:]
+home, root, alt_objects_root, out, prefix = sys.argv[1:]
 paths = collections.Counter(); writes = collections.Counter()
 ancestor_lookups = collections.Counter()
-quoted = re.compile(r'"(/home/joe/[^"\\]*)"')
+quoted = re.compile(r'"(' + re.escape(home) + r'/[^"\\]*)"')
 write_mark = re.compile(
     r'^(?:(?:open|openat|openat2)\(.*(?:O_WRONLY|O_RDWR|O_CREAT|O_TRUNC)|'
     r'(?:mkdir|mkdirat|rmdir|unlink|unlinkat|rename|renameat|renameat2|'
@@ -154,23 +155,23 @@ write_mark = re.compile(
 # Read-only host toolchain inputs.  They are not application roots and are
 # intentionally shared by relocated checkouts; writes remain prohibited.
 allowed_read_prefixes = (
-    ('/home/joe/.m2/', 'Maven dependency cache'),
-    ('/home/joe/.clojure/', 'Clojure CLI user configuration and cache'),
-    ('/home/joe/.cache/', 'user-level toolchain cache'),
-    ('/home/joe/.deps.clj/', 'deps.clj tool cache'),
-    ('/home/joe/.config/git/', 'Git user configuration fragments'),
-    ('/home/joe/.local/share/claude/', 'Claude launcher toolchain'),
-    ('/home/joe/.nvm/', 'Node launcher toolchain'),
+    (os.path.join(home, '.m2') + '/', 'Maven dependency cache'),
+    (os.path.join(home, '.clojure') + '/', 'Clojure CLI user configuration and cache'),
+    (os.path.join(home, '.cache') + '/', 'user-level toolchain cache'),
+    (os.path.join(home, '.deps.clj') + '/', 'deps.clj tool cache'),
+    (os.path.join(home, '.config/git') + '/', 'Git user configuration fragments'),
+    (os.path.join(home, '.local/share/claude') + '/', 'Claude launcher toolchain'),
+    (os.path.join(home, '.nvm') + '/', 'Node launcher toolchain'),
 )
 allowed_read_exact = {
-    '/home/joe/.gitconfig': 'Git user configuration',
-    '/home/joe/.zai-key': 'ZAI API credential',
-    '/home/joe/.zaikey': 'legacy ZAI API credential',
-    '/home/joe/.m2': 'Maven dependency cache root',
-    '/home/joe/.clojure': 'Clojure CLI user configuration root',
-    '/home/joe/.cache': 'user-level toolchain cache root',
-    '/home/joe/.deps.clj': 'deps.clj tool cache root',
-    '/home/joe/.config/git': 'Git user configuration root',
+    os.path.join(home, '.gitconfig'): 'Git user configuration',
+    os.path.join(home, '.zai-key'): 'ZAI API credential',
+    os.path.join(home, '.zaikey'): 'legacy ZAI API credential',
+    os.path.join(home, '.m2'): 'Maven dependency cache root',
+    os.path.join(home, '.clojure'): 'Clojure CLI user configuration root',
+    os.path.join(home, '.cache'): 'user-level toolchain cache root',
+    os.path.join(home, '.deps.clj'): 'deps.clj tool cache root',
+    os.path.join(home, '.config/git'): 'Git user configuration root',
 }
 lines = []
 for name in glob.glob(prefix + '.*'):
@@ -186,9 +187,9 @@ for line in lines:
 allowed_roots = tuple(x.rstrip('/') for x in (root, alt_objects_root, *object_roots) if x)
 root_ancestors = []
 cursor = os.path.dirname(root)
-while cursor.startswith('/home/joe'):
+while cursor.startswith(home):
     root_ancestors.append(cursor)
-    if cursor == '/home/joe':
+    if cursor == home:
         break
     cursor = os.path.dirname(cursor)
 git_discovery_lookups = {
@@ -199,10 +200,10 @@ git_discovery_lookups = {
                       os.path.join(ancestor, 'HEAD'))
 }
 toolchain_lookup_only = {
-    '/home/joe/.nrepl/nrepl.edn',
-    '/home/joe/.shadow-cljs/config.edn',
-    '/home/joe/AGENTS.md',
-    '/home/joe/wm-sandbox/AGENTS.md',
+    os.path.join(home, '.nrepl/nrepl.edn'),
+    os.path.join(home, '.shadow-cljs/config.edn'),
+    os.path.join(home, 'AGENTS.md'),
+    os.path.join(home, 'wm-sandbox/AGENTS.md'),
 }
 lookup_mark = re.compile(
     r'^(?:stat|lstat|newfstatat|statx|access|faccessat|faccessat2|readlink|readlinkat)\('
