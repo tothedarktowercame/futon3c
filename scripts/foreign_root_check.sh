@@ -184,6 +184,24 @@ for line in lines:
         if alt_objects_root and '/objects' in path and (path == alt_objects_root or path.startswith(alt_objects_root + '/')):
             object_roots.add(path.split('/objects', 1)[0] + '/objects')
 allowed_roots = tuple(x.rstrip('/') for x in (root, alt_objects_root, *object_roots) if x)
+root_ancestors = []
+cursor = os.path.dirname(root)
+while cursor.startswith('/home/joe') and cursor != '/home/joe':
+    root_ancestors.append(cursor)
+    cursor = os.path.dirname(cursor)
+git_discovery_lookups = {
+    candidate
+    for ancestor in root_ancestors
+    for candidate in (os.path.join(ancestor, '.git'),
+                      os.path.join(ancestor, '.git', 'HEAD'),
+                      os.path.join(ancestor, 'HEAD'))
+}
+toolchain_lookup_only = {
+    '/home/joe/.nrepl/nrepl.edn',
+    '/home/joe/.shadow-cljs/config.edn',
+    '/home/joe/AGENTS.md',
+    '/home/joe/wm-sandbox/AGENTS.md',
+}
 lookup_mark = re.compile(
     r'^(?:stat|lstat|newfstatat|statx|access|faccessat|faccessat2|readlink|readlinkat)\('
     r'|^(?:open|openat|openat2)\(.*O_RDONLY.*O_DIRECTORY'
@@ -200,6 +218,10 @@ for line in lines:
                 path == allowed or allowed.startswith(path.rstrip('/') + '/')
                 for allowed in allowed_roots)
             if is_allowed_ancestor and lookup_mark.search(line) and not write_mark.search(line):
+                ancestor_lookups[path] += 1
+                continue
+            if ((path in git_discovery_lookups or path in toolchain_lookup_only)
+                    and lookup_mark.search(line) and not write_mark.search(line)):
                 ancestor_lookups[path] += 1
                 continue
             if '/.git/objects/' in path and not write_mark.search(line):
