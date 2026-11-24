@@ -95,7 +95,8 @@ if [[ "$throwaway_futon1b" == true ]]; then
   (
     cd "$code_root/futon1b"
     export GIT_OPTIONAL_LOCKS=0 MALLOC_ARENA_MAX=2 FUTON1B_DRAWBRIDGE_PORT=0
-    exec setsid strace -ff -o "$trace_prefix" -e trace=%file,connect,execve \
+    export PGPASSFILE="$code_root/.config/pgpass"
+    exec setsid strace -ff -o "$trace_prefix" -e trace=%file,%network,execve \
       clojure -J-Xmx2g -M:node -m futon1b-server \
       --store-dir "$throwaway_store" --port "$futon1b_port"
   ) >"$futon1b_log" 2>&1 &
@@ -155,8 +156,8 @@ watch_writes() {
   export FUTON3C_ROOT="$code_root/futon3c" FUTON3_ROOT="$code_root/futon3"
   export FUTON3A_ROOT="$code_root/futon3a" FUTON5_ROOT="$code_root/futon5" FUTON6_ROOT="$code_root/futon6"
   export FUTON2_DATA_ROOT="$code_root/futon2/data" FUTON_WM_NOTES_ROOT="$code_root/notes"
-  export FUTON1A_URL="http://127.0.0.1:7271" FUTON_SUBSTRATE_URL="http://127.0.0.1:7271"
-  export FUTON1B_URL="http://127.0.0.1:7273" FUTON_MEMORY_BASE="http://127.0.0.1:7273"
+  export FUTON1A_URL="http://127.0.0.1:$futon1b_port" FUTON_SUBSTRATE_URL="http://127.0.0.1:$futon1b_port"
+  export FUTON1B_URL="http://127.0.0.1:$futon1b_port" FUTON_MEMORY_BASE="http://127.0.0.1:$futon1b_port"
   # These optional in-JVM servers preflight their default ports (7094/7096)
   # by connecting before binding.  A portability run needs neither service;
   # disabling them prevents even a readiness probe of a live host listener.
@@ -177,6 +178,14 @@ watch_writes() {
   export FUTON3C_CLAUDE_PROJECTS_ROOT="$code_root/.claude/projects"
   export FUTON3C_ARXANA_TOGETHER_LOG_DIR="$code_root/storage/arxana-together"
   export FUTON3C_DISCIPLINE_EVENTS_PATH="$code_root/futon3c/data/discipline-events.edn"
+  export FUTON3C_AGENT_ROSTER_FILE="$code_root/storage/futon3c/agent-roster.edn"
+  export FUTON3C_AGENT_RESTORE=false
+  export FUTON3C_DURABLE_QUEUE_PATH="$code_root/storage/futon3c/turn-queue.edn"
+  export KIMI_API_KEY=sandbox-unused PGPASSFILE="$code_root/.config/pgpass"
+  export CODEX_BIN=codex CLAUDE_BIN=claude
+  export FUTON3C_PEERS="" FUTON3C_PEER_SITES=""
+  export FUTON3C_SELF_URL="http://127.0.0.1:$agency_port"
+  export FUTON3C_INBOX_ZERO_FOLLOWUP_URL="http://127.0.0.1:$agency_port/api/alpha/followups"
   export FUTON3C_EVIDENCE_SPOOL_DB="$code_root/storage/futon3c/evidence-spool.db"
   export FUTON3C_COMMIT_INGEST_CURSORS="$code_root/storage/futon3c/commit-ingest-cursors.edn"
   export FUTON3C_DISPATCH_PAYLOAD_STORE="$code_root/storage/dispatch-payloads"
@@ -186,7 +195,7 @@ watch_writes() {
   export FUTON_PATTERN_LIBRARY_ROOT="$code_root/futon3/library" FUTON3_LIBRARY_DIR="$code_root/futon3/library"
   export FUTON3C_INSTALLATION_WATCH_ROOT="$code_root" FUTON3C_WORKTREE_ROOT="$code_root/futon3c"
   export FUTON3C_PLANETMATH_ROOT="$code_root/planetmath"
-  exec setsid strace -ff -o "$trace_prefix" -e trace=%file,connect,execve make dev
+  exec setsid strace -ff -o "$trace_prefix" -e trace=%file,%network,execve make dev
 ) >"$runtime_log" 2>&1 &
 leader=$!
 watch_writes & watcher=$!
@@ -278,8 +287,20 @@ allowed_read_exact = {
 lines = []
 for name in glob.glob(prefix + '.*'):
     lines.extend(open(name, errors='replace'))
+for line in lines:
+    if line.startswith('getsockname('):
+        port_match = re.search(r'sin6?_port=htons\((\d+)\)', line)
+        address_match = (re.search(r'inet_addr\("([^\"]+)"\)', line) or
+                         re.search(r'inet_pton\(AF_INET6, "([^\"]+)"', line))
+        if port_match and address_match and address_match.group(1) in {'127.0.0.1', '::1'}:
+            sandbox_ports.add(int(port_match.group(1)))
 object_roots = set()
 for line in lines:
+        # The second quoted value is readlink's returned target, not a path
+        # the traced process accessed. Process monitors inspect /proc/*/exe;
+        # do not misclassify the host executable named in that return buffer.
+        if line.startswith('readlink("/proc/') or line.startswith('readlinkat(AT_FDCWD, "/proc/'):
+            continue
     for path in quoted.findall(line):
         marker = '/.git/objects'
         if marker in path:
@@ -336,7 +357,7 @@ for line in lines:
                     connects['prohibited'] += 1
             elif inet_family and port_match and address_match:
                 port = int(port_match.group(1)); address = address_match.group(1)
-                if address in {'127.0.0.1', '::1'}:
+                if address in {'127.0.0.1', '::1', '127.0.0.53'}:
                     connects['allowed-sandbox-port' if port in sandbox_ports else 'prohibited'] += 1
                 else:
                     connects['external-network'] += 1
